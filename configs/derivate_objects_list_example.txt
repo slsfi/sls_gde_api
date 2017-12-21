@@ -1,0 +1,1 @@
+thumbnails/test/test.jpg

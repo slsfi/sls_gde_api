@@ -1,0 +1,3 @@
+auth_url: https://hesilon-swift.sls.fi:8083/auth/v1.0
+username: swtest:username@domain
+password: !PassW0rd

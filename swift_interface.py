@@ -1,0 +1,79 @@
+import mimetypes
+import os
+from io import BytesIO
+import requests
+import traceback
+import yaml
+import urllib3
+urllib3.disable_warnings()  # TODO signed cert for Isilon Swift
+
+file_dir = os.path.dirname(os.path.abspath(__file__))
+derivate_objects_list_file = os.path.join(file_dir, "configs", "derivate_objects_list.txt")
+with open(os.path.join(file_dir, "configs", "swift_auth.yml")) as swift_auth_file:
+    swift_auth = yaml.load(swift_auth_file)
+
+with open(derivate_objects_list_file) as list_file:
+    valid_files = set()
+    for line in list_file:
+        valid_files.add(line.strip())
+
+
+def get_file_or_none(filename):
+    # TODO maybe get MIME type from FileMaker somehow?
+    mime_type = mimetypes.guess_type(filename)[0]
+    if mime_type is None:
+        mime_type = "application/octet-stream"  # Unknown file type, arbitrary binary data
+
+    try:
+        if filename in valid_files:
+            return _actually_get_file_from_swift(filename), mime_type
+        else:
+            print("Filename not in list of approved files!")
+            return None, None
+    except Exception:
+        print("Exception when getting file from Swift!")
+        print(traceback.format_exc())
+        return None, None
+
+
+def _actually_get_file_from_swift(path):
+    print("All checks OK, getting file from Swift")
+    with requests.Session() as s:
+        auth_url = swift_auth["auth_url"]
+        username = swift_auth["username"]
+        password = swift_auth["password"]
+
+        s, storage_url = _authenticate_to_swift(auth_url, s, username, password)
+
+        ret = s.get("{}/{}".format(storage_url, path), verify=False, stream=True)
+
+        if ret.status_code == 200:
+            output = BytesIO()
+            output.write(ret.content)
+            content = output.getvalue()
+            output.close()
+            return content
+
+
+def _authenticate_to_swift(url, session, user, key):
+    auth = {
+        "X-Auth-User": user,
+        "X-Auth-Key": key
+    }
+    session.headers.update(auth)
+
+    r = session.get(url, verify=False)
+    print("--- Getting AUTH token --- GET {}".format(url))
+    print(r.status_code)
+    print(r.headers)
+    print(r.content)
+
+    token = r.headers["X-Auth-Token"]
+    storage_url = r.headers["X-Storage-Url"]
+    del session.headers["X-Auth-User"]
+    del session.headers["X-Auth-Key"]
+    session.headers.update({
+        "X-Auth-Token": token
+    })
+
+    return session, storage_url
