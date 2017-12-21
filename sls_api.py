@@ -3,7 +3,9 @@ from flask import Flask, abort, Response, request
 from lxml.etree import SubElement, tostring
 
 
-from endpoints.oai import validate_request, get_metadata_from_mysql, create_root_element, populate_identify_element, populate_listmetadataformats_element, populate_listsets_element, create_error_xml
+from endpoints.oai import validate_request, get_metadata_from_mysql, create_root_element, \
+    populate_identify_element, populate_listmetadataformats_element, populate_listsets_element, \
+    populate_ead_records_element, populate_records_element, create_error_xml
 from endpoints.swift_interface import get_file_or_none
 
 app = Flask(__name__)
@@ -58,21 +60,27 @@ def get_oai_metadata():
         result_attrs = {}
 
         if result_tag == "Identify":
+            # Create and populate Identify element
             identify_root = SubElement(root_element, result_tag, result_attrs)
-
             date_byte_string = result[0]["date"]
             populate_identify_element(base_url, identify_root, date_byte_string.decode("utf-8", errors="ignore"))
-
         elif result_tag == "ListMetadataFormats":
+            # Create and populate ListMetadataFormats element
             listmetadataformats_root = SubElement(root_element, result_tag, result_attrs)
             populate_listmetadataformats_element(listmetadataformats_root)
         elif result_tag == "ListSets":
+            # Create and populate ListSets element
             listsets_root = SubElement(root_element, result_tag, result_attrs)
             populate_listsets_element(listsets_root)
         else:
-            # TODO createEadRecord
-            # TODO createRecord
-            pass
+            # Create container element for records and fill it with record elements according to metadataPrefix
+            records_root = SubElement(root_element, result_tag, result_attrs)
+            if valid_params["metadataPrefix"] == "ead":
+                for row_dict in result:
+                    populate_ead_records_element(records_root, row_dict, valid_params["set"], valid_params["setName"], valid_params["metadataPrefix"], valid_params["verb"])
+            else:
+                for row_dict in result:
+                    populate_records_element(records_root, row_dict, valid_params["set"], valid_params["set_name"], valid_params["metadataPrefix"], valid_params["verb"])
 
         # Turn the generated XML tree into a utf8-encoded indented string
         return_content = tostring(root_element, encoding="utf-8", pretty_print=True)

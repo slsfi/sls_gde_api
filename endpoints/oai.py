@@ -216,6 +216,18 @@ def populate_listmetadataformats_element(root_xml):
     ead_namespace.text = "http://www.loc.gov/ead"
 
 
+def populate_records_element(root_xml, record_dict, set, set_name, metadata_prefix, verb):
+    temp_element = SubElement(root_xml, "NotYetImplemented")
+    temp_element.text = "This function not yet implemented!"
+    # TODO port from functions.php
+
+
+def populate_ead_records_element(root_xml, record_dict, set, set_name, metadata_prefix, verb):
+    temp_element = SubElement(root_xml, "NotYetImplemented")
+    temp_element.text = "This function not yet implemented!"
+    # TODO port from functions.php
+
+
 def create_error_xml(base_url, verb=None, error_type=u"badVerb", error_text=u"Bad OAI verb"):
     xmlns = "http://www.openarchives.org/OAI/2.0/"
     xsi = "http://www.w3.org/2001/XMLSchema-instance"
