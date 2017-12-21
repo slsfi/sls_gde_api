@@ -7,17 +7,18 @@ import pymysql
 import traceback
 import yaml
 
+valid_OAI_verbs = ["Identify", "ListSets", "ListMetadataFormats", "ListIdentifiers", "ListRecords", "GetRecord"]
+
 
 def validate_request(request):
     valid_params = {}
     error = None
-    verbs = ["Identify", "ListRecords", "ListIdentifiers", "ListMetadataFormats", "ListSets", "GetRecord"]
 
     for key, value in request.args.iteritems():
         if key not in ["verb", "from", "until", "identifier", "set", "metadataPrefix"]:
             error = ("badArgument", "Unknown argument")
 
-    if "verb" in request.args and request.args["verb"] in verbs:
+    if "verb" in request.args and request.args["verb"] in valid_OAI_verbs:
         valid_params["verb"] = request.args["verb"]
     else:
         error = ("badVerb", "Bad OAI verb")
@@ -216,16 +217,63 @@ def populate_listmetadataformats_element(root_xml):
     ead_namespace.text = "http://www.loc.gov/ead"
 
 
-def populate_records_element(root_xml, record_dict, set, set_name, metadata_prefix, verb):
-    temp_element = SubElement(root_xml, "NotYetImplemented")
-    temp_element.text = "This function not yet implemented!"
-    # TODO port from functions.php
+def populate_records_element(root_xml, record_dict, set_name, metadata_prefix, verb):
+    # ListIdentifiers, ListRecords, GetRecord
+    if verb != "ListIdentifiers":
+        record = SubElement(root_xml, "record")
+        element = SubElement(record, "header")
+    else:
+        record = SubElement(root_xml, "header")
+        element = record
+    identifier = SubElement(element, "identifier")
+    identifier.text = record_dict["identifier"]
+    datestamp = SubElement(element, "datestamp")
+    datestamp.text = record_dict["date_modified"]
+
+    if record_dict["to_europeana"]:
+        set_spec = SubElement(element, "setSpec")
+        set_spec.text = "SLSeuropeana"
+    if record_dict["to_ndb"]:
+        set_spec = SubElement(element, "setSpec")
+        set_spec.text = "SLSfinna"
+    if verb != "ListIdentifiers" and verb != "ListRecords":
+        set_name_elem = SubElement(element, "setName")
+        set_name_elem.text = set_name
+    if record_dict["status"] == "deleted":
+        element.attrib["status"] = "deleted"
+    elif verb == "ListRecords" or verb == "GetRecord":
+        temp_element = SubElement(root_xml, "NotYetImplemented")
+        temp_element.text = "This function not yet implemented!"
+        # TODO port from functions.php
 
 
-def populate_ead_records_element(root_xml, record_dict, set, set_name, metadata_prefix, verb):
-    temp_element = SubElement(root_xml, "NotYetImplemented")
-    temp_element.text = "This function not yet implemented!"
-    # TODO port from functions.php
+def populate_ead_records_element(root_xml, record_dict, set_name, metadata_prefix, verb):
+    # ListIdentifiers, ListRecords, GetRecord - following EAD metadata format
+    if verb != "ListIdentifiers":
+        record = SubElement(root_xml, "record")
+        element = SubElement(record, "header")
+    else:
+        record = SubElement(root_xml, "header")
+        element = record
+    identifier = SubElement(element, "identifier")
+    identifier.text = record_dict["c_signum"]
+    datestamp = SubElement(element, "datestamp")
+    datestamp.text = record_dict["date_modify"].strftime("%Y-%m-%d")
+    if record_dict["to_europeana"]:
+        set_spec = SubElement(element, "setSpec")
+        set_spec.text = "SLSeuropeana"
+    if record_dict["to_ndb"]:
+        set_spec = SubElement(element, "setSpec")
+        set_spec.text = "SLSfinna"
+    if verb != "ListIdentifiers" and verb != "ListRecords":
+        set_name_elem = SubElement(element, "setName")
+        set_name_elem.text = set_name
+    if record_dict["status"] == "deleted":
+        element.attrib["status"] = "deleted"
+    elif verb == "ListRecords" or verb == "GetRecord":
+        temp_element = SubElement(root_xml, "NotYetImplemented")
+        temp_element.text = "This function not yet implemented!"
+        # TODO port from functions.php
 
 
 def create_error_xml(base_url, verb=None, error_type=u"badVerb", error_text=u"Bad OAI verb"):

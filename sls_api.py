@@ -1,3 +1,4 @@
+from collections import OrderedDict
 import datetime
 from flask import Flask, abort, Response, request
 from lxml.etree import SubElement, tostring
@@ -42,8 +43,10 @@ def get_oai_metadata():
         response_date_element.text = datetime.datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
 
         # Next, add the request element
-        attrs = {"verb": valid_params["verb"]}
+        attrs = OrderedDict()
+        attrs["verb"] = valid_params["verb"]
         if valid_params["verb"] in ["ListRecords", "ListIdentifiers", "GetRecord"]:
+            attrs["metadataPrefix"] = valid_params["metadataPrefix"]
             if "from" in valid_params:
                 attrs["from"] = valid_params["from"]
             if "until" in valid_params:
@@ -57,35 +60,35 @@ def get_oai_metadata():
 
         # Then add the container element and fill it with the return dict data
         result_tag = valid_params["verb"]
-        result_attrs = {}
 
         if result_tag == "Identify":
             # Create and populate Identify element
-            identify_root = SubElement(root_element, result_tag, result_attrs)
+            identify_root = SubElement(root_element, result_tag)
             date_byte_string = result[0]["date"]
             populate_identify_element(base_url, identify_root, date_byte_string.decode("utf-8", errors="ignore"))
         elif result_tag == "ListMetadataFormats":
             # Create and populate ListMetadataFormats element
-            listmetadataformats_root = SubElement(root_element, result_tag, result_attrs)
+            listmetadataformats_root = SubElement(root_element, result_tag)
             populate_listmetadataformats_element(listmetadataformats_root)
         elif result_tag == "ListSets":
             # Create and populate ListSets element
-            listsets_root = SubElement(root_element, result_tag, result_attrs)
+            listsets_root = SubElement(root_element, result_tag)
             populate_listsets_element(listsets_root)
         else:
             # Create container element for records and fill it with record elements according to metadataPrefix
-            records_root = SubElement(root_element, result_tag, result_attrs)
+            records_root = SubElement(root_element, result_tag)
+            set_name = "" if "setName" not in valid_params else valid_params["setName"]
             if valid_params["metadataPrefix"] == "ead":
                 for row_dict in result:
-                    populate_ead_records_element(records_root, row_dict, valid_params["set"], valid_params["setName"], valid_params["metadataPrefix"], valid_params["verb"])
+                    populate_ead_records_element(records_root, row_dict, set_name, valid_params["metadataPrefix"], valid_params["verb"])
             else:
                 for row_dict in result:
-                    populate_records_element(records_root, row_dict, valid_params["set"], valid_params["set_name"], valid_params["metadataPrefix"], valid_params["verb"])
+                    populate_records_element(records_root, row_dict, set_name, valid_params["metadataPrefix"], valid_params["verb"])
 
         # Turn the generated XML tree into a utf8-encoded indented string
         return_content = tostring(root_element, encoding="utf-8", pretty_print=True)
 
-    # TODO check if any of this breaks XML rendering on any User-Agents, if so just return 200 always
+    # TODO check if non-200 status breaks XML rendering on common browsers, if so just return 200 always
     if error is None:
         return_status = 200
     else:
