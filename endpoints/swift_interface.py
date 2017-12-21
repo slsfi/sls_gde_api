@@ -28,7 +28,7 @@ def get_file_or_none(filename):
         if filename in valid_files:
             return _actually_get_file_from_swift(filename), mime_type
         else:
-            print("Filename not in list of approved files!")
+            print("Filename {!r} not in list of approved files!".format(filename))
             return None, None
     except Exception:
         print("Exception when getting file from Swift!")
@@ -37,7 +37,7 @@ def get_file_or_none(filename):
 
 
 def _actually_get_file_from_swift(path):
-    print("All checks OK, getting file from Swift")
+    print("All checks OK, getting file {!r} from Swift".format(path))
     with requests.Session() as s:
         auth_url = swift_auth["auth_url"]
         username = swift_auth["username"]

@@ -217,7 +217,7 @@ def populate_listmetadataformats_element(root_xml):
     ead_namespace.text = "http://www.loc.gov/ead"
 
 
-def populate_records_element(root_xml, record_dict, set_name, metadata_prefix, verb):
+def populate_records_element(root_xml, record_dict, metadata_prefix, verb):
     # ListIdentifiers, ListRecords, GetRecord
     if verb != "ListIdentifiers":
         record = SubElement(root_xml, "record")
@@ -229,16 +229,18 @@ def populate_records_element(root_xml, record_dict, set_name, metadata_prefix, v
     identifier.text = record_dict["identifier"]
     datestamp = SubElement(element, "datestamp")
     datestamp.text = record_dict["date_modified"]
-
     if record_dict["to_europeana"]:
         set_spec = SubElement(element, "setSpec")
         set_spec.text = "SLSeuropeana"
+        if verb == "GetRecord":
+            set_name = SubElement(element, "setName")
+            set_name.text = "SLS material till Europeana"
     if record_dict["to_ndb"]:
         set_spec = SubElement(element, "setSpec")
         set_spec.text = "SLSfinna"
-    if verb != "ListIdentifiers" and verb != "ListRecords":
-        set_name_elem = SubElement(element, "setName")
-        set_name_elem.text = set_name
+        if verb == "GetRecord":
+            set_name = SubElement(element, "setName")
+            set_name.text = "SLS material till Finna/NDB"
     if record_dict["status"] == "deleted":
         element.attrib["status"] = "deleted"
     elif verb == "ListRecords" or verb == "GetRecord":
@@ -247,7 +249,7 @@ def populate_records_element(root_xml, record_dict, set_name, metadata_prefix, v
         # TODO port from functions.php
 
 
-def populate_ead_records_element(root_xml, record_dict, set_name, metadata_prefix, verb):
+def populate_ead_records_element(root_xml, record_dict, metadata_prefix, verb):
     # ListIdentifiers, ListRecords, GetRecord - following EAD metadata format
     if verb != "ListIdentifiers":
         record = SubElement(root_xml, "record")
@@ -262,12 +264,15 @@ def populate_ead_records_element(root_xml, record_dict, set_name, metadata_prefi
     if record_dict["to_europeana"]:
         set_spec = SubElement(element, "setSpec")
         set_spec.text = "SLSeuropeana"
+        if verb == "GetRecord":
+            set_name = SubElement(element, "setName")
+            set_name.text = "SLS material till Europeana"
     if record_dict["to_ndb"]:
         set_spec = SubElement(element, "setSpec")
         set_spec.text = "SLSfinna"
-    if verb != "ListIdentifiers" and verb != "ListRecords":
-        set_name_elem = SubElement(element, "setName")
-        set_name_elem.text = set_name
+        if verb == "GetRecord":
+            set_name = SubElement(element, "setName")
+            set_name.text = "SLS material till Finna/NDB"
     if record_dict["status"] == "deleted":
         element.attrib["status"] = "deleted"
     elif verb == "ListRecords" or verb == "GetRecord":

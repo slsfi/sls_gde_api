@@ -58,7 +58,7 @@ def get_oai_metadata():
         request_element = SubElement(root_element, "request", attrs)
         request_element.text = base_url
 
-        # Then add the container element and fill it with the return dict data
+        # Then add the result container element and fill it with the result dict data
         result_tag = valid_params["verb"]
 
         if result_tag == "Identify":
@@ -75,15 +75,15 @@ def get_oai_metadata():
             listsets_root = SubElement(root_element, result_tag)
             populate_listsets_element(listsets_root)
         else:
+            # ListIdentifiers, ListRecords, or GetRecord
             # Create container element for records and fill it with record elements according to metadataPrefix
             records_root = SubElement(root_element, result_tag)
-            set_name = "" if "setName" not in valid_params else valid_params["setName"]
             if valid_params["metadataPrefix"] == "ead":
                 for row_dict in result:
-                    populate_ead_records_element(records_root, row_dict, set_name, valid_params["metadataPrefix"], valid_params["verb"])
+                    populate_ead_records_element(records_root, row_dict, valid_params["metadataPrefix"], valid_params["verb"])
             else:
                 for row_dict in result:
-                    populate_records_element(records_root, row_dict, set_name, valid_params["metadataPrefix"], valid_params["verb"])
+                    populate_records_element(records_root, row_dict, valid_params["metadataPrefix"], valid_params["verb"])
 
         # Turn the generated XML tree into a utf8-encoded indented string
         return_content = tostring(root_element, encoding="utf-8", pretty_print=True)
