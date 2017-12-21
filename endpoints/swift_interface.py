@@ -55,7 +55,7 @@ def _actually_get_file_from_swift(path):
             return content
 
 
-def _authenticate_to_swift(url, session, user, key):
+def _authenticate_to_swift(url, session, user, key, debug_prints=False):
     auth = {
         "X-Auth-User": user,
         "X-Auth-Key": key
@@ -63,10 +63,11 @@ def _authenticate_to_swift(url, session, user, key):
     session.headers.update(auth)
 
     r = session.get(url, verify=False)
-    print("--- Getting AUTH token --- GET {}".format(url))
-    print(r.status_code)
-    print(r.headers)
-    print(r.content)
+    if debug_prints:
+        print("--- Getting AUTH token --- GET {}".format(url))
+        print(r.status_code)
+        print(r.headers)
+        print(r.content)
 
     token = r.headers["X-Auth-Token"]
     storage_url = r.headers["X-Storage-Url"]
