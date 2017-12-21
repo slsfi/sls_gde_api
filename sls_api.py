@@ -1,3 +1,4 @@
+from __future__ import unicode_literals
 from collections import OrderedDict
 import datetime
 from flask import Flask, abort, Response, request

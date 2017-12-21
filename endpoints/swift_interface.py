@@ -1,3 +1,4 @@
+from __future__ import unicode_literals
 import mimetypes
 import os
 from io import BytesIO
