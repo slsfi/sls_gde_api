@@ -7,9 +7,9 @@ import yaml
 import urllib3
 urllib3.disable_warnings()  # TODO signed cert for Isilon Swift
 
-file_dir = os.path.dirname(os.path.abspath(__file__))
-derivate_objects_list_file = os.path.join(file_dir, "configs", "derivate_objects_list.txt")
-with open(os.path.join(file_dir, "configs", "swift_auth.yml")) as swift_auth_file:
+config_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "configs")
+derivate_objects_list_file = os.path.join(config_dir, "derivate_objects_list.txt")
+with open(os.path.join(config_dir, "swift_auth.yml")) as swift_auth_file:
     swift_auth = yaml.load(swift_auth_file)
 
 with open(derivate_objects_list_file) as list_file:
