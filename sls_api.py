@@ -13,6 +13,7 @@ from endpoints.swift_interface import get_file_or_none
 app = Flask(__name__)
 
 
+# TODO better name, since it's not just images but also audio and other accessfiles. /accessfiles, maybe?
 @app.route('/images/<path:image_path>', methods=["GET"])
 def get_image_or_404(image_path):
     file_obj, mime_type = get_file_or_none(image_path)

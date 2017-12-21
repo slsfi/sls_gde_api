@@ -10,6 +10,7 @@ import traceback
 import yaml
 
 valid_OAI_verbs = ["Identify", "ListSets", "ListMetadataFormats", "ListIdentifiers", "ListRecords", "GetRecord"]
+accessfile_API_endpoint = "http://api.sls.fi/images/"
 
 
 def validate_request(request):
@@ -221,7 +222,6 @@ def populate_listmetadataformats_element(root_xml):
 
 
 def populate_records_element(root_xml, record_dict, metadata_prefix, verb):
-    # TODO don't add an XML tag if it's text is going to be empty-string
     # ListIdentifiers, ListRecords, GetRecord
     if verb != "ListIdentifiers":
         record = SubElement(root_xml, "record")
@@ -309,7 +309,6 @@ def populate_records_element(root_xml, record_dict, metadata_prefix, verb):
                     spatial_elem = SubElement(container, "{%s}spatial" % namespace_map["dcterms"], attrib={"{%s}lang" % xml: "sv"})
                     spatial_elem.text = record_dict["dcterms_spatial{}".format(i) if i != 1 else "dcterms_spatial"]
 
-            # TODO check the namespace on the attrib for dcterms:created
             if record_dict["dcterms_created_maskinlasbart"]:
                 created_elem = SubElement(container, "{%s}created" % namespace_map["dcterms"], attrib={"{%s}type" % namespace_map["xsi"]: "dcterms:W3CDTF"})
                 created_elem.text = record_dict["dcterms_created_maskinlasbart"]
@@ -408,10 +407,9 @@ def populate_records_element(root_xml, record_dict, metadata_prefix, verb):
             language_elem.text = record_dict["dc_language"]
 
         if metadata_prefix == "europeana":
-            # TODO check filepath base against new API (api.sls.fi/images)
             if record_dict["derivate_filepath"]:
                 filepath_elem = SubElement(container, "{%s}object" % namespace_map["europeana"])
-                filepath_elem.text = "http://api.sls.fi/images/{}".format(record_dict["derivate_filepath"])
+                filepath_elem.text = "{}{}".format(accessfile_API_endpoint, record_dict["derivate_filepath"])
 
             provider_elem = SubElement(container, "{%s}provider" % namespace_map["europeana"])
             provider_elem.text = "National Formula agreement"
@@ -427,20 +425,17 @@ def populate_records_element(root_xml, record_dict, metadata_prefix, verb):
             dataprovider_elem = SubElement(container, "{%s}dataProvider" % namespace_map["europeana"])
             dataprovider_elem.text = "Svenska litteratursällskapet i Finland"
 
-            # TODO check filepath base against new API (api.sls.fi/images)
             if record_dict["derivate_filepath"]:
                 shownby_elem = SubElement(container, "{%s}isShownBy" % namespace_map["europeana"])
-                shownby_elem.text = "http://api.sls.fi/images/{}".format(record_dict["derivate_filepath"])
+                shownby_elem.text = "{}{}".format(accessfile_API_endpoint, record_dict["derivate_filepath"])
 
             if record_dict["DC2_type"].lower() == "sound":
                 shownat_elem = SubElement(container, "{%s}isShownAt" % namespace_map["europeana"])
                 shownat_elem.text = record_dict["c_isReferencedBy_URL"]
         else:
-            # TODO check namespaces on the attribs in this chunk
-            # TODO check filepath base against new API (api.sls.fi/images)
             if record_dict["derivate_filepath"]:
                 filepath_elem = SubElement(container, "{%s}identifier" % namespace_map["dc"], attrib={"{%s}type" % namespace_map["xsi"]: "dcterms:URI"})
-                filepath_elem.text = "http://api.sls.fi/images/{}".format(record_dict["derivate_filepath"])
+                filepath_elem.text = "{}{}".format(accessfile_API_endpoint, record_dict["derivate_filepath"])
 
             publisher_elem = SubElement(container, "{%s}publisher" % namespace_map["dc"])
             publisher_elem.text = "National Formula agreement"
@@ -496,6 +491,7 @@ def populate_ead_records_element(root_xml, record_dict, metadata_prefix, verb):
         temp_element = SubElement(root_xml, "NotYetImplemented")
         temp_element.text = "This function not yet implemented!"
         # TODO port from functions.php
+        # TODO don't add an element if its text would be empty
 
 
 def create_error_xml(base_url, verb=None, error_type=u"badVerb", error_text=u"Bad OAI verb"):
