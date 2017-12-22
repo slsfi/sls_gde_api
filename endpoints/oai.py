@@ -10,7 +10,8 @@ import traceback
 import yaml
 
 valid_OAI_verbs = ["Identify", "ListSets", "ListMetadataFormats", "ListIdentifiers", "ListRecords", "GetRecord"]
-accessfile_API_endpoint = "http://api.sls.fi/images/"
+accessfile_API_endpoint = "http://api.sls.fi/accessfiles/"
+# TODO get endpoint programmatically
 
 
 def validate_request(request):

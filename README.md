@@ -6,11 +6,13 @@
     - Use sls_api.conf for Apache2 sites-available config
     - Install using Python 2.7 virtualenv at /home/webapp/virtualenvs/sls_api
     
-### /images endpoint
-- Provides image accessfiles through Isilon Swift
+### /accessfiles endpoint
+- Provides accessfiles through Isilon Swift for Finna and Europeana
 - Needs a list of allowed accessfiles and swift authentication details to work
     - configs/derivate_objects_list.txt and configs/swift_auth.yml
     - See _example files for more specific details
+- List of accessfiles can be generated from FileMaker .csv export using
+    - https://bitbucket.org/rasek_sls/accessfile_list_generator
     
 ### /oai endpoint
 - Provides OAI-PMH metadata in XML format for Finna and Europeana

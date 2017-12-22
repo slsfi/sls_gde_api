@@ -13,10 +13,9 @@ from endpoints.swift_interface import get_file_or_none
 app = Flask(__name__)
 
 
-# TODO better name, since it's not just images but also audio and other accessfiles. /accessfiles, maybe?
-@app.route('/images/<path:image_path>', methods=["GET"])
-def get_image_or_404(image_path):
-    file_obj, mime_type = get_file_or_none(image_path)
+@app.route('/accessfiles/<path:file_path>', methods=["GET"])
+def get_file_or_404(file_path):
+    file_obj, mime_type = get_file_or_none(file_path)
     if file_obj is None:
         abort(404)
     else:
@@ -25,7 +24,7 @@ def get_image_or_404(image_path):
 
 @app.route('/oai/', methods=["GET"])
 def get_oai_metadata():
-    base_url = "http://api.sls.fi/oai/"  # request.base_url
+    base_url = request.base_url
 
     valid_params, error = validate_request(request)
 
