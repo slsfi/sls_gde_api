@@ -476,15 +476,15 @@ def populate_ead_records_element(root_xml, record_dict, metadata_prefix, verb):
     if record_dict["to_europeana"]:
         set_spec = SubElement(element, "setSpec")
         set_spec.text = "SLSeuropeana"
-        if verb == "GetRecord":
-            set_name = SubElement(element, "setName")
-            set_name.text = "SLS material till Europeana"
+        # if verb == "GetRecord":
+        #     set_name = SubElement(element, "setName")
+        #     set_name.text = "SLS material till Europeana"
     if record_dict["to_ndb"]:
         set_spec = SubElement(element, "setSpec")
         set_spec.text = "SLSfinna"
-        if verb == "GetRecord":
-            set_name = SubElement(element, "setName")
-            set_name.text = "SLS material till Finna/NDB"
+        # if verb == "GetRecord":
+        #     set_name = SubElement(element, "setName")
+        #     set_name.text = "SLS material till Finna/NDB"
     if record_dict["status"] == "deleted":
         element.attrib["status"] = "deleted"
     elif verb == "ListRecords" or verb == "GetRecord":
@@ -602,9 +602,9 @@ def populate_ead_records_element(root_xml, record_dict, metadata_prefix, verb):
             language_elem = SubElement(language_header_elem, "{%s}language" % namespace_map["ead"], attrib={"langcode": "swe"})
             language_elem.text = record_dict["sprak"]
 
-        repo_elem = SubElement(did_elem, "{%s}repository" % namespace_map["ead"])
-        corp_elem = SubElement(repo_elem, "{%s}corpname" % namespace_map["ead"],
+        repo_elem = SubElement(did_elem, "{%s}repository" % namespace_map["ead"],
                                attrib={"label": "Svenska litteratursällskapet i Finland, {}".format(record_dict["slsArkiv"])})
+        corp_elem = SubElement(repo_elem, "{%s}corpname" % namespace_map["ead"])
         corp_elem.text = "SLS"
 
         physloc_elem = SubElement(did_elem, "{%s}physloc" % namespace_map["ead"])
