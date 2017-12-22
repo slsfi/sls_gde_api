@@ -490,9 +490,129 @@ def populate_ead_records_element(root_xml, record_dict, metadata_prefix, verb):
     elif verb == "ListRecords" or verb == "GetRecord":
         namespace_map = get_namespace_map(verb)
         temp_element = SubElement(root_xml, "NotYetImplemented")
-        temp_element.text = "This function not yet implemented!"
-        # TODO port from functions.php
+        temp_element.text = "This function not yet fully implemented!"
         # TODO don't add an element if its text would be empty
+        element = SubElement(record, "metadata")
+
+        element_ead = SubElement(element, "{%s}ead" % namespace_map["ead"])
+
+        header_elem = SubElement(element_ead, "{%s}eadheader" % namespace_map["ead"],
+                                 attrib={"langencoding": "iso639-2b",
+                                         "countryencoding": "iso3166-1",
+                                         "dateencoding": "iso8601"})
+
+        id_elem = SubElement(header_elem, "{%s}eadid" % namespace_map["ead"])
+        id_elem.text = record_dict["c_signum"]
+
+        desc_elem = SubElement(header_elem, "{%s}filedesc" % namespace_map["ead"])
+
+        titles_elem = SubElement(desc_elem, "{%s}titlestmt" % namespace_map["ead"])
+
+        title_proper_elem = SubElement(titles_elem, "{%s}titleproper" % namespace_map["ead"])
+        title_proper_elem.text = "Databaspost på huvudkatalognivå över {}".format(record_dict["c_signum"])
+
+        publications_elem = SubElement(desc_elem, "{%s}publicationstmt" % namespace_map["ead"])
+
+        publisher_elem = SubElement(publications_elem, "{%s}publisher" % namespace_map["ead"])
+        publisher_elem.text = "Svenska litteratursällskapet i Finland"
+
+        desc_elem = SubElement(header_elem, "{%s}profiledesc" % namespace_map["ead"])
+
+        creation_elem = SubElement(desc_elem, "{%s}creation" % namespace_map["ead"])
+        creation_elem.text = "Beskrivningen tagen ur SLS arkivs databaser, huvudkatalognivån och objektnivån i Arkiva, och exporterat till ead xml."
+
+        language_header_elem = SubElement(desc_elem, "{%s}language" % namespace_map["ead"])
+
+        language_elem = SubElement(language_header_elem, "{%s}language" % namespace_map["ead"],
+                                   attrib={"langcode": "swe"})
+        language_elem.text = "Svenska"
+
+        archdesc_elem = SubElement(element_ead, "{%s}archdesc" % namespace_map["ead"],
+                                   attrib={"level": "fonds" if record_dict["arkivetsTyp"].lower() == "arkiv" else "collection"})
+
+        did_elem = SubElement(archdesc_elem, "{%s}did" % namespace_map["ead"])
+
+        head_elem = SubElement(did_elem, "{%s}head" % namespace_map["ead"])
+        head_elem.text = "Huvudkatalog"
+
+        title_elem = SubElement(did_elem, "{%s}unittitle" % namespace_map["ead"])
+        title_elem.text = record_dict["arkivetsNamn"]
+
+        if record_dict["c_tid_arkivetsInnehall"]:
+            date_elem = SubElement(did_elem, "{%s}unitdate" % namespace_map["ead"])
+            date_elem.text = record_dict["c_tid_arkivetsInnehall"]
+            date_elem.attrib["normal"] = record_dict["c_tid_arkivetsInnehall_maskin"]
+            date_elem.attrib["label"] = "gransar"
+            date_elem.attrib["type"] = "inclusive"
+            date_elem.attrib["datechar"] = "creation"
+
+        if record_dict["c_tid_arkivetInlamnat"]:
+            date_elem = SubElement(did_elem, "{%s}unitdate" % namespace_map["ead"])
+            date_elem.text = record_dict["c_tid_arkivetInlamnat"]
+            date_elem.attrib["normal"] = record_dict["c_tid_arkivetInsamlat_maskin"]
+            date_elem.attrib["label"] = "insamlingsar"
+            date_elem.attrib["type"] = "bulk"
+            date_elem.attrib["datechar"] = "accumulation"
+
+        if record_dict["c_tid_arkivetInlamnat"]:
+            date_elem = SubElement(did_elem, "{%s}unitdate" % namespace_map["ead"])
+            date_elem.text = record_dict["c_tid_arkivetInlamnat"]
+            date_elem.attrib["normal"] = record_dict["c_tid_arkivetInlamnat_maskin"]
+            date_elem.attrib["label"] = "inlämningsar"
+            date_elem.attrib["type"] = "bulk"
+            date_elem.attrib["datechar"] = "accumulation"
+
+        id_elem = SubElement(did_elem, "{%s}unitid" % namespace_map["ead"])
+        id_elem.text = record_dict["c_signum"]
+
+        if record_dict["projekt"]:
+            origination_elem = SubElement(did_elem, "{%s}origination" % namespace_map["ead"],
+                                          attrib={"{%s}label" % namespace_map["ead"]: "collector"})
+            origination_elem.text = record_dict["projekt"]
+
+        physdesc_elem = SubElement(did_elem, "{%s}physdesc" % namespace_map["ead"],
+                                   attrib={"label": "Extent"})
+        if record_dict["omfattning_hyllmeter"]:
+            extent = SubElement(physdesc_elem, "{%s}extent" % namespace_map["ead"], attrib={"unit": "running_meters"})
+            extent.text = "{} hyllmeter".format(record_dict["omfattning_hyllmeter"])
+        if record_dict["omfattning_arkivenheter"]:
+            extent = SubElement(physdesc_elem, "{%s}extent" % namespace_map["ead"], attrib={"unit": "archival_units"})
+            extent.text = "{} arkivenheter".format(record_dict["omfattning_arkivenheter"])
+        if record_dict["omfattning_sidor"]:
+            extent = SubElement(physdesc_elem, "{%s}extent" % namespace_map["ead"], attrib={"unit": "pages"})
+            extent.text = "{} sidor".format(record_dict["omfattning_sidor"])
+        if record_dict["omfattning_filmer"]:
+            extent = SubElement(physdesc_elem, "{%s}extent" % namespace_map["ead"], attrib={"unit": "films"})
+            extent.text = "{} filmer".format(record_dict["omfattning_filmer"])
+        if record_dict["omfattning_fotografier"]:
+            extent = SubElement(physdesc_elem, "{%s}extent" % namespace_map["ead"], attrib={"unit": "photographs"})
+            extent.text = "{} fotografier".format(record_dict["omfattning_fotografier"])
+        if record_dict["omfattning_ljudband"]:
+            extent = SubElement(physdesc_elem, "{%s}extent" % namespace_map["ead"], attrib={"unit": "audio_tapes"})
+            extent.text = "{} ljudband".format(record_dict["omfattning_ljudband"])
+        if record_dict["omfattning_skisser"]:
+            extent = SubElement(physdesc_elem, "{%s}extent" % namespace_map["ead"], attrib={"unit": "drawings"})
+            extent.text = "{} skisser".format(record_dict["omfattning_skisser"])
+        if record_dict["omfattning_kartor"]:
+            extent = SubElement(physdesc_elem, "{%s}extent" % namespace_map["ead"], attrib={"unit": "maps"})
+            extent.text = "{} kartor".format(record_dict["omfattning_kartor"])
+
+        if record_dict["sprak"]:
+            language_header_elem = SubElement(did_elem, "{%s}langmaterial" % namespace_map["ead"])
+            language_elem = SubElement(language_header_elem, "{%s}language" % namespace_map["ead"], attrib={"langcode": "swe"})
+            language_elem.text = record_dict["sprak"]
+
+        repo_elem = SubElement(did_elem, "{%s}repository" % namespace_map["ead"])
+        corp_elem = SubElement(repo_elem, "{%s}corpname" % namespace_map["ead"],
+                               attrib={"label": "Svenska litteratursällskapet i Finland, {}".format(record_dict["slsArkiv"])})
+        corp_elem.text = "SLS"
+
+        physloc_elem = SubElement(did_elem, "{%s}physloc" % namespace_map["ead"])
+        physloc_elem.text = record_dict["slsArkiv"]
+        physloc_elem = SubElement(did_elem, "{%s}physloc" % namespace_map["ead"])
+        physloc_elem.text = record_dict["arkivetsPlacering"]
+
+        # TODO port from functions.php, line 540 - 890
 
 
 def create_error_xml(base_url, verb=None, error_type=u"badVerb", error_text=u"Bad OAI verb"):
