@@ -10,6 +10,9 @@ import traceback
 import yaml
 
 valid_OAI_verbs = ["Identify", "ListSets", "ListMetadataFormats", "ListIdentifiers", "ListRecords", "GetRecord"]
+config_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "configs")
+with open(os.path.join(config_dir, "mysql.yml")) as mysql_config_file:
+    mysql_config = yaml.load(mysql_config_file)
 accessfile_API_endpoint = "http://api.sls.fi/accessfiles/"
 # TODO get endpoint programmatically
 
@@ -89,9 +92,6 @@ def validate_request(request):
 
 
 def get_metadata_from_mysql(valid_params, error):
-    config_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "configs")
-    with open(os.path.join(config_dir, "mysql.yml")) as mysql_config_file:
-        mysql_config = yaml.load(mysql_config_file)
     result = []
     if error is None:
         try:
@@ -490,6 +490,7 @@ def populate_ead_records_element(root_xml, record_dict, metadata_prefix, verb):
     elif verb == "ListRecords" or verb == "GetRecord":
         namespace_map = get_namespace_map(verb)
         namespace_map["xml"] = "http://www.w3.org/XML/1998/namespace"
+        namespace_map["xlink"] = "http://www.w3.org/1999/xlink"
 
         element = SubElement(record, "metadata")
 
@@ -648,29 +649,18 @@ def populate_ead_records_element(root_xml, record_dict, metadata_prefix, verb):
                                               attrib={"rules": "internal"})
                     subject_elem.text = person_elements[0]
 
-        if record_dict["c_listaPlatser"]:
-            control_access_elem = SubElement(archdesc_elem, "{%s}controlaccess" % namespace_map["ead"])
-            head_elem = SubElement(control_access_elem, "{%s}head" % namespace_map["ead"])
-            head_elem.text = "geographic_facet"
-            if "," in record_dict["c_listaPlatser"]:
-                for split_place in record_dict["c_listaPlatser"].split(","):
+        for placelist in [record_dict["c_listaPlatser"], record_dict["c_listaPlatser_fin"]]:
+            if placelist:
+                control_access_elem = SubElement(archdesc_elem, "{%s}controlaccess" % namespace_map["ead"])
+                head_elem = SubElement(control_access_elem, "{%s}head" % namespace_map["ead"])
+                head_elem.text = "geographic_facet"
+                if "," in placelist:
+                    for split_place in placelist.split(","):
+                        geogname_elem = SubElement(control_access_elem, "{%s}geogname" % namespace_map["ead"])
+                        geogname_elem.text = split_place.strip()
+                else:
                     geogname_elem = SubElement(control_access_elem, "{%s}geogname" % namespace_map["ead"])
-                    geogname_elem.text = split_place.strip()
-            else:
-                geogname_elem = SubElement(control_access_elem, "{%s}geogname" % namespace_map["ead"])
-                geogname_elem.text = record_dict["c_listaPlatser"]
-
-        if record_dict["c_listaPlatser_fin"]:
-            control_access_elem = SubElement(archdesc_elem, "{%s}controlaccess" % namespace_map["ead"])
-            head_elem = SubElement(control_access_elem, "{%s}head" % namespace_map["ead"])
-            head_elem.text = "geographic_facet"
-            if "," in record_dict["c_listaPlatser_fin"]:
-                for split_place in record_dict["c_listaPlatser_fin"].split(","):
-                    geogname_elem = SubElement(control_access_elem, "{%s}geogname" % namespace_map["ead"])
-                    geogname_elem.text = split_place.strip()
-            else:
-                geogname_elem = SubElement(control_access_elem, "{%s}geogname" % namespace_map["ead"])
-                geogname_elem.text = record_dict["c_listaPlatser_fin"]
+                    geogname_elem.text = placelist
 
         if record_dict["c_omArkivbildaren_webb"]:
             about_persons = record_dict["c_omArkivbildaren_webb"].split(";")
@@ -679,7 +669,234 @@ def populate_ead_records_element(root_xml, record_dict, metadata_prefix, verb):
                 p_elem = SubElement(bioghist_elem, "{%s}p" % namespace_map["ead"])
                 p_elem.text = person.strip()
 
-        # TODO functions.php L 643 - 890
+        scopecontent_elem = SubElement(archdesc_elem, "{%s}scopecontent" % namespace_map["ead"])
+        head_elem = SubElement(scopecontent_elem, "{%s}head" % namespace_map["ead"])
+        head_elem.text = "description"
+        for text in [record_dict["arkivetsInnehall"], record_dict["anmarkningarExterna"], record_dict["anmarkningarReferens"]]:
+            if text:
+                p_elem = SubElement(scopecontent_elem, "{%s}p" % namespace_map["ead"])
+                p_elem.text = text
+
+        if record_dict["nyttjanderatt"]:
+            accessrestrict_elem = SubElement(archdesc_elem, "{%s}accessrestrict" % namespace_map["ead"])
+            if "," in record_dict["nyttjanderatt"]:
+                split_text = record_dict["nyttjanderatt"].split(",")
+                for text in split_text:
+                    p_elem = SubElement(accessrestrict_elem, "{%s}p" % namespace_map["ead"])
+                    p_elem.text = text.strip()
+            else:
+                p_elem = SubElement(accessrestrict_elem, "{%s}p" % namespace_map["ead"])
+                p_elem.text = record_dict["nyttjanderatt"]
+
+        dsc_elem = SubElement(archdesc_elem, "{%s}dsc" % namespace_map["ead"],
+                              attrib={"type": "combined"})
+
+        result = []
+        try:
+            # Use a custom DictCursor that uses collections.OrderedDict
+            # This way we maintain column order for each row in the result
+            class OrderedDictCursor(pymysql.cursors.DictCursorMixin, pymysql.cursors.Cursor):
+                dict_type = OrderedDict
+
+            connection = pymysql.connect(host=mysql_config["address"],
+                                         user=mysql_config["username"],
+                                         password=mysql_config["password"],
+                                         db=mysql_config["database"],
+                                         charset="utf8",
+                                         cursorclass=OrderedDictCursor)
+        except Exception:
+            print traceback.format_exc()
+
+        else:
+            with connection.cursor() as cursor:
+                cursor.execute("SELECT * FROM intellectualEntities WHERE c_samlingsnummer = ?", (record_dict["nummer"],))
+                result = cursor.fetchall()
+
+            for row in result:
+                c_elem = SubElement(dsc_elem, "{%s}c" % namespace_map["ead"],
+                                    attrib={"level": "item"})
+
+                did_elem = SubElement(c_elem, "{%s}did" % namespace_map["ead"])
+                title_elem = SubElement(did_elem, "{%s}unittitle" % namespace_map["ead"])
+                title_elem.text = row["c_title"]
+
+                if row["dcterms_created_maskinlasbart"]:
+                    date_elem = SubElement(did_elem, "{%s}unitdate" % namespace_map["ead"],
+                                           attrib={"normal": row["dcterms_created_maskinlasbart"]})
+                    date_elem.text = row["dcterms_created_maskinlasbart"]
+                    date_elem.attrib["type"] = "bulk"
+                    date_elem.attrib["datechar"] = "creation"
+
+                unitid_elem = SubElement(did_elem, "{%s}unitid" % namespace_map["ead"],
+                                         attrib={"label": "accession_number"})
+                unitid_elem.text = row["funna_unitid"]
+
+                with connection.cursor() as cursor:
+                    cursor.execute("SELECT * FROM URN WHERE id_IE = ?", (row["nummer"],))
+                    sub_result = cursor.fetchall()
+
+                for sub_row in sub_result:
+                    unitid_elem = SubElement(did_elem, "{%s}unitid" % namespace_map["ead"],
+                                             attrib={"label": "PID"})
+                    unitid_elem.text = sub_row["URN"]
+
+                dimensions_elem = SubElement(did_elem, "{%s}dimensions" % namespace_map["ead"])
+                dimensions_elem.text = row["dc_source_dimensions"]
+
+                physdesc_elem = SubElement(did_elem, "{%s}physdesc" % namespace_map["ead"])
+                physdesc_elem.text = row["dc_source2"]
+
+                if row["dc_language"]:
+                    langmaterial_elem = SubElement(did_elem, "{%s}langmaterial" % namespace_map["ead"])
+                    language_elem = SubElement(langmaterial_elem, "{%s}language" % namespace_map["ead"])
+                    language_elem.text = row["dc_language"]
+
+                with connection.cursor() as cursor:
+                    cursor.execute("SELECT nummer, entity_label, entity_order FROM digitalObjects WHERE c_ienummer=? ORDER BY entity_order", (row["nummer"],))
+                    sub_result = cursor.fetchall()
+
+                for sub_row in sub_result:
+                    grp_elem = SubElement(did_elem, "{%s}daogrp" % namespace_map["ead"])
+                    if sub_row["entity_label"]:
+                        desc_elem = SubElement(grp_elem, "{%s}daodesc" % namespace_map["ead"])
+                        p_elem = SubElement(desc_elem, "{%s}p" % namespace_map["ead"])
+                        p_elem.text = sub_row["entity_label"]
+
+                    with connection.cursor() as cursor:
+                        cursor.execute("SELECT derivateObjects.roleTitle, derivateObjects.filePath, digitalObjects.entity_order FROM derivateObjects JOIN digitalObjects ON derivateObjects.c_do = digitalObjects.nummer"
+                                       "WHERE c_do=? ORDER BY digitalObjects.entity_order", (sub_row["nummer"],))
+                        sub_sub_result = cursor.fetchall()
+
+                    for sub_sub_row in sub_sub_result:
+                        loc_elem = SubElement(grp_elem, "{%s}daoloc" % namespace_map["ead"],
+                                              attrib={"{%s}label" % namespace_map["xlink"]: sub_sub_row["roleTitle"]})
+                        if sub_sub_row["roleTitle"] == "Kundkopia":
+                            loc_elem.attrib["role"] = "image_full"
+                        elif sub_sub_row["roleTitle"] == "Thumbnail":
+                            loc_elem.attrib["role"] = "image_thumbnail"
+                        elif sub_sub_row["roleTitle"] == "Databasbild":
+                            loc_elem.attrib["role"] = "image_reference"
+                        elif sub_sub_row["roleTitle"] == "sound_reference":
+                            loc_elem.attrib["role"] = "sound_reference"
+
+                        loc_elem.attrib["{%s}href" % namespace_map["xlink"]] = sub_sub_row["filePath"]
+
+                if row["c_isReferencedBy_URL"]:
+                    grp_elem = SubElement(did_elem, "{%s}daogrp" % namespace_map["ead"])
+                    desc_elem = SubElement(grp_elem, "{%s}daodesc" % namespace_map["ead"])
+                    p_elem = SubElement(desc_elem, "{%s}p" % namespace_map["ead"])
+                    p_elem.text = row["c_isReferencedBy_URL"]
+                    loc_elem = SubElement(grp_elem, "{%s}daoloc" % namespace_map["ead"],
+                                          attrib={"{%s}label" % namespace_map["xlink"]: "context_www"})
+                    loc_elem.attrib["role"] = "url"
+                    loc_elem.attrib["{%s}href" % namespace_map["xlink"]] = row["c_isReferencedBy_URL"]
+
+                if row["dc_description"]:
+                    scopecontent_elem = SubElement(c_elem, "{%s}scopecontent" % namespace_map["ead"])
+                    head_elem = SubElement(scopecontent_elem, "{%s}head" % namespace_map["ead"])
+                    head_elem.text = "description"
+                    p_elem = SubElement(scopecontent_elem, "{%s}p" % namespace_map["ead"])
+                    p_elem.text = row["dc_description"]
+
+                    if row["dcterms_isReferencedBy"]:
+                        p_elem = SubElement(scopecontent_elem, "{%s}p" % namespace_map["ead"])
+                        p_elem.text = row["dcterms_isReferencedBy"]
+
+                if row["dc_rights"]:
+                    for elem_tag in ["{%s}userestrict" % namespace_map["ead"], "{%s}accessrestrict" % namespace_map["ead"]]:
+                        restrict_elem = SubElement(c_elem, elem_tag)
+                        if row["dc_rights"] == "CC BY 4.0":
+                            p_elem = SubElement(restrict_elem, "{%s}p" % namespace_map["ead"])
+                            p_elem.text = row["dc_rights"]
+                            SubElement(p_elem, "{%s}extptr" % namespace_map["ead"],
+                                       attrib={"href": "https://creativecommons.org/licenses/by/4.0/"})
+                        else:
+                            p_elem = SubElement(restrict_elem, "{%s}p" % namespace_map["ead"],
+                                                attrib={"{%s}lang" % namespace_map["xml"]: "swe"})
+                            p_elem.text = row["dc_rights"]
+                            p_elem = SubElement(restrict_elem, "{%s}p" % namespace_map["ead"],
+                                                attrib={"{%s}lang" % namespace_map["xml"]: "fin"})
+                            p_elem.text = row["rights_fin"]
+                            p_elem = SubElement(restrict_elem, "{%s}p" % namespace_map["ead"],
+                                                attrib={"{%s}lang" % namespace_map["xml"]: "eng"})
+                            p_elem.text = row["rights_eng"]
+
+                if row["dc_type"] or row["dc_type2"]:
+                    control_access_elem = SubElement(c_elem, "{%s}controlaccess" % namespace_map["ead"])
+                    head_elem = SubElement(control_access_elem, "{%s}head" % namespace_map["ead"])
+                    head_elem.text = "format"
+                    if "," in row["dc_type"]:
+                        split_types = row["dc_type"].split(",")
+                        for dctype in split_types:
+                            genreform_elem = SubElement(control_access_elem, "{%s}genreform" % namespace_map["ead"])
+                            genreform_elem.text = dctype.strip()
+                    else:
+                        genreform_elem = SubElement(control_access_elem, "{%s}genreform" % namespace_map["ead"])
+                        genreform_elem.text = row["dc_type"]
+
+                if row["dc_creator"]:
+                    control_access_elem = SubElement(c_elem, "{%s}controlaccess" % namespace_map["ead"])
+                    head_elem = SubElement(control_access_elem, "{%s}head" % namespace_map["ead"])
+                    head_elem.text = "author"
+                    if ";" in row["dc_creator"]:
+                        split_persons = row["dc_creator"].split(";")
+                        for person in split_persons:
+                            persname_elem = SubElement(control_access_elem, "{%s}persname" % namespace_map["ead"],
+                                                       attrib={"role": "creator"})
+                            persname_elem.text = person.strip()
+
+                    else:
+                        persname_elem = SubElement(control_access_elem, "{%s}persname" % namespace_map["ead"],
+                                                   attrib={"role": "creator"})
+                        persname_elem.text = row["dc_creator"]
+
+                if row["dc_subject"]:
+                    persons = row["dc_subject"].split("; ")
+
+                    control_access_elem = SubElement(c_elem, "{%s}controlaccess" % namespace_map["ead"])
+                    head_elem = SubElement(control_access_elem, "{%s}head" % namespace_map["ead"])
+                    head_elem.text = "topic_facet"
+
+                    for person in persons:
+                        person_elements = person.split(" (")
+                        if len(person_elements) > 1:
+                            subject_elem = SubElement(control_access_elem, "{%s}subject" % namespace_map["ead"],
+                                                      attrib={"href": person_elements[1].replace(")", "")})
+                            subject_elem.text = person_elements[0]
+                            subject_elem.attrib["source"] = "YSO"
+                            subject_elem.attrib["{%s}lang" % namespace_map["xml"]] = "swe"
+                        else:
+                            subject_elem = SubElement(control_access_elem, "{%s}subject" % namespace_map["ead"],
+                                                      attrib={"rules": "internal"})
+                            subject_elem.text = person_elements[0]
+
+                if row["dcterms_spatial_full"]:
+                    control_access_elem = SubElement(c_elem, "{%s}controlaccess" % namespace_map["ead"])
+                    head_elem = SubElement(control_access_elem, "{%s}head" % namespace_map["ead"])
+                    head_elem.text = "geographic_facet"
+                    if "," in row["dcterms_spatial_full"]:
+                        split_terms = row["dcterms_spatial_full"].split(",")
+                        for term in split_terms:
+                            geogname_elem = SubElement(control_access_elem, "{%s}geogname" % namespace_map["ead"],
+                                                       attrib={"{%s}lang" % namespace_map["xml"]: "swe"})
+                            geogname_elem.text = term.strip()
+                    else:
+                        geogname_elem = SubElement(control_access_elem, "{%s}geogname" % namespace_map["ead"])
+                        geogname_elem.text = row["dcterms_spatial_full"]
+
+                if row["dcterms_spatial_fin"]:
+                    control_access_elem = SubElement(c_elem, "{%s}controlaccess" % namespace_map["ead"])
+                    head_elem = SubElement(control_access_elem, "{%s}head" % namespace_map["ead"])
+                    head_elem.text = "geographic_facet"
+                    if "," in row["dcterms_spatial_fin"]:
+                        split_terms = row["dcterms_spatial_fin"].split(",")
+                        for term in split_terms:
+                            geogname_elem = SubElement(control_access_elem, "{%s}geogname" % namespace_map["ead"],
+                                                       attrib={"{%s}lang" % namespace_map["xml"]: "fin"})
+                            geogname_elem.text = term.strip()
+                    else:
+                        geogname_elem = SubElement(control_access_elem, "{%s}geogname" % namespace_map["ead"])
+                        geogname_elem.text = row["dcterms_spatial_fin"]
 
 
 def create_error_xml(base_url, verb=None, error_type=u"badVerb", error_text=u"Bad OAI verb"):
