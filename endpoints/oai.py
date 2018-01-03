@@ -521,9 +521,9 @@ def populate_ead_records_element(root_xml, record_dict, verb):
         creation_elem = SubElement(desc_elem, "{%s}creation" % namespace_map["ead"])
         creation_elem.text = "Beskrivningen tagen ur SLS arkivs databaser, huvudkatalognivån och objektnivån i Arkiva, och exporterat till ead xml."
 
-        language_header_elem = SubElement(desc_elem, "{%s}language" % namespace_map["ead"])
+        lang_usage_elem = SubElement(desc_elem, "{%s}langusage" % namespace_map["ead"])
 
-        language_elem = SubElement(language_header_elem, "{%s}language" % namespace_map["ead"],
+        language_elem = SubElement(lang_usage_elem, "{%s}language" % namespace_map["ead"],
                                    attrib={"langcode": "swe"})
         language_elem.text = "Svenska"
 
