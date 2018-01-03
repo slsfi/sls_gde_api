@@ -279,7 +279,7 @@ def populate_records_element(root_xml, record_dict, metadata_prefix, verb):
         if record_dict["dc_subject"]:
             if "," in record_dict["dc_subject"]:
                 for split_subject in record_dict["dc_subject"].split(","):
-                    subject_elem = SubElement(container, "{%s}subject" % namespace_map["dc"],attrib={"{%s}lang" % xml: "sv"})
+                    subject_elem = SubElement(container, "{%s}subject" % namespace_map["dc"], attrib={"{%s}lang" % xml: "sv"})
                     subject_elem.text = split_subject.strip()
             else:
                 subject_elem = SubElement(container, "{%s}subject" % namespace_map["dc"], attrib={"{%s}lang" % xml: "sv"})
@@ -489,9 +489,8 @@ def populate_ead_records_element(root_xml, record_dict, metadata_prefix, verb):
         element.attrib["status"] = "deleted"
     elif verb == "ListRecords" or verb == "GetRecord":
         namespace_map = get_namespace_map(verb)
-        temp_element = SubElement(root_xml, "NotYetImplemented")
-        temp_element.text = "This function not yet fully implemented!"
-        # TODO don't add an element if its text would be empty
+        namespace_map["xml"] = "http://www.w3.org/XML/1998/namespace"
+
         element = SubElement(record, "metadata")
 
         element_ead = SubElement(element, "{%s}ead" % namespace_map["ead"])
@@ -612,7 +611,75 @@ def populate_ead_records_element(root_xml, record_dict, metadata_prefix, verb):
         physloc_elem = SubElement(did_elem, "{%s}physloc" % namespace_map["ead"])
         physloc_elem.text = record_dict["arkivetsPlacering"]
 
-        # TODO port from functions.php, line 540 - 890
+        if record_dict["c_listPersonerRoll_webb"]:
+            persons = record_dict["c_listPersonerRoll_webb"].split("; ")
+
+            control_access_elem = SubElement(archdesc_elem, "{%s}controlaccess" % namespace_map["ead"])
+            head_elem = SubElement(control_access_elem, "{%s}head" % namespace_map["ead"])
+            head_elem.text = "author"
+
+            for person in persons:
+                person_elements = person.split(" (")
+                if len(person_elements) > 1:
+                    persname_elem = SubElement(control_access_elem, "{%s}persname" % namespace_map["ead"],
+                                               attrib={"role": person_elements[1].replace(")", "")})
+                    persname_elem.text = person_elements[0]
+                else:
+                    persname_elem = SubElement(control_access_elem, "{%s}persname" % namespace_map["ead"])
+                    persname_elem.text = person_elements[0]
+
+        if record_dict["amnesord"]:
+            persons = record_dict["amnesord"].split("; ")
+
+            control_access_elem = SubElement(archdesc_elem, "{%s}controlaccess" % namespace_map["ead"])
+            head_elem = SubElement(control_access_elem, "{%s}head" % namespace_map["ead"])
+            head_elem.text = "topic_facet"
+
+            for person in persons:
+                person_elements = person.split(" (")
+                if len(person_elements) > 1:
+                    subject_elem = SubElement(control_access_elem, "{%s}subject" % namespace_map["ead"],
+                                              attrib={"href": person_elements[1].replace(")", "")})
+                    subject_elem.attrib["source"] = "YSO"
+                    subject_elem.attrib["{%s}lang" % namespace_map["xml"]] = "swe"
+                    subject_elem.text = person_elements[0]
+                else:
+                    subject_elem = SubElement(control_access_elem, "{%s}subject" % namespace_map["ead"],
+                                              attrib={"rules": "internal"})
+                    subject_elem.text = person_elements[0]
+
+        if record_dict["c_listaPlatser"]:
+            control_access_elem = SubElement(archdesc_elem, "{%s}controlaccess" % namespace_map["ead"])
+            head_elem = SubElement(control_access_elem, "{%s}head" % namespace_map["ead"])
+            head_elem.text = "geographic_facet"
+            if "," in record_dict["c_listaPlatser"]:
+                for split_place in record_dict["c_listaPlatser"].split(","):
+                    geogname_elem = SubElement(control_access_elem, "{%s}geogname" % namespace_map["ead"])
+                    geogname_elem.text = split_place.strip()
+            else:
+                geogname_elem = SubElement(control_access_elem, "{%s}geogname" % namespace_map["ead"])
+                geogname_elem.text = record_dict["c_listaPlatser"]
+
+        if record_dict["c_listaPlatser_fin"]:
+            control_access_elem = SubElement(archdesc_elem, "{%s}controlaccess" % namespace_map["ead"])
+            head_elem = SubElement(control_access_elem, "{%s}head" % namespace_map["ead"])
+            head_elem.text = "geographic_facet"
+            if "," in record_dict["c_listaPlatser_fin"]:
+                for split_place in record_dict["c_listaPlatser_fin"].split(","):
+                    geogname_elem = SubElement(control_access_elem, "{%s}geogname" % namespace_map["ead"])
+                    geogname_elem.text = split_place.strip()
+            else:
+                geogname_elem = SubElement(control_access_elem, "{%s}geogname" % namespace_map["ead"])
+                geogname_elem.text = record_dict["c_listaPlatser_fin"]
+
+        if record_dict["c_omArkivbildaren_webb"]:
+            about_persons = record_dict["c_omArkivbildaren_webb"].split(";")
+            bioghist_elem = SubElement(archdesc_elem, "{%s}bioghist" % namespace_map["ead"])
+            for person in about_persons:
+                p_elem = SubElement(bioghist_elem, "{%s}p" % namespace_map["ead"])
+                p_elem.text = person.strip()
+
+        # TODO functions.php L 643 - 890
 
 
 def create_error_xml(base_url, verb=None, error_type=u"badVerb", error_text=u"Bad OAI verb"):
