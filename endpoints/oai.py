@@ -497,9 +497,10 @@ def populate_ead_records_element(root_xml, record_dict, verb):
         element_ead = SubElement(element, "{%s}ead" % namespace_map["ead"])
 
         header_elem = SubElement(element_ead, "{%s}eadheader" % namespace_map["ead"],
-                                 attrib={"langencoding": "iso639-2b",
-                                         "countryencoding": "iso3166-1",
-                                         "dateencoding": "iso8601"})
+                                 attrib=OrderedDict())
+        header_elem.attrib["langencoding"] = "iso639-2b"
+        header_elem.attrib["countryencoding"] = "iso3166-1"
+        header_elem.attrib["dateencoding"] = "iso8601"
 
         id_elem = SubElement(header_elem, "{%s}eadid" % namespace_map["ead"])
         id_elem.text = record_dict["c_signum"]
