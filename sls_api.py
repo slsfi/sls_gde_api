@@ -81,7 +81,7 @@ def get_oai_metadata():
             records_root = SubElement(root_element, result_tag)
             if valid_params["metadataPrefix"] == "ead":
                 for row_dict in result:
-                    populate_ead_records_element(records_root, row_dict, valid_params["metadataPrefix"], valid_params["verb"])
+                    populate_ead_records_element(records_root, row_dict, valid_params["verb"])
             else:
                 for row_dict in result:
                     populate_records_element(records_root, row_dict, valid_params["metadataPrefix"], valid_params["verb"])
