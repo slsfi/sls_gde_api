@@ -87,7 +87,7 @@ def get_oai_metadata():
                     populate_records_element(records_root, row_dict, valid_params["metadataPrefix"], valid_params["verb"])
 
         # Turn the generated XML tree into a utf8-encoded indented string
-        return_content = tostring(root_element, encoding="utf-8", pretty_print=True)
+        return_content = tostring(root_element, encoding="UTF-8", pretty_print=True, xml_declaration=True)
 
     # TODO check if non-200 status breaks XML rendering on common browsers, if so just return 200 always
     if error is None:

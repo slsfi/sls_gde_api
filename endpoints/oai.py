@@ -923,7 +923,7 @@ def create_error_xml(base_url, verb=None, error_type=u"badVerb", error_text=u"Ba
     error_element = SubElement(root_element, "error", attrib={"code": error_type})
     error_element.text = error_text
 
-    return tostring(root_element, encoding="utf-8", pretty_print=True)
+    return tostring(root_element, encoding="UTF-8", pretty_print=True, xml_declaration=True)
 
 
 def generate_sql_query(valid_params):
