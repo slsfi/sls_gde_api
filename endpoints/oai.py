@@ -529,7 +529,7 @@ def populate_ead_records_element(root_xml, record_dict, verb):
         language_elem.text = "Svenska"
 
         archdesc_elem = SubElement(element_ead, "{%s}archdesc" % namespace_map["ead"],
-                                   attrib={"level": "fonds" if record_dict["arkivetsTyp"].lower() == "arkiv" else "collection"})
+                                   attrib={"level": "fonds" if str(record_dict["arkivetsTyp"]).lower() == "arkiv" else "collection"})
 
         did_elem = SubElement(archdesc_elem, "{%s}did" % namespace_map["ead"])
 
@@ -542,7 +542,7 @@ def populate_ead_records_element(root_xml, record_dict, verb):
         if record_dict["c_tid_arkivetsInnehall"]:
             date_elem = SubElement(did_elem, "{%s}unitdate" % namespace_map["ead"])
             date_elem.text = record_dict["c_tid_arkivetsInnehall"]
-            date_elem.attrib["normal"] = record_dict["c_tid_arkivetsInnehall_maskin"]
+            date_elem.attrib["normal"] = str(record_dict["c_tid_arkivetsInnehall_maskin"])
             date_elem.attrib["label"] = "gransar"
             date_elem.attrib["type"] = "inclusive"
             date_elem.attrib["datechar"] = "creation"
@@ -550,7 +550,7 @@ def populate_ead_records_element(root_xml, record_dict, verb):
         if record_dict["c_tid_arkivetInsamlat"]:
             date_elem = SubElement(did_elem, "{%s}unitdate" % namespace_map["ead"])
             date_elem.text = record_dict["c_tid_arkivetInsamlat"]
-            date_elem.attrib["normal"] = record_dict["c_tid_arkivetInsamlat_maskin"]
+            date_elem.attrib["normal"] = str(record_dict["c_tid_arkivetInsamlat_maskin"])
             date_elem.attrib["label"] = "insamlingsar"
             date_elem.attrib["type"] = "bulk"
             date_elem.attrib["datechar"] = "accumulation"
@@ -558,7 +558,7 @@ def populate_ead_records_element(root_xml, record_dict, verb):
         if record_dict["c_tid_arkivetInlamnat"]:
             date_elem = SubElement(did_elem, "{%s}unitdate" % namespace_map["ead"])
             date_elem.text = record_dict["c_tid_arkivetInlamnat"]
-            date_elem.attrib["normal"] = record_dict["c_tid_arkivetInlamnat_maskin"]
+            date_elem.attrib["normal"] = str(record_dict["c_tid_arkivetInlamnat_maskin"])
             date_elem.attrib["label"] = "inlämningsar"
             date_elem.attrib["type"] = "bulk"
             date_elem.attrib["datechar"] = "accumulation"
@@ -711,7 +711,7 @@ def populate_ead_records_element(root_xml, record_dict, verb):
 
         else:
             with connection.cursor() as cursor:
-                cursor.execute("SELECT * FROM intellectualEntities WHERE c_samlingsnummer = %s", [str(record_dict["nummer"])])
+                cursor.execute("SELECT * FROM intellectualEntities WHERE c_samlingsnummer = %s", [record_dict["nummer"]])
                 result = cursor.fetchall()
 
             for row in result:
@@ -731,10 +731,10 @@ def populate_ead_records_element(root_xml, record_dict, verb):
 
                 unitid_elem = SubElement(did_elem, "{%s}unitid" % namespace_map["ead"],
                                          attrib={"label": "accession_number"})
-                unitid_elem.text = row["funna_unitid"]
+                unitid_elem.text = row["finna_unitid"]
 
                 with connection.cursor() as cursor:
-                    cursor.execute("SELECT * FROM URN WHERE id_IE = %s", [str(row["nummer"])])
+                    cursor.execute("SELECT * FROM URN WHERE id_IE = %s", [row["nummer"]])
                     sub_result = cursor.fetchall()
 
                 for sub_row in sub_result:
@@ -754,7 +754,7 @@ def populate_ead_records_element(root_xml, record_dict, verb):
                     language_elem.text = row["dc_language"]
 
                 with connection.cursor() as cursor:
-                    cursor.execute("SELECT nummer, entity_label, entity_order FROM digitalObjects WHERE c_ienummer=%s ORDER BY entity_order", [str(row["nummer"])])
+                    cursor.execute("SELECT nummer, entity_label, entity_order FROM digitalObjects WHERE c_ienummer=%s ORDER BY entity_order", [row["nummer"]])
                     sub_result = cursor.fetchall()
 
                 for sub_row in sub_result:
@@ -766,8 +766,8 @@ def populate_ead_records_element(root_xml, record_dict, verb):
 
                     with connection.cursor() as cursor:
                         cursor.execute("SELECT derivateObjects.roleTitle, derivateObjects.filePath, digitalObjects.entity_order "
-                                       "FROM derivateObjects JOIN digitalObjects ON derivateObjects.c_do = digitalObjects.nummer"
-                                       "WHERE c_do=%s ORDER BY digitalObjects.entity_order", [str(sub_row["nummer"])])
+                                       "FROM derivateObjects JOIN digitalObjects ON derivateObjects.c_do = digitalObjects.nummer "
+                                       "WHERE c_do=%s ORDER BY digitalObjects.entity_order", [sub_row["nummer"]])
                         sub_sub_result = cursor.fetchall()
 
                     for sub_sub_row in sub_sub_result:
@@ -824,19 +824,20 @@ def populate_ead_records_element(root_xml, record_dict, verb):
                                                 attrib={"lang": "eng"})
                             p_elem.text = row["rights_eng"]
 
-                if row["dc_type"] or row["dc_type2"]:
-                    control_access_elem = SubElement(c_elem, "{%s}controlaccess" % namespace_map["ead"])
-                    head_elem = SubElement(control_access_elem, "{%s}head" % namespace_map["ead"])
-                    head_elem.text = "format"
-                    if ", " in row["dc_type"]:
-                        split_types = row["dc_type"].split(", ")
-                        for dctype in split_types:
-                            if dctype:
-                                genreform_elem = SubElement(control_access_elem, "{%s}genreform" % namespace_map["ead"])
-                                genreform_elem.text = dctype
-                    else:
-                        genreform_elem = SubElement(control_access_elem, "{%s}genreform" % namespace_map["ead"])
-                        genreform_elem.text = row["dc_type"]
+                for dctype in [row["dc_type"], row["dc_type"]]:
+                    if dctype:
+                        control_access_elem = SubElement(c_elem, "{%s}controlaccess" % namespace_map["ead"])
+                        head_elem = SubElement(control_access_elem, "{%s}head" % namespace_map["ead"])
+                        head_elem.text = "format"
+                        if ", " in dctype:
+                            split_types = dctype.split(", ")
+                            for split_type in split_types:
+                                if split_type:
+                                    genreform_elem = SubElement(control_access_elem, "{%s}genreform" % namespace_map["ead"])
+                                    genreform_elem.text = split_type
+                        else:
+                            genreform_elem = SubElement(control_access_elem, "{%s}genreform" % namespace_map["ead"])
+                            genreform_elem.text = dctype
 
                 if row["dc_creator"]:
                     control_access_elem = SubElement(c_elem, "{%s}controlaccess" % namespace_map["ead"])
