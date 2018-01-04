@@ -18,6 +18,31 @@ accessfile_API_endpoint = "http://www.sls.fi/databasen/"
 # TODO get endpoint programmatically
 
 
+def create_element(parent, tag_name, contents, attributes=None, namespace_map=None):
+    if contents:
+        new_elem = SubElement(parent, tag_name, attrib=attributes, nsmap=namespace_map)
+        new_elem.text = contents.strftime("%Y-%m-%d") if isinstance(contents, (datetime.date, datetime.datetime)) else contents
+        return new_elem
+
+
+def create_empty_element(parent, tag_name, attributes=None, namespace_map=None):
+    new_elem = SubElement(parent, tag_name, attrib=attributes, nsmap=namespace_map)
+    new_elem.text = ""
+    return new_elem
+
+
+def create_split_element(parent, tag_name, contents, attributes=None, namespace_map=None, delimiter=", "):
+    if contents:
+        if delimiter in contents:
+            split_contents = contents.split(delimiter)
+            for content in split_contents:
+                new_elem = SubElement(parent, tag_name, attrib=attributes, nsmap=namespace_map)
+                new_elem.text = content
+        else:
+            new_elem = SubElement(parent, tag_name, attrib=attributes, nsmap=namespace_map)
+            new_elem.text = contents
+
+
 def validate_request(request):
     valid_params = {}
     error = None
@@ -185,42 +210,29 @@ def populate_identify_element(base_url, root_xml, earliest_date_stamp):
 
 def populate_listsets_element(root_xml):
     europeana_set_element = SubElement(root_xml, "set")
-    europeana_spec = SubElement(europeana_set_element, "setSpec")
-    europeana_spec.text = "SLSeuropeana"
-    europeana_name = SubElement(europeana_set_element, "setName")
-    europeana_name.text = "SLS material till Europeana"
+    create_element(europeana_set_element, "setSpec", "SLSeuropeana")
+    create_element(europeana_set_element, "setName", "SLS material till Europeana")
 
     finna_set_element = SubElement(root_xml, "set")
-    finna_spec = SubElement(finna_set_element, "setSpec")
-    finna_spec.text = "SLSfinna"
-    finna_name = SubElement(finna_set_element, "setName")
-    finna_name.text = "SLS material till Finna/NDB"
+    create_element(finna_set_element, "setSpec", "SLSfinna")
+    create_element(finna_set_element, "setName", "SLS material till Finna/NDB")
 
 
 def populate_listmetadataformats_element(root_xml):
     oai_dc_root = SubElement(root_xml, "metadataFormat")
-    oai_dc_prefix = SubElement(oai_dc_root, "metadataPrefix")
-    oai_dc_prefix.text = "oai_dc"
-    oai_dc_schema = SubElement(oai_dc_root, "schema")
-    oai_dc_schema.text = "http://www.openarchives.org/OAI/2.0/oai_dc.xsd"
-    oai_dc_namespace = SubElement(oai_dc_root, "metadataNamespace")
-    oai_dc_namespace.text = "http://www.openarchives.org/OAI/2.0/oai_dc/"
+    create_element(oai_dc_root, "metadataPrefix", "oai_dc")
+    create_element(oai_dc_root, "schema", "http://www.openarchives.org/OAI/2.0/oai_dc.xsd")
+    create_element(oai_dc_root, "metadataNamespace", "http://www.openarchives.org/OAI/2.0/oai_dc/")
 
     europeana_root = SubElement(root_xml, "metadataFormat")
-    europeana_prefix = SubElement(europeana_root, "metadataPrefix")
-    europeana_prefix.text = "europeana"
-    europeana_schema = SubElement(europeana_root, "schema")
-    europeana_schema.text = "http://www.europeana.eu/schemas/ese/ESE-V3.4.xsd"
-    europeana_namespace = SubElement(europeana_root, "metadataNamespace")
-    europeana_namespace.text = "http://www.europeana.eu/schemas/ese/"
+    create_element(europeana_root, "metadataPrefix", "europeana")
+    create_element(europeana_root, "schema", "http://www.europeana.eu/schemas/ese/ESE-V3.4.xsd")
+    create_element(europeana_root, "metadataNamespace", "http://www.europeana.eu/schemas/ese/")
 
     ead_root = SubElement(root_xml, "metadataFormat")
-    ead_prefix = SubElement(ead_root, "metadataPrefix")
-    ead_prefix.text = "ead"
-    ead_schema = SubElement(ead_root, "schema")
-    ead_schema.text = "http://www.loc.gov/ead/ead.xsd"
-    ead_namespace = SubElement(ead_root, "metadataNamespace")
-    ead_namespace.text = "http://www.loc.gov/ead"
+    create_element(ead_root, "metadataPrefix", "ead")
+    create_element(ead_root, "schema", "http://www.loc.gov/ead/ead.xsd")
+    create_element(ead_root, "metadataNamespace", "http://www.loc.gov/ead")
 
 
 def populate_records_element(root_xml, record_dict, metadata_prefix, verb):
@@ -231,22 +243,13 @@ def populate_records_element(root_xml, record_dict, metadata_prefix, verb):
     else:
         record = SubElement(root_xml, "header")
         element = record
-    identifier = SubElement(element, "identifier")
-    identifier.text = record_dict["identifier"]
-    datestamp = SubElement(element, "datestamp")
-    datestamp.text = record_dict["date_modified"]
+    create_element(element, "identifier", record_dict["identifier"])
+    create_element(element, "datestamp", record_dict["date_modified"])
+
     if record_dict["to_europeana"]:
-        set_spec = SubElement(element, "setSpec")
-        set_spec.text = "SLSeuropeana"
-        # if verb == "GetRecord":
-        #     set_name = SubElement(element, "setName")
-        #     set_name.text = "SLS material till Europeana"
+        create_element(element, "setSpec", "SLSeuropeana")
     if record_dict["to_ndb"]:
-        set_spec = SubElement(element, "setSpec")
-        set_spec.text = "SLSfinna"
-        # if verb == "GetRecord":
-        #     set_name = SubElement(element, "setName")
-        #     set_name.text = "SLS material till Finna/NDB"
+        create_element(element, "setSpec", "SLSfinna")
     if record_dict["status"] == "deleted":
         element.attrib["status"] = "deleted"
     elif verb == "ListRecords" or verb == "GetRecord":
@@ -261,137 +264,98 @@ def populate_records_element(root_xml, record_dict, metadata_prefix, verb):
         else:
             container = SubElement(element, "{%s}dc" % namespace_map["oai_dc"])
 
-        if record_dict["dc_title"]:
-            title_elem = SubElement(container, "{%s}title" % namespace_map["dc"])
-            title_elem.text = record_dict["dc_title"]
+        # dc:title
+        create_element(container, "{%s}title" % namespace_map["dc"], record_dict["dc_title"])
 
-        if record_dict["dc_type2"]:
-            type_elem = SubElement(container, "{%s}type" % namespace_map["dc"], attrib={"{%s}lang" % xml: "sv"}, nsmap=namespace_map)
-            type_elem.text = record_dict["dc_type2"]
+        # dc:type
+        create_element(container, "{%s}type" % namespace_map["dc"], record_dict["dc_type2"],
+                       attributes={"{%s}lang" % xml: "sv"}, namespace_map=namespace_map)
 
+        # dc:type
         if record_dict["DC2_type"] and record_dict["DC2_type"].lower() == "sound":
-            label_elem = SubElement(container, "{%s}type" % namespace_map["dc"], attrib={"{%s}lang" % xml: "sv"}, nsmap=namespace_map)
-            label_elem.text = record_dict["entity_label"]
+            create_element(container, "{%s}type" % namespace_map["dc"], record_dict["entity_label"],
+                           attributes={"{%s}lang" % xml: "sv"}, namespace_map=namespace_map)
 
-        if record_dict["dc_type2_eng"]:
-            type_elem = SubElement(container, "{%s}type" % namespace_map["dc"], attrib={"{%s}lang" % xml: "en"}, nsmap=namespace_map)
-            type_elem.text = record_dict["dc_type2_eng"]
+        # dc:type
+        create_element(container, "{%s}type" % namespace_map["dc"], record_dict["dc_type2_eng"],
+                       attributes={"{%s}lang" % xml: "en"}, namespace_map=namespace_map)
 
-        if record_dict["dc_subject"]:
-            if ", " in record_dict["dc_subject"]:
-                for split_subject in record_dict["dc_subject"].split(", "):
-                    if split_subject:
-                        subject_elem = SubElement(container, "{%s}subject" % namespace_map["dc"], attrib={"{%s}lang" % xml: "sv"})
-                        subject_elem.text = split_subject
-            else:
-                subject_elem = SubElement(container, "{%s}subject" % namespace_map["dc"], attrib={"{%s}lang" % xml: "sv"}, nsmap=namespace_map)
-                subject_elem.text = record_dict["dc_subject"]
+        # dc:subject
+        create_split_element(container, "{%s}subject" % namespace_map["dc"], record_dict["dc_subject"],
+                             attributes={"{%s}lang" % xml: "sv"}, namespace_map=namespace_map)
 
-        if record_dict["dc_description"]:
-            description_elem = SubElement(container, "{%s}description" % namespace_map["dc"], attrib={"{%s}lang" % xml: "sv"}, nsmap=namespace_map)
-            description_elem.text = record_dict["dc_description"]
+        # dc:description
+        create_element(container, "{%s}description" % namespace_map["dc"], record_dict["dc_description"],
+                       attributes={"{%s}lang" % xml: "sv"}, namespace_map=namespace_map)
 
+        # dc:description
         if record_dict["DC2_type"] and record_dict["DC2_type"].lower() == "text":
-            description_elem = SubElement(container, "{%s}description" % namespace_map["dc"], attrib={"{%s}lang" % xml: "sv"}, nsmap=namespace_map)
-            description_elem.text = record_dict["entity_label"]
+            create_element(container, "{%s}description" % namespace_map["dc"], record_dict["entity_label"],
+                           attributes={"{%s}lang" % xml: "sv"}, namespace_map=namespace_map)
 
-        if record_dict["dc_source"]:
-            source_elem = SubElement(container, "{%s}source" % namespace_map["dc"])
-            source_elem.text = record_dict["dc_source"]
+        # dc:source
+        create_element(container, "{%s}source" % namespace_map["dc"], record_dict["dc_source"])
 
         if metadata_prefix == "europeana":
-            if record_dict["arkivetsNamn"]:
-                is_part_of_elem = SubElement(container, "{%s}isPartOf" % namespace_map["dcterms"])
-                is_part_of_elem.text = record_dict["arkivetsNamn"]
-            if record_dict["c_signum"]:
-                is_part_of_elem = SubElement(container, "{%s}isPartOf" % namespace_map["dcterms"])
-                is_part_of_elem.text = record_dict["c_signum"]
+            # dcterms:isPartOf
+            create_element(container, "{%s}isPartOf" % namespace_map["dcterms"], record_dict["arkivetsNamn"])
+            create_element(container, "{%s}isPartOf" % namespace_map["dcterms"], record_dict["c_signum"])
 
+            # dcterms:spatial
             for i in range(1, 5):
-                spatial_term = record_dict["dcterms_spatial{}".format(i) if i != 1 else "dcterms_spatial"]
-                if spatial_term and ", " in spatial_term:
-                    split_terms = spatial_term.split(", ")
-                    for term in split_terms:
-                        spatial_elem = SubElement(container, "{%s}spatial" % namespace_map["dcterms"], attrib={"{%s}lang" % xml: "sv"}, nsmap=namespace_map)
-                        spatial_elem.text = term
-                elif spatial_term:
-                    spatial_elem = SubElement(container, "{%s}spatial" % namespace_map["dcterms"], attrib={"{%s}lang" % xml: "sv"}, nsmap=namespace_map)
-                    spatial_elem.text = record_dict["dcterms_spatial{}".format(i) if i != 1 else "dcterms_spatial"]
+                create_split_element(container, "{%s}spatial" % namespace_map["dcterms"], record_dict["dcterms_spatial{}".format(i) if i != 1 else "dcterms_spatial"],
+                                     attributes={"{%s}lang" % xml: "sv"}, namespace_map=namespace_map)
 
-            if record_dict["dcterms_created_maskinlasbart"]:
-                created_elem = SubElement(container, "{%s}created" % namespace_map["dcterms"], attrib={"{%s}type" % namespace_map["xsi"]: "dcterms:W3CDTF"})
-                created_elem.text = record_dict["dcterms_created_maskinlasbart"]
+            # dctrems:created
+            create_element(container, "{%s}created" % namespace_map["dcterms"], record_dict["dcterms_created_maskinlasbart"],
+                           attributes={"{%s}type" % namespace_map["xsi"]: "dcterms:W3CDTF"})
 
-            if record_dict["dcterms_isReferencedBy"]:
-                is_referenced_by_elem = SubElement(container, "{%s}isReferencedBy" % namespace_map["dcterms"])
-                is_referenced_by_elem.text = record_dict["dcterms_isReferencedBy"]
+            # dcterms:isReferencedBy
+            create_element(container, "{%s}isReferencedBy" % namespace_map["dcterms"], record_dict["dcterms_isReferencedBy"])
 
-            if record_dict["dc_identifier"]:
-                is_format_of_elem = SubElement(container, "{%s}isFormatOf" % namespace_map["dcterms"])
-                is_format_of_elem.text = record_dict["dc_identifier"]
+            # dcterms:isFormatOf
+            create_element(container, "{%s}isFormatOf" % namespace_map["dcterms"], record_dict["dc_identifier"])
 
-            if record_dict["dc_source_dimensions"] or record_dict["duration"]:
-                extent_elem = SubElement(container, "{%s}extent" % namespace_map["dcterms"])
-                if record_dict["dc_source_dimensions"]:
-                    extent_elem.text = record_dict["dc_source_dimensions"]
-                else:
-                    extent_elem.text = record_dict["duration"]
+            # dcterms:extent
+            create_element(container, "{%s}extent" % namespace_map["dcterms"],
+                           record_dict["dc_source_dimensions"] if record_dict["dc_source_dimensions"] else record_dict["duration"])
 
-            if record_dict["dc_source2"]:
-                medium_elem = SubElement(container, "{%s}medium" % namespace_map["dcterms"])
-                medium_elem.text = record_dict["dc_source2"]
+            # dcterms:medium
+            create_element(container, "{%s}medium" % namespace_map["dcterms"], record_dict["dc_source2"])
+
         else:
-            if record_dict["arkivetsNamn"]:
-                relation_elem = SubElement(container, "{%s}relation" % namespace_map["dc"])
-                relation_elem.text = record_dict["arkivetsNamn"]
-            if record_dict["c_signum"]:
-                relation_elem = SubElement(container, "{%s}relation" % namespace_map["dc"])
-                relation_elem.text = record_dict["c_signum"]
+            # dc:relation
+            create_element(container, "{%s}relation" % namespace_map["dc"], record_dict["arkivetsNamn"])
+            create_element(container, "{%s}relation" % namespace_map["dc"], record_dict["c_signum"])
 
+            # dc:coverage
             for i in range(1, 5):
-                spatial_term = record_dict["dcterms_spatial{}".format(i) if i != 1 else "dcterms_spatial"]
-                if spatial_term and ", " in spatial_term:
-                    split_terms = spatial_term.split(", ")
-                    for term in split_terms:
-                        spatial_elem = SubElement(container, "{%s}spatial" % namespace_map["dcterms"],
-                                                  attrib={"{%s}lang" % xml: "sv"}, nsmap=namespace_map)
-                        spatial_elem.text = term
-                elif spatial_term:
-                    spatial_elem = SubElement(container, "{%s}spatial" % namespace_map["dcterms"],
-                                              attrib={"{%s}lang" % xml: "sv"}, nsmap=namespace_map)
-                    spatial_elem.text = record_dict["dcterms_spatial{}".format(i) if i != 1 else "dcterms_spatial"]
+                create_split_element(container, "{%s}coverage" % namespace_map["dc"],
+                                     record_dict["dcterms_spatial{}".format(i) if i != 1 else "dcterms_spatial"],
+                                     attributes={"{%s}lang" % xml: "sv"}, namespace_map=namespace_map)
 
-            if record_dict["dcterms_created_maskinlasbart"]:
-                date_elem = SubElement(container, "{%s}date" % namespace_map["dc"], attrib={"{%s}type" % namespace_map["xsi"]: "dcterms:W3CDTF"})
-                date_elem.text = record_dict["dcterms_created_maskinlasbart"]
+            # dc:date
+            create_element(container, "{%s}date" % namespace_map["dc"], record_dict["dcterms_created_maskinlasbart"],
+                           attributes={"{%s}type" % namespace_map["xsi"]: "dcterms:W3CDTF"})
 
-            if record_dict["dcterms_isReferencedBy"]:
-                relation_elem = SubElement(container, "{%s}relation" % namespace_map["dc"])
-                relation_elem.text = record_dict["dcterms_isReferencedBy"]
+            # dc:relation
+            create_element(container, "{%s}relation" % namespace_map["dc"], record_dict["dcterms_isReferencedBy"])
+            create_element(container, "{%s}relation" % namespace_map["dc"], record_dict["dc_identifier"])
 
-            if record_dict["dc_identifier"]:
-                relation_elem = SubElement(container, "{%s}relation" % namespace_map["dc"])
-                relation_elem.text = record_dict["dc_identifier"]
+            # dc:format
+            create_element(container, "{%s}format" % namespace_map["dc"],
+                           record_dict["dc_source_dimensions"] if record_dict["dc_source_dimensions"] else record_dict["duration"])
 
-            if record_dict["dc_source_dimensions"] or record_dict["duration"]:
-                format_elem = SubElement(container, "{%s}format" % namespace_map["dc"])
-                if record_dict["dc_source_dimensions"]:
-                    format_elem.text = record_dict["dc_source_dimensions"]
-                else:
-                    format_elem.text = record_dict["duration"]
+            create_element(container, "{%s}format" % namespace_map["dc"], record_dict["dc_source2"])
 
-            if record_dict["dc_source2"]:
-                format_elem = SubElement(container, "{%s}format" % namespace_map["dc"])
-                format_elem.text = record_dict["dc_source2"]
+        # dc:format
+        create_element(container, "{%s}format" % namespace_map["dc"], record_dict["filetype_MIME"],
+                       attributes={"{%s}type" % namespace_map["xsi"]: "dcterms:IMT"})
 
-        if record_dict["filetype_MIME"]:
-            format_elem = SubElement(container, "{%s}format" % namespace_map["dc"], attrib={"{%s}type" % namespace_map["xsi"]: "dcterms:IMT"})
-            format_elem.text = record_dict["filetype_MIME"]
+        # dc:creator
+        create_element(container, "{%s}creator" % namespace_map["dc"], record_dict["dc_creator"])
 
-        if record_dict["dc_creator"]:
-            creator_elem = SubElement(container, "{%s}creator" % namespace_map["dc"])
-            creator_elem.text = record_dict["dc_creator"]
-
+        # dc:publisher
         # join together the two publisher fields
         publisher = ""
         if record_dict["dc_publisher"]:
@@ -400,81 +364,82 @@ def populate_records_element(root_xml, record_dict, metadata_prefix, verb):
             if len(publisher) > 0:
                 publisher += ", "
             publisher += record_dict["dc_publisher2"]
-        if publisher:
-            publisher_elem = SubElement(container, "{%s}publisher" % namespace_map["dc"])
-            publisher_elem.text = publisher
+        create_element(container, "{%s}publisher" % namespace_map["dc"], publisher)
 
-        if record_dict["dc_rights"]:
-            rights_elem = SubElement(container, "{%s}rights" % namespace_map["dc"], attrib={"{%s}lang" % xml: "sv"}, nsmap=namespace_map)
-            rights_elem.text = record_dict["dc_rights"]
+        # dc:rights
+        create_element(container, "{%s}rights" % namespace_map["dc"], record_dict["dc_rights"],
+                       attributes={"{%s}lang" % xml: "sv"}, namespace_map=namespace_map)
 
-        if record_dict["DCterms_issued"]:
-            if metadata_prefix == "europeana":
-                issued_elem = SubElement(container, "{%s}issued" % namespace_map["dcterms"], attrib={"{%s}type" % namespace_map["xsi"]: "dcterms:W3CDTF"})
-            else:
-                issued_elem = SubElement(container, "{%s}date" % namespace_map["dc"], attrib={"{%s}type" % namespace_map["xsi"]: "dcterms:W3CDTF"})
-            issued_elem.text = record_dict["DCterms_issued"].strftime("%Y-%m-%d")
+        # dcterms:issued / dc:date
+        if metadata_prefix == "europeana":
+            create_element(container, "{%s}issued" % namespace_map["dcterms"], record_dict["DCterms_issued"],
+                           attributes={"{%s}type" % namespace_map["xsi"]: "dcterms:W3CDTF"})
+        else:
+            create_element(container, "{%s}date" % namespace_map["dc"], record_dict["DCterms_issued"],
+                           attributes={"{%s}type" % namespace_map["xsi"]: "dcterms:W3CDTF"})
 
-        if record_dict["identifier"]:
-            identifier_elem = SubElement(container, "{%s}identifier" % namespace_map["dc"])
-            identifier_elem.text = record_dict["identifier"]
+        # dc:identifier
+        create_element(container, "{%s}identifier" % namespace_map["dc"], record_dict["identifier"])
 
-        if record_dict["dc_language"]:
-            language_elem = SubElement(container, "{%s}language" % namespace_map["dc"], attrib={"{%s}type" % namespace_map["xsi"]: "dcterms:ISO639-2"})
-            language_elem.text = record_dict["dc_language"]
+        # dc:language
+        create_element(container, "{%s}language" % namespace_map["dc"], record_dict["dc_language"],
+                       attributes={"{%s}type" % namespace_map["xsi"]: "dcterms:ISO639-2"})
 
         if metadata_prefix == "europeana":
+            # europeana namespace
+            # object
             if record_dict["derivate_filepath"]:
-                filepath_elem = SubElement(container, "{%s}object" % namespace_map["europeana"])
-                filepath_elem.text = "{}{}".format(accessfile_API_endpoint, record_dict["derivate_filepath"])
+                create_element(container, "{%s}object" % namespace_map["europeana"],
+                               "{}{}".format(accessfile_API_endpoint, record_dict["derivate_filepath"]))
 
-            provider_elem = SubElement(container, "{%s}provider" % namespace_map["europeana"])
-            provider_elem.text = "National Formula agreement"
+            # provider
+            create_element(container, "{%s}provider" % namespace_map["europeana"], "National Formula agreement")
 
-            if record_dict["ESE_type"]:
-                type_elem = SubElement(container, "{%s}type" % namespace_map["europeana"])
-                type_elem.text = record_dict["ESE_type"]
+            # type
+            create_element(container, "{%s}type" % namespace_map["europeana"], record_dict["ESE_type"])
 
-            if record_dict["europeanaRights"]:
-                rights_elem = SubElement(container, "{%s}rights" % namespace_map["europeana"])
-                rights_elem.text = record_dict["europeanaRights"]
+            # rights
+            create_element(container, "{%s}rights" % namespace_map["europeana"], record_dict["europeanaRights"])
 
-            dataprovider_elem = SubElement(container, "{%s}dataProvider" % namespace_map["europeana"])
-            dataprovider_elem.text = "Svenska litteratursällskapet i Finland"
+            # dataProvider
+            create_element(container, "{%s}dataProvider" % namespace_map["europeana"], "Svenska litteratursällskapet i Finland")
 
+            # isShownBy
             if record_dict["derivate_filepath"]:
-                shownby_elem = SubElement(container, "{%s}isShownBy" % namespace_map["europeana"])
-                shownby_elem.text = "{}{}".format(accessfile_API_endpoint, record_dict["derivate_filepath"])
+                create_element(container, "{%s}isShownBy" % namespace_map["europeana"],
+                               "{}{}".format(accessfile_API_endpoint, record_dict["derivate_filepath"]))
+            # isShownAt
+            if record_dict["DC2_type"] and record_dict["DC2_type"].lower() == "sound":
+                create_element(container, "{%s}isShownAt" % namespace_map["europeana"], record_dict["c_isReferencedBy_URL"])
 
-            if record_dict["DC2_type"] and record_dict["DC2_type"].lower() == "sound" and record_dict["c_isReferencedBy_URL"]:
-                shownat_elem = SubElement(container, "{%s}isShownAt" % namespace_map["europeana"])
-                shownat_elem.text = record_dict["c_isReferencedBy_URL"]
         else:
+            # dc:identifier
             if record_dict["derivate_filepath"]:
-                filepath_elem = SubElement(container, "{%s}identifier" % namespace_map["dc"], attrib={"{%s}type" % namespace_map["xsi"]: "dcterms:URI"})
-                filepath_elem.text = "{}{}".format(accessfile_API_endpoint, record_dict["derivate_filepath"])
+                create_element(container, "{%s}identifier" % namespace_map["dc"],
+                               "{}{}".format(accessfile_API_endpoint, record_dict["derivate_filepath"]),
+                               attributes={"{%s}type" % namespace_map["xsi"]: "dcterms:URI"})
 
-            publisher_elem = SubElement(container, "{%s}publisher" % namespace_map["dc"])
-            publisher_elem.text = "National Formula agreement"
+            # dc:publisher
+            create_element(container, "{%s}publisher" % namespace_map["dc"], "National Formula agreement")
 
-            if record_dict["ESE_type"]:
-                type_elem = SubElement(container, "{%s}type" % namespace_map["dc"], attrib={"{%s}type" % namespace_map["xsi"]: "dcterms:DCMItype"})
-                type_elem.text = record_dict["ESE_type"]
+            # dc:type
+            create_element(container, "{%s}type" % namespace_map["dc"], record_dict["ESE_type"],
+                           attributes={"{%s}type" % namespace_map["xsi"]: "dcterms:DCMItype"})
 
-            if record_dict["europeanaRights"]:
-                rights_elem = SubElement(container, "{%s}rights" % namespace_map["dc"])
-                rights_elem.text = record_dict["europeanaRights"]
+            # dc:rights
+            create_element(container, "{%s}rights" % namespace_map["dc"], record_dict["europeanaRights"])
 
-            publisher_elem = SubElement(container, "{%s}publisher" % namespace_map["dc"])
-            publisher_elem.text = "Svenska litteratursällskapet i Finland"
+            # dc:publisher
+            create_element(container, "{%s}publisher" % namespace_map["dc"], "Svenska litteratursällskapet i Finland")
 
+            # dc:identifier
             if record_dict["derivate_filepath"]:
-                identifier_elem = SubElement(container, "{%s}identifier" % namespace_map["dc"], attrib={"{%s}type" % namespace_map["xsi"]: "dcterms:URI"})
-                identifier_elem.text = "http://api.sls.fi/images/{}".format(record_dict["derivate_filepath"])
-
+                create_element(container, "{%s}identifier" % namespace_map["dc"],
+                               "{}{}".format(accessfile_API_endpoint, record_dict["derivate_filepath"]),
+                               attributes={"{%s}type" % namespace_map["xsi"]: "dcterms:URI"})
             if record_dict["DC2_type"].lower() == "sound":
-                identifier_elem = SubElement(container, "{%s}identifier" % namespace_map["dc"], attrib={"{%s}type" % namespace_map["xsi"]: "dcterms:URI"})
-                identifier_elem.text = record_dict["c_isReferencedBy_URL"]
+                create_element(container, "{%s}identifier" % namespace_map["dc"], record_dict["c_isReferencedBy_URL"],
+                               attributes={"{%s}type" % namespace_map["xsi"]: "dcterms:URI"})
 
 
 def populate_ead_records_element(root_xml, record_dict, verb):
