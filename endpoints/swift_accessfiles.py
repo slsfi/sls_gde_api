@@ -19,8 +19,7 @@ with open(derivate_objects_list_file) as list_file:
         valid_files.add(line.strip())
 
 
-def get_file_or_none(filename):
-    # TODO maybe get MIME type from FileMaker somehow?
+def get_file_if_on_list(filename):
     mime_type = mimetypes.guess_type(filename)[0]
     if mime_type is None:
         mime_type = "application/octet-stream"  # Unknown file type, arbitrary binary data
