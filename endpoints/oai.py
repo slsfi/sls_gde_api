@@ -555,8 +555,9 @@ def populate_ead_records_element(root_xml, record_dict, verb):
         head_elem = SubElement(did_elem, "{%s}head" % namespace_map["ead"])
         head_elem.text = "Huvudkatalog"
 
-        title_elem = SubElement(did_elem, "{%s}unittitle" % namespace_map["ead"])
-        title_elem.text = record_dict["arkivetsNamn"]
+        if record_dict["arkivetsNamn"]:
+            title_elem = SubElement(did_elem, "{%s}unittitle" % namespace_map["ead"])
+            title_elem.text = record_dict["arkivetsNamn"]
 
         if record_dict["c_tid_arkivetsInnehall"]:
             date_elem = SubElement(did_elem, "{%s}unitdate" % namespace_map["ead"])
