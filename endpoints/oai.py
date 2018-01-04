@@ -13,7 +13,8 @@ valid_OAI_verbs = ["Identify", "ListSets", "ListMetadataFormats", "ListIdentifie
 config_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "configs")
 with open(os.path.join(config_dir, "mysql.yml")) as mysql_config_file:
     mysql_config = yaml.load(mysql_config_file)
-accessfile_API_endpoint = "http://api.sls.fi/accessfiles/"
+# accessfile_API_endpoint = "http://api.sls.fi/accessfiles/"
+accessfile_API_endpoint = "http://www.sls.fi/databasen/"
 # TODO get endpoint programmatically
 
 
@@ -36,15 +37,15 @@ def validate_request(request):
         except Exception:
             error = ("badArgument", "From-date malformed")
         else:
-            valid_params["from"] = from_date
+            valid_params["from"] = from_date.strftime("%Y-%m-%d")
 
     if "until" in request.args:
         try:
-            from_date = parse(request.args["until"])
+            until_date = parse(request.args["until"])
         except Exception:
             error = ("badArgument", "Until-date malformed")
         else:
-            valid_params["until"] = from_date
+            valid_params["until"] = until_date.strftime("%Y-%m-%d")
 
     if "identifier" in request.args:
         valid_params["identifier"] = request.args["identifier"]
@@ -250,8 +251,8 @@ def populate_records_element(root_xml, record_dict, metadata_prefix, verb):
         element.attrib["status"] = "deleted"
     elif verb == "ListRecords" or verb == "GetRecord":
         # Add record metadata, lots of it.
-        xml = "http://www.w3.org/XML/1998/namespace"
         namespace_map = get_namespace_map(verb)
+        xml = "http://www.w3.org/XML/1998/namespace"
         namespace_map["xml"] = xml
         element = SubElement(record, "metadata")
 
@@ -265,15 +266,15 @@ def populate_records_element(root_xml, record_dict, metadata_prefix, verb):
             title_elem.text = record_dict["dc_title"]
 
         if record_dict["dc_type2"]:
-            type_elem = SubElement(container, "{%s}type" % namespace_map["dc"], attrib={"{%s}lang" % xml: "sv"})
+            type_elem = SubElement(container, "{%s}type" % namespace_map["dc"], attrib={"{%s}lang" % xml: "sv"}, nsmap=namespace_map)
             type_elem.text = record_dict["dc_type2"]
 
-        if record_dict["DC2_type"].lower() == "sound":
-            label_elem = SubElement(container, "{%s}type" % namespace_map["dc"], attrib={"{%s}lang" % xml: "sv"})
+        if record_dict["DC2_type"] and record_dict["DC2_type"].lower() == "sound":
+            label_elem = SubElement(container, "{%s}type" % namespace_map["dc"], attrib={"{%s}lang" % xml: "sv"}, nsmap=namespace_map)
             label_elem.text = record_dict["entity_label"]
 
         if record_dict["dc_type2_eng"]:
-            type_elem = SubElement(container, "{%s}type" % namespace_map["dc"], attrib={"{%s}lang" % xml: "en"})
+            type_elem = SubElement(container, "{%s}type" % namespace_map["dc"], attrib={"{%s}lang" % xml: "en"}, nsmap=namespace_map)
             type_elem.text = record_dict["dc_type2_eng"]
 
         if record_dict["dc_subject"]:
@@ -283,15 +284,15 @@ def populate_records_element(root_xml, record_dict, metadata_prefix, verb):
                         subject_elem = SubElement(container, "{%s}subject" % namespace_map["dc"], attrib={"{%s}lang" % xml: "sv"})
                         subject_elem.text = split_subject
             else:
-                subject_elem = SubElement(container, "{%s}subject" % namespace_map["dc"], attrib={"{%s}lang" % xml: "sv"})
+                subject_elem = SubElement(container, "{%s}subject" % namespace_map["dc"], attrib={"{%s}lang" % xml: "sv"}, nsmap=namespace_map)
                 subject_elem.text = record_dict["dc_subject"]
 
         if record_dict["dc_description"]:
-            description_elem = SubElement(container, "{%s}description" % namespace_map["dc"], attrib={"{%s}lang" % xml: "sv"})
+            description_elem = SubElement(container, "{%s}description" % namespace_map["dc"], attrib={"{%s}lang" % xml: "sv"}, nsmap=namespace_map)
             description_elem.text = record_dict["dc_description"]
 
-        if record_dict["DC2_type"].lower() == "text":
-            description_elem = SubElement(container, "{%s}description" % namespace_map["dc"], attrib={"{%s}lang" % xml: "sv"})
+        if record_dict["DC2_type"] and record_dict["DC2_type"].lower() == "text":
+            description_elem = SubElement(container, "{%s}description" % namespace_map["dc"], attrib={"{%s}lang" % xml: "sv"}, nsmap=namespace_map)
             description_elem.text = record_dict["entity_label"]
 
         if record_dict["dc_source"]:
@@ -307,8 +308,14 @@ def populate_records_element(root_xml, record_dict, metadata_prefix, verb):
                 is_part_of_elem.text = record_dict["c_signum"]
 
             for i in range(1, 5):
-                if record_dict["dcterms_spatial{}".format(i) if i != 1 else "dcterms_spatial"]:
-                    spatial_elem = SubElement(container, "{%s}spatial" % namespace_map["dcterms"], attrib={"{%s}lang" % xml: "sv"})
+                spatial_term = record_dict["dcterms_spatial{}".format(i) if i != 1 else "dcterms_spatial"]
+                if spatial_term and ", " in spatial_term:
+                    split_terms = spatial_term.split(", ")
+                    for term in split_terms:
+                        spatial_elem = SubElement(container, "{%s}spatial" % namespace_map["dcterms"], attrib={"{%s}lang" % xml: "sv"}, nsmap=namespace_map)
+                        spatial_elem.text = term
+                elif spatial_term:
+                    spatial_elem = SubElement(container, "{%s}spatial" % namespace_map["dcterms"], attrib={"{%s}lang" % xml: "sv"}, nsmap=namespace_map)
                     spatial_elem.text = record_dict["dcterms_spatial{}".format(i) if i != 1 else "dcterms_spatial"]
 
             if record_dict["dcterms_created_maskinlasbart"]:
@@ -326,7 +333,7 @@ def populate_records_element(root_xml, record_dict, metadata_prefix, verb):
             if record_dict["dc_source_dimensions"] or record_dict["duration"]:
                 extent_elem = SubElement(container, "{%s}extent" % namespace_map["dcterms"])
                 if record_dict["dc_source_dimensions"]:
-                    extent_elem.text = record_dict["dc_source_dimentions"]
+                    extent_elem.text = record_dict["dc_source_dimensions"]
                 else:
                     extent_elem.text = record_dict["duration"]
 
@@ -342,9 +349,17 @@ def populate_records_element(root_xml, record_dict, metadata_prefix, verb):
                 relation_elem.text = record_dict["c_signum"]
 
             for i in range(1, 5):
-                if record_dict["dcterms_spatial{}".format(i) if i != 1 else "dcterms_spatial"]:
-                    coverage_elem = SubElement(container, "{%s}coverage" % namespace_map["dc"], attrib={"{%s}lang" % xml: "sv"})
-                    coverage_elem.text = record_dict["dcterms_spatial{}".format(i) if i != 1 else "dcterms_spatial"]
+                spatial_term = record_dict["dcterms_spatial{}".format(i) if i != 1 else "dcterms_spatial"]
+                if spatial_term and ", " in spatial_term:
+                    split_terms = spatial_term.split(", ")
+                    for term in split_terms:
+                        spatial_elem = SubElement(container, "{%s}spatial" % namespace_map["dcterms"],
+                                                  attrib={"{%s}lang" % xml: "sv"}, nsmap=namespace_map)
+                        spatial_elem.text = term
+                elif spatial_term:
+                    spatial_elem = SubElement(container, "{%s}spatial" % namespace_map["dcterms"],
+                                              attrib={"{%s}lang" % xml: "sv"}, nsmap=namespace_map)
+                    spatial_elem.text = record_dict["dcterms_spatial{}".format(i) if i != 1 else "dcterms_spatial"]
 
             if record_dict["dcterms_created_maskinlasbart"]:
                 date_elem = SubElement(container, "{%s}date" % namespace_map["dc"], attrib={"{%s}type" % namespace_map["xsi"]: "dcterms:W3CDTF"})
@@ -390,7 +405,7 @@ def populate_records_element(root_xml, record_dict, metadata_prefix, verb):
             publisher_elem.text = publisher
 
         if record_dict["dc_rights"]:
-            rights_elem = SubElement(container, "{%s}rights" % namespace_map["dc"], attrib={"{%s}lang" % xml: "sv"})
+            rights_elem = SubElement(container, "{%s}rights" % namespace_map["dc"], attrib={"{%s}lang" % xml: "sv"}, nsmap=namespace_map)
             rights_elem.text = record_dict["dc_rights"]
 
         if record_dict["DCterms_issued"]:
@@ -398,7 +413,7 @@ def populate_records_element(root_xml, record_dict, metadata_prefix, verb):
                 issued_elem = SubElement(container, "{%s}issued" % namespace_map["dcterms"], attrib={"{%s}type" % namespace_map["xsi"]: "dcterms:W3CDTF"})
             else:
                 issued_elem = SubElement(container, "{%s}date" % namespace_map["dc"], attrib={"{%s}type" % namespace_map["xsi"]: "dcterms:W3CDTF"})
-            issued_elem.text = record_dict["DCterms_issued"]
+            issued_elem.text = record_dict["DCterms_issued"].strftime("%Y-%m-%d")
 
         if record_dict["identifier"]:
             identifier_elem = SubElement(container, "{%s}identifier" % namespace_map["dc"])
@@ -431,7 +446,7 @@ def populate_records_element(root_xml, record_dict, metadata_prefix, verb):
                 shownby_elem = SubElement(container, "{%s}isShownBy" % namespace_map["europeana"])
                 shownby_elem.text = "{}{}".format(accessfile_API_endpoint, record_dict["derivate_filepath"])
 
-            if record_dict["DC2_type"].lower() == "sound":
+            if record_dict["DC2_type"] and record_dict["DC2_type"].lower() == "sound" and record_dict["c_isReferencedBy_URL"]:
                 shownat_elem = SubElement(container, "{%s}isShownAt" % namespace_map["europeana"])
                 shownat_elem.text = record_dict["c_isReferencedBy_URL"]
         else:
@@ -490,7 +505,6 @@ def populate_ead_records_element(root_xml, record_dict, verb):
         element.attrib["status"] = "deleted"
     elif verb == "ListRecords" or verb == "GetRecord":
         namespace_map = get_namespace_map(verb)
-        namespace_map["xlink"] = "http://www.w3.org/1999/xlink"
 
         element = SubElement(record, "metadata")
 
@@ -528,8 +542,13 @@ def populate_ead_records_element(root_xml, record_dict, verb):
                                    attrib={"langcode": "swe"})
         language_elem.text = "Svenska"
 
+        level = ""
+        if str(record_dict["arkivetsTyp"]).lower() == "arkiv":
+            level = "fonds"
+        elif str(record_dict["arkivetsTyp"]).lower() == "samling":
+            level = "collection"
         archdesc_elem = SubElement(element_ead, "{%s}archdesc" % namespace_map["ead"],
-                                   attrib={"level": "fonds" if str(record_dict["arkivetsTyp"]).lower() == "arkiv" else "collection"})
+                                   attrib={"level": level})
 
         did_elem = SubElement(archdesc_elem, "{%s}did" % namespace_map["ead"])
 
@@ -542,7 +561,7 @@ def populate_ead_records_element(root_xml, record_dict, verb):
         if record_dict["c_tid_arkivetsInnehall"]:
             date_elem = SubElement(did_elem, "{%s}unitdate" % namespace_map["ead"])
             date_elem.text = record_dict["c_tid_arkivetsInnehall"]
-            date_elem.attrib["normal"] = str(record_dict["c_tid_arkivetsInnehall_maskin"])
+            date_elem.attrib["normal"] = record_dict["c_tid_arkivetsInnehall_maskin"] if record_dict["c_tid_arkivetsInnehall_maskin"] else ""
             date_elem.attrib["label"] = "gransar"
             date_elem.attrib["type"] = "inclusive"
             date_elem.attrib["datechar"] = "creation"
@@ -550,7 +569,7 @@ def populate_ead_records_element(root_xml, record_dict, verb):
         if record_dict["c_tid_arkivetInsamlat"]:
             date_elem = SubElement(did_elem, "{%s}unitdate" % namespace_map["ead"])
             date_elem.text = record_dict["c_tid_arkivetInsamlat"]
-            date_elem.attrib["normal"] = str(record_dict["c_tid_arkivetInsamlat_maskin"])
+            date_elem.attrib["normal"] = record_dict["c_tid_arkivetInsamlat_maskin"] if record_dict["c_tid_arkivetInsamlat_maskin"] else ""
             date_elem.attrib["label"] = "insamlingsar"
             date_elem.attrib["type"] = "bulk"
             date_elem.attrib["datechar"] = "accumulation"
@@ -558,7 +577,7 @@ def populate_ead_records_element(root_xml, record_dict, verb):
         if record_dict["c_tid_arkivetInlamnat"]:
             date_elem = SubElement(did_elem, "{%s}unitdate" % namespace_map["ead"])
             date_elem.text = record_dict["c_tid_arkivetInlamnat"]
-            date_elem.attrib["normal"] = str(record_dict["c_tid_arkivetInlamnat_maskin"])
+            date_elem.attrib["normal"] = record_dict["c_tid_arkivetInlamnat_maskin"] if record_dict["c_tid_arkivetInlamnat_maskin"] else ""
             date_elem.attrib["label"] = "inlämningsar"
             date_elem.attrib["type"] = "bulk"
             date_elem.attrib["datechar"] = "accumulation"
@@ -608,10 +627,12 @@ def populate_ead_records_element(root_xml, record_dict, verb):
         corp_elem = SubElement(repo_elem, "{%s}corpname" % namespace_map["ead"])
         corp_elem.text = "SLS"
 
-        physloc_elem = SubElement(did_elem, "{%s}physloc" % namespace_map["ead"])
-        physloc_elem.text = record_dict["slsArkiv"]
-        physloc_elem = SubElement(did_elem, "{%s}physloc" % namespace_map["ead"])
-        physloc_elem.text = record_dict["arkivetsPlacering"]
+        if record_dict["slsArkiv"]:
+            physloc_elem = SubElement(did_elem, "{%s}physloc" % namespace_map["ead"])
+            physloc_elem.text = record_dict["slsArkiv"]
+        if record_dict["arkivetsPlacering"]:
+            physloc_elem = SubElement(did_elem, "{%s}physloc" % namespace_map["ead"])
+            physloc_elem.text = record_dict["arkivetsPlacering"]
 
         if record_dict["c_listaPersonerRoll_webb"]:
             persons = record_dict["c_listaPersonerRoll_webb"].split("; ")
@@ -669,7 +690,7 @@ def populate_ead_records_element(root_xml, record_dict, verb):
             bioghist_elem = SubElement(archdesc_elem, "{%s}bioghist" % namespace_map["ead"])
             for person in about_persons:
                 p_elem = SubElement(bioghist_elem, "{%s}p" % namespace_map["ead"])
-                p_elem.text = person.strip()
+                p_elem.text = person
 
         scopecontent_elem = SubElement(archdesc_elem, "{%s}scopecontent" % namespace_map["ead"])
         head_elem = SubElement(scopecontent_elem, "{%s}head" % namespace_map["ead"])
@@ -710,6 +731,8 @@ def populate_ead_records_element(root_xml, record_dict, verb):
             print traceback.format_exc()
 
         else:
+            xlink = "http://www.w3.org/1999/xlink"
+            namespace_map["xlink"] = xlink
             with connection.cursor() as cursor:
                 cursor.execute("SELECT * FROM intellectualEntities WHERE c_samlingsnummer = %s", [record_dict["nummer"]])
                 result = cursor.fetchall()
@@ -719,8 +742,9 @@ def populate_ead_records_element(root_xml, record_dict, verb):
                                     attrib={"level": "item"})
 
                 did_elem = SubElement(c_elem, "{%s}did" % namespace_map["ead"])
-                title_elem = SubElement(did_elem, "{%s}unittitle" % namespace_map["ead"])
-                title_elem.text = row["c_title"]
+                if row["c_title"]:
+                    title_elem = SubElement(did_elem, "{%s}unittitle" % namespace_map["ead"])
+                    title_elem.text = row["c_title"]
 
                 if row["dcterms_created_maskinlasbart"]:
                     date_elem = SubElement(did_elem, "{%s}unitdate" % namespace_map["ead"],
@@ -729,9 +753,10 @@ def populate_ead_records_element(root_xml, record_dict, verb):
                     date_elem.attrib["type"] = "bulk"
                     date_elem.attrib["datechar"] = "creation"
 
-                unitid_elem = SubElement(did_elem, "{%s}unitid" % namespace_map["ead"],
-                                         attrib={"label": "accession_number"})
-                unitid_elem.text = row["finna_unitid"]
+                if row["finna_unitid"]:
+                    unitid_elem = SubElement(did_elem, "{%s}unitid" % namespace_map["ead"],
+                                             attrib={"label": "accession_number"})
+                    unitid_elem.text = row["finna_unitid"]
 
                 with connection.cursor() as cursor:
                     cursor.execute("SELECT * FROM URN WHERE id_IE = %s", [row["nummer"]])
@@ -742,11 +767,13 @@ def populate_ead_records_element(root_xml, record_dict, verb):
                                              attrib={"label": "PID"})
                     unitid_elem.text = sub_row["URN"]
 
-                dimensions_elem = SubElement(did_elem, "{%s}dimensions" % namespace_map["ead"])
-                dimensions_elem.text = row["dc_source_dimensions"]
+                if row["dc_source_dimensions"]:
+                    dimensions_elem = SubElement(did_elem, "{%s}dimensions" % namespace_map["ead"])
+                    dimensions_elem.text = row["dc_source_dimensions"]
 
-                physdesc_elem = SubElement(did_elem, "{%s}physdesc" % namespace_map["ead"])
-                physdesc_elem.text = row["dc_source2"]
+                if row["dc_source2"]:
+                    physdesc_elem = SubElement(did_elem, "{%s}physdesc" % namespace_map["ead"])
+                    physdesc_elem.text = row["dc_source2"]
 
                 if row["dc_language"]:
                     langmaterial_elem = SubElement(did_elem, "{%s}langmaterial" % namespace_map["ead"])
@@ -772,7 +799,8 @@ def populate_ead_records_element(root_xml, record_dict, verb):
 
                     for sub_sub_row in sub_sub_result:
                         loc_elem = SubElement(grp_elem, "{%s}daoloc" % namespace_map["ead"],
-                                              attrib={"{%s}label" % namespace_map["xlink"]: sub_sub_row["roleTitle"]})
+                                              attrib={"{%s}label" % xlink: sub_sub_row["roleTitle"]}, nsmap=namespace_map)
+                        loc_elem.text = ""
                         if sub_sub_row["roleTitle"] == "Kundkopia":
                             loc_elem.attrib["role"] = "image_full"
                         elif sub_sub_row["roleTitle"] == "Thumbnail":
@@ -782,7 +810,7 @@ def populate_ead_records_element(root_xml, record_dict, verb):
                         elif sub_sub_row["roleTitle"] == "sound_reference":
                             loc_elem.attrib["role"] = "sound_reference"
 
-                        loc_elem.attrib["{%s}href" % namespace_map["xlink"]] = sub_sub_row["filePath"]
+                        loc_elem.attrib["{%s}href" % xlink] = sub_sub_row["filePath"]
 
                 if row["c_isReferencedBy_URL"]:
                     grp_elem = SubElement(did_elem, "{%s}daogrp" % namespace_map["ead"])
@@ -790,9 +818,10 @@ def populate_ead_records_element(root_xml, record_dict, verb):
                     p_elem = SubElement(desc_elem, "{%s}p" % namespace_map["ead"])
                     p_elem.text = row["c_isReferencedBy_URL"]
                     loc_elem = SubElement(grp_elem, "{%s}daoloc" % namespace_map["ead"],
-                                          attrib={"{%s}label" % namespace_map["xlink"]: "context_www"})
+                                          attrib={"{%s}label" % xlink: "context_www"}, nsmap=namespace_map)
+                    loc_elem.text = ""
                     loc_elem.attrib["role"] = "url"
-                    loc_elem.attrib["{%s}href" % namespace_map["xlink"]] = row["c_isReferencedBy_URL"]
+                    loc_elem.attrib["{%s}href" % xlink] = row["c_isReferencedBy_URL"]
 
                 if row["dc_description"]:
                     scopecontent_elem = SubElement(c_elem, "{%s}scopecontent" % namespace_map["ead"])
@@ -811,8 +840,8 @@ def populate_ead_records_element(root_xml, record_dict, verb):
                         if row["dc_rights"] == "CC BY 4.0":
                             p_elem = SubElement(restrict_elem, "{%s}p" % namespace_map["ead"])
                             p_elem.text = row["dc_rights"]
-                            SubElement(p_elem, "{%s}extptr" % namespace_map["ead"],
-                                       attrib={"href": "https://creativecommons.org/licenses/by/4.0/"})
+                            extptr_elem = SubElement(p_elem, "{%s}extptr" % namespace_map["ead"], attrib={"href": "https://creativecommons.org/licenses/by/4.0/"})
+                            extptr_elem.text = ""
                         else:
                             p_elem = SubElement(restrict_elem, "{%s}p" % namespace_map["ead"],
                                                 attrib={"lang": "swe"})
@@ -824,20 +853,21 @@ def populate_ead_records_element(root_xml, record_dict, verb):
                                                 attrib={"lang": "eng"})
                             p_elem.text = row["rights_eng"]
 
-                for dctype in [row["dc_type"], row["dc_type"]]:
-                    if dctype:
-                        control_access_elem = SubElement(c_elem, "{%s}controlaccess" % namespace_map["ead"])
-                        head_elem = SubElement(control_access_elem, "{%s}head" % namespace_map["ead"])
-                        head_elem.text = "format"
-                        if ", " in dctype:
-                            split_types = dctype.split(", ")
-                            for split_type in split_types:
-                                if split_type:
-                                    genreform_elem = SubElement(control_access_elem, "{%s}genreform" % namespace_map["ead"])
-                                    genreform_elem.text = split_type
-                        else:
-                            genreform_elem = SubElement(control_access_elem, "{%s}genreform" % namespace_map["ead"])
-                            genreform_elem.text = dctype
+                if row["dc_type"] or row["dc_type2"]:
+                    control_access_elem = SubElement(c_elem, "{%s}controlaccess" % namespace_map["ead"])
+                    head_elem = SubElement(control_access_elem, "{%s}head" % namespace_map["ead"])
+                    head_elem.text = "format"
+                    dctype = row["dc_type"] if row["dc_type"] else ""
+
+                    if ", " in dctype:
+                        split_types = dctype.split(", ")
+                        for split_type in split_types:
+                            if split_type:
+                                genreform_elem = SubElement(control_access_elem, "{%s}genreform" % namespace_map["ead"])
+                                genreform_elem.text = split_type
+                    elif dctype:
+                        genreform_elem = SubElement(control_access_elem, "{%s}genreform" % namespace_map["ead"])
+                        genreform_elem.text = dctype
 
                 if row["dc_creator"]:
                     control_access_elem = SubElement(c_elem, "{%s}controlaccess" % namespace_map["ead"])
@@ -888,7 +918,8 @@ def populate_ead_records_element(root_xml, record_dict, verb):
                                                            attrib={"lang": "swe"})
                                 geogname_elem.text = term
                     else:
-                        geogname_elem = SubElement(control_access_elem, "{%s}geogname" % namespace_map["ead"])
+                        geogname_elem = SubElement(control_access_elem, "{%s}geogname" % namespace_map["ead"],
+                                                   attrib={"lang": "swe"})
                         geogname_elem.text = row["dcterms_spatial_full"]
 
                 if row["dcterms_spatial_fin"]:
@@ -903,7 +934,8 @@ def populate_ead_records_element(root_xml, record_dict, verb):
                                                            attrib={"lang": "fin"})
                                 geogname_elem.text = term
                     else:
-                        geogname_elem = SubElement(control_access_elem, "{%s}geogname" % namespace_map["ead"])
+                        geogname_elem = SubElement(control_access_elem, "{%s}geogname" % namespace_map["ead"],
+                                                   attrib={"lang": "fin"})
                         geogname_elem.text = row["dcterms_spatial_fin"]
 
 
@@ -968,6 +1000,6 @@ def generate_sql_query(valid_params):
                 valid_params["identifier"])
     else:
         # verb is Identify
-        sql_query = "SELECT MIN(GREATEST(digitalObjects.date_create, intellectualEntities.date_create, samlingar.date_create)) AS date FROM digitalObjects, intellectualEntities, samlingar WHERE digitalObjects.c_ienummer = intellectualEntities.nummer AND intellectualEntities.c_samlingsnummer = samlingar.nummer"
+        sql_query = "SELECT MIN(GREATEST(digitalObjects.date_modify, intellectualEntities.date_modify, samlingar.date_modify)) AS date FROM digitalObjects, intellectualEntities, samlingar WHERE digitalObjects.c_ienummer = intellectualEntities.nummer AND intellectualEntities.c_samlingsnummer = samlingar.nummer"
 
     return sql_query
