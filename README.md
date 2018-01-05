@@ -20,4 +20,7 @@
 - Needs connection details to MySQL server housing metadata
     - configs/mysql.yml
     - See mysql_example.yml for specifics
-    
+- Uses a C-based MySQL python connector library, mysqlclient
+    - https://github.com/PyMySQL/mysqlclient-python/blob/master/README.md
+    - Difficult to install on Windows, pymysql can be used instead, with ~0.5x performance
+ 
