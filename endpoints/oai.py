@@ -116,7 +116,7 @@ def process_oai_request(request):
     # Ensure the MySQL connection is closed before returning, so that the connection won't be kept alive until timeout
     if connection is not None and connection.open:
         connection.close()
-    return Response(response=return_content, status=return_status, content_type="application/xml")
+    return Response(response=return_content, status=return_status, content_type="text/xml; charset=utf-8")
 
 
 def validate_request(request):
