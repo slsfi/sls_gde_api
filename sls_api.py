@@ -1,7 +1,6 @@
 from __future__ import unicode_literals
 from flask import Flask, abort, Response, request
 
-
 from endpoints.oai import process_oai_request
 from endpoints.swift_accessfiles import get_file_if_on_list
 

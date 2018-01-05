@@ -1,6 +1,7 @@
 Flask==0.12.*
 lxml==4.1.*
+mysqlclient==1.3.*         # Hard to install on windows, use PyMySQL there instead
 python-dateutil==2.6.*
 PyYAML==3.12
-PyMySQL==0.8.*
+#PyMySQL==0.8.*            # Performance is ~2x slower than mysqlclient, but simple to install (pure python)
 requests==2.18.*
