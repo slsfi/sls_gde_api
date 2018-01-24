@@ -1,4 +1,5 @@
 from __future__ import unicode_literals
+from flask import abort, Blueprint, Response
 import mimetypes
 import os
 from io import BytesIO
@@ -7,6 +8,8 @@ import traceback
 import yaml
 import urllib3
 urllib3.disable_warnings()  # TODO signed cert for Isilon Swift
+
+swift = Blueprint("swift", __name__)
 
 config_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "configs")
 derivate_objects_list_file = os.path.join(config_dir, "derivate_objects_list.txt")
@@ -17,6 +20,18 @@ with open(derivate_objects_list_file) as list_file:
     valid_files = set()
     for line in list_file:
         valid_files.add(line.strip())
+
+
+@swift.route('/<path:file_path>', methods=["GET"])
+def get_file_or_404(file_path):
+    """
+    Gets a file from ISILON Swift, if the file is on the configured list of allowed files, otherwise returns 404
+    """
+    file_obj, mime_type = get_file_if_on_list(file_path)
+    if file_obj is None:
+        abort(404)
+    else:
+        return Response(file_obj, status=200, mimetype=mime_type, content_type=mime_type)
 
 
 def get_file_if_on_list(filename):

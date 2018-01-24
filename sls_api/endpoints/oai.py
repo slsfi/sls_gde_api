@@ -3,27 +3,26 @@ from __future__ import unicode_literals
 from collections import OrderedDict
 import datetime
 from dateutil.parser import parse
-from flask import Response
+from flask import Blueprint, Response, request
 from lxml.etree import Element, SubElement, tostring
 import os
-try:
-    import MySQLdb
-    import MySQLdb.cursors
-except ImportError:
-    import pymysql as MySQLdb
+import pymysql
 import traceback
 import yaml
+
+oai = Blueprint("oai", __name__)
 
 valid_OAI_verbs = ["Identify", "ListSets", "ListMetadataFormats", "ListIdentifiers", "ListRecords", "GetRecord"]
 config_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "configs")
 with open(os.path.join(config_dir, "mysql.yml")) as mysql_config_file:
-    mysql_config = yaml.load(mysql_config_file)
+    mysql_config = yaml.load(mysql_config_file)["oai"]
 accessfile_API_endpoint = "http://api.sls.fi/accessfiles/"  # TODO get endpoint programmatically
 # Define MySQL connection variable as module-level global, so we can use it in multiple places once opened
 connection = None
 
 
-def process_oai_request(request):
+@oai.route('/', methods=["GET"])
+def process_oai_request():
     """
     Fully processes an incoming Flask request
     Returns a Flask Response containing a string of XML containing metadata or an error message
@@ -119,54 +118,54 @@ def process_oai_request(request):
     return Response(response=return_content, status=return_status, content_type="text/xml; charset=utf-8")
 
 
-def validate_request(request):
+def validate_request(req):
     """
     Validates a Flask request to ensure it conforms to the OAI-PMH standard
     """
     valid_params = {}
     error = None
 
-    for key, value in request.args.iteritems():
+    for key, value in req.args.iteritems():
         if key not in ["verb", "from", "until", "identifier", "set", "metadataPrefix"]:
             error = ("badArgument", "Unknown argument")
     if error is not None:
         return valid_params, error
-    if "verb" in request.args and request.args["verb"] in valid_OAI_verbs:
-        valid_params["verb"] = request.args["verb"]
+    if "verb" in req.args and req.args["verb"] in valid_OAI_verbs:
+        valid_params["verb"] = req.args["verb"]
     else:
         error = ("badVerb", "Bad OAI verb")
 
-    if "from" in request.args and error is None:
+    if "from" in req.args and error is None:
         try:
-            from_date = parse(request.args["from"])
+            from_date = parse(req.args["from"])
         except Exception:
             error = ("badArgument", "From-date malformed")
         else:
             valid_params["from"] = from_date.strftime("%Y-%m-%d")
 
-    if "until" in request.args and error is None:
+    if "until" in req.args and error is None:
         try:
-            until_date = parse(request.args["until"])
+            until_date = parse(req.args["until"])
         except Exception:
             error = ("badArgument", "Until-date malformed")
         else:
             valid_params["until"] = until_date.strftime("%Y-%m-%d")
 
-    if "identifier" in request.args and error is None:
-        valid_params["identifier"] = request.args["identifier"]
+    if "identifier" in req.args and error is None:
+        valid_params["identifier"] = req.args["identifier"]
 
-    if "set" in request.args and error is None:
-        if request.args["set"] == "SLSeuropeana":
-            valid_params["set"] = request.args["set"]
+    if "set" in req.args and error is None:
+        if req.args["set"] == "SLSeuropeana":
+            valid_params["set"] = req.args["set"]
             valid_params["setName"] = "SLS material till Europeana"
-        elif request.args["set"] == "SLSfinna":
-            valid_params["set"] = request.args["set"]
+        elif req.args["set"] == "SLSfinna":
+            valid_params["set"] = req.args["set"]
             valid_params["setName"] = "SLS material till Finna/NDB"
         else:
             error = ("badArgument", "Unknown set")
 
-    if "metadataPrefix" in request.args and error is None:
-        prefix = request.args["metadataPrefix"]
+    if "metadataPrefix" in req.args and error is None:
+        prefix = req.args["metadataPrefix"]
         if prefix in ["oai_dc", "europeana", "ead"]:
             valid_params["metadataPrefix"] = prefix
         else:
@@ -241,12 +240,12 @@ def open_mysql_connection():
     Open a MySQL connection, storing it in a module-level variable 'connection'
     """
     global connection
-    connection = MySQLdb.connect(host=mysql_config["address"],
+    connection = pymysql.connect(host=mysql_config["address"],
                                  user=mysql_config["username"],
                                  password=mysql_config["password"],
                                  db=mysql_config["database"],
                                  charset="utf8",
-                                 cursorclass=MySQLdb.cursors.DictCursor)
+                                 cursorclass=pymysql.cursors.DictCursor)
 
 
 def get_metadata_from_mysql(valid_params, error):

@@ -2,9 +2,8 @@
 - Flask-driven REST API for sls.fi
 - Runs on Python 2.7
 - Unified API for all publically accessible sls.fi data (eventually)
-- Install into /var/sites/sls_api/
-    - Use sls_api.conf for Apache2 sites-available config
-    - Install using Python 2.7 virtualenv at /home/webapp/virtualenvs/sls_api
+- Installation details:
+    - TBD http://flask.pocoo.org/docs/0.12/patterns/packages/
     
 ### /accessfiles endpoint
 - Provides accessfiles through Isilon Swift for Finna and Europeana
@@ -23,4 +22,7 @@
 - Uses a C-based MySQL python connector library, mysqlclient
     - https://github.com/PyMySQL/mysqlclient-python/blob/master/README.md
     - Difficult to install on Windows, pymysql can be used instead, with ~0.5x performance
+ 
+ ### /digitaleditions endpoint
+ - TBD
  
