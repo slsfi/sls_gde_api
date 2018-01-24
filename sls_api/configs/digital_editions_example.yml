@@ -6,6 +6,7 @@ parland:
     show_internally_published: True
     show_unpublished: True
     disabled_publications: []
+    file_root: /var/parland-required
 topelius:
     address: mysql_server.example.com
     username: web_user
@@ -14,8 +15,10 @@ topelius:
     show_internally_published: True
     show_unpublished: True
     disabled_publications: [10,12,13,14,9,20,28]
+    file_root: /var/topelius-required
 semantic_data:
     address: mysql_server.example.com
     username: web_user
     password: SecretMySQLPassword
     database: semantic_data
+xslt_root: /var/xslt

@@ -1,6 +1,6 @@
 from __future__ import unicode_literals
 from collections import OrderedDict
-from flask import Blueprint, jsonify
+from flask import Blueprint, jsonify, safe_join
 from lxml import etree
 import pymysql
 import os
@@ -78,8 +78,8 @@ def set_access_control_headers(response):
 @digital_edition.route("/<project>/html/<filename>")
 def get_html_contents_as_json(project, filename):
     # TODO logging
-    # TODO better path handling
-    file_path = os.path.join(os.path.abspath(__file__), os.path.realpath("/../../../../{}-required/html/".format(project)), "{}.html".format(filename))
+    file_path = safe_join(project_config[project]["file_root"], "html", "{}.html".format(filename))
+    # file_path = os.path.join(os.path.abspath(__file__), os.path.realpath("/../../../../{}-required/html/".format(project)), "{}.html".format(filename))
     with open(file_path) as html_file:
         contents = html_file.read()
 
@@ -378,11 +378,12 @@ def get_publication_est_text(project, edition_id):
             content = "Content is not externally published"
 
         else:
-            # TODO better path handling
-            xml_file_path = os.path.realpath(os.path.join(os.path.abspath(__file__), "/../../../../{}-required/xml/est/".format(project), "{}_est.xml".format(id_parts[0])))
+            xml_file_path = safe_join(project_config[project]["file_root"], "xml", "est", "{}_est.xml".format(id_parts[0]))
+            # xml_file_path = os.path.realpath(os.path.join(os.path.abspath(__file__), "/../../../../{}-required/xml/est/".format(project), "{}_est.xml".format(id_parts[0])))
 
-            cache_folder_path = os.path.realpath(os.path.join(os.path.abspath(__file__), "/../../../../{}-required/cache/est".format(project)))
-            cache_file_path = os.path.join(cache_folder_path, "{}_est.html".format(id_parts[0]))
+            cache_file_path = safe_join(project_config[project]["file_root"], "cache", "est", "{}_est.html".format(id_parts[0]))
+            # cache_folder_path = os.path.realpath(os.path.join(os.path.abspath(__file__), "/../../../../{}-required/cache/est".format(project)))
+            # cache_file_path = os.path.join(cache_folder_path, "{}_est.html".format(id_parts[0]))
 
             if os.path.exists(cache_file_path):
                 try:
@@ -393,8 +394,8 @@ def get_publication_est_text(project, edition_id):
 
             elif os.path.exists(xml_file_path):
                 try:
-                    # TODO store XSL filepaths better
-                    xsl_file_path = os.path.realpath(os.path.join(os.path.abspath(__file__), "/../../../../xslt/est.xsl"))
+                    xsl_file_path = safe_join(project_config["xslt_root"], "est.xsl")
+                    # xsl_file_path = os.path.realpath(os.path.join(os.path.abspath(__file__), "/../../../../xslt/est.xsl"))
                     content = xml_to_html(xsl_file_path, xml_file_path)
                     try:
                         with open(cache_file_path, "w") as cache_file:
@@ -455,12 +456,14 @@ def get_publication_com_text(project, edition_id, note_id):
         else:
             id_parts = edition_id.replace("_com", "").split(";")
 
-            # TODO better path handling
-            xml_file_path = os.path.realpath(os.path.join(os.path.abspath(__file__), "/../../../../{}-required/xml/com".format(project), "{}_com.xml".format(id_parts[0])))
-            est_file_path = os.path.realpath(os.path.join(os.path.abspath(__file__), "/../../../../{}-required/xml/est".format(project), "{}_est.xml".format(id_parts[0])))
+            xml_file_path = safe_join(project_config[project]["file_root"], "xml", "com", "{}_com.xml".format(id_parts[0]))
+            # xml_file_path = os.path.realpath(os.path.join(os.path.abspath(__file__), "/../../../../{}-required/xml/com".format(project), "{}_com.xml".format(id_parts[0])))
+            est_file_path = safe_join(project_config[project]["file_root"], "xml", "est", "{}_est.xml".format(id_parts[0]))
+            # est_file_path = os.path.realpath(os.path.join(os.path.abspath(__file__), "/../../../../{}-required/xml/est".format(project), "{}_est.xml".format(id_parts[0])))
 
-            cache_folder_path = os.path.realpath(os.path.join(os.path.abspath(__file__), "/../../../../{}-required/cache/com".format(project)))
-            cache_file_path = os.path.join(cache_folder_path, "note_{}_com_{}.html".format(id_parts[0], note_id))
+            cache_file_path = safe_join(project_config[project]["file_root"], "cache", "com", "note_{}_com_{}.html".format(id_parts[0], note_id))
+            # cache_folder_path = os.path.realpath(os.path.join(os.path.abspath(__file__), "/../../../../{}-required/cache/com".format(project)))
+            # cache_file_path = os.path.join(cache_folder_path, "note_{}_com_{}.html".format(id_parts[0], note_id))
 
             if os.path.exists(cache_file_path):
                 try:
@@ -474,8 +477,8 @@ def get_publication_com_text(project, edition_id, note_id):
                         "noteId": note_id,
                         "estDocument": "file://{}".format(est_file_path)
                     }
-                    # TODO store xsl path better
-                    xsl_file_path = os.path.realpath(os.path.join(os.path.abspath(__file__), "/../../../../xslt/notes.xsl"))
+                    xsl_file_path = safe_join(project_config["xslt_root"], "notes.xsl")
+                    # xsl_file_path = os.path.realpath(os.path.join(os.path.abspath(__file__), "/../../../../xslt/notes.xsl"))
 
                     content = xml_to_html(xsl_file_path, xml_file_path, params=params)
                     try:
@@ -520,11 +523,12 @@ def get_publication_inl_text(project, edition_id, lang=None):
         version = "int" if project_config[project]["show_internally_published"] else "ext"
         filename = "{}_inl_{}_{}.xml".format(edition_id, lang_code, version)
 
-        # TODO better path handling
-        xml_file_path = os.path.realpath(os.path.join(os.path.abspath(__file__), "/../../../../{}-required/xml/inl".format(project), filename))
+        xml_file_path = safe_join(project_config[project]["file_root"], "xml", "inl", filename)
+        # xml_file_path = os.path.realpath(os.path.join(os.path.abspath(__file__), "/../../../../{}-required/xml/inl".format(project), filename))
 
-        cache_folder_path = os.path.realpath(os.path.join(os.path.abspath(__file__), "/../../../../{}-required/cache/inl".format(project)))
-        cache_file_path = os.path.join(cache_folder_path, filename.replace(".xml", ".html"))
+        cache_file_path = safe_join(project_config[project]["file_root"], "cache", "inl", filename.replace(".xml", ".html"))
+        # cache_folder_path = os.path.realpath(os.path.join(os.path.abspath(__file__), "/../../../../{}-required/cache/inl".format(project)))
+        # cache_file_path = os.path.join(cache_folder_path, filename.replace(".xml", ".html"))
 
         if os.path.exists(cache_file_path):
             try:
@@ -534,8 +538,8 @@ def get_publication_inl_text(project, edition_id, lang=None):
                 content = "Error reading content from cache"
         elif os.path.exists(xml_file_path):
             try:
-                # TODO store xsl filepaths better
-                xsl_file_path = os.path.realpath(os.path.join(os.path.abspath(__file__), "/../../../../xslt/est.xsl"))
+                xsl_file_path = safe_join(project_config["xslt_root"], "est.xml")
+                # xsl_file_path = os.path.realpath(os.path.join(os.path.abspath(__file__), "/../../../../xslt/est.xsl"))
                 content = xml_to_html(xsl_file_path, xml_file_path)
                 try:
                     with open(cache_file_path, "w") as cache_file:
