@@ -9,8 +9,11 @@
     - `export FLASK_APP=/path/to/sls_api`
     - http://flask.pocoo.org/docs/0.12/patterns/packages/
 - Running the API
-    - `source /path/to/created/venv/bin/activate`
-    - `flask run`
+    - Install `apache2` and `mod_wsgi`
+    - Edit sls_api_example.conf, change `/path/to/sls_api` to actual path to sls_api folder
+    - Save new file as `/etc/apache2/sites-available/sls_api.conf`
+    - Run `a2ensite sls_api.conf`
+    - Run `apachectl graceful`
     
 ### /accessfiles endpoint
 - Provides accessfiles through Isilon Swift for Finna and Europeana
