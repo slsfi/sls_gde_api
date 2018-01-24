@@ -1,10 +1,15 @@
 from __future__ import unicode_literals
 from collections import OrderedDict
 from flask import Blueprint, jsonify, safe_join
+import logging
+from logging.handlers import TimedRotatingFileHandler
 from lxml import etree
 import pymysql
 import os
+from sys import stdout
 import yaml
+
+# TODO cache invalidation?
 
 digital_edition = Blueprint('digital_edition', __name__)
 
@@ -16,6 +21,17 @@ with open(os.path.join(config_dir, "digital_editions.yml")) as digital_editions_
         "topelius": project_config["topelius"],
         "semantic_data": project_config["semantic_data"]
     }
+
+logger = logging.getLogger("digital_editions_api")
+logger.setLevel(logging.INFO)
+
+stream_handler = logging.StreamHandler(stream=stdout)
+stream_handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s', '%H:%M:%S'))
+logger.addHandler(stream_handler)
+
+file_handler = TimedRotatingFileHandler(filename=project_config["log_file"], when="midnight", backupCount=7)
+file_handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s', '%H:%M:%S'))
+logger.addHandler(file_handler)
 
 
 def xml_to_html(xsl_file_path, xml_file_path, replace_namespace=True, params=None):
@@ -77,12 +93,11 @@ def set_access_control_headers(response):
 # routes/digitaledition/html.php
 @digital_edition.route("/<project>/html/<filename>")
 def get_html_contents_as_json(project, filename):
-    # TODO logging
+    logger.info("Getting static content from /{}/html/{}".format(project, filename))
     file_path = safe_join(project_config[project]["file_root"], "html", "{}.html".format(filename))
     # file_path = os.path.join(os.path.abspath(__file__), os.path.realpath("/../../../../{}-required/html/".format(project)), "{}.html".format(filename))
     with open(file_path) as html_file:
         contents = html_file.read()
-
     data = {
         "filename": filename,
         "contents": contents
@@ -93,7 +108,7 @@ def get_html_contents_as_json(project, filename):
 # routes/digitaledition/manuscripts.php
 @digital_edition.route("/<project>/manuscript/<publication_id>")
 def get_manuscripts(project, publication_id):
-    # TODO logging
+    logger.info("Getting manuscript /{}/manuscript/{}".format(project, publication_id))
     open_mysql_connection(project)
     sql = "SELECT * FROM manuscripts WHERE m_publication_id=%s ORDER BY m_sort"
     with connection.cursor() as cursor:
@@ -106,7 +121,7 @@ def get_manuscripts(project, publication_id):
 # routes/digitaledition/publications.php
 @digital_edition.route("/<project>/publication/<publication_id>")
 def get_publication(project, publication_id):
-    # TODO logging
+    logger.info("Getting publication /{}/publication/{}".format(project, publication_id))
     open_mysql_connection(project)
     sql = "SELECT * FROM publications WHERE p_id=%s ORDER BY p_title"
     with connection.cursor() as cursor:
@@ -119,7 +134,7 @@ def get_publication(project, publication_id):
 # routes/digitaledition/table-of-contents.php
 @digital_edition.route("/<project>/table-of-contents/editions")
 def get_toc_editions(project):
-    # TODO logging
+    logger.info("Getting editions /{}/table-of-contents/editions".format(project))
     open_mysql_connection(project)
     if project_config.get(project).get("show_unpublished"):
         sql = "SELECT ed_id AS id, ed_title AS title, ed_filediv AS divchapters FROM publications_ed ORDER BY ed_datumlansering"
@@ -144,7 +159,7 @@ def get_toc_editions(project):
 # routes/digitaledition/table-of-contents.php
 @digital_edition.route("/<project>/table-of-contents/edition/<edition_id>/root")
 def get_toc_root(project, edition_id):
-    # TODO logging
+    logger.info("Getting root s/{}/table-of-contents/{}/root".format(project, edition_id))
     open_mysql_connection(project)
     show_published = 2
     if project_config.get(project).get("show_unpublished"):
@@ -172,7 +187,7 @@ def get_toc_root(project, edition_id):
 # routes/digitaledition/table-of-contents.php
 @digital_edition.route("/<project>/table-of-contents/edition/<edition_id>/group/<group_id>")
 def get_toc_root_elements(project, edition_id, group_id):
-    # TODO logging
+    logger.info("Getting \"root elements\" /{}/table-of-contents/edition/{}/group/{}".format(project, edition_id, group_id))
     open_mysql_connection(project)
     sql = "SELECT * FROM tableofcontents WHERE toc_ed_id=%s AND toc_groupid=%s AND toc_linkType!=6 ORDER BY sortOrder"
     with connection.cursor() as cursor:
@@ -185,7 +200,7 @@ def get_toc_root_elements(project, edition_id, group_id):
 # routes/digitaledition/table-of-contents.php
 @digital_edition.route("/<project>/table-of-contents/edition/<edition_id>/prevnext/<link_id>")
 def get_toc_edition_link(project, edition_id, link_id):
-    # TODO logging
+    logger.info("Getting links /{}/table-of-contents/edition/{}/prevnext/{}".format(project, edition_id, link_id))
     return_data = []
     open_mysql_connection(project)
     sql = "SELECT ed_id AS id, ed_lansering, ed_title AS title, " \
@@ -246,7 +261,7 @@ def get_toc_edition_link(project, edition_id, link_id):
 # routes/digitaledition/table-of-contents.php
 @digital_edition.route("/<project>/table-of-contents/edition/<edition_id>")
 def get_toc_edition(project, edition_id):
-    # TODO logging
+    logger.info("Getting edition /{}/table-of-contents/edition/{}".format(project, edition_id))
     open_mysql_connection(project)
 
     show_published = 2
@@ -326,7 +341,7 @@ def _php_array_values(ordered_dict):
 # routes/digitaledition/table-of-contents.php
 @digital_edition.route("/<project>/table-of-contents/edition/<edition_id>/first")
 def get_toc_edition_firstentry(project, edition_id):
-    # TODO logging
+    logger.info("Getting first edition /{}/table-of-contents/edition/{}/first".format(project, edition_id))
     open_mysql_connection(project)
     sql = "SELECT title, toc_ed_id, toc_linkID FROM tableofcontents WHERE toc_ed_id=%s AND toc_linkID IS NOT NULL ORDER BY sortOrder ASC LIMIT 1"
     with connection.cursor() as cursor:
@@ -339,7 +354,7 @@ def get_toc_edition_firstentry(project, edition_id):
 # routes/digitaledition/xml.php
 @digital_edition.route("/<project>/text/est/<edition_id>")
 def get_publication_est_text(project, edition_id):
-    # TODO logging
+    logger.info("Getting XML /{}/text/est/{} and transforming".format(project, edition_id))
     open_mysql_connection(project)
     sql = "SELECT ed_id AS id, ed_lansering, ed_title AS title, ed_filediv AS multiple_files, " \
           "ed_date_swe AS info_sv, ed_date_fin AS info_fi " \
@@ -385,6 +400,9 @@ def get_publication_est_text(project, edition_id):
             # cache_folder_path = os.path.realpath(os.path.join(os.path.abspath(__file__), "/../../../../{}-required/cache/est".format(project)))
             # cache_file_path = os.path.join(cache_folder_path, "{}_est.html".format(id_parts[0]))
 
+            logger.debug("Cache file path is {}".format(cache_file_path))
+            logger.debug("XML file path is {}".format(xml_file_path))
+
             if os.path.exists(cache_file_path):
                 try:
                     with open(cache_file_path) as cache_file:
@@ -393,16 +411,20 @@ def get_publication_est_text(project, edition_id):
                     content = "Error reading file from cache."
 
             elif os.path.exists(xml_file_path):
+                logger.warning("No cache found")
                 try:
                     xsl_file_path = safe_join(project_config["xslt_root"], "est.xsl")
                     # xsl_file_path = os.path.realpath(os.path.join(os.path.abspath(__file__), "/../../../../xslt/est.xsl"))
                     content = xml_to_html(xsl_file_path, xml_file_path)
                     try:
                         with open(cache_file_path, "w") as cache_file:
+                            logger.warning("Writing contents to cache file")
                             cache_file.write(content)
                     except Exception:
+                        logger.exception("Could not create cachefile")
                         content = "Successfully fetched content but could not generate cache for it."
                 except Exception:
+                    logger.exception("Error when parsing XML file")
                     content = "Error parsing document."
             else:
                 content = "File not found."
@@ -418,7 +440,7 @@ def get_publication_est_text(project, edition_id):
 # routes/digitaledition/xml.php
 @digital_edition.route("/<project>/text/com/<edition_id>/<note_id>")
 def get_publication_com_text(project, edition_id, note_id):
-    # TODO logging
+    logger.info("Getting XML /{}/text/com/{}/{} and transforming".format(project, edition_id, note_id))
     open_mysql_connection(project)
     sql = "SELECT ed_id AS id, ed_lansering, ed_title AS title, ed_filediv AS multiple_files, " \
           "ed_date_swe AS info_sv, ed_date_fin AS info_fi " \
@@ -465,6 +487,10 @@ def get_publication_com_text(project, edition_id, note_id):
             # cache_folder_path = os.path.realpath(os.path.join(os.path.abspath(__file__), "/../../../../{}-required/cache/com".format(project)))
             # cache_file_path = os.path.join(cache_folder_path, "note_{}_com_{}.html".format(id_parts[0], note_id))
 
+            logger.debug("Cache file path is {}".format(cache_file_path))
+            logger.debug("XML file path is {}".format(xml_file_path))
+            logger.debug("est XML file path is {}".format(est_file_path))
+
             if os.path.exists(cache_file_path):
                 try:
                     with open(cache_file_path) as cache_file:
@@ -472,6 +498,7 @@ def get_publication_com_text(project, edition_id, note_id):
                 except Exception:
                     content = "Error reading content from cache."
             elif os.path.exists(xml_file_path):
+                logger.warning("No cache found")
                 try:
                     params = {
                         "noteId": note_id,
@@ -483,10 +510,13 @@ def get_publication_com_text(project, edition_id, note_id):
                     content = xml_to_html(xsl_file_path, xml_file_path, params=params)
                     try:
                         with open(cache_file_path, "w") as cache_file:
+                            logger.warning("Writing contents to cache file")
                             cache_file.write(content)
                     except Exception:
+                        logger.exception("Could not create cachefile")
                         content = "Successfully fetched content but could not generate cache for it."
                 except Exception:
+                    logger.exception("Error when parsing XML file")
                     content = "Error parsing document"
             else:
                 content = "File not found"
@@ -500,9 +530,13 @@ def get_publication_com_text(project, edition_id, note_id):
 
 
 # routes/digitaledition/xml.php
-@digital_edition.route("/<project>/text/inl/<edition_id>/")
+@digital_edition.route("/<project>/text/inl/<edition_id>")
+@digital_edition.route("/<project>/text/inl/<edition_id>/<lang>")
 def get_publication_inl_text(project, edition_id, lang=None):
-    # TODO logging
+    if lang is None:
+        logger.info("Getting XML /{}/text/inl/{} and transforming".format(project, edition_id))
+    else:
+        logger.info("Getting XML /{}/text/inl/{}/{} and transforming".format(project, edition_id, lang))
     open_mysql_connection(project)
     sql = "SELECT ed_id AS id, ed_lansering, ed_title AS title, ed_filediv AS multiple_files, " \
           "ed_date_swe AS info_sv, ed_date_fin AS info_fi " \
@@ -530,25 +564,35 @@ def get_publication_inl_text(project, edition_id, lang=None):
         # cache_folder_path = os.path.realpath(os.path.join(os.path.abspath(__file__), "/../../../../{}-required/cache/inl".format(project)))
         # cache_file_path = os.path.join(cache_folder_path, filename.replace(".xml", ".html"))
 
+        logger.debug("Cache file path is {}".format(cache_file_path))
+        logger.debug("XML file path is {}".format(xml_file_path))
+
         if os.path.exists(cache_file_path):
+            logger.info("Cache file found, reading contents from there...")
             try:
                 with open(cache_file_path) as cache_file:
                     content = cache_file.read()
             except Exception:
+                logger.exception("Error reading content from cache")
                 content = "Error reading content from cache"
         elif os.path.exists(xml_file_path):
+            logger.warning("No cache found")
             try:
                 xsl_file_path = safe_join(project_config["xslt_root"], "est.xml")
                 # xsl_file_path = os.path.realpath(os.path.join(os.path.abspath(__file__), "/../../../../xslt/est.xsl"))
                 content = xml_to_html(xsl_file_path, xml_file_path)
                 try:
                     with open(cache_file_path, "w") as cache_file:
+                        logger.warning("Writing contents to cache file")
                         cache_file.write(content)
                 except Exception:
+                    logger.exception("Could not create cachefile")
                     content = "Successfully fetched content but could not generate cache for it."
             except Exception:
+                logger.exception("Error parsing document")
                 content = "Error parsing document"
         else:
+            logger.warning("No preface found")
             content = "File not found"
 
     data = {
@@ -561,8 +605,8 @@ def get_publication_inl_text(project, edition_id, lang=None):
 
 # routes/semantic_data/persons.php
 @digital_edition.route("/semantic_data/persons/tooltip/<person_id>")
-def get_persons_tooltip(person_id):
-    # TODO logging
+def get_person_tooltip(person_id):
+    logger.info("Getting tooltip /semantic_data/persons/tooltip/{}".format(person_id))
     open_mysql_connection("semantic_data")
     sql = "SELECT c_webbnamn_1_sort AS title, ed_tooltip AS content, c_webbfornamn1, c_webbefternamn1 " \
           "FROM persons WHERE id_p=%s"
@@ -581,8 +625,8 @@ def get_persons_tooltip(person_id):
 
 # routes/semantic_data/persons.php
 @digital_edition.route("/semantic_data/persons/list/<data_source_id>")
-def get_persons_manuscript_route(data_source_id):
-    # TODO logging
+def get_list_of_persons(data_source_id):
+    logger.info("Getting list of persons /semantic_data/persons/list/{}".format(data_source_id))
     open_mysql_connection("semantic_data")
     sql = "SELECT c_webbnamn_1_sort AS title, ed_tooltip AS content, " \
           "c_webbfornamn1, c_webbefternamn1, ed_tooltip, id_p, c_webbsok " \
@@ -599,8 +643,8 @@ def get_persons_manuscript_route(data_source_id):
 
 # routes/semantic_data/places.php
 @digital_edition.route("/semantic_data/places/tooltip/<place_id>")
-def get_places_tooltip(place_id):
-    # TODO logging
+def get_place_tooltip(place_id):
+    logging.info("Getting tooltip /semantic_data/places/tooltip/{}".format(place_id))
     open_mysql_connection("semantic_data")
     place_id = place_id.replace("pl", "").replace("PlId", "")
 
@@ -615,8 +659,8 @@ def get_places_tooltip(place_id):
 
 # routes/semantic_data/places.php
 @digital_edition.route("/semantic_data/places/list")
-def get_places_manuscript_route():
-    # TODO logging
+def get_list_of_places():
+    logger.info("Getting list of places /semantic_data/places/list")
     open_mysql_connection("semantic_data")
 
     sql = "SELECT c_webbsok, o_id AS id FROM places ORDER BY o_id ASC"
