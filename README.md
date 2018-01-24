@@ -3,7 +3,14 @@
 - Runs on Python 2.7
 - Unified API for all publically accessible sls.fi data (eventually)
 - Installation details:
-    - TBD http://flask.pocoo.org/docs/0.12/patterns/packages/
+    - Setup a virtualenv
+    - `source /path/to/created/venv/bin/activate`
+    - `pip install -e .`
+    - `export FLASK_APP=/path/to/sls_api`
+    - http://flask.pocoo.org/docs/0.12/patterns/packages/
+- Running the API
+    - `source /path/to/created/venv/bin/activate`
+    - `flask run`
     
 ### /accessfiles endpoint
 - Provides accessfiles through Isilon Swift for Finna and Europeana
@@ -24,5 +31,7 @@
     - Difficult to install on Windows, pymysql can be used instead, with ~0.5x performance
  
  ### /digitaleditions endpoint
- - TBD
+- Port of older PHP apis:
+    - https://github.com/slsfi/digital_editions_API 
+    - https://github.com/slsfi/digital_editions_xslt
  
