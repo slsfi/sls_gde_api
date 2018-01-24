@@ -6,14 +6,21 @@
     - Setup a virtualenv
     - `source /path/to/created/venv/bin/activate`
     - `pip install -e .`
-    - `export FLASK_APP=/path/to/sls_api`
     - http://flask.pocoo.org/docs/0.12/patterns/packages/
-- Running the API
+    
+- Running the API in production
     - Install `apache2` and `mod_wsgi`
-    - Edit sls_api_example.conf, change `/path/to/sls_api` to actual path to sls_api folder
-    - Save new file as `/etc/apache2/sites-available/sls_api.conf`
+    - Edit sls_api_example.conf to create new apache site config:
+        - change `/path/to/sls_api` to actual path to sls_api folder
+        - change `/path/to/created/venv` to actual path to created virtualenv
+        - Save new file as `/etc/apache2/sites-available/sls_api.conf`
     - Run `a2ensite sls_api.conf`
     - Run `apachectl graceful`
+    
+- Manually testing the API without apache
+    - `source /path/to/created/venv/bin/activate`
+    - `export FLASK_APP=/path/to/sls_api`
+    - `flask run`
     
 ### /accessfiles endpoint
 - Provides accessfiles through Isilon Swift for Finna and Europeana
@@ -34,4 +41,6 @@
 - Port of older PHP apis:
     - https://github.com/slsfi/digital_editions_API 
     - https://github.com/slsfi/digital_editions_xslt
- 
+- Needs connection details for MySQL server and paths to folders for XML, HTML, and XSL files
+    - configs/digital_editions.yml
+    - See digital_editions_example.yml for specifics
