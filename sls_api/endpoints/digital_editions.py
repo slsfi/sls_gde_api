@@ -9,12 +9,12 @@ import yaml
 digital_edition = Blueprint('digital_edition', __name__)
 
 config_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "configs")
-with open(os.path.join(config_dir, "mysql.yml")) as mysql_config_file:
-    mysql_config = yaml.load(mysql_config_file)
-    mysql_config = {
-        "parland": mysql_config["digital_editions"]["parland"],
-        "topelius": mysql_config["digital_editions"]["topelius"],
-        "semantic_data": mysql_config["digital_editions"]["semantic_data"]
+with open(os.path.join(config_dir, "digital_editions.yml")) as digital_editions_config:
+    project_config = yaml.load(digital_editions_config)
+    project_config = {
+        "parland": project_config["parland"],
+        "topelius": project_config["topelius"],
+        "semantic_data": project_config["semantic_data"]
     }
 
 
@@ -48,14 +48,14 @@ class OrderedDictCursor(pymysql.cursors.DictCursorMixin, pymysql.cursors.Cursor)
 
 def open_mysql_connection(database):
     global connection
-    if database not in mysql_config:
+    if database not in project_config:
         connection = None
     else:
         connection = pymysql.connect(
-            host=mysql_config[database]["address"],
-            user=mysql_config[database]["username"],
-            password=mysql_config[database]["password"],
-            db=mysql_config[database]["database"],
+            host=project_config[database]["address"],
+            user=project_config[database]["username"],
+            password=project_config[database]["password"],
+            db=project_config[database]["database"],
             charset="utf8",
             cursorclass=OrderedDictCursor
         )
@@ -121,9 +121,9 @@ def get_publication(project, publication_id):
 def get_toc_editions(project):
     # TODO logging
     open_mysql_connection(project)
-    if mysql_config.get(project).get("show_unpublished"):
+    if project_config.get(project).get("show_unpublished"):
         sql = "SELECT ed_id AS id, ed_title AS title, ed_filediv AS divchapters FROM publications_ed ORDER BY ed_datumlansering"
-    elif mysql_config.get(project).get("show_internally_published"):
+    elif project_config.get(project).get("show_internally_published"):
         sql = "SELECT ed_id AS id, ed_title AS title, ed_filediv AS divchapters FROM publications_ed WHERE ed_lansering>0 ORDER BY ed_datumlansering"
     else:
         sql = "SELECT ed_id AS id, ed_title AS title, ed_filediv AS divchapters FROM publications_ed WHERE ed_lansering=2 ORDER BY ed_datumlansering"
@@ -135,7 +135,7 @@ def get_toc_editions(project):
     connection.close()
     return_data = []
     for row in result:
-        if row["id"] not in mysql_config.get(project).get("disabled_publications"):
+        if row["id"] not in project_config.get(project).get("disabled_publications"):
             return_data.append(row)
 
     return jsonify(return_data), 200, {"Access-Control-Allow-Origin": "*"}
@@ -147,9 +147,9 @@ def get_toc_root(project, edition_id):
     # TODO logging
     open_mysql_connection(project)
     show_published = 2
-    if mysql_config.get(project).get("show_unpublished"):
+    if project_config.get(project).get("show_unpublished"):
         show_published = 0
-    elif mysql_config.get(project).get("show_internally_published"):
+    elif project_config.get(project).get("show_internally_published"):
         show_published = 1
 
     if edition_id == 15:
@@ -250,9 +250,9 @@ def get_toc_edition(project, edition_id):
     open_mysql_connection(project)
 
     show_published = 2
-    if mysql_config.get(project).get("show_unpublished"):
+    if project_config.get(project).get("show_unpublished"):
         show_published = 0
-    elif mysql_config.get(project).get("show_internally_published"):
+    elif project_config.get(project).get("show_internally_published"):
         show_published = 1
 
     if edition_id == 15:
@@ -367,14 +367,14 @@ def get_publication_est_text(project, edition_id):
 
     if len(edition_data) < 1:
         content = "Content does not exist"
-    elif edition_data[0]["ed_lansering"] < 1 and not mysql_config[project]["show_unpublished"]:
+    elif edition_data[0]["ed_lansering"] < 1 and not project_config[project]["show_unpublished"]:
         content = "Content is not published"
-    elif edition_data[0]["ed_lansering"] == 1 and not mysql_config[project]["show_internally_published"] and not mysql_config[project]["show_unpublished"]:
+    elif edition_data[0]["ed_lansering"] == 1 and not project_config[project]["show_internally_published"] and not project_config[project]["show_unpublished"]:
         content = "Content is not externally published"
     else:
         id_parts = edition_id.replace("_est", "").split(";")
 
-        if not mysql_config[project]["show_internally_published"] and not letter_published:
+        if not project_config[project]["show_internally_published"] and not letter_published:
             content = "Content is not externally published"
 
         else:
@@ -445,12 +445,12 @@ def get_publication_com_text(project, edition_id, note_id):
 
     if len(edition_data) < 1:
         content = "Content does not exist"
-    elif edition_data[0]["ed_lansering"] < 1 and not mysql_config[project]["show_unpublished"]:
+    elif edition_data[0]["ed_lansering"] < 1 and not project_config[project]["show_unpublished"]:
         content = "Content is not published"
-    elif edition_data[0]["ed_lansering"] == 1 and not mysql_config[project]["show_internally_published"] and not mysql_config[project]["show_unpublished"]:
+    elif edition_data[0]["ed_lansering"] == 1 and not project_config[project]["show_internally_published"] and not project_config[project]["show_unpublished"]:
         content = "Content is not externally published"
     else:
-        if not mysql_config[project]["show_internally_published"] and not letter_published:
+        if not project_config[project]["show_internally_published"] and not letter_published:
             content = "Content is not externally published"
         else:
             id_parts = edition_id.replace("_com", "").split(";")
@@ -511,13 +511,13 @@ def get_publication_inl_text(project, edition_id, lang=None):
 
     if len(edition_data) < 1:
         content = "Content does not exist"
-    elif edition_data[0]["ed_lansering"] < 1 and not mysql_config[project]["show_unpublished"]:
+    elif edition_data[0]["ed_lansering"] < 1 and not project_config[project]["show_unpublished"]:
         content = "Content is not published"
-    elif edition_data[0]["ed_lansering"] == 1 and not mysql_config[project]["show_internally_published"] and not mysql_config[project]["show_unpublished"]:
+    elif edition_data[0]["ed_lansering"] == 1 and not project_config[project]["show_internally_published"] and not project_config[project]["show_unpublished"]:
         content = "Content is not externally published"
     else:
         lang_code = "fin" if lang == "fi" else "swe"
-        version = "int" if mysql_config[project]["show_internally_published"] else "ext"
+        version = "int" if project_config[project]["show_internally_published"] else "ext"
         filename = "{}_inl_{}_{}.xml".format(edition_id, lang_code, version)
 
         # TODO better path handling

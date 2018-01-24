@@ -1,0 +1,4 @@
+address: mysql_server.example.com
+username: web_user
+password: SecretMySQLPassword
+database: Metadata

@@ -1,0 +1,21 @@
+parland:
+    address: mysql_server.example.com
+    username: web_user
+    password: SecretMySQLPassword
+    database: parland
+    show_internally_published: True
+    show_unpublished: True
+    disabled_publications: []
+topelius:
+    address: mysql_server.example.com
+    username: web_user
+    password: SecretMySQLPassword
+    database: topelius
+    show_internally_published: True
+    show_unpublished: True
+    disabled_publications: [10,12,13,14,9,20,28]
+semantic_data:
+    address: mysql_server.example.com
+    username: web_user
+    password: SecretMySQLPassword
+    database: semantic_data

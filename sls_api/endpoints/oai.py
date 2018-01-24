@@ -14,8 +14,8 @@ oai = Blueprint("oai", __name__)
 
 valid_OAI_verbs = ["Identify", "ListSets", "ListMetadataFormats", "ListIdentifiers", "ListRecords", "GetRecord"]
 config_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "configs")
-with open(os.path.join(config_dir, "mysql.yml")) as mysql_config_file:
-    mysql_config = yaml.load(mysql_config_file)["oai"]
+with open(os.path.join(config_dir, "oai.yml")) as mysql_config_file:
+    mysql_config = yaml.load(mysql_config_file)
 accessfile_API_endpoint = "http://api.sls.fi/accessfiles/"  # TODO get endpoint programmatically
 # Define MySQL connection variable as module-level global, so we can use it in multiple places once opened
 connection = None
