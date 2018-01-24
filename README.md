@@ -30,7 +30,7 @@
     - https://github.com/PyMySQL/mysqlclient-python/blob/master/README.md
     - Difficult to install on Windows, pymysql can be used instead, with ~0.5x performance
  
- ### /digitaleditions endpoint
+### /digitaleditions endpoint
 - Port of older PHP apis:
     - https://github.com/slsfi/digital_editions_API 
     - https://github.com/slsfi/digital_editions_xslt
