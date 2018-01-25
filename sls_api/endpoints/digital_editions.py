@@ -58,11 +58,9 @@ def xml_to_html(xsl_file_path, xml_file_path, replace_namespace=True, params=Non
     return etree.tostring(result, encoding="utf-8", method="html", pretty_print=True)
 
 
-class OrderedDictCursor(pymysql.cursors.DictCursorMixin, pymysql.cursors.Cursor):
-    dict_type = OrderedDict
-
-
 def open_mysql_connection(database):
+    class OrderedDictCursor(pymysql.cursors.DictCursorMixin, pymysql.cursors.Cursor):
+        dict_type = OrderedDict
     global connection
     if database not in project_config:
         connection = None
