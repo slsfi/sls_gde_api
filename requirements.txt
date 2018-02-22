@@ -1,6 +1,0 @@
-Flask==0.12.*
-lxml==4.1.*
-python-dateutil==2.6.*
-PyYAML==3.12
-PyMySQL==0.8.*
-requests==2.18.*
