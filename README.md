@@ -3,22 +3,17 @@
 - Runs on Python 2.7
 - Unified API for all publically accessible sls.fi data (eventually)
 - Installation details:
-    - Setup a virtualenv
-    - `source /path/to/created/venv/bin/activate`
+    - Create config files from _example files in `config` folder
+    - If needed, tweak `uwsgi.ini` file to adjust uWSGI server settings
+    - run `docker build -t sls_api .` in root folder containing `Dockerfile` and `uwsgi.ini`
+    
+- Running in Production
+    - Start api using `docker run -p 80:80 --name=sls_api --restart=always sls_api`
+    - (if needed, other ports can be used, i.e. `-p 8080:80`)
+    
+- Manually testing the API without Docker, using a python virtualenv
+    - `source /path/to/virtualenv/bin/activate`
     - `pip install -e .`
-    - http://flask.pocoo.org/docs/0.12/patterns/packages/
-    
-- Running the API in production
-    - Install `apache2` and `mod_wsgi`
-    - Edit sls_api_example.conf to create new apache site config:
-        - change `/path/to/sls_api` to actual path to sls_api folder
-        - change `/path/to/created/venv` to actual path to created virtualenv
-        - Save new file as `/etc/apache2/sites-available/sls_api.conf`
-    - Run `a2ensite sls_api.conf`
-    - Run `apachectl graceful`
-    
-- Manually testing the API without apache
-    - `source /path/to/created/venv/bin/activate`
     - `export FLASK_APP=/path/to/sls_api`
     - `flask run`
     
