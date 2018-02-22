@@ -16,11 +16,6 @@ digital_edition = Blueprint('digital_edition', __name__)
 config_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "configs")
 with open(os.path.join(config_dir, "digital_editions.yml")) as digital_editions_config:
     project_config = yaml.load(digital_editions_config)
-    project_config = {
-        "parland": project_config["parland"],
-        "topelius": project_config["topelius"],
-        "semantic_data": project_config["semantic_data"]
-    }
 
 logger = logging.getLogger("digital_editions_api")
 logger.setLevel(logging.INFO)
