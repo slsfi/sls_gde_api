@@ -9,7 +9,7 @@
     
 - Running in Production
     - Start api using `docker run -p 80:80 --name=sls_api --restart=always sls_api`
-    - (if needed, other ports can be used, i.e. `-p 8080:80`)
+    - (if needed, other ports can be used instead, i.e. `-p 8080:80`)
     
 - Manually testing the API without Docker, using a python virtualenv
     - `source /path/to/virtualenv/bin/activate`
@@ -39,3 +39,9 @@
 - Needs connection details for MySQL server and paths to folders for XML, HTML, and XSL files
     - configs/digital_editions.yml
     - See digital_editions_example.yml for specifics
+
+### /filemaker endpoint
+- Direct link to a Filemaker Server 2016 REST API
+- https://fmhelp.filemaker.com/docs/16/en/restapi/
+- Base URL for Filemaker Server defined in configs/filemaker.yml
+    - see configs/filemaker_example.yml
