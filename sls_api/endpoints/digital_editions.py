@@ -1,6 +1,6 @@
 from __future__ import unicode_literals
 from collections import OrderedDict
-from flask import Blueprint, jsonify, safe_join
+from flask import abort, Blueprint, jsonify, safe_join
 import logging
 from logging.handlers import TimedRotatingFileHandler
 from lxml import etree
@@ -89,13 +89,16 @@ def get_html_contents_as_json(project, filename):
     logger.info("Getting static content from /{}/html/{}".format(project, filename))
     file_path = safe_join(project_config[project]["file_root"], "html", "{}.html".format(filename))
     # file_path = os.path.join(os.path.abspath(__file__), os.path.realpath("/../../../../{}-required/html/".format(project)), "{}.html".format(filename))
-    with open(file_path) as html_file:
-        contents = html_file.read()
-    data = {
-        "filename": filename,
-        "contents": contents
-    }
-    return jsonify(data), 200, {"Access-Control-Allow-Origin": "*"}
+    if os.path.exists(file_path):
+        with open(file_path) as html_file:
+            contents = html_file.read()
+        data = {
+            "filename": filename,
+            "contents": contents
+        }
+        return jsonify(data), 200, {"Access-Control-Allow-Origin": "*"}
+    else:
+        abort(404)
 
 
 # routes/digitaledition/manuscripts.php
