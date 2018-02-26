@@ -161,12 +161,12 @@ def get_toc_root(project, edition_id):
         show_published = 1
 
     if edition_id == 15:
-        sql = "SELECT toc.* FROM tableofcontents toc" \
-              "JOIN publications_ed ped ON toc.toc_ed_id = ped.ed_id" \
-              "JOIN publications_group pgroup ON toc.toc_group_id = pgroup.group_id" \
+        sql = "SELECT toc.* FROM tableofcontents toc " \
+              "JOIN publications_ed ped ON toc.toc_ed_id = ped.ed_id " \
+              "JOIN publications_group pgroup ON toc.toc_group_id = pgroup.group_id " \
               "WHERE toc_ed_id=%s AND pgroup.group_lansering>={} AND toc_groupid IS NULL ORDER BY sortOrder".format(show_published)
     else:
-        sql = "SELECT toc.* FROM tableofcontents toc" \
+        sql = "SELECT toc.* FROM tableofcontents toc " \
               "WHERE toc_ed_id=%s AND toc_group_id IS NULL AND toc_groupid IS NULL ORDER BY sortOrder"
 
     with connection.cursor() as cursor:
@@ -264,12 +264,12 @@ def get_toc_edition(project, edition_id):
         show_published = 1
 
     if edition_id == 15:
-        sql = "SELECT toc.* FROM tableofcontents toc JOIN publications_ed ped ON toc.toc_ed_id = ped.ed_id" \
-              "JOIN publications_group pgroup ON toc.toc_group_id = pgroup.group_id" \
-              "WHERE toc_ed_id = %s AND toc_linkType!=6 AND prgroup.group_lansering>={}" \
+        sql = "SELECT toc.* FROM tableofcontents toc JOIN publications_ed ped ON toc.toc_ed_id = ped.ed_id " \
+              "JOIN publications_group pgroup ON toc.toc_group_id = pgroup.group_id " \
+              "WHERE toc_ed_id = %s AND toc_linkType!=6 AND prgroup.group_lansering>={} " \
               "ORDER BY toc_groupid, toc.sortOrder".format(show_published)
     else:
-        sql = "SELECT toc.* FROM tableofcontents toc WHERE toc_ed_id=%s AND toc_linkType!=6" \
+        sql = "SELECT toc.* FROM tableofcontents toc WHERE toc_ed_id=%s AND toc_linkType!=6 " \
               "AND toc.toc_group_id IS NULL ORDER BY toc_groupid, toc.sortOrder"
 
     with connection.cursor() as cursor:
@@ -357,10 +357,10 @@ def get_publication_est_text(project, edition_id):
         cursor.execute(sql, [edition_id])
         edition_data = cursor.fetchall()
 
-    sql = "SELECT DISTINCT p_identifier FROM digital_edition_topelius.publications_ed ped" \
-          "JOIN digital_edition_topelius.publications p ON p.p_ed_id = ped.ed_id" \
-          "JOIN digital_edition_topelius.publications_collection pc ON pc.coll_ed_id = p.p_ed_id" \
-          "JOIN digital_edition_topelius.publications_group pg ON pg.group_id = p.p_group_id" \
+    sql = "SELECT DISTINCT p_identifier FROM digital_edition_topelius.publications_ed ped " \
+          "JOIN digital_edition_topelius.publications p ON p.p_ed_id = ped.ed_id " \
+          "JOIN digital_edition_topelius.publications_collection pc ON pc.coll_ed_id = p.p_ed_id " \
+          "JOIN digital_edition_topelius.publications_group pg ON pg.group_id = p.p_group_id " \
           "WHERE ed_lansering = 2 AND pg.group_lansering != 1 AND ped.ed_id = 15 AND p_identifier=%s"
 
     with connection.cursor() as cursor:
@@ -443,10 +443,10 @@ def get_publication_com_text(project, edition_id, note_id):
         cursor.execute(sql, [edition_id])
         edition_data = cursor.fetchall()
 
-    sql = "SELECT DISTINCT p_identifier FROM digital_edition_topelius.publications_ed ped" \
-          "JOIN digital_edition_topelius.publications p ON p.p_ed_id = ped.ed_id" \
-          "JOIN digital_edition_topelius.publications_collection pc ON pc.coll_ed_id = p.p_ed_id" \
-          "JOIN digital_edition_topelius.publications_group pg ON pg.group_id = p.p_group_id" \
+    sql = "SELECT DISTINCT p_identifier FROM digital_edition_topelius.publications_ed ped " \
+          "JOIN digital_edition_topelius.publications p ON p.p_ed_id = ped.ed_id " \
+          "JOIN digital_edition_topelius.publications_collection pc ON pc.coll_ed_id = p.p_ed_id " \
+          "JOIN digital_edition_topelius.publications_group pg ON pg.group_id = p.p_group_id " \
           "WHERE ed_lansering = 2 AND pg.group_lansering != 1 AND ped.ed_id = 15 AND p_identifier=%s"
 
     with connection.cursor() as cursor:
