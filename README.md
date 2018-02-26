@@ -4,12 +4,13 @@
 - Unified API for all publically accessible sls.fi data (eventually)
 - Installation details:
     - Create config files from _example files in `config` folder
+    - Ensure volume paths in `docker-compose.yml` point at the correct host and container folders
     - If needed, tweak `uwsgi.ini` file to adjust uWSGI server settings
-    - run `docker build -t sls_api .` in root folder containing `Dockerfile` and `uwsgi.ini`
+    - run `docker-compose build` in root folder containing `Dockerfile`, `uwsgi.ini`, and `docker-compose.yml`
     
 - Running in Production
-    - Start api using `docker run -p 80:80 --name=sls_api --restart=always sls_api`
-    - (if needed, other ports can be used instead, i.e. `-p 8080:80`)
+    - Start api using `docker-compose up -d`
+    - Please note that the default port is 80, this can be changed in `docker-compose.yml`
     
 - Manually testing the API without Docker, using a python virtualenv
     - `source /path/to/virtualenv/bin/activate`

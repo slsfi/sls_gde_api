@@ -1,0 +1,17 @@
+version: '3'
+services:
+    api:
+        build:
+            context: .
+        volumes:
+            # Files for Digital Editions need to be mounted
+            # Syntax is host_path:container_path
+            # This example mounts the host's /var/topelius to /var/topelius-files in the container and so on
+            - ./topelius:/var/topelius-files/
+            - ./parland:/var/parland-files/
+            - ./xslt:/var/xslt-files/
+        restart: always
+        ports:
+            # Port syntax is host_port:container_port
+            # Dockerfile uses port 80
+            - "80:80"
