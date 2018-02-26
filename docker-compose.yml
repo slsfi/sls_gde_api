@@ -7,9 +7,9 @@ services:
             # Files for Digital Editions need to be mounted
             # Syntax is host_path:container_path
             # This example mounts the host's /var/topelius to /var/topelius-files in the container and so on
-            - ./topelius:/var/topelius-files/
-            - ./parland:/var/parland-files/
-            - ./xslt:/var/xslt-files/
+            - /var/topelius:/var/topelius-files/
+            - /var/parland:/var/parland-files/
+            - /var/xslt:/var/xslt-files/
         restart: always
         ports:
             # Port syntax is host_port:container_port
