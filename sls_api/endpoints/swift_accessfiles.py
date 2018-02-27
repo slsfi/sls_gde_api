@@ -11,12 +11,12 @@ urllib3.disable_warnings()  # TODO signed cert for Isilon Swift
 swift = Blueprint("swift", __name__)
 
 config_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "configs")
-derivate_objects_list_file = os.path.join(config_dir, "derivate_objects_list.txt")
+swift_file_list = os.path.join(config_dir, "swift_file_list.txt")
 with open(os.path.join(config_dir, "swift_auth.yml")) as swift_auth_file:
     yaml = YAML()
     swift_auth = yaml.load(swift_auth_file)
 
-with open(derivate_objects_list_file) as list_file:
+with open(swift_file_list) as list_file:
     valid_files = set()
     for line in list_file:
         valid_files.add(line.strip())

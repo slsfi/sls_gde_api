@@ -21,10 +21,12 @@
 ### /accessfiles endpoint
 - Provides accessfiles through Isilon Swift for Finna and Europeana
 - Needs a list of allowed accessfiles and swift authentication details to work
-    - configs/derivate_objects_list.txt and configs/swift_auth.yml
+    - configs/swift_file_list.txt and configs/swift_auth.yml
     - See _example files for more specific details
-- List of accessfiles can be generated from FileMaker .csv export using
-    - https://bitbucket.org/rasek_sls/accessfile_list_generator
+- List of allowed files can be generated from FileMaker .csv export using
+    - https://bitbucket.org/rasek_sls/accessfile_list_generator  (private repo)
+- swift_file_list.txt should be a newline-separated list of valid filepaths inside the Swift home directory
+    - In other words, filepaths relative to the home directory of the swift user configured in swift_auth.yml
     
 ### /oai endpoint
 - Provides OAI-PMH metadata in XML format for Finna and Europeana
