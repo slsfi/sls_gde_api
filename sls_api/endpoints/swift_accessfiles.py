@@ -3,8 +3,8 @@ import mimetypes
 import os
 from io import BytesIO
 import requests
+from ruamel.yaml import YAML
 import traceback
-import yaml
 import urllib3
 urllib3.disable_warnings()  # TODO signed cert for Isilon Swift
 
@@ -13,6 +13,7 @@ swift = Blueprint("swift", __name__)
 config_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "configs")
 derivate_objects_list_file = os.path.join(config_dir, "derivate_objects_list.txt")
 with open(os.path.join(config_dir, "swift_auth.yml")) as swift_auth_file:
+    yaml = YAML()
     swift_auth = yaml.load(swift_auth_file)
 
 with open(derivate_objects_list_file) as list_file:

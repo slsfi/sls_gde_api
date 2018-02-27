@@ -1,10 +1,11 @@
 from flask import Blueprint, request, Response
 import os
 import requests
-import yaml
+from ruamel.yaml import YAML
 
 config_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "configs")
 with open(os.path.join(config_dir, "filemaker.yml")) as config_file:
+    yaml = YAML()
     filemaker_config = yaml.load(config_file)
 
 filemaker = Blueprint("filemaker", __name__)

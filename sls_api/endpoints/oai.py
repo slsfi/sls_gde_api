@@ -5,15 +5,16 @@ from flask import Blueprint, Response, request
 from lxml.etree import Element, SubElement, tostring
 import os
 import pymysql
+from ruamel.yaml import YAML
 import traceback
-import yaml
 
 oai = Blueprint("oai", __name__)
 
 valid_OAI_verbs = ["Identify", "ListSets", "ListMetadataFormats", "ListIdentifiers", "ListRecords", "GetRecord"]
 config_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "configs")
 with open(os.path.join(config_dir, "oai.yml")) as mysql_config_file:
-    mysql_config = yaml.load(mysql_config_file)
+    yaml = YAML()
+    oai_config = yaml.load(mysql_config_file)
 accessfile_API_endpoint = "http://api.sls.fi/accessfiles/"  # TODO get endpoint programmatically
 # Define MySQL connection variable as module-level global, so we can use it in multiple places once opened
 connection = None
@@ -238,10 +239,10 @@ def open_mysql_connection():
     Open a MySQL connection, storing it in a module-level variable 'connection'
     """
     global connection
-    connection = pymysql.connect(host=mysql_config["address"],
-                                 user=mysql_config["username"],
-                                 password=mysql_config["password"],
-                                 db=mysql_config["database"],
+    connection = pymysql.connect(host=oai_config["address"],
+                                 user=oai_config["username"],
+                                 password=oai_config["password"],
+                                 db=oai_config["database"],
                                  charset="utf8",
                                  cursorclass=pymysql.cursors.DictCursor)
 
@@ -308,15 +309,14 @@ def populate_identify_element(base_url, root_xml, earliest_date_stamp):
     """
     Populate the 'root_xml' XML Element with SubElements according to the OAI 'Identify' verb spec
     """
-    # TODO move identify elements to a settings file
     identify_content = OrderedDict()
-    identify_content["repositoryName"] = "SLS/Arkiva"
+    identify_content["repositoryName"] = oai_config["repo_name"]
     identify_content["baseURL"] = base_url
-    identify_content["protocolVersion"] = "2.0"
-    identify_content["adminEmail"] = "is@sls.fi"
+    identify_content["protocolVersion"] = oai_config["repo_protocol_ver"]
+    identify_content["adminEmail"] = oai_config["repo_admin"]
     identify_content["earliestDatestamp"] = earliest_date_stamp
-    identify_content["deletedRecord"] = "persistent"
-    identify_content["granularity"] = "YYYY-MM-DD"
+    identify_content["deletedRecord"] = oai_config["repo_deletion"]
+    identify_content["granularity"] = oai_config["repo_granularity"]
 
     for key, value in identify_content.items():
         create_element(root_xml, key, value)
@@ -326,13 +326,10 @@ def populate_listsets_element(root_xml):
     """
     Populate the 'root_xml' XML Element with SubElements according to the OAI 'ListSets' spec
     """
-    europeana_set_element = SubElement(root_xml, "set")
-    create_element(europeana_set_element, "setSpec", "SLSeuropeana")
-    create_element(europeana_set_element, "setName", "SLS material till Europeana")
-
-    finna_set_element = SubElement(root_xml, "set")
-    create_element(finna_set_element, "setSpec", "SLSfinna")
-    create_element(finna_set_element, "setName", "SLS material till Finna/NDB")
+    for setSpec, setName in oai_config["sets"].items():
+        set_element = SubElement(root_xml, "set")
+        create_element(set_element, "setSpec", setSpec)
+        create_element(set_element, "setName", setName)
 
 
 def populate_listmetadataformats_element(root_xml):

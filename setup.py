@@ -10,7 +10,7 @@ setup(
         'lxml==4.1.*',
         'PyMySQL==0.8.* ',
         'python-dateutil==2.6.*',
-        'PyYAML==3.12',
+        'ruamel.yaml==0.15.*',
         'requests==2.18.*'
     ]
 )

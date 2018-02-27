@@ -4,9 +4,9 @@ import logging
 from logging.handlers import TimedRotatingFileHandler
 from lxml import etree
 import pymysql
+from ruamel.yaml import YAML
 import os
 from sys import stdout
-import yaml
 
 # TODO cache invalidation?
 
@@ -14,6 +14,7 @@ digital_edition = Blueprint('digital_edition', __name__)
 
 config_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "configs")
 with open(os.path.join(config_dir, "digital_editions.yml")) as digital_editions_config:
+    yaml = YAML()
     project_config = yaml.load(digital_editions_config)
 
 logger = logging.getLogger("digital_editions_api")
