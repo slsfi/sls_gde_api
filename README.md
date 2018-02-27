@@ -13,9 +13,9 @@
     - Please note that the default port is 80, this can be changed in `docker-compose.yml`
     
 - Manually testing the API without Docker, using a python virtualenv
-    - `source /path/to/virtualenv/bin/activate`
+    - `source /path/to/virtualenv/bin/activate` or `/path/to/virtualenv/Scripts/activate_this.bat` on Windows
     - `pip install -e .`
-    - `export FLASK_APP=/path/to/sls_api`
+    - `export FLASK_APP=/path/to/sls_api` or `set FLASK_APP=/path/to/sls_api` on Windows
     - `flask run`
     
 ### /accessfiles endpoint
