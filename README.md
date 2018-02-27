@@ -1,6 +1,6 @@
 # Unified REST API for sls.fi (api.sls.fi)
 - Flask-driven REST API for sls.fi
-- Runs on Python 2.7
+- Runs on Python >=3.6
 - Unified API for all publically accessible sls.fi data (eventually)
 - Installation details:
     - Create config files from _example files in `config` folder

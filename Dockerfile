@@ -1,4 +1,4 @@
-FROM tiangolo/uwsgi-nginx-flask:python2.7
+FROM tiangolo/uwsgi-nginx-flask:python3.6
 
 # Remove demo app and add sls_api files to /app folder
 WORKDIR /app

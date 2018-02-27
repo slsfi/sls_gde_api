@@ -1,5 +1,3 @@
-# coding=utf-8
-from __future__ import unicode_literals
 from collections import OrderedDict
 import datetime
 from dateutil.parser import parse
@@ -125,7 +123,7 @@ def validate_request(req):
     valid_params = {}
     error = None
 
-    for key, value in req.args.iteritems():
+    for key, value in req.args.items():
         if key not in ["verb", "from", "until", "identifier", "set", "metadataPrefix"]:
             error = ("badArgument", "Unknown argument")
     if error is not None:

@@ -1,4 +1,3 @@
-from __future__ import unicode_literals
 from flask import Blueprint, request, Response
 import os
 import requests
@@ -14,7 +13,7 @@ filemaker = Blueprint("filemaker", __name__)
 @filemaker.route("/<path:filemaker_request>", methods=["GET", "POST", "PUT", "DELETE"])
 def send_request(filemaker_request):
     # TODO certificate verification
-    print "{}{}".format(filemaker_config["base_url"], filemaker_request)
+    print("{}{}".format(filemaker_config["base_url"], filemaker_request))
     if request.method == "GET":
         fm_return = requests.get("{base_url}{path}".format(base_url=filemaker_config["base_url"], path=filemaker_request),
                                  headers=request.headers, verify=False)

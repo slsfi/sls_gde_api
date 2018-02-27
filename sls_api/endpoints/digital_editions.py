@@ -1,4 +1,3 @@
-from __future__ import unicode_literals
 from collections import OrderedDict
 from flask import abort, Blueprint, jsonify, safe_join
 import logging
@@ -35,22 +34,23 @@ def xml_to_html(xsl_file_path, xml_file_path, replace_namespace=True, params=Non
     if not os.path.exists(xml_file_path):
         return "XML file {!r} not found!".format(xml_file_path)
 
-    with open(xml_file_path) as xml_file:
+    with open(xml_file_path, mode="r") as xml_file:
         xml_contents = xml_file.read()
         if replace_namespace:
             xml_contents = xml_contents.replace('xmlns="http://www.sls.fi/tei"', 'xmlns="http://www.tei-c.org/ns/1.0"')
 
         xml_root = etree.fromstring(xml_contents)
 
-    with open(xsl_file_path) as xsl_file:
-        xsl_transform = etree.XSLT(xsl_file.read())
+    with open(xsl_file_path, "r") as xsl_file:
+        xslt_root = etree.parse(xsl_file)
+        xsl_transform = etree.XSLT(xslt_root)
 
     if params:
         result = xsl_transform(xml_root, **params)
     else:
         result = xsl_transform(xml_root)
 
-    return etree.tostring(result, encoding="utf-8", method="html", pretty_print=True)
+    return str(result)
 
 
 def open_mysql_connection(database):
@@ -284,7 +284,7 @@ def get_toc_edition(project, edition_id):
     sub_group_toc_id = 0
 
     for iteration in range(1, 3):
-        for key, value in toc_data.iteritems():
+        for key, value in toc_data.items():
             if iteration == 1:
                 if value["toc_groupid"] is None:
                     if value["toc_id"] not in return_data:
@@ -315,11 +315,11 @@ def get_toc_edition(project, edition_id):
     # TODO attempt to make sense of line 176 - 212 in https://github.com/slsfi/digital_editions_API/blob/master/src/routes/digitaledition/table-of-contents.php
     return_data = _php_array_values(return_data)
 
-    for key, value in return_data.iteritems():
+    for key, value in return_data.items():
         return_data[key]["items"] = _php_array_values(return_data[key]["items"])
 
         if len(return_data[key]["items"]) == 0:
-            for key2, value2 in return_data[key]["items"].iteritems():
+            for key2, value2 in return_data[key]["items"].items():
                 return_data[key]["items"][key2]["items"] = _php_array_values(return_data[key]["items"][key2]["items"])
 
     return jsonify(return_data)
@@ -354,17 +354,17 @@ def get_publication_est_text(project, edition_id):
     open_mysql_connection(project)
     sql = "SELECT ed_id AS id, ed_lansering, ed_title AS title, ed_filediv AS multiple_files, " \
           "ed_date_swe AS info_sv, ed_date_fin AS info_fi " \
-          "FROM publications_ed WHERE ed_id=%s ORDER BY ed_datumlansering"
+          "FROM publications_ed WHERE ed_id = %s ORDER BY ed_datumlansering"
 
     with connection.cursor() as cursor:
-        cursor.execute(sql, [edition_id])
+        cursor.execute(sql, [edition_id.split("_")[0]])  # edition_id is like 1_1, we need the first digit here
         edition_data = cursor.fetchall()
 
-    sql = "SELECT DISTINCT p_identifier FROM digital_edition_topelius.publications_ed ped " \
+    sql = "SELECT DISTINCT p.p_identifier FROM digital_edition_topelius.publications_ed ped " \
           "JOIN digital_edition_topelius.publications p ON p.p_ed_id = ped.ed_id " \
           "JOIN digital_edition_topelius.publications_collection pc ON pc.coll_ed_id = p.p_ed_id " \
           "JOIN digital_edition_topelius.publications_group pg ON pg.group_id = p.p_group_id " \
-          "WHERE ed_lansering = 2 AND pg.group_lansering != 1 AND ped.ed_id = 15 AND p_identifier=%s"
+          "WHERE ped.ed_lansering = 2 AND pg.group_lansering != 1 AND ped.ed_id = 15 AND p.p_identifier = %s"
 
     with connection.cursor() as cursor:
         cursor.execute(sql, [edition_id])
@@ -390,11 +390,8 @@ def get_publication_est_text(project, edition_id):
 
         else:
             xml_file_path = safe_join(project_config[project]["file_root"], "xml", "est", "{}_est.xml".format(id_parts[0]))
-            # xml_file_path = os.path.realpath(os.path.join(os.path.abspath(__file__), "/../../../../{}-required/xml/est/".format(project), "{}_est.xml".format(id_parts[0])))
 
             cache_file_path = safe_join(project_config[project]["file_root"], "cache", "est", "{}_est.html".format(id_parts[0]))
-            # cache_folder_path = os.path.realpath(os.path.join(os.path.abspath(__file__), "/../../../../{}-required/cache/est".format(project)))
-            # cache_file_path = os.path.join(cache_folder_path, "{}_est.html".format(id_parts[0]))
 
             logger.debug("Cache file path is {}".format(cache_file_path))
             logger.debug("XML file path is {}".format(xml_file_path))
@@ -410,7 +407,6 @@ def get_publication_est_text(project, edition_id):
                 logger.warning("No cache found")
                 try:
                     xsl_file_path = safe_join(project_config["xslt_root"], "est.xsl")
-                    # xsl_file_path = os.path.realpath(os.path.join(os.path.abspath(__file__), "/../../../../xslt/est.xsl"))
                     content = xml_to_html(xsl_file_path, xml_file_path)
                     try:
                         with open(cache_file_path, "w") as cache_file:
@@ -440,17 +436,17 @@ def get_publication_com_text(project, edition_id, note_id):
     open_mysql_connection(project)
     sql = "SELECT ed_id AS id, ed_lansering, ed_title AS title, ed_filediv AS multiple_files, " \
           "ed_date_swe AS info_sv, ed_date_fin AS info_fi " \
-          "FROM publications_ed WHERE ed_id=%s ORDER BY ed_datumlansering"
+          "FROM publications_ed WHERE ed_id = %s ORDER BY ed_datumlansering"
 
     with connection.cursor() as cursor:
-        cursor.execute(sql, [edition_id])
+        cursor.execute(sql, [edition_id.split("_")[0]])  # edition_id is like 1_1, we need the first digit here
         edition_data = cursor.fetchall()
 
-    sql = "SELECT DISTINCT p_identifier FROM digital_edition_topelius.publications_ed ped " \
+    sql = "SELECT DISTINCT p.p_identifier FROM digital_edition_topelius.publications_ed ped " \
           "JOIN digital_edition_topelius.publications p ON p.p_ed_id = ped.ed_id " \
           "JOIN digital_edition_topelius.publications_collection pc ON pc.coll_ed_id = p.p_ed_id " \
           "JOIN digital_edition_topelius.publications_group pg ON pg.group_id = p.p_group_id " \
-          "WHERE ed_lansering = 2 AND pg.group_lansering != 1 AND ped.ed_id = 15 AND p_identifier=%s"
+          "WHERE ped.ed_lansering = 2 AND pg.group_lansering != 1 AND ped.ed_id = 15 AND p.p_identifier = %s"
 
     with connection.cursor() as cursor:
         cursor.execute(sql, [edition_id])
@@ -501,7 +497,6 @@ def get_publication_com_text(project, edition_id, note_id):
                         "estDocument": "file://{}".format(est_file_path)
                     }
                     xsl_file_path = safe_join(project_config["xslt_root"], "notes.xsl")
-                    # xsl_file_path = os.path.realpath(os.path.join(os.path.abspath(__file__), "/../../../../xslt/notes.xsl"))
 
                     content = xml_to_html(xsl_file_path, xml_file_path, params=params)
                     try:
@@ -536,10 +531,10 @@ def get_publication_inl_text(project, edition_id, lang=None):
     open_mysql_connection(project)
     sql = "SELECT ed_id AS id, ed_lansering, ed_title AS title, ed_filediv AS multiple_files, " \
           "ed_date_swe AS info_sv, ed_date_fin AS info_fi " \
-          "FROM publications_ed WHERE ed_id=%s ORDER BY ed_datumlansering"
+          "FROM publications_ed WHERE ed_id = %s ORDER BY ed_datumlansering"
 
     with connection.cursor() as cursor:
-        cursor.execute(sql, [edition_id])
+        cursor.execute(sql, [edition_id.split("_")[0]])  # edition_id is like 1_1, we need the first digit here
         edition_data = cursor.fetchall()
 
     if len(edition_data) < 1:
@@ -575,7 +570,6 @@ def get_publication_inl_text(project, edition_id, lang=None):
             logger.warning("No cache found")
             try:
                 xsl_file_path = safe_join(project_config["xslt_root"], "est.xml")
-                # xsl_file_path = os.path.realpath(os.path.join(os.path.abspath(__file__), "/../../../../xslt/est.xsl"))
                 content = xml_to_html(xsl_file_path, xml_file_path)
                 try:
                     with open(cache_file_path, "w") as cache_file:
