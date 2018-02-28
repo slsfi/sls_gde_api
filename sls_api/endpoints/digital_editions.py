@@ -18,7 +18,7 @@ with open(os.path.join(config_dir, "digital_editions.yml"), encoding="UTF-8") as
     project_config = yaml.load(digital_editions_config)
 
 logger = logging.getLogger("digital_editions_api")
-if os.environ.get("FLASK_DEBUG", 0) == 1:
+if int(os.environ.get("FLASK_DEBUG", 0)) == 1:
     logger.setLevel(logging.DEBUG)
 else:
     logger.setLevel(logging.INFO)
