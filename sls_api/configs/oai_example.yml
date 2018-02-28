@@ -1,18 +1,18 @@
 # MySQL configuration
-address: "mysql_server.example.com"
-username: "web_user"
-password: "SecretMySQLPassword"
-database: "Metadata"
+address: 'mysql_server.example.com'
+username: 'web_user'
+password: 'SecretMySQLPassword'
+database: 'Metadata'
 
 # Identify verb data
-repo_name: "Company/RepoName"
-repo_protocol_ver: "2.0"
-repo_admin: "admin@company.com"
-repo_deletion: "persistent"
-repo_granularity: "YYYY-MM-DD"
+repo_name: 'Company/RepoName'
+repo_protocol_ver: '2.0'
+repo_admin: 'admin@company.com'
+repo_deletion: 'persistent'
+repo_granularity: 'YYYY-MM-DD'
 
 # ListSets verb data
 sets:
-    # Sets are defined as setSpec: "setName"
-    CompanySet1: "Full Set Name"
-    otherSet: "Long Set Name"
+    # Sets are defined as setSpec: 'setName'
+    CompanySet1: 'Full Set Name'
+    otherSet: 'Long Set Name'
