@@ -8,7 +8,7 @@ from ruamel.yaml import YAML
 import os
 from sys import stdout
 
-# TODO cache invalidation?
+# TODO cache invalidation - check modification time of cache file, if old, discard and regenerate cache
 
 digital_edition = Blueprint('digital_edition', __name__)
 
@@ -18,7 +18,10 @@ with open(os.path.join(config_dir, "digital_editions.yml"), encoding="UTF-8") as
     project_config = yaml.load(digital_editions_config)
 
 logger = logging.getLogger("digital_editions_api")
-logger.setLevel(logging.INFO)
+if os.environ.get("FLASK_DEBUG", 0):
+    logger.setLevel(logging.DEBUG)
+else:
+    logger.setLevel(logging.INFO)
 
 stream_handler = logging.StreamHandler(stream=stdout)
 stream_handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s', '%H:%M:%S'))
@@ -29,7 +32,14 @@ file_handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelnam
 logger.addHandler(file_handler)
 
 
+class FileResolver(etree.Resolver):
+    def resolve(self, system_url, public_id, context):
+        logger.debug("Resolving {}".format(system_url))
+        return self.resolve_filename(system_url, context)
+
+
 def xml_to_html(xsl_file_path, xml_file_path, replace_namespace=True, params=None):
+    logger.debug("Transforming {} using {}".format(xml_file_path, xsl_file_path))
     if not os.path.exists(xsl_file_path):
         return "XSL file {!r} not found!".format(xsl_file_path)
     if not os.path.exists(xml_file_path):
@@ -42,14 +52,18 @@ def xml_to_html(xsl_file_path, xml_file_path, replace_namespace=True, params=Non
 
         xml_root = etree.fromstring(xml_contents)
 
+    xsl_parser = etree.XMLParser()
+    xsl_parser.resolvers.add(FileResolver())
     with open(xsl_file_path, encoding="UTF-8") as xsl_file:
-        xslt_root = etree.parse(xsl_file)
+        xslt_root = etree.parse(xsl_file, parser=xsl_parser)
         xsl_transform = etree.XSLT(xslt_root)
 
-    if params:
-        result = xsl_transform(xml_root, **params)
-    else:
+    if params is None:
         result = xsl_transform(xml_root)
+    elif isinstance(params, dict) or isinstance(params, OrderedDict):
+        result = xsl_transform(xslt_root, **params)
+    else:
+        raise Exception("Invalid parameters for XSLT transformation, must be of type dict or OrderedDict, not {}".format(type(params)))
 
     return str(result)
 
@@ -403,6 +417,8 @@ def get_publication_est_text(project, edition_id):
                         content = cache_file.read()
                 except Exception:
                     content = "Error reading file from cache."
+                else:
+                    logger.info("Content fetched from cache.")
 
             elif os.path.exists(xml_file_path):
                 logger.warning("No cache found")
@@ -411,7 +427,7 @@ def get_publication_est_text(project, edition_id):
                     content = xml_to_html(xsl_file_path, xml_file_path)
                     try:
                         with open(cache_file_path, mode="w", encoding="UTF-8") as cache_file:
-                            logger.warning("Writing contents to cache file")
+                            logger.info("Writing contents to cache file")
                             cache_file.write(content)
                     except Exception:
                         logger.exception("Could not create cachefile")
@@ -490,6 +506,8 @@ def get_publication_com_text(project, edition_id, note_id):
                         content = cache_file.read()
                 except Exception:
                     content = "Error reading content from cache."
+                else:
+                    logger.info("Content fetched from cache.")
             elif os.path.exists(xml_file_path):
                 logger.warning("No cache found")
                 try:
@@ -502,7 +520,7 @@ def get_publication_com_text(project, edition_id, note_id):
                     content = xml_to_html(xsl_file_path, xml_file_path, params=params)
                     try:
                         with open(cache_file_path, mode="w", encoding="UTF-8") as cache_file:
-                            logger.warning("Writing contents to cache file")
+                            logger.info("Writing contents to cache file")
                             cache_file.write(content)
                     except Exception:
                         logger.exception("Could not create cachefile")
@@ -560,13 +578,14 @@ def get_publication_inl_text(project, edition_id, lang=None):
         logger.debug("XML file path is {}".format(xml_file_path))
 
         if os.path.exists(cache_file_path):
-            logger.info("Cache file found, reading contents from there...")
             try:
                 with open(cache_file_path, encoding="UTF-8") as cache_file:
                     content = cache_file.read()
             except Exception:
                 logger.exception("Error reading content from cache")
                 content = "Error reading content from cache"
+            else:
+                logger.info("Content fetched from cache.")
         elif os.path.exists(xml_file_path):
             logger.warning("No cache found")
             try:
@@ -574,7 +593,7 @@ def get_publication_inl_text(project, edition_id, lang=None):
                 content = xml_to_html(xsl_file_path, xml_file_path)
                 try:
                     with open(cache_file_path, mode="w", encoding="UTF-8") as cache_file:
-                        logger.warning("Writing contents to cache file")
+                        logger.info("Writing contents to cache file")
                         cache_file.write(content)
                 except Exception:
                     logger.exception("Could not create cachefile")
