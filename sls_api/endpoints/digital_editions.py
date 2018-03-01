@@ -284,10 +284,10 @@ def get_toc_edition(project, edition_id):
     if edition_id == 15:
         sql = "SELECT toc.* FROM tableofcontents toc JOIN publications_ed ped ON toc.toc_ed_id = ped.ed_id " \
               "JOIN publications_group pgroup ON toc.toc_group_id = pgroup.group_id " \
-              "WHERE toc_ed_id = %s AND toc_linkType!=6 AND prgroup.group_lansering>={} " \
+              "WHERE toc_ed_id = %s AND (toc_linkType!=6 OR toc_linkType IS NULL) AND prgroup.group_lansering>={} " \
               "ORDER BY toc_groupid, toc.sortOrder".format(show_published)
     else:
-        sql = "SELECT toc.* FROM tableofcontents toc WHERE toc_ed_id=%s AND toc_linkType!=6 " \
+        sql = "SELECT toc.* FROM tableofcontents toc WHERE toc_ed_id=%s AND (toc_linkType!=6 OR toc_linkType IS NULL) " \
               "AND toc.toc_group_id IS NULL ORDER BY toc_groupid, toc.sortOrder"
 
     with connection.cursor() as cursor:
@@ -297,56 +297,55 @@ def get_toc_edition(project, edition_id):
 
     return_data = OrderedDict()
     sub_group_toc_id = 0
-
     for iteration in range(1, 3):
-        for key, value in toc_data.items():
+        for row in toc_data:
             if iteration == 1:
-                if value["toc_groupid"] is None:
-                    if value["toc_id"] not in return_data:
-                        return_data[value["toc_id"]] = {
-                            "id": value["toc_id"],
-                            "title": value["title"],
-                            "titleLevel": value["titleLevel"],
-                            "items": []
-                        }
+                if row["toc_groupid"] is None:
+                    if row["toc_id"] not in return_data:
+                        new_data = {
+                                "id": row["toc_id"],
+                                "title": row["title"],
+                                "titleLevel": row["titleLevel"],
+                                "items": []
+                            }
+                        return_data[int(row["toc_id"])] = new_data
             elif iteration == 2:
-                if value["toc_groupid"] is not None and value["toc_linkType"] is None:
-                    if value["toc_groupid"] not in return_data or "items" not in return_data[value["toc_groupid"]] or value["toc_id"] not in return_data[value["toc_groupid"]]["items"]:
-                        sub_group_toc_id = value["toc_id"]
-                        return_data[value["toc_groupid"]]["items"][value["toc_id"]] = {
-                            "title": value["title"],
-                            "id": value["toc_id"],
-                            "items": []
-                        }
-                    else:
-                        return_data[value["toc_groupid"]]["items"][sub_group_toc_id]["items"][value["toc_id"]] = {
-                            "title": value["title"],
-                            "id": value["toc_id"],
-                            "link": "{}_{}".format(value["toc_ed_id"], value["toc_linkID"]),
-                            "link_type": value["toc_linkType"],
-                            "sort_order": value["sortOrder"]
-                        }
-
-    # TODO attempt to make sense of line 176 - 212 in https://github.com/slsfi/digital_editions_API/blob/master/src/routes/digitaledition/table-of-contents.php
-    return_data = _php_array_values(return_data)
+                if row["toc_groupid"] is not None and row["toc_linkType"] is None:
+                    groupid = row["toc_groupid"]
+                    if groupid not in return_data or "items" not in return_data[groupid] or row["toc_id"] not in return_data[groupid]["items"]:
+                        # The PHP version builds up these objects, but appears to throw them away or lose them at some point?
+                        continue
+                        # sub_group_toc_id = row["toc_id"]
+                        # new_data = {
+                        #     "title": row["title"],
+                        #     "id": row["toc_id"],
+                        #     "items": []
+                        # }
+                        # if "items" not in return_data[groupid]:
+                        #     return_data[groupid]["items"] = []
+                        # return_data[groupid]["items"].insert(row["toc_id"], new_data)
+                else:
+                    if row["toc_groupid"] is None:
+                        continue
+                    new_data = {
+                        "title": row["title"],
+                        "id": row["toc_id"],
+                        "link": "{}_{}".format(row["toc_ed_id"], row["toc_linkID"]),
+                        "link_type": row["toc_linkType"],
+                        "sort_order": row["sortOrder"]
+                    }
+                    try:
+                        return_data[row["toc_groupid"]]["items"][sub_group_toc_id]["items"].insert(row["toc_id"], new_data)
+                    except IndexError:
+                        return_data[row["toc_groupid"]]["items"].insert(sub_group_toc_id, {"items": [new_data]})
 
     for key, value in return_data.items():
-        return_data[key]["items"] = _php_array_values(return_data[key]["items"])
+        # the PHP version seems to drop these at some point
+        del value["id"]
+        del value["title"]
+        del value["titleLevel"]
 
-        if len(return_data[key]["items"]) == 0:
-            for key2, value2 in return_data[key]["items"].items():
-                return_data[key]["items"][key2]["items"] = _php_array_values(return_data[key]["items"][key2]["items"])
-
-    return jsonify(return_data)
-
-
-def _php_array_values(ordered_dict):
-    i = 0
-    return_dict = OrderedDict()
-    for key, value in ordered_dict:
-        return_dict[i] = value
-        i += 1
-    return return_dict
+    return jsonify(list(return_data.values()))
 
 
 # routes/digitaledition/table-of-contents.php
@@ -360,6 +359,15 @@ def get_toc_edition_firstentry(project, edition_id):
         result = cursor.fetchone()
     connection.close()
     return jsonify(result)
+
+
+@digital_edition.route("/<project>/cache/est/<edition_id>")            # est
+@digital_edition.route("/<project>/cache/com/<edition_id>/<note_id>")  # com
+@digital_edition.route("/<project>/cache/inl/<edition_id>/<lang>")     # inl
+def check_last_modified(project, edition_id, note_id=None, lang=None):
+    # TODO check mtime of XML file
+    # TODO in future, check date_modified from database instead
+    pass
 
 
 # routes/digitaledition/xml.php
@@ -654,7 +662,7 @@ def get_list_of_persons(data_source_id):
 # routes/semantic_data/places.php
 @digital_edition.route("/semantic_data/places/tooltip/<place_id>")
 def get_place_tooltip(place_id):
-    logging.info("Getting tooltip /semantic_data/places/tooltip/{}".format(place_id))
+    logger.info("Getting tooltip /semantic_data/places/tooltip/{}".format(place_id))
     open_mysql_connection("semantic_data")
     place_id = place_id.replace("pl", "").replace("PlId", "")
 
