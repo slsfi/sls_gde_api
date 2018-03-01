@@ -10,8 +10,10 @@ services:
             - /var/topelius:/var/topelius-files/
             - /var/parland:/var/parland-files/
             - /var/xslt:/var/xslt-files/
+            # Config files need to be mounted aswell
+            - ./sls_api/configs:/app/sls_api/configs
         restart: always
         ports:
             # Port syntax is host_port:container_port
             # Dockerfile uses port 80
-            - "80:80"
+            - "5000:80"
