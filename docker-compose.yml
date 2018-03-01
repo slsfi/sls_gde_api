@@ -16,4 +16,4 @@ services:
         ports:
             # Port syntax is host_port:container_port
             # Dockerfile uses port 80
-            - "5000:80"
+            - "80:80"
