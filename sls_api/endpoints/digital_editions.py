@@ -1,5 +1,5 @@
 from collections import OrderedDict
-from flask import abort, Blueprint, jsonify, safe_join
+from flask import abort, Blueprint, jsonify, request, safe_join
 import logging
 from logging.handlers import TimedRotatingFileHandler
 from lxml import etree
@@ -362,12 +362,30 @@ def get_toc_edition_firstentry(project, edition_id):
 
 
 @digital_edition.route("/<project>/cache/est/<edition_id>")            # est
-@digital_edition.route("/<project>/cache/com/<edition_id>/<note_id>")  # com
+@digital_edition.route("/<project>/cache/com/<edition_id>/")           # com
 @digital_edition.route("/<project>/cache/inl/<edition_id>/<lang>")     # inl
-def check_last_modified(project, edition_id, note_id=None, lang=None):
-    # TODO check mtime of XML file
+def check_last_modified(project, edition_id, lang=None):
+    """
+    Return the modification time for the XML containing the reading text, as seconds since the UNIX epoch
+    """
     # TODO in future, check date_modified from database instead
-    pass
+    text_type = request.path.split("/")[4]
+    if text_type == "est":
+        xml_file_path = safe_join(project_config[project]["file_root"], "xml", "est", "{}_est.xml".format(edition_id))
+    elif text_type == "com":
+        xml_file_path = safe_join(project_config[project]["file_root"], "xml", "com", "{}_com.xml".format(edition_id))
+    elif text_type == "inl":
+        lang_code = "fin" if lang == "fi" else "swe"
+        version = "int" if project_config[project]["show_internally_published"] else "ext"
+        filename = "{}_inl_{}_{}.xml".format(edition_id, lang_code, version)
+
+        xml_file_path = safe_join(project_config[project]["file_root"], "xml", "inl", filename)
+    else:
+        return ""
+    try:
+        return str(os.path.getmtime(xml_file_path)), 200
+    except OSError:
+        return abort(404)
 
 
 # routes/digitaledition/xml.php
