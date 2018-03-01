@@ -210,9 +210,9 @@ def get_toc_root_elements(project, edition_id, group_id):
 
 # routes/digitaledition/table-of-contents.php
 @digital_edition.route("/<project>/table-of-contents/edition/<edition_id>/prevnext/<link_id>")
-def get_toc_edition_link(project, edition_id, link_id):
+def get_toc_edition_links(project, edition_id, link_id):
     logger.info("Getting links /{}/table-of-contents/edition/{}/prevnext/{}".format(project, edition_id, link_id))
-    return_data = []
+    return_data = OrderedDict()
     open_mysql_connection(project)
     sql = "SELECT ed_id AS id, ed_lansering, ed_title AS title, " \
           "ed_filediv AS multiple_files, ed_date_swe AS info_sv, ed_date_fin AS info_fi " \
@@ -251,7 +251,10 @@ def get_toc_edition_link(project, edition_id, link_id):
         with connection.cursor() as cursor:
             cursor.execute(sql, [edition_id, link_id])
             toc_data = cursor.fetchall()
-            return_data["prev"] = toc_data[0]
+            if len(toc_data) > 0:
+                return_data["prev"] = toc_data[0]
+            else:
+                return_data["prev"] = None
 
         sql = "SELECT t1.title AS title, t1.toc_ed_id AS edition_id, t1.toc_linkID AS link_id " \
               "FROM tableofcontents t1 LEFT JOIN tableofcontents t2 " \
