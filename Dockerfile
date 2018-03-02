@@ -7,7 +7,6 @@ RUN pip install Twisted
 RUN mkdir /app
 WORKDIR /app
 COPY setup.py /app
-COPY uwsgi.ini /app
 RUN mkdir /app/sls_api
 COPY sls_api/__init__.py /app/sls_api/__init__.py
 COPY sls_api/endpoints /app/sls_api/endpoints
