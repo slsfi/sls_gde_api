@@ -31,6 +31,8 @@ class FileResolver(etree.Resolver):
 
 def xml_to_html(xsl_file_path, xml_file_path, replace_namespace=True, params=None):
     logger.debug("Transforming {} using {}".format(xml_file_path, xsl_file_path))
+    if params is not None:
+        logger.debug("Parameters are {}".format(params))
     if not os.path.exists(xsl_file_path):
         return "XSL file {!r} not found!".format(xsl_file_path)
     if not os.path.exists(xml_file_path):
@@ -52,10 +54,11 @@ def xml_to_html(xsl_file_path, xml_file_path, replace_namespace=True, params=Non
     if params is None:
         result = xsl_transform(xml_root)
     elif isinstance(params, dict) or isinstance(params, OrderedDict):
-        result = xsl_transform(xslt_root, **params)
+        result = xsl_transform(xml_root, **params)
     else:
         raise Exception("Invalid parameters for XSLT transformation, must be of type dict or OrderedDict, not {}".format(type(params)))
-
+    if len(xsl_transform.error_log) > 0:
+        logging.debug(xsl_transform.error_log)
     return str(result)
 
 
@@ -527,8 +530,8 @@ def get_publication_com_text(project, edition_id, note_id):
                 logger.warning("No cache found")
                 try:
                     params = {
-                        "noteId": note_id,
-                        "estDocument": "file://{}".format(est_file_path)
+                        "noteId": '"{}"'.format(note_id),
+                        "estDocument": '"file://{}"'.format(est_file_path)
                     }
                     xsl_file_path = safe_join(project_config["xslt_root"], "notes.xsl")
 
