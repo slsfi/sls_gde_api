@@ -6,7 +6,6 @@ from lxml import etree
 import pymysql
 from ruamel.yaml import YAML
 import os
-from sys import stdout
 
 # TODO cache invalidation - check modification time of cache file, if old, discard and regenerate cache
 
@@ -17,15 +16,7 @@ with open(os.path.join(config_dir, "digital_editions.yml"), encoding="UTF-8") as
     yaml = YAML()
     project_config = yaml.load(digital_editions_config)
 
-logger = logging.getLogger("digital_editions_api")
-if int(os.environ.get("FLASK_DEBUG", 0)) == 1:
-    logger.setLevel(logging.DEBUG)
-else:
-    logger.setLevel(logging.INFO)
-
-stream_handler = logging.StreamHandler(stream=stdout)
-stream_handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s', '%H:%M:%S'))
-logger.addHandler(stream_handler)
+logger = logging.getLogger("sls_api.digital_edition")
 
 file_handler = TimedRotatingFileHandler(filename=project_config["log_file"], when="midnight", backupCount=7)
 file_handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s', '%H:%M:%S'))
