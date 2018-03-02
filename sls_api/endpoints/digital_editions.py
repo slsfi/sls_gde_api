@@ -100,7 +100,7 @@ def get_html_contents_as_json(project, filename):
             contents = html_file.read()
         data = {
             "filename": filename,
-            "contents": contents
+            "content": contents
         }
         return jsonify(data), 200, {"Access-Control-Allow-Origin": "*"}
     else:
@@ -508,14 +508,9 @@ def get_publication_com_text(project, edition_id, note_id):
             id_parts = edition_id.replace("_com", "").split(";")
 
             xml_file_path = safe_join(project_config[project]["file_root"], "xml", "com", "{}_com.xml".format(id_parts[0]))
-            # xml_file_path = os.path.realpath(os.path.join(os.path.abspath(__file__), "/../../../../{}-required/xml/com".format(project), "{}_com.xml".format(id_parts[0])))
             est_file_path = safe_join(project_config[project]["file_root"], "xml", "est", "{}_est.xml".format(id_parts[0]))
-            # est_file_path = os.path.realpath(os.path.join(os.path.abspath(__file__), "/../../../../{}-required/xml/est".format(project), "{}_est.xml".format(id_parts[0])))
 
             cache_file_path = safe_join(project_config[project]["file_root"], "cache", "com", "note_{}_com_{}.html".format(id_parts[0], note_id))
-            # cache_folder_path = os.path.realpath(os.path.join(os.path.abspath(__file__), "/../../../../{}-required/cache/com".format(project)))
-            # cache_file_path = os.path.join(cache_folder_path, "note_{}_com_{}.html".format(id_parts[0], note_id))
-
             logger.debug("Cache file path is {}".format(cache_file_path))
             logger.debug("XML file path is {}".format(xml_file_path))
             logger.debug("est XML file path is {}".format(est_file_path))
