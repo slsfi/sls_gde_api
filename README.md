@@ -59,7 +59,7 @@ limitations under the License.
 - Port of older PHP apis:
     - https://github.com/slsfi/digital_editions_API 
     - https://github.com/slsfi/digital_editions_xslt
-- Currently made for the SLS metadata database, being re-made for the GDE 2018 database spec, see branch
+- Currently made for the SLS metadata database, being re-made for the GDE 2018 database spec, see branch `gde2018-database-spec`
 - Needs connection details for MySQL server and paths to folders for XML, HTML, and XSL files
     - configs/digital_editions.yml
     - See digital_editions_example.yml for specifics
