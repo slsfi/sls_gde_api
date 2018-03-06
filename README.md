@@ -3,7 +3,7 @@
 - Runs on Python >=3.6
 - Unified API for all publically accessible sls.fi data 
 
-Copyright 2018 Svenska Litteraturs‰llskapet i Finland, r.f.
+Copyright 2018 Svenska Litteraturs√§llskapet i Finland, r.f.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -23,19 +23,18 @@ limitations under the License.
 - Installation details:
     - Create config files from _example files in `config` folder
     - Ensure volume paths in `docker-compose.yml` point at the correct host and container folders
-    - If needed, tweak `uwsgi.ini` file to adjust uWSGI server settings
-    - run `docker-compose build` in root folder containing `Dockerfile`, `uwsgi.ini`, and `docker-compose.yml`
+    - run `docker-compose build` in root folder containing `Dockerfile` and `docker-compose.yml`
     
 - Running in Production
     - Start api using `docker-compose up -d`
-    - Please note that the default port is 80, this can be changed in `docker-compose.yml`
+    - Please note that the default port is 8080, this can be changed in `docker-compose.yml`
     
 - Manually testing the API without Docker, using a python virtualenv
     - `source /path/to/virtualenv/bin/activate` or `/path/to/virtualenv/Scripts/activate_this.bat` on Windows
     - `pip install -e .`
     - `export FLASK_APP=/path/to/sls_api` or `set FLASK_APP=/path/to/sls_api` on Windows
     - `export FLASK_DEBUG=1` or `set FLASK_DEBUG=1`on Windows to activate DEBUG mode
-    - `flask run`
+    - `flask run` - note that this uses port 5000 by default
     
 ### /accessfiles endpoint
 - Provides accessfiles through Isilon Swift for Finna and Europeana
