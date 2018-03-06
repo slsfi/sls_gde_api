@@ -3,7 +3,7 @@
 - Runs on Python >=3.6
 - Unified API for all publically accessible sls.fi data 
 
-Copyright 2018 Svenska Litteraturs√§llskapet i Finland, r.f.
+Copyright 2018 Svenska Litteraturs‰llskapet i Finland, r.f.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -51,6 +51,7 @@ limitations under the License.
 - Provides OAI-PMH metadata in XML format for Finna and Europeana
 - Follows https://www.openarchives.org/OAI/openarchivesprotocol.html
 - Needs connection details to MySQL server housing metadata
+- Currently made for the SLS metadata database, specification for this TBD
     - configs/oai.yml
     - See oai_example.yml for specifics
  
@@ -58,6 +59,7 @@ limitations under the License.
 - Port of older PHP apis:
     - https://github.com/slsfi/digital_editions_API 
     - https://github.com/slsfi/digital_editions_xslt
+- Currently made for the SLS metadata database, being re-made for the GDE 2018 database spec, see branch
 - Needs connection details for MySQL server and paths to folders for XML, HTML, and XSL files
     - configs/digital_editions.yml
     - See digital_editions_example.yml for specifics
