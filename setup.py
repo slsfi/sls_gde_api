@@ -9,7 +9,7 @@ setup(
         'flask==0.12.*',
         'lxml==4.1.*',
         'PyMySQL==0.8.* ',
-        'python-dateutil==2.6.*',
+        'python-dateutil==2.7.*',
         'ruamel.yaml==0.15.*',
         'requests==2.18.*'
     ]
