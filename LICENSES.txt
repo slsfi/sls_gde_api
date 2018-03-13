@@ -2,6 +2,7 @@ The SLS API itself is licensed under an Apache 2.0 license - see LICENSE
 
 The SLS API makes use of several open-source libraries:
     - Flask is published under a BSD 3-clause license, see LICENSES/flask.txt
+    - flasgger is published under an MIT license, see LICENSES/flasgger.txt
     - lxml is published under a BSD 3-clause license, see LICENSES/lxml.txt
     - PyMySQL is published under an MIT license, see LICENSES/pymysql.txt
     - python-dateutil is published under an Apache 2.0 license and a BSD 3-clause license, see LICENSES/dateutil.txt
