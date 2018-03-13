@@ -648,7 +648,7 @@ def get_person_tooltip(person_id):
     if ms_data and ms_data[0] is not None:
         return jsonify(ms_data[0])
     else:
-        return jsonify("")
+        return jsonify("Person not found"), 404
 
 
 # routes/semantic_data/persons.php
@@ -682,7 +682,11 @@ def get_place_tooltip(place_id):
         ms_data = cursor.fetchall()
 
     connection.close()
-    return jsonify(ms_data[0])
+
+    if ms_data and ms_data[0] is not None:
+        return jsonify(ms_data[0])
+    else:
+        return jsonify("Place not found"), 404
 
 
 # routes/semantic_data/places.php
