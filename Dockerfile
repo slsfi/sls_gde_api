@@ -6,6 +6,7 @@ RUN pip install Twisted
 
 RUN mkdir /app
 WORKDIR /app
+COPY openapi.json /app
 COPY setup.py /app
 RUN mkdir /app/sls_api
 COPY sls_api/__init__.py /app/sls_api/__init__.py
