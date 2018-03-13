@@ -1,0 +1,649 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "description": "Unified API for all publically accessible sls.fi data",
+    "version": "1.0.0",
+    "title": "SLS API",
+    "contact": {
+      "email": "is@sls.fi"
+    },
+    "license": {
+      "name": "Apache 2.0 License",
+      "url": "http://www.apache.org/licenses/LICENSE-2.0.html"
+    }
+  },
+  "servers": [
+    {
+      "url": "http://api.sls.fi",
+      "description": "Live version used by sls.fi projects"
+    }
+  ],
+  "tags": [
+    {
+      "name": "accessfiles",
+      "description": "Provides files from an ISILON Swift accesspoint"
+    },
+    {
+      "name": "digitaledition",
+      "description": "Endpoints used by the Generic Platform for Digital Editions",
+      "externalDocs": {
+        "description": "Github repo for old API",
+        "url": "https://github.com/slsfi/digital_editions_API"
+      }
+    },
+    {
+      "name": "/filemaker",
+      "description": "Direct link to a Filemaker Server 2016 REST API",
+      "externalDocs": {
+        "description": "More info",
+        "url": "https://fmhelp.filemaker.com/docs/16/en/restapi/"
+      }
+    },
+    {
+      "name": "oai",
+      "description": "Provides metadata in a OAI-compliant XML formats",
+      "externalDocs": {
+        "description": "OAI-PMH spec",
+        "url": "https://www.openarchives.org/OAI/openarchivesprotocol.html"
+      }
+    }
+  ],
+  "paths": {
+    "/accessfiles/{file_path}": {
+      "get": {
+        "summary": "Get a file from ISILON Swift if it exists and is accessible",
+        "description": "NOTE: The Content-Type header of the response matches the MIME type of the file.",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "file_path",
+            "description": "The path to a file in the Swift home directory",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "example": "thumbnails/test/test.jpg"
+            }
+          }
+        ],
+        "tags": [
+          "accessfiles"
+        ],
+        "responses": {
+          "200": {
+            "description": "The requested file in its entirety, with matching Content-Type header"
+          },
+          "404": {
+            "description": "The file was not found, or is otherwise not available"
+          }
+        }
+      }
+    },
+    "/digitaledition/{project}/html/{filename}": {
+      "get": {
+        "summary": "Get static HTML content for a given project",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project",
+            "description": "The Digital Edition project this request concerns (topelius, parland, etc)",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "example": "topelius"
+            }
+          },
+          {
+            "in": "path",
+            "name": "filename",
+            "description": "The filename for the desired content, without file extension",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "example": "frontpage_en"
+            }
+          }
+        ],
+        "tags": [
+          "digitaledition"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "filename": "about_en",
+                    "content": "<html><body>Hello World!</body></html>"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "The requested content was not found"
+          }
+        }
+      }
+    },
+    "/digitaledition/{project}/manuscript/{publication_id}": {
+      "get": {
+        "summary": "Get the manuscript record(s) for a given publication ID",
+        "description": "NOTE: This method essentially returns database rows directly, as a JSON object (list of rows)",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project",
+            "description": "The Digital Edition project this request concerns (topelius, parland, etc)",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "example": "topelius"
+            }
+          },
+          {
+            "in": "path",
+            "name": "publication_id",
+            "description": "The ID for the desired publication",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "example": "1"
+            }
+          }
+        ],
+        "tags": [
+          "digitaledition"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": [
+                    {
+                      "m_id": 1,
+                      "m_filename": "foo.xml",
+                      "m_publication_id": 1,
+                      "m_title": "Example 1"
+                    },
+                    {
+                      "m_id": 2,
+                      "m_filename": "bar.xml",
+                      "m_publication_id": 28,
+                      "m_title": "Example 2"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/digitaledition/{project}/publication/{publication_id}": {
+      "get": {
+        "summary": "Get the publication record(s) for a given publication ID",
+        "description": "NOTE: This method essentially returns database rows directly, as a JSON object (list of rows)",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project",
+            "description": "The Digital Edition project this request concerns (topelius, parland, etc)",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "example": "topelius"
+            }
+          },
+          {
+            "in": "path",
+            "name": "publication_id",
+            "description": "The ID for the desired publication",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "example": "1"
+            }
+          }
+        ],
+        "tags": [
+          "digitaledition"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": [
+                    {
+                      "URN": "blah:foo:bar:832759824",
+                      "filename": "1_1_test.xml",
+                      "p_id": 1,
+                      "p_title": "Test publication",
+                      "p_identifier": "1_1"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/digitaledition/{project}/text/est/{edition_id}": {
+      "get": {
+        "summary": "Get the reading text for a single edition",
+        "description": "Returns the formatted reading text for a single readition for the given project",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project",
+            "description": "The Digital Edition project this request concerns (topelius, parland, etc)",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "example": "topelius"
+            }
+          },
+          {
+            "in": "path",
+            "name": "edition_id",
+            "description": "The ID for the desired edition",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "example": "1_1"
+            }
+          }
+        ],
+        "tags": [
+          "digitaledition"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "id": "1_1",
+                    "content": "<div><p>Hello, World!</p></div>"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/digitaledition/{project}/text/com/{edition_id}/{note_id}": {
+      "get": {
+        "summary": "Get a specific note/commentary for a given edition",
+        "description": "Returns the formatted text for the desired note/comment",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project",
+            "description": "The Digital Edition project this request concerns (topelius, parland, etc)",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "example": "topelius"
+            }
+          },
+          {
+            "in": "path",
+            "name": "edition_id",
+            "description": "The ID for the desired edition",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "example": "1_1"
+            }
+          },
+          {
+            "in": "path",
+            "name": "note_id",
+            "description": "The ID for the desired note",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "example": "en350"
+            }
+          }
+        ],
+        "tags": [
+          "digitaledition"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "id": "1_1",
+                    "content": "<p>This word refers to an example.</p>"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/digitaledition/{project}/text/inl/{edition_id}": {
+      "get": {
+        "summary": "Get internationalized text for a given edition",
+        "description": "Returns the formatted text for the desired edition",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project",
+            "description": "The Digital Edition project this request concerns (topelius, parland, etc)",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "example": "topelius"
+            }
+          },
+          {
+            "in": "path",
+            "name": "edition_id",
+            "description": "The ID for the desired edition",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "example": "1_1"
+            }
+          }
+        ],
+        "tags": [
+          "digitaledition"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "id": "1_1",
+                    "content": "<div><p>Hello World!</p></div>"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/digitaledition/{project}/text/inl/{edition_id}/{language}": {
+      "get": {
+        "summary": "Get translated text for a given edition",
+        "description": "Returns the formatted text for the desired edition, in the desired language",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project",
+            "description": "The Digital Edition project this request concerns (topelius, parland, etc)",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "example": "topelius"
+            }
+          },
+          {
+            "in": "path",
+            "name": "edition_id",
+            "description": "The ID for the desired edition",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "example": "1_1"
+            }
+          },
+          {
+            "in": "path",
+            "name": "language",
+            "description": "The languge code for the desired text",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "fin",
+                "swe",
+                "eng"
+              ],
+              "example": "swe"
+            }
+          }
+        ],
+        "tags": [
+          "digitaledition"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "id": "1_1",
+                    "content": "<div><p>Hejsan Världen!</p></div>"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/digitaledition/semantic_data/persons/tooltip/{person_id}": {
+      "get": {
+        "summary": "Get tooltip text for the given person",
+        "description": "Returns a brief description of the person in question",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "person_id",
+            "description": "The unique string ID for the person in question",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "example": "spe1"
+            }
+          }
+        ],
+        "tags": [
+          "digitaledition"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "title": "Test Person",
+                    "content": "Test Person is a very interesting person.",
+                    "givenname": "Test",
+                    "surname": "Person"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Person ID not found in database"
+          }
+        }
+      }
+    },
+    "/digitaledition/semantic_data/persons/list/{data_source_id}": {
+      "get": {
+        "summary": "Get a list of all available persons in the given data source",
+        "description": "Returns a list of database rows from the given data source",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "data_source_id",
+            "description": "The numeric ID for the desired data source",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "example": 1
+            }
+          }
+        ],
+        "tags": [
+          "digitaledition"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": [
+                    {
+                      "id_p": "spe1",
+                      "title": "Test Person"
+                    },
+                    {
+                      "id_p": "spe2",
+                      "title": "Butch Deadlift"
+                    },
+                    {
+                      "id_p": "spe3",
+                      "title": "Big McLargeHuge"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/digitaledition/semantic_data/places/tooltip/{place_id}": {
+      "get": {
+        "summary": "Get tooltip text for the given place",
+        "description": "Returns a brief description of the place in question",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "place_id",
+            "description": "The unique string ID for the place in question",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "example": "PlId110"
+            }
+          }
+        ],
+        "tags": [
+          "digitaledition"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "title": "Example Place",
+                    "content": "Example Place is a very distinct and interesting place, used as an example."
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Place ID not found in database"
+          }
+        }
+      }
+    },
+    "/digitaledition/semantic_data/places/list": {
+      "get": {
+        "summary": "Get a list of all available places",
+        "description": "Returns a list of available places and their associated IDs",
+        "tags": [
+          "digitaledition"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": [
+                    {
+                      "title": "Example Place",
+                      "id": "PlId110"
+                    },
+                    {
+                      "title": "Test Plaza",
+                      "id": "PlId001"
+                    },
+                    {
+                      "title": "Idiot Crater",
+                      "id": "PlId002"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/oai": {
+      "get": {
+        "summary": "Get archival metadata in OAI-PMH format",
+        "description": "Follows the Open Archives Initiative Protocol for Metadata Harvesting",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "verb",
+            "description": "A valid OAI-PMH verb",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "Identify",
+                "ListSets",
+                "ListMetadataFormats",
+                "ListIdentifiers",
+                "ListRecords",
+                "GetRecord"
+              ],
+              "example": "Identify"
+            }
+          }
+        ],
+        "tags": [
+          "oai"
+        ],
+        "responses": {
+          "200": {
+            "description": "A valid OAI-PMH return containing metadata"
+          },
+          "400": {
+            "description": "A valid OAI-PMH return containing an error message, due to a malformed request"
+          },
+          "404": {
+            "description": "A valid OAI-PMH return containing an error message, as the requested metadata was not found"
+          },
+          "500": {
+            "description": "A valid OAI-PMH return containing an error message, due to an internal server error"
+          }
+        }
+      }
+    }
+  }
+}

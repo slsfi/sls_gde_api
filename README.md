@@ -35,7 +35,11 @@ limitations under the License.
     - `export FLASK_APP=/path/to/sls_api` or `set FLASK_APP=/path/to/sls_api` on Windows
     - `export FLASK_DEBUG=1` or `set FLASK_DEBUG=1`on Windows to activate DEBUG mode
     - `flask run` - note that this uses port 5000 by default
-    
+
+### /apidocs endpoint
+- Provides Swagger UI API documentation
+- Documentation also available as OpenAPI 3.0.0 spec, see `openapi.json`
+
 ### /accessfiles endpoint
 - Provides accessfiles through Isilon Swift for Finna and Europeana
 - Needs a list of allowed accessfiles and swift authentication details to work
