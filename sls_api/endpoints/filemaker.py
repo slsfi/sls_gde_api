@@ -11,23 +11,24 @@ with open(os.path.join(config_dir, "filemaker.yml")) as config_file:
 filemaker = Blueprint("filemaker", __name__)
 
 
+@filemaker.route("/", methods=["GET", "POST", "PUT", "DELETE"])
 @filemaker.route("/<path:filemaker_request>", methods=["GET", "POST", "PUT", "DELETE"])
-def send_request(filemaker_request):
-    # TODO certificate verification
-    print("{}{}".format(filemaker_config["base_url"], filemaker_request))
-    if request.method == "GET":
-        fm_return = requests.get("{base_url}{path}".format(base_url=filemaker_config["base_url"], path=filemaker_request),
-                                 headers=request.headers, verify=False)
-        return Response(fm_return.content, status=fm_return.status_code, content_type="application/json")
-    elif request.method == "POST":
-        fm_return = requests.post("{base_url}{path}".format(base_url=filemaker_config["base_url"], path=filemaker_request),
-                                  headers=request.headers, json=request.json, verify=False)
-        return Response(fm_return.content, status=fm_return.status_code, content_type="application/json")
-    elif request.method == "PUT":
-        fm_return = requests.put("{base_url}{path}".format(base_url=filemaker_config["base_url"], path=filemaker_request),
-                                 headers=request.headers, data=request.json, verify=False)
-        return Response(fm_return.content, status=fm_return.status_code, content_type="application/json")
-    elif request.method == "DELETE":
-        fm_return = requests.delete("{base_url}{path}".format(base_url=filemaker_config["base_url"], path=filemaker_request),
-                                    headers=request.headers, verify=False)
-        return Response(fm_return.content, status=fm_return.status_code, content_type="application/json")
+def proxy_to_filemaker(filemaker_request=None):
+    if filemaker_request is None:
+        request_url = filemaker_config["base_url"]
+    else:
+        request_url = "{}{}".format(filemaker_config["base_url"], filemaker_request)
+    resp = requests.request(
+        method=request.method,
+        url=request_url,
+        headers={key: value for (key, value) in request.headers if key != "Host"},
+        data=request.get_data(),
+        cookies=request.cookies,
+        allow_redirects=False,
+        verify=False
+    )
+
+    excluded_headers = ["content-encoding", "content-length", "transfer-encoding", "connection"]
+    headers = [(name, value) for (name, value) in resp.raw.headers.items() if name.lower() not in excluded_headers]
+
+    return Response(resp.content, resp.status_code, headers)
