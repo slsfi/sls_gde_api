@@ -16,12 +16,16 @@
     {
       "url": "http://api.sls.fi",
       "description": "Live version used by sls.fi projects"
+    },
+    {
+      "url": "http://127.0.0.1:5000",
+      "description": "Localhost version for testing purposes"
     }
   ],
   "tags": [
     {
       "name": "accessfiles",
-      "description": "Provides files from an ISILON Swift accesspoint"
+      "description": "Provides image and audio files of objects in the SLS Digital Archives, as seen on http://sls.finna.fi"
     },
     {
       "name": "digitaledition",
@@ -32,16 +36,8 @@
       }
     },
     {
-      "name": "/filemaker",
-      "description": "Direct link to a Filemaker Server 2016 REST API",
-      "externalDocs": {
-        "description": "More info",
-        "url": "https://fmhelp.filemaker.com/docs/16/en/restapi/"
-      }
-    },
-    {
       "name": "oai",
-      "description": "Provides metadata in a OAI-compliant XML formats",
+      "description": "Provides OAI metadata for objects in the SLS Digital Archives, as seen on http://sls.finna.fi",
       "externalDocs": {
         "description": "OAI-PMH spec",
         "url": "https://www.openarchives.org/OAI/openarchivesprotocol.html"
@@ -51,7 +47,7 @@
   "paths": {
     "/accessfiles/{file_path}": {
       "get": {
-        "summary": "Get a file from ISILON Swift if it exists and is accessible",
+        "summary": "Get a file from the SLS archives if it exists and is publically accessible",
         "description": "NOTE: The Content-Type header of the response matches the MIME type of the file.",
         "parameters": [
           {
@@ -99,7 +95,7 @@
             "required": true,
             "schema": {
               "type": "string",
-              "example": "frontpage_en"
+              "example": "frontpage-en"
             }
           }
         ],
@@ -113,7 +109,7 @@
               "application/json": {
                 "schema": {
                   "example": {
-                    "filename": "about_en",
+                    "filename": "about-en",
                     "content": "<html><body>Hello World!</body></html>"
                   }
                 }
@@ -604,7 +600,7 @@
     },
     "/oai": {
       "get": {
-        "summary": "Get archival metadata in OAI-PMH format",
+        "summary": "Perform OAI-PMH queries against SLS databases",
         "description": "Follows the Open Archives Initiative Protocol for Metadata Harvesting",
         "parameters": [
           {
@@ -624,6 +620,52 @@
               ],
               "example": "Identify"
             }
+          },
+          {
+            "in": "query",
+            "name": "from",
+            "description": "Only get metadata newer than this timestamp (YYYY-MM-DD)",
+            "schema": {
+              "type": "string",
+              "example": "2017-12-31"
+            }
+          },
+          {
+            "in": "query",
+            "name": "until",
+            "description": "Only get metadata older than this timestamp (YYYY-MM-DD)",
+            "schema": {
+              "type": "string",
+              "example": "2017-12-31"
+            }
+          },
+          {
+            "in": "query",
+            "name": "identifier",
+            "description": "Only get metadata with this ID (use verb=ListIdentifiers to get available IDs)",
+            "schema": {
+              "type": "string",
+              "example": "129"
+            }
+          },
+          {
+            "in": "query",
+            "name": "set",
+            "description": "Only get metadata from this archival set (use verb=ListSets to get available sets)",
+            "schema": {
+              "type": "string",
+              "example": "SLSfinna"
+            }
+          },
+          {
+            "in": "query",
+            "name": "metadataPrefix",
+            "description": "Choose display format for metadata (use verb=ListMetadataFormats to get available formats)",
+            "schema": {
+              "type": "string",
+              "enum": ["oai_dc", "europeana", "ead"],
+              "example": "oai_dc"
+            }
           }
         ],
         "tags": [
@@ -631,16 +673,36 @@
         ],
         "responses": {
           "200": {
-            "description": "A valid OAI-PMH return containing metadata"
+            "description": "A valid OAI-PMH return containing metadata",
+            "content": {
+              "text/xml": {
+
+              }
+            }
           },
           "400": {
-            "description": "A valid OAI-PMH return containing an error message, due to a malformed request"
+            "description": "A valid OAI-PMH return containing an error message, due to a malformed request",
+            "content": {
+              "text/xml": {
+
+              }
+            }
           },
           "404": {
-            "description": "A valid OAI-PMH return containing an error message, as the requested metadata was not found"
+            "description": "A valid OAI-PMH return containing an error message, as the requested metadata was not found",
+            "content": {
+              "text/xml": {
+
+              }
+            }
           },
           "500": {
-            "description": "A valid OAI-PMH return containing an error message, due to an internal server error"
+            "description": "A valid OAI-PMH return containing an error message, due to an internal server error",
+            "content": {
+              "text/xml": {
+
+              }
+            }
           }
         }
       }

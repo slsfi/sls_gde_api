@@ -1,4 +1,4 @@
-from flask import Flask
+from flask import Flask, redirect, url_for
 from flasgger import Swagger
 import logging
 import json
@@ -19,7 +19,7 @@ root_logger.addHandler(stream_handler)
 
 logger = logging.getLogger("sls_api")
 
-# Load in Swagger UI to display api documentation at /apidocs
+# Load in Swagger UI to display api documentation at /apidocs, with a 302-redirect at the base URL
 if os.path.exists("openapi.json"):
     app.config["SWAGGER"] = {
         "title": "SLS API",
@@ -27,6 +27,11 @@ if os.path.exists("openapi.json"):
     }
     with open("openapi.json") as json_file:
         swagger = Swagger(app, template=json.load(json_file))
+
+    # redirect requests at the base URL to /apidocs
+    @app.route("/")
+    def redir_to_docs():
+        return redirect(url_for("flasgger.apidocs"), code=302)
 else:
     logger.warning("Could not load openapi.json specification file!")
 
@@ -35,9 +40,6 @@ else:
 if os.path.exists(os.path.join("sls_api", "configs", "digital_editions.yml")):
     from sls_api.endpoints.digital_editions import digital_edition
     app.register_blueprint(digital_edition, url_prefix="/digitaledition")
-if os.path.exists(os.path.join("sls_api", "configs", "filemaker.yml")):
-    from sls_api.endpoints.filemaker import filemaker
-    app.register_blueprint(filemaker, url_prefix="/filemaker")
 if os.path.exists(os.path.join("sls_api", "configs", "oai.yml")):
     from sls_api.endpoints.oai import oai
     app.register_blueprint(oai, url_prefix="/oai")

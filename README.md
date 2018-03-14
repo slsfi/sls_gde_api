@@ -66,9 +66,3 @@ limitations under the License.
 - Needs connection details for MySQL server and paths to folders for XML, HTML, and XSL files
     - configs/digital_editions.yml
     - See digital_editions_example.yml for specifics
-
-### /filemaker endpoint
-- Direct link to a Filemaker Server 2016 REST API
-- https://fmhelp.filemaker.com/docs/16/en/restapi/
-- Base URL for Filemaker Server defined in configs/filemaker.yml
-    - see configs/filemaker_example.yml
