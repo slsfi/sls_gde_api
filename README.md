@@ -2,7 +2,7 @@
 - Flask-driven REST API for sls.fi
 - Runs on Python >=3.6
 - Unified API for all publically accessible sls.fi data 
-
+---
 Copyright 2018 Svenska Litteratursällskapet i Finland, r.f.
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -16,7 +16,6 @@ distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
-
 ---
 - For full details on licenses in-use by the SLS API and its components, see `LICENSES.txt`
 
@@ -49,7 +48,17 @@ limitations under the License.
     - https://bitbucket.org/rasek_sls/accessfile_list_generator  (private repo)
 - swift_file_list.txt should be a newline-separated list of valid filepaths inside the Swift home directory
     - In other words, filepaths relative to the home directory of the swift user configured in swift_auth.yml
-    
+
+### /digitaleditions endpoint
+- Endpoints used for the SLS Generic Digital Edition platform
+- Currently made for the SLS metadata database, being re-made for the GDE 2018 database spec, see branch `gde2018-database-spec`
+- Port of older PHP apis:
+    - https://github.com/slsfi/digital_editions_API 
+    - https://github.com/slsfi/digital_editions_xslt
+- Needs connection details for MySQL server and paths to folders for XML, HTML, and XSL files
+    - configs/digital_editions.yml
+    - See digital_editions_example.yml for specifics    
+
 ### /oai endpoint
 - Provides OAI-PMH metadata in XML format for Finna and Europeana
 - Follows https://www.openarchives.org/OAI/openarchivesprotocol.html
@@ -57,12 +66,3 @@ limitations under the License.
 - Currently made for the SLS metadata database, specification for this TBD
     - configs/oai.yml
     - See oai_example.yml for specifics
- 
-### /digitaleditions endpoint
-- Port of older PHP apis:
-    - https://github.com/slsfi/digital_editions_API 
-    - https://github.com/slsfi/digital_editions_xslt
-- Currently made for the SLS metadata database, being re-made for the GDE 2018 database spec, see branch `gde2018-database-spec`
-- Needs connection details for MySQL server and paths to folders for XML, HTML, and XSL files
-    - configs/digital_editions.yml
-    - See digital_editions_example.yml for specifics
