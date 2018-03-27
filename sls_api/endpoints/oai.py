@@ -199,9 +199,15 @@ def create_element(parent, tag_name, contents, attributes=None, namespace_map=No
     """
     Creates an XML SubElement of the 'parent' XML element
     """
-    if contents:
+    if not contents:
+        return
+    elif isinstance(contents, (datetime.date, datetime.datetime)):
         new_elem = SubElement(parent, tag_name, attrib=attributes, nsmap=namespace_map)
-        new_elem.text = contents.strftime("%Y-%m-%d") if isinstance(contents, (datetime.date, datetime.datetime)) else contents
+        new_elem.text = contents.strftime("%Y-%m-%d")
+        return new_elem
+    elif contents.strip():
+        new_elem = SubElement(parent, tag_name, attrib=attributes, nsmap=namespace_map)
+        new_elem.text = contents.replace("\x0B", "").strip()
         return new_elem
 
 
@@ -404,7 +410,8 @@ def populate_records_element(root_xml, record_dict, metadata_prefix, verb):
 
         # dc:subject
         create_split_element(container, "{%s}subject" % dc, record_dict["dc_subject"],
-                             attributes={"{%s}lang" % xml: "sv"}, namespace_map=namespace_map)
+                             attributes={"{%s}lang" % xml: "sv"}, namespace_map=namespace_map,
+                             delimiter="; ")
 
         # dc:description
         create_element(container, "{%s}description" % dc, record_dict["dc_description"],
@@ -475,7 +482,8 @@ def populate_records_element(root_xml, record_dict, metadata_prefix, verb):
                        attributes={"{%s}type" % namespace_map["xsi"]: "dcterms:IMT"})
 
         # dc:creator
-        create_element(container, "{%s}creator" % dc, record_dict["dc_creator"])
+        create_split_element(container, "{%s}creator" % dc, record_dict["dc_creator"], delimiter="; ")
+        # create_element(container, "{%s}creator" % dc, record_dict["dc_creator"])
 
         # dc:publisher
         # join together the two publisher fields
@@ -578,7 +586,7 @@ def populate_ead_records_element(root_xml, record_dict, verb):
         element = record
 
     create_element(element, "identifier", record_dict["c_signum"])
-    create_element(element, "datestamp", record_dict["date_modify"])
+    datestamp_elem = create_element(element, "datestamp", record_dict["date_modify"])
 
     if record_dict["to_europeana"]:
         create_element(element, "setSpec", "SLSeuropeana")
@@ -712,7 +720,9 @@ def populate_ead_records_element(root_xml, record_dict, verb):
         # ead:language
         if record_dict["sprak"]:
             language_header_elem = SubElement(did_elem, "{%s}langmaterial" % ead)
-            create_element(language_header_elem, "{%s}language" % ead, record_dict["sprak"],
+            languages = record_dict["sprak"].split("\x0B")
+            languages = ",".join(languages)
+            create_element(language_header_elem, "{%s}language" % ead, languages,
                            attributes={"langcode": "swe"})
 
         # ead:repository
@@ -797,6 +807,9 @@ def populate_ead_records_element(root_xml, record_dict, verb):
             cursor.execute("SELECT * FROM intellectualEntities WHERE c_samlingsnummer = '%s'", [record_dict["nummer"]])
             result = cursor.fetchall()
         for row in result:
+            if isinstance(row.get("date_modify", ""), datetime.datetime) or isinstance(row.get("date_modify", ""), datetime.date):
+                if row["date_modify"].strftime("%Y-%m-%d") > datestamp_elem.text:
+                    datestamp_elem.text = row["date_modify"].strftime("%Y-%m-%d")
             c_elem = SubElement(dsc_elem, "{%s}c" % ead,
                                 attrib={"level": "item"})
 
@@ -840,10 +853,13 @@ def populate_ead_records_element(root_xml, record_dict, verb):
 
             # get all digitalObjects for this IE
             with connection.cursor() as cursor:
-                cursor.execute("SELECT nummer, entity_label, entity_order FROM digitalObjects WHERE c_ienummer='%s' ORDER BY entity_order", [row["nummer"]])
+                cursor.execute("SELECT nummer, date_modify, entity_label, entity_order FROM digitalObjects WHERE c_ienummer='%s' ORDER BY entity_order", [row["nummer"]])
                 sub_result = cursor.fetchall()
 
             for sub_row in sub_result:
+                if isinstance(sub_row.get("date_modify", ""), datetime.datetime) or isinstance(sub_row.get("date_modify", ""), datetime.date):
+                    if sub_row["date_modify"].strftime("%Y-%m-%d") > datestamp_elem.text:
+                        datestamp_elem.text = sub_row["date_modify"].strftime("%Y-%m-%d")
                 # ead:daogrp
                 grp_elem = SubElement(did_elem, "{%s}daogrp" % ead)
                 if sub_row["entity_label"]:
@@ -852,12 +868,15 @@ def populate_ead_records_element(root_xml, record_dict, verb):
 
                 # get all derivateObjects that belong to this digitalObject
                 with connection.cursor() as cursor:
-                    cursor.execute("SELECT derivateObjects.roleTitle, derivateObjects.filePath, digitalObjects.entity_order "
+                    cursor.execute("SELECT derivateObjects.date_modify, derivateObjects.roleTitle, derivateObjects.filePath, digitalObjects.entity_order "
                                    "FROM derivateObjects JOIN digitalObjects ON derivateObjects.c_do = digitalObjects.nummer "
                                    "WHERE c_do='%s' ORDER BY digitalObjects.entity_order", [sub_row["nummer"]])
                     sub_sub_result = cursor.fetchall()
 
                 for sub_sub_row in sub_sub_result:
+                    if isinstance(sub_sub_row.get("date_modify", ""), datetime.datetime) or isinstance(sub_sub_row.get("date_modify", ""), datetime.date):
+                        if sub_sub_row["date_modify"].strftime("%Y-%m-%d") > datestamp_elem.text:
+                            datestamp_elem.text = sub_sub_row["date_modify"].strftime("%Y-%m-%d")
                     # ead:daoloc
                     loc_elem = create_empty_element(grp_elem, "{%s}daoloc" % ead,
                                                     attributes={"{%s}label" % xlink: sub_sub_row["roleTitle"]},
