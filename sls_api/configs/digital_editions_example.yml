@@ -1,5 +1,6 @@
 parland:
     address: 'mysql_server.example.com'
+    port: 3306
     username: 'web_user'
     password: 'SecretMySQLPassword'
     database: 'parland'
@@ -9,6 +10,7 @@ parland:
     file_root: '/var/parland-files'
 topelius:
     address: 'mysql_server.example.com'
+    port: 3306
     username: 'web_user'
     password: 'SecretMySQLPassword'
     database: 'topelius'
@@ -18,6 +20,7 @@ topelius:
     file_root: '/var/topelius-files'
 semantic_data:
     address: 'mysql_server.example.com'
+    port: 3306
     username: 'web_user'
     password: 'SecretMySQLPassword'
     database: 'semantic_data'

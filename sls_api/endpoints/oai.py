@@ -246,6 +246,7 @@ def open_mysql_connection():
     """
     global connection
     connection = pymysql.connect(host=oai_config["address"],
+                                 port=oai_config["port"],
                                  user=oai_config["username"],
                                  password=oai_config["password"],
                                  db=oai_config["database"],

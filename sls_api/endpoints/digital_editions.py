@@ -71,6 +71,7 @@ def open_mysql_connection(database):
     else:
         connection = pymysql.connect(
             host=project_config[database]["address"],
+            port=project_config[database]["port"],
             user=project_config[database]["username"],
             password=project_config[database]["password"],
             db=project_config[database]["database"],

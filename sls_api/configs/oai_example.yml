@@ -1,5 +1,6 @@
 # MySQL configuration
 address: 'mysql_server.example.com'
+port: 3306
 username: 'web_user'
 password: 'SecretMySQLPassword'
 database: 'Metadata'
