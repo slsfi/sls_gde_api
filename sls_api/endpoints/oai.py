@@ -808,7 +808,7 @@ def populate_ead_records_element(root_xml, record_dict, verb):
             cursor.execute("SELECT * FROM intellectualEntities WHERE c_samlingsnummer = '%s'", [record_dict["nummer"]])
             result = cursor.fetchall()
         for row in result:
-            if isinstance(row.get("date_modify", ""), datetime.datetime) or isinstance(row.get("date_modify", ""), datetime.date):
+            if isinstance(row.get("date_modify", ""), (datetime.datetime, datetime.date)):
                 if row["date_modify"].strftime("%Y-%m-%d") > datestamp_elem.text:
                     datestamp_elem.text = row["date_modify"].strftime("%Y-%m-%d")
             c_elem = SubElement(dsc_elem, "{%s}c" % ead,
@@ -858,7 +858,7 @@ def populate_ead_records_element(root_xml, record_dict, verb):
                 sub_result = cursor.fetchall()
 
             for sub_row in sub_result:
-                if isinstance(sub_row.get("date_modify", ""), datetime.datetime) or isinstance(sub_row.get("date_modify", ""), datetime.date):
+                if isinstance(sub_row.get("date_modify", ""), (datetime.datetime, datetime.date)):
                     if sub_row["date_modify"].strftime("%Y-%m-%d") > datestamp_elem.text:
                         datestamp_elem.text = sub_row["date_modify"].strftime("%Y-%m-%d")
                 # ead:daogrp
@@ -875,7 +875,7 @@ def populate_ead_records_element(root_xml, record_dict, verb):
                     sub_sub_result = cursor.fetchall()
 
                 for sub_sub_row in sub_sub_result:
-                    if isinstance(sub_sub_row.get("date_modify", ""), datetime.datetime) or isinstance(sub_sub_row.get("date_modify", ""), datetime.date):
+                    if isinstance(sub_sub_row.get("date_modify", ""), (datetime.datetime, datetime.date)):
                         if sub_sub_row["date_modify"].strftime("%Y-%m-%d") > datestamp_elem.text:
                             datestamp_elem.text = sub_sub_row["date_modify"].strftime("%Y-%m-%d")
                     # ead:daoloc
