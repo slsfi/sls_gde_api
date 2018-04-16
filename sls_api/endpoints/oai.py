@@ -906,11 +906,12 @@ def populate_ead_records_element(root_xml, record_dict, verb):
                 loc_elem.attrib["{%s}href" % xlink] = row["c_isReferencedBy_URL"]
 
             # ead:scopecontent
-            if row["dc_description"]:
+            if row["dc_description"] or row["dcterms_isReferencedBy"] or row["dc_description_2_external"]:
                 scopecontent_elem = SubElement(c_elem, "{%s}scopecontent" % ead)
                 create_element(scopecontent_elem, "{%s}head" % ead, "description")
                 create_element(scopecontent_elem, "{%s}p" % ead, row["dc_description"])
                 create_element(scopecontent_elem, "{%s}p" % ead, row["dcterms_isReferencedBy"])
+                create_element(scopecontent_elem, "{%s}p" % ead, row["dc_description_2_external"])
 
             # ead:userestrict
             # ead:accessrestrict
