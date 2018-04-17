@@ -6,13 +6,14 @@ from lxml import etree
 import pymysql
 from ruamel.yaml import YAML
 import os
+import io
 
 # TODO cache invalidation - check modification time of cache file, if old, discard and regenerate cache
 
 digital_edition = Blueprint('digital_edition', __name__)
 
 config_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "configs")
-with open(os.path.join(config_dir, "digital_editions.yml"), encoding="UTF-8") as digital_editions_config:
+with io.open(os.path.join(config_dir, "digital_editions.yml"), encoding="UTF-8") as digital_editions_config:
     yaml = YAML()
     project_config = yaml.load(digital_editions_config)
 
@@ -38,7 +39,7 @@ def xml_to_html(xsl_file_path, xml_file_path, replace_namespace=True, params=Non
     if not os.path.exists(xml_file_path):
         return "XML file {!r} not found!".format(xml_file_path)
 
-    with open(xml_file_path, encoding="UTF-8") as xml_file:
+    with io.open(xml_file_path, encoding="UTF-8") as xml_file:
         xml_contents = xml_file.read()
         if replace_namespace:
             xml_contents = xml_contents.replace('xmlns="http://www.sls.fi/tei"', 'xmlns="http://www.tei-c.org/ns/1.0"')
@@ -47,7 +48,7 @@ def xml_to_html(xsl_file_path, xml_file_path, replace_namespace=True, params=Non
 
     xsl_parser = etree.XMLParser()
     xsl_parser.resolvers.add(FileResolver())
-    with open(xsl_file_path, encoding="UTF-8") as xsl_file:
+    with io.open(xsl_file_path, encoding="UTF-8") as xsl_file:
         xslt_root = etree.parse(xsl_file, parser=xsl_parser)
         xsl_transform = etree.XSLT(xslt_root)
 
@@ -100,7 +101,7 @@ def get_html_contents_as_json(project, filename):
     file_path = safe_join(project_config[project]["file_root"], "html", "{}.html".format(filename))
     # file_path = os.path.join(os.path.abspath(__file__), os.path.realpath("/../../../../{}-required/html/".format(project)), "{}.html".format(filename))
     if os.path.exists(file_path):
-        with open(file_path, encoding="UTF-8") as html_file:
+        with io.open(file_path, encoding="UTF-8") as html_file:
             contents = html_file.read()
         data = {
             "filename": filename,
@@ -437,7 +438,7 @@ def get_publication_est_text(project, edition_id):
 
             if os.path.exists(cache_file_path):
                 try:
-                    with open(cache_file_path, encoding="UTF-8") as cache_file:
+                    with io.open(cache_file_path, encoding="UTF-8") as cache_file:
                         content = cache_file.read()
                 except Exception:
                     content = "Error reading file from cache."
@@ -450,7 +451,7 @@ def get_publication_est_text(project, edition_id):
                     xsl_file_path = safe_join(project_config["xslt_root"], "est.xsl")
                     content = xml_to_html(xsl_file_path, xml_file_path)
                     try:
-                        with open(cache_file_path, mode="w", encoding="UTF-8") as cache_file:
+                        with io.open(cache_file_path, mode="w", encoding="UTF-8") as cache_file:
                             logger.info("Writing contents to cache file")
                             cache_file.write(content)
                     except Exception:
@@ -521,7 +522,7 @@ def get_publication_com_text(project, edition_id, note_id):
 
             if os.path.exists(cache_file_path):
                 try:
-                    with open(cache_file_path, encoding="UTF-8") as cache_file:
+                    with io.open(cache_file_path, encoding="UTF-8") as cache_file:
                         content = cache_file.read()
                 except Exception:
                     content = "Error reading content from cache."
@@ -538,7 +539,7 @@ def get_publication_com_text(project, edition_id, note_id):
 
                     content = xml_to_html(xsl_file_path, xml_file_path, params=params)
                     try:
-                        with open(cache_file_path, mode="w", encoding="UTF-8") as cache_file:
+                        with io.open(cache_file_path, mode="w", encoding="UTF-8") as cache_file:
                             logger.info("Writing contents to cache file")
                             cache_file.write(content)
                     except Exception:
@@ -598,7 +599,7 @@ def get_publication_inl_text(project, edition_id, lang=None):
 
         if os.path.exists(cache_file_path):
             try:
-                with open(cache_file_path, encoding="UTF-8") as cache_file:
+                with io.open(cache_file_path, encoding="UTF-8") as cache_file:
                     content = cache_file.read()
             except Exception:
                 logger.exception("Error reading content from cache")
@@ -611,7 +612,7 @@ def get_publication_inl_text(project, edition_id, lang=None):
                 xsl_file_path = safe_join(project_config["xslt_root"], "est.xml")
                 content = xml_to_html(xsl_file_path, xml_file_path)
                 try:
-                    with open(cache_file_path, mode="w", encoding="UTF-8") as cache_file:
+                    with io.open(cache_file_path, mode="w", encoding="UTF-8") as cache_file:
                         logger.info("Writing contents to cache file")
                         cache_file.write(content)
                 except Exception:
