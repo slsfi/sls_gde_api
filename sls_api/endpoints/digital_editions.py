@@ -563,10 +563,21 @@ def get_publication_com_text(project, edition_id, note_id):
 @digital_edition.route("/<project>/text/inl/<edition_id>")
 @digital_edition.route("/<project>/text/inl/<edition_id>/<lang>")
 def get_publication_inl_text(project, edition_id, lang=None):
+    return get_publication_inl_tit_text(project, edition_id, lang, "inl")
+
+# routes/digitaledition/xml.php
+@digital_edition.route("/<project>/text/tit/<edition_id>")
+@digital_edition.route("/<project>/text/tit/<edition_id>/<lang>")
+def get_publication_tit_text(project, edition_id, lang=None):
+    return get_publication_inl_tit_text(project, edition_id, lang, "tit")
+
+
+def get_publication_inl_tit_text(project, edition_id, lang=None, what="inl"):
+
     if lang is None:
-        logger.info("Getting XML /{}/text/inl/{} and transforming".format(project, edition_id))
+        logger.info("Getting XML /{}/text/{}/{} and transforming".format(project, what, edition_id))
     else:
-        logger.info("Getting XML /{}/text/inl/{}/{} and transforming".format(project, edition_id, lang))
+        logger.info("Getting XML /{}/text/{}/{}/{} and transforming".format(project, what, edition_id, lang))
     open_mysql_connection(project)
     sql = "SELECT ed_id AS id, ed_lansering, ed_title AS title, ed_filediv AS multiple_files, " \
           "ed_date_swe AS info_sv, ed_date_fin AS info_fi " \
@@ -585,12 +596,12 @@ def get_publication_inl_text(project, edition_id, lang=None):
     else:
         lang_code = "fin" if lang == "fi" else "swe"
         version = "int" if project_config[project]["show_internally_published"] else "ext"
-        filename = "{}_inl_{}_{}.xml".format(edition_id, lang_code, version)
+        filename = "{}_{}_{}_{}.xml".format(edition_id, what, lang_code, version)
 
-        xml_file_path = safe_join(project_config[project]["file_root"], "xml", "inl", filename)
+        xml_file_path = safe_join(project_config[project]["file_root"], "xml", what, filename)
         # xml_file_path = os.path.realpath(os.path.join(os.path.abspath(__file__), "/../../../../{}-required/xml/inl".format(project), filename))
 
-        cache_file_path = safe_join(project_config[project]["file_root"], "cache", "inl", filename.replace(".xml", ".html"))
+        cache_file_path = safe_join(project_config[project]["file_root"], "cache", what, filename.replace(".xml", ".html"))
         # cache_folder_path = os.path.realpath(os.path.join(os.path.abspath(__file__), "/../../../../{}-required/cache/inl".format(project)))
         # cache_file_path = os.path.join(cache_folder_path, filename.replace(".xml", ".html"))
 
@@ -609,7 +620,7 @@ def get_publication_inl_text(project, edition_id, lang=None):
         elif os.path.exists(xml_file_path):
             logger.warning("No cache found")
             try:
-                xsl_file_path = safe_join(project_config["xslt_root"], "est.xml")
+                xsl_file_path = safe_join(project_config["xslt_root"], "est.xsl")
                 content = xml_to_html(xsl_file_path, xml_file_path)
                 try:
                     with io.open(cache_file_path, mode="w", encoding="UTF-8") as cache_file:
