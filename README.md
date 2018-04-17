@@ -1,9 +1,9 @@
 # Unified REST API for sls.fi (api.sls.fi)
 - Flask-driven REST API for sls.fi
-- Runs on Python >=3.6 (python2 may work, but will likely run slower and may have issues with unicode)
+- Runs on Python >=3.6 (Python2 may work, but will likely run slower and may have issues with unicode)
 - Unified API for all publically accessible sls.fi data 
 ---
-Copyright 2018 Svenska Litteraturs‰llskapet i Finland, r.f.
+Copyright 2018 Svenska Litteraturs√§llskapet i Finland, r.f.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
