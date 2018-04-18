@@ -473,7 +473,8 @@ def get_publication_est_text(project, edition_id):
 
 # routes/digitaledition/xml.php
 @digital_edition.route("/<project>/text/com/<edition_id>/<note_id>")
-def get_publication_com_text(project, edition_id, note_id):
+@digital_edition.route("/<project>/text/com/<edition_id>")
+def get_publication_com_text(project, edition_id, note_id=None):
     logger.info("Getting XML /{}/text/com/{}/{} and transforming".format(project, edition_id, note_id))
     open_mysql_connection(project)
     sql = "SELECT ed_id AS id, ed_lansering, ed_title AS title, ed_filediv AS multiple_files, " \
@@ -532,10 +533,14 @@ def get_publication_com_text(project, edition_id, note_id):
                 logger.warning("No cache found")
                 try:
                     params = {
-                        "noteId": '"{}"'.format(note_id),
                         "estDocument": '"file://{}"'.format(est_file_path)
                     }
-                    xsl_file_path = safe_join(project_config["xslt_root"], "notes.xsl")
+                    xsl_file = "com.xsl"
+                    if note_id is not None:
+                        params["noteId"] = '"{}"'.format(note_id)
+                        xsl_file = "notes.xsl"
+
+                    xsl_file_path = safe_join(project_config["xslt_root"], xsl_file)
 
                     content = xml_to_html(xsl_file_path, xml_file_path, params=params)
                     try:
