@@ -625,7 +625,13 @@ def get_publication_inl_tit_text(project, edition_id, lang=None, what="inl"):
         elif os.path.exists(xml_file_path):
             logger.warning("No cache found")
             try:
-                xsl_file_path = safe_join(project_config["xslt_root"], "est.xsl")
+
+                if what == "tit":
+                    xsl_file = "title.xsl"
+                else:
+                    xsl_file = "introduction.xsl"
+
+                xsl_file_path = safe_join(project_config["xslt_root"], xsl_file)
                 content = xml_to_html(xsl_file_path, xml_file_path)
                 try:
                     with io.open(cache_file_path, mode="w", encoding="UTF-8") as cache_file:
