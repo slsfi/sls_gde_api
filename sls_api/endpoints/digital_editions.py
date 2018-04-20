@@ -386,53 +386,6 @@ def check_last_modified(project, edition_id, lang=None):
     except OSError:
         return abort(404)
 
-# Helper function to determine if a text can be shown online or not.
-def publish_status(project, edition_id):
-    logger.info("Checking if /{} {} is published".format(project, edition_id))
-
-    open_mysql_connection(project)
-    sql = "SELECT ed_id AS id, ed_lansering, ed_title AS title, ed_filediv AS multiple_files, " \
-          "ed_date_swe AS info_sv, ed_date_fin AS info_fi " \
-          "FROM publications_ed WHERE ed_id = %s ORDER BY ed_datumlansering"
-
-    with connection.cursor() as cursor:
-        cursor.execute(sql, [edition_id.split("_")[0]])  # edition_id is like 1_1, we need the first digit here
-        edition_data = cursor.fetchall()
-
-    sql = "SELECT DISTINCT p.p_identifier FROM digital_edition_topelius.publications_ed ped " \
-          "JOIN digital_edition_topelius.publications p ON p.p_ed_id = ped.ed_id " \
-          "JOIN digital_edition_topelius.publications_collection pc ON pc.coll_ed_id = p.p_ed_id " \
-          "JOIN digital_edition_topelius.publications_group pg ON pg.group_id = p.p_group_id " \
-          "WHERE ped.ed_lansering = 2 AND pg.group_lansering != 1 AND ped.ed_id = 15 AND p.p_identifier = %s"
-
-    with connection.cursor() as cursor:
-        cursor.execute(sql, [edition_id])
-        letters = cursor.fetchall()
-        letter_published = False
-
-    connection.close()
-
-    if len(letters) > 0 or not edition_id.startswith("15_"):
-        letter_published = True
-
-    can_show = False
-    content = ""
-
-    if len(edition_data) < 1:
-        content = "Content does not exist"
-    elif edition_data[0]["ed_lansering"] < 1 and not project_config[project]["show_unpublished"]:
-        content = "Content is not published"
-    elif edition_data[0]["ed_lansering"] == 1 and not project_config[project]["show_internally_published"] and not project_config[project]["show_unpublished"]:
-        content = "Content is not externally published"
-    else:
-        if not project_config[project]["show_internally_published"] and not letter_published:
-            content = "Content is not externally published"
-        else:
-            can_show = True
-
-    return (can_show, content)
-
-
 # routes/digitaledition/xml.php
 @digital_edition.route("/<project>/text/est/<edition_id>")
 def get_publication_est_text(project, edition_id):
@@ -545,6 +498,178 @@ def get_publication_com_text(project, edition_id, note_id=None):
 
     return jsonify(data), 200, {"Access-Control-Allow-Origin": "*"}
 
+
+# routes/digitaledition/xml.php
+@digital_edition.route("/<project>/text/ms/<edition_id>")
+@digital_edition.route("/<project>/text/ms/<edition_id>/<changes>")
+def get_publication_manuscripts(project, edition_id, changes=False):
+
+    can_show, erro_message = publish_status(project, edition_id)
+
+    if can_show:
+        item_id, book_id, text_id, section_id = getIdParts(edition_id)
+        open_mysql_connection(project)
+        manuscript_info = []
+
+        # the content has chapters in the same xml
+        sql = "SELECT m_title, m_type, m_filename, m_id FROM manuscripts WHERE m_filename like %s ORDER BY m_sort"
+        with connection.cursor() as cursor:
+            cursor.execute(sql, [item_id  + "_ms_%"])
+            manuscript_info = cursor.fetchall()
+
+        connection.close()
+
+        for i in range(len(manuscript_info)):
+            manuscript = manuscript_info[i]
+            params = {
+                "bookId": book_id
+            }
+            manuscript_info[i]["manuscript_changes"] = getContent(project, "ms", manuscript["m_filename"], "ms_changes.xsl", params)
+            manuscript_info[i]["manuscript_normalized"] = getContent(project, "ms", manuscript["m_filename"], "ms_normalized.xsl", params)
+
+        data = {
+            "id": item_id,
+            "manuscripts": manuscript_info
+        }
+
+    else:
+        data = {
+            "id": edition_id,
+            "error": error_message
+        }
+
+    return jsonify(data), 200, {"Access-Control-Allow-Origin": "*"}
+
+
+# routes/digitaledition/xml.php
+@digital_edition.route("/<project>/text/var/<edition_id>")
+def get_publication_variations(project, edition_id):
+    logger.info("Getting XML /{}/text/var/{} and transforming ...".format(project, edition_id))
+    can_show, error_message = publish_status(project, edition_id)
+
+    if can_show:
+        item_id, book_id, text_id, section_id = getIdParts(edition_id)
+        open_mysql_connection(project)
+        variation_info = []
+
+        # the content has chapters in the same xml
+        if (section_id is not None):
+            sql = "SELECT v_title, v_type, v_filename, v_id FROM versions WHERE v_filename like %s AND v_section_id=%s ORDER BY v_sort"
+            with connection.cursor() as cursor:
+                cursor.execute(sql, [item_id  + "_var_%", section_id])
+                variation_info = cursor.fetchall()
+        else:
+            sql = "SELECT v_title, v_type, v_filename, v_id FROM versions WHERE v_filename like %s ORDER BY v_sort"
+            with connection.cursor() as cursor:
+                cursor.execute(sql, [item_id + "_var_%"])
+                variation_info = cursor.fetchall()
+        connection.close()
+
+        for i in range(len(variation_info)):
+            variation = variation_info[i]
+            params = {
+                "bookId": book_id
+            }
+            # chapters_xsl_file = "chapters.xsl"
+
+            if variation["v_type"] == "1":
+                xsl_file = "poem_variants_est.xsl"
+            else:
+                xsl_file = "poem_variants_other.xsl"
+
+            if (section_id is not None):
+                params["sectionId"] = section_id
+
+            variation_info[i] = getContent(project, "var", variation["v_filename"], xsl_file, params)
+
+        data = {
+            "id": edition_id,
+            "variations": variation_info
+        }
+
+    else:
+        data = {
+            "id": edition_id,
+            "error": error_message
+        }
+
+    return jsonify(data), 200, {"Access-Control-Allow-Origin": "*"}
+'''
+		// -------------------------------------------------
+		// Versions
+		// -------------------------------------------------
+		//Put variants in an array indexed by the title (variant source), be careful to escape ' characters if they exist in text
+		$variants = array();
+		if($m_sSectionId != '0') {
+			$result2 = mysqli_query($db, "SELECT v_title, v_type, v_filename, v_id FROM versions WHERE v_publication_id=".$sPubId." AND v_section_id='".$m_sSectionId."' ORDER BY v_sort");
+			$result2 = mysqli_query($db, "SELECT v_title, v_type, v_filename, v_id FROM versions WHERE v_publication_id=".$sPubId." ORDER BY v_sort");
+			if(mysqli_num_rows($result2) < 1)
+		}
+		else
+			$result2 = mysqli_query($db, "SELECT v_title, v_type, v_filename, v_id FROM versions WHERE v_publication_id=".$sPubId." ORDER BY v_sort");
+		if($result2)
+		{
+			while ($myrow2 = mysqli_fetch_assoc($result2))
+			{
+				if(file_exists(GetVarPath().$myrow2['v_filename']))
+				{
+					if($myrow2['v_type'] == "1")
+					{
+						if($m_sSectionId != '0')
+							$variants[$myrow2['v_title']] = 
+                            array("text" => "'".str_replace("'", "&#39;", replaceLineBreaks(
+                                XmlFileToHtml(GetVarPath().$myrow2['v_filename'], 
+                                'poem_variants_est.xsl', 
+                                'sectionId', $m_sSectionId, 
+                                'bookId', $m_sBookId)))."'", 
+                                "chapters" => XmlFileToHtml (
+                                    .$myrow2['v_filename'], 
+                                    'chapters.xsl', 
+                                    'bookId', $m_sBookId))), 
+                                "type" => 1, 
+                                "var_id" => $myrow2['v_id']);
+						else
+							$variants[$myrow2['v_title']] = 
+                                array("text" => 
+                                    XmlFileToHtml( $myrow2['v_filename'],
+                                    $config["folder_xslt"].'
+                                    poem_variants_est.xsl', 
+                                    'bookId', $m_sBookId)))."'", 
+                                    "chapters" => 
+                                        trim(replaceLineBreaks(
+                                                XmlFileToHtml(
+                                                        .$myrow2['v_filename'], 
+                                                        'chapters.xsl', 
+                                                        'bookId', $m_sBookId)
+                                                    )), 
+                                    "type" => 1, 
+                                    "var_id" => $myrow2['v_id']);
+					}
+					else
+					{
+						if($m_sSectionId != '0')
+							$variants[$myrow2['v_title']] = array("text" => "'".str_replace("'", "&#39;", replaceLineBreaks(XmlFileToHtml(GetVarPath().$myrow2['v_filename'], $config["folder_xslt"].'poem_variants_other.xsl', 'sectionId', $m_sSectionId)))."'", "chapters" => trim(replaceLineBreaks(XmlFileToHtml(GetVarPath().$myrow2['v_filename'], $config["folder_xslt"].'chapters.xsl', null, null))), "type" => $myrow2['v_type'], "var_id" => $myrow2['v_id']);
+						else
+							$variants[$myrow2['v_title']] = array("text" => "'".str_replace("'", "&#39;", replaceLineBreaks(XmlFileToHtml(GetVarPath().$myrow2['v_filename'], $config["folder_xslt"].'poem_variants_other.xsl', null, null)))."'", "chapters" => trim(replaceLineBreaks(XmlFileToHtml(GetVarPath().$myrow2['v_filename'], $config["folder_xslt"].'chapters.xsl', null, null))), "type" => $myrow2['v_type'], "var_id" => $myrow2['v_id']);
+					}
+				}
+			}
+		}
+		if(count($variants) > 0)
+		{
+			$variantObjects = array();
+			foreach ($variants as $title => $variant)
+				$variantObjects[] = "{'title' : '$title', 'text' : ".$variant["text"].(strlen($variant["chapters"]) > 4 ? ", 'chapters' : ".$variant["chapters"] : "" ).", 'type' : ".$variant["type"].", 'var_id' : ".$variant["var_id"]."}";
+			$variantJS = "[".implode(',', $variantObjects).']';
+		}
+		else
+		{
+			$variantJS = "'<div class=\"container cont_comment\"><p class=\"noIndent\">".$phrases['inga_varianter']."</p></div>'";
+		}
+		// -------------------------------------------------
+		// Versions end
+		// -------------------------------------------------
+'''
 
 # routes/digitaledition/xml.php
 @digital_edition.route("/<project>/text/inl/<edition_id>")
@@ -697,3 +822,104 @@ def get_list_of_places():
 
     connection.close()
     return jsonify(ms_data)
+
+
+
+'''
+    HELPER FUNCTIONS  
+'''
+
+def publish_status(project, edition_id):
+    """Get info on the publications status
+    Is is visible to the public etc...
+
+    returns two values:
+        - a booelan if the publication can be shown
+        - a message text why it can't be shown, if that is the case.
+    """
+    logger.info("Checking if /{} {} is published".format(project, edition_id))
+
+    open_mysql_connection(project)
+    sql = "SELECT ed_id AS id, ed_lansering, ed_title AS title, ed_filediv AS multiple_files, " \
+          "ed_date_swe AS info_sv, ed_date_fin AS info_fi " \
+          "FROM publications_ed WHERE ed_id = %s ORDER BY ed_datumlansering"
+
+    with connection.cursor() as cursor:
+        cursor.execute(sql, [edition_id.split("_")[0]])  # edition_id is like 1_1, we need the first digit here
+        edition_data = cursor.fetchall()
+
+    sql = "SELECT DISTINCT p.p_identifier FROM digital_edition_topelius.publications_ed ped " \
+          "JOIN digital_edition_topelius.publications p ON p.p_ed_id = ped.ed_id " \
+          "JOIN digital_edition_topelius.publications_collection pc ON pc.coll_ed_id = p.p_ed_id " \
+          "JOIN digital_edition_topelius.publications_group pg ON pg.group_id = p.p_group_id " \
+          "WHERE ped.ed_lansering = 2 AND pg.group_lansering != 1 AND ped.ed_id = 15 AND p.p_identifier = %s"
+
+    with connection.cursor() as cursor:
+        cursor.execute(sql, [edition_id])
+        letters = cursor.fetchall()
+        letter_published = False
+
+    connection.close()
+
+    if len(letters) > 0 or not edition_id.startswith("15_"):
+        letter_published = True
+
+    can_show = False
+    content = ""
+
+    if len(edition_data) < 1:
+        content = "Content does not exist"
+    elif edition_data[0]["ed_lansering"] < 1 and not project_config[project]["show_unpublished"]:
+        content = "Content is not published"
+    elif edition_data[0]["ed_lansering"] == 1 and not project_config[project]["show_internally_published"] and not project_config[project]["show_unpublished"]:
+        content = "Content is not externally published"
+    else:
+        if not project_config[project]["show_internally_published"] and not letter_published:
+            content = "Content is not externally published"
+        else:
+            can_show = True
+
+    return (can_show, content)
+
+def getIdParts(edition_id):
+    id_parts = edition_id.replace("_est", "").split(";")    # 12_1_est;ch5  - Finland framställt i teckningar.
+
+    item_id = id_parts[0]    # 1_1
+    item_parts = item_id.split("_")
+    book_id = item_parts[0]
+    text_id = item_parts[1]
+    section_id = id_parts[1] if len(id_parts) > 1 else None
+
+    return item_id, book_id, text_id, section_id
+
+def getContent(project, folder, xml_filename, xsl_filename, parameters):
+        xml_file_path = safe_join(project_config[project]["file_root"], "xml", folder, xml_filename)
+        xsl_file_path = safe_join(project_config["xslt_root"], xsl_filename)
+        cache_file_path = xml_file_path.replace("/xml/", "/cache/").replace(".xml", ".html");
+
+        if os.path.exists(cache_file_path):
+            try:
+                with io.open(cache_file_path, encoding="UTF-8") as cache_file:
+                    content = cache_file.read()
+            except Exception:
+                content = "Error reading content from cache."
+            else:
+                logger.info("Content fetched from cache.")
+        elif os.path.exists(xml_file_path):
+            logger.warning("No cache found")
+            try:
+                content = xml_to_html(xsl_file_path, xml_file_path, params=parameters).replace('\n', '').replace('\r', '')
+                try:
+                    with io.open(cache_file_path, mode="w", encoding="UTF-8") as cache_file:
+                        cache_file.write(content)
+                except Exception:
+                    logger.exception("Could not create cachefile")
+                    content = "Successfully fetched content but could not generate cache for it."
+            except Exception as e:
+                logger.exception("Error when parsing XML file")
+                content = "Error parsing document"
+                content += str(e)
+        else:
+            content = "File not found"
+
+        return content
