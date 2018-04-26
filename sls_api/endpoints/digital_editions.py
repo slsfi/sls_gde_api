@@ -66,6 +66,7 @@ def xml_to_html(xsl_file_path, xml_file_path, replace_namespace=True, params=Non
 def open_mysql_connection(database):
     class OrderedDictCursor(pymysql.cursors.DictCursorMixin, pymysql.cursors.Cursor):
         dict_type = OrderedDict
+
     global connection
     if database not in project_config:
         connection = None
@@ -99,7 +100,6 @@ def set_access_control_headers(response):
 def get_html_contents_as_json(project, filename):
     logger.info("Getting static content from /{}/html/{}".format(project, filename))
     file_path = safe_join(project_config[project]["file_root"], "html", "{}.html".format(filename))
-    # file_path = os.path.join(os.path.abspath(__file__), os.path.realpath("/../../../../{}-required/html/".format(project)), "{}.html".format(filename))
     if os.path.exists(file_path):
         with io.open(file_path, encoding="UTF-8") as html_file:
             contents = html_file.read()
@@ -302,16 +302,17 @@ def get_toc_edition(project, edition_id):
                 if row["toc_groupid"] is None:
                     if row["toc_id"] not in return_data:
                         new_data = {
-                                "id": row["toc_id"],
-                                "title": row["title"],
-                                "titleLevel": row["titleLevel"],
-                                "items": []
-                            }
+                            "id": row["toc_id"],
+                            "title": row["title"],
+                            "titleLevel": row["titleLevel"],
+                            "items": []
+                        }
                         return_data[int(row["toc_id"])] = new_data
             elif iteration == 2:
                 if row["toc_groupid"] is not None and row["toc_linkType"] is None:
                     groupid = row["toc_groupid"]
-                    if groupid not in return_data or "items" not in return_data[groupid] or row["toc_id"] not in return_data[groupid]["items"]:
+                    if groupid not in return_data or "items" not in return_data[groupid] or row["toc_id"] not in \
+                            return_data[groupid]["items"]:
                         # The PHP version builds up these objects, but appears to throw them away or lose them at some point?
                         continue
                         # sub_group_toc_id = row["toc_id"]
@@ -360,9 +361,9 @@ def get_toc_edition_firstentry(project, edition_id):
     return jsonify(result)
 
 
-@digital_edition.route("/<project>/cache/est/<edition_id>")            # est
-@digital_edition.route("/<project>/cache/com/<edition_id>/")           # com
-@digital_edition.route("/<project>/cache/inl/<edition_id>/<lang>")     # inl
+@digital_edition.route("/<project>/cache/est/<edition_id>")  # est
+@digital_edition.route("/<project>/cache/com/<edition_id>/")  # com
+@digital_edition.route("/<project>/cache/inl/<edition_id>/<lang>")  # inl
 def check_last_modified(project, edition_id, lang=None):
     """
     Return the modification time for the XML containing the reading text, as seconds since the UNIX epoch
@@ -385,6 +386,7 @@ def check_last_modified(project, edition_id, lang=None):
         return str(os.path.getmtime(xml_file_path)), 200
     except OSError:
         return abort(404)
+
 
 # routes/digitaledition/xml.php
 @digital_edition.route("/<project>/text/est/<edition_id>")
@@ -441,8 +443,6 @@ def get_publication_est_text(project, edition_id):
 @digital_edition.route("/<project>/text/com/<edition_id>/<note_id>")
 @digital_edition.route("/<project>/text/com/<edition_id>")
 def get_publication_com_text(project, edition_id, note_id=None):
-    logger.info("Getting XML /{}/text/com/{}/{} and transforming".format(project, edition_id, note_id))
-
     can_show, content = publish_status(project, edition_id)
 
     if can_show:
@@ -450,6 +450,7 @@ def get_publication_com_text(project, edition_id, note_id=None):
 
         xml_file_path = safe_join(project_config[project]["file_root"], "xml", "com", "{}_com.xml".format(id_parts[0]))
         est_file_path = safe_join(project_config[project]["file_root"], "xml", "est", "{}_est.xml".format(id_parts[0]))
+        logger.info("Getting contents for file {}".format(xml_file_path))
 
         cache_file_path = safe_join(project_config[project]["file_root"], "cache", "com", "note_{}_com_{}.html".format(id_parts[0], note_id))
         logger.debug("Cache file path is {}".format(cache_file_path))
@@ -503,18 +504,16 @@ def get_publication_com_text(project, edition_id, note_id=None):
 @digital_edition.route("/<project>/text/ms/<edition_id>")
 @digital_edition.route("/<project>/text/ms/<edition_id>/<changes>")
 def get_publication_manuscripts(project, edition_id, changes=False):
-
-    can_show, erro_message = publish_status(project, edition_id)
+    can_show, error_message = publish_status(project, edition_id)
 
     if can_show:
-        item_id, book_id, text_id, section_id = getIdParts(edition_id)
+        item_id, book_id, text_id, section_id = get_id_parts(edition_id)
         open_mysql_connection(project)
-        manuscript_info = []
 
         # the content has chapters in the same xml
         sql = "SELECT m_title, m_type, m_filename, m_id FROM manuscripts WHERE m_filename like %s ORDER BY m_sort"
         with connection.cursor() as cursor:
-            cursor.execute(sql, [item_id  + "_ms_%"])
+            cursor.execute(sql, [item_id + "_ms_%"])
             manuscript_info = cursor.fetchall()
 
         connection.close()
@@ -524,8 +523,8 @@ def get_publication_manuscripts(project, edition_id, changes=False):
             params = {
                 "bookId": book_id
             }
-            manuscript_info[i]["manuscript_changes"] = getContent(project, "ms", manuscript["m_filename"], "ms_changes.xsl", params)
-            manuscript_info[i]["manuscript_normalized"] = getContent(project, "ms", manuscript["m_filename"], "ms_normalized.xsl", params)
+            manuscript_info[i]["manuscript_changes"] = get_content(project, "ms", manuscript["m_filename"], "ms_changes.xsl", params)
+            manuscript_info[i]["manuscript_normalized"] = get_content(project, "ms", manuscript["m_filename"], "ms_normalized.xsl", params)
 
         data = {
             "id": item_id,
@@ -548,15 +547,14 @@ def get_publication_variations(project, edition_id):
     can_show, error_message = publish_status(project, edition_id)
 
     if can_show:
-        item_id, book_id, text_id, section_id = getIdParts(edition_id)
+        item_id, book_id, text_id, section_id = get_id_parts(edition_id)
         open_mysql_connection(project)
-        variation_info = []
 
         # the content has chapters in the same xml
-        if (section_id is not None):
+        if section_id is not None:
             sql = "SELECT v_title, v_type, v_filename, v_id FROM versions WHERE v_filename like %s AND v_section_id=%s ORDER BY v_sort"
             with connection.cursor() as cursor:
-                cursor.execute(sql, [item_id  + "_var_%", section_id])
+                cursor.execute(sql, [item_id + "_var_%", section_id])
                 variation_info = cursor.fetchall()
         else:
             sql = "SELECT v_title, v_type, v_filename, v_id FROM versions WHERE v_filename like %s ORDER BY v_sort"
@@ -577,10 +575,10 @@ def get_publication_variations(project, edition_id):
             else:
                 xsl_file = "poem_variants_other.xsl"
 
-            if (section_id is not None):
+            if section_id is not None:
                 params["sectionId"] = section_id
 
-            variation_info[i] = getContent(project, "var", variation["v_filename"], xsl_file, params)
+            variation_info[i] = get_content(project, "var", variation["v_filename"], xsl_file, params)
 
         data = {
             "id": edition_id,
@@ -594,88 +592,14 @@ def get_publication_variations(project, edition_id):
         }
 
     return jsonify(data), 200, {"Access-Control-Allow-Origin": "*"}
-'''
-		// -------------------------------------------------
-		// Versions
-		// -------------------------------------------------
-		//Put variants in an array indexed by the title (variant source), be careful to escape ' characters if they exist in text
-		$variants = array();
-		if($m_sSectionId != '0') {
-			$result2 = mysqli_query($db, "SELECT v_title, v_type, v_filename, v_id FROM versions WHERE v_publication_id=".$sPubId." AND v_section_id='".$m_sSectionId."' ORDER BY v_sort");
-			$result2 = mysqli_query($db, "SELECT v_title, v_type, v_filename, v_id FROM versions WHERE v_publication_id=".$sPubId." ORDER BY v_sort");
-			if(mysqli_num_rows($result2) < 1)
-		}
-		else
-			$result2 = mysqli_query($db, "SELECT v_title, v_type, v_filename, v_id FROM versions WHERE v_publication_id=".$sPubId." ORDER BY v_sort");
-		if($result2)
-		{
-			while ($myrow2 = mysqli_fetch_assoc($result2))
-			{
-				if(file_exists(GetVarPath().$myrow2['v_filename']))
-				{
-					if($myrow2['v_type'] == "1")
-					{
-						if($m_sSectionId != '0')
-							$variants[$myrow2['v_title']] = 
-                            array("text" => "'".str_replace("'", "&#39;", replaceLineBreaks(
-                                XmlFileToHtml(GetVarPath().$myrow2['v_filename'], 
-                                'poem_variants_est.xsl', 
-                                'sectionId', $m_sSectionId, 
-                                'bookId', $m_sBookId)))."'", 
-                                "chapters" => XmlFileToHtml (
-                                    .$myrow2['v_filename'], 
-                                    'chapters.xsl', 
-                                    'bookId', $m_sBookId))), 
-                                "type" => 1, 
-                                "var_id" => $myrow2['v_id']);
-						else
-							$variants[$myrow2['v_title']] = 
-                                array("text" => 
-                                    XmlFileToHtml( $myrow2['v_filename'],
-                                    $config["folder_xslt"].'
-                                    poem_variants_est.xsl', 
-                                    'bookId', $m_sBookId)))."'", 
-                                    "chapters" => 
-                                        trim(replaceLineBreaks(
-                                                XmlFileToHtml(
-                                                        .$myrow2['v_filename'], 
-                                                        'chapters.xsl', 
-                                                        'bookId', $m_sBookId)
-                                                    )), 
-                                    "type" => 1, 
-                                    "var_id" => $myrow2['v_id']);
-					}
-					else
-					{
-						if($m_sSectionId != '0')
-							$variants[$myrow2['v_title']] = array("text" => "'".str_replace("'", "&#39;", replaceLineBreaks(XmlFileToHtml(GetVarPath().$myrow2['v_filename'], $config["folder_xslt"].'poem_variants_other.xsl', 'sectionId', $m_sSectionId)))."'", "chapters" => trim(replaceLineBreaks(XmlFileToHtml(GetVarPath().$myrow2['v_filename'], $config["folder_xslt"].'chapters.xsl', null, null))), "type" => $myrow2['v_type'], "var_id" => $myrow2['v_id']);
-						else
-							$variants[$myrow2['v_title']] = array("text" => "'".str_replace("'", "&#39;", replaceLineBreaks(XmlFileToHtml(GetVarPath().$myrow2['v_filename'], $config["folder_xslt"].'poem_variants_other.xsl', null, null)))."'", "chapters" => trim(replaceLineBreaks(XmlFileToHtml(GetVarPath().$myrow2['v_filename'], $config["folder_xslt"].'chapters.xsl', null, null))), "type" => $myrow2['v_type'], "var_id" => $myrow2['v_id']);
-					}
-				}
-			}
-		}
-		if(count($variants) > 0)
-		{
-			$variantObjects = array();
-			foreach ($variants as $title => $variant)
-				$variantObjects[] = "{'title' : '$title', 'text' : ".$variant["text"].(strlen($variant["chapters"]) > 4 ? ", 'chapters' : ".$variant["chapters"] : "" ).", 'type' : ".$variant["type"].", 'var_id' : ".$variant["var_id"]."}";
-			$variantJS = "[".implode(',', $variantObjects).']';
-		}
-		else
-		{
-			$variantJS = "'<div class=\"container cont_comment\"><p class=\"noIndent\">".$phrases['inga_varianter']."</p></div>'";
-		}
-		// -------------------------------------------------
-		// Versions end
-		// -------------------------------------------------
-'''
+
 
 # routes/digitaledition/xml.php
 @digital_edition.route("/<project>/text/inl/<edition_id>")
 @digital_edition.route("/<project>/text/inl/<edition_id>/<lang>")
 def get_publication_inl_text(project, edition_id, lang=None):
     return get_publication_inl_tit_text(project, edition_id, lang, "inl")
+
 
 # routes/digitaledition/xml.php
 @digital_edition.route("/<project>/text/tit/<edition_id>")
@@ -685,26 +609,18 @@ def get_publication_tit_text(project, edition_id, lang=None):
 
 
 def get_publication_inl_tit_text(project, edition_id, lang=None, what="inl"):
-
-    if lang is None:
-        logger.info("Getting XML /{}/text/{}/{} and transforming".format(project, what, edition_id))
-    else:
-        logger.info("Getting XML /{}/text/{}/{}/{} and transforming".format(project, what, edition_id, lang))
-
     can_show, content = publish_status(project, edition_id)
 
     if can_show:
-
         lang_code = "fin" if lang == "fi" else "swe"
         version = "int" if project_config[project]["show_internally_published"] else "ext"
         filename = "{}_{}_{}_{}.xml".format(edition_id, what, lang_code, version)
 
         xml_file_path = safe_join(project_config[project]["file_root"], "xml", what, filename)
-        # xml_file_path = os.path.realpath(os.path.join(os.path.abspath(__file__), "/../../../../{}-required/xml/inl".format(project), filename))
+
+        logger.info("Getting contents for file {}".format(xml_file_path))
 
         cache_file_path = safe_join(project_config[project]["file_root"], "cache", what, filename.replace(".xml", ".html"))
-        # cache_folder_path = os.path.realpath(os.path.join(os.path.abspath(__file__), "/../../../../{}-required/cache/inl".format(project)))
-        # cache_file_path = os.path.join(cache_folder_path, filename.replace(".xml", ".html"))
 
         logger.debug("Cache file path is {}".format(cache_file_path))
         logger.debug("XML file path is {}".format(xml_file_path))
@@ -824,10 +740,10 @@ def get_list_of_places():
     return jsonify(ms_data)
 
 
-
 '''
     HELPER FUNCTIONS  
 '''
+
 
 def publish_status(project, edition_id):
     """Get info on the publications status
@@ -879,12 +795,13 @@ def publish_status(project, edition_id):
         else:
             can_show = True
 
-    return (can_show, content)
+    return can_show, content
 
-def getIdParts(edition_id):
-    id_parts = edition_id.replace("_est", "").split(";")    # 12_1_est;ch5  - Finland framställt i teckningar.
 
-    item_id = id_parts[0]    # 1_1
+def get_id_parts(edition_id):
+    id_parts = edition_id.replace("_est", "").split(";")  # 12_1_est;ch5  - Finland framställt i teckningar.
+
+    item_id = id_parts[0]  # 1_1
     item_parts = item_id.split("_")
     book_id = item_parts[0]
     text_id = item_parts[1]
@@ -892,34 +809,35 @@ def getIdParts(edition_id):
 
     return item_id, book_id, text_id, section_id
 
-def getContent(project, folder, xml_filename, xsl_filename, parameters):
-        xml_file_path = safe_join(project_config[project]["file_root"], "xml", folder, xml_filename)
-        xsl_file_path = safe_join(project_config["xslt_root"], xsl_filename)
-        cache_file_path = xml_file_path.replace("/xml/", "/cache/").replace(".xml", ".html");
 
-        if os.path.exists(cache_file_path):
-            try:
-                with io.open(cache_file_path, encoding="UTF-8") as cache_file:
-                    content = cache_file.read()
-            except Exception:
-                content = "Error reading content from cache."
-            else:
-                logger.info("Content fetched from cache.")
-        elif os.path.exists(xml_file_path):
-            logger.warning("No cache found")
-            try:
-                content = xml_to_html(xsl_file_path, xml_file_path, params=parameters).replace('\n', '').replace('\r', '')
-                try:
-                    with io.open(cache_file_path, mode="w", encoding="UTF-8") as cache_file:
-                        cache_file.write(content)
-                except Exception:
-                    logger.exception("Could not create cachefile")
-                    content = "Successfully fetched content but could not generate cache for it."
-            except Exception as e:
-                logger.exception("Error when parsing XML file")
-                content = "Error parsing document"
-                content += str(e)
+def get_content(project, folder, xml_filename, xsl_filename, parameters):
+    xml_file_path = safe_join(project_config[project]["file_root"], "xml", folder, xml_filename)
+    xsl_file_path = safe_join(project_config["xslt_root"], xsl_filename)
+    cache_file_path = xml_file_path.replace("/xml/", "/cache/").replace(".xml", ".html")
+
+    if os.path.exists(cache_file_path):
+        try:
+            with io.open(cache_file_path, encoding="UTF-8") as cache_file:
+                content = cache_file.read()
+        except Exception:
+            content = "Error reading content from cache."
         else:
-            content = "File not found"
+            logger.info("Content fetched from cache.")
+    elif os.path.exists(xml_file_path):
+        logger.warning("No cache found")
+        try:
+            content = xml_to_html(xsl_file_path, xml_file_path, params=parameters).replace('\n', '').replace('\r', '')
+            try:
+                with io.open(cache_file_path, mode="w", encoding="UTF-8") as cache_file:
+                    cache_file.write(content)
+            except Exception:
+                logger.exception("Could not create cachefile")
+                content = "Successfully fetched content but could not generate cache for it."
+        except Exception as e:
+            logger.exception("Error when parsing XML file")
+            content = "Error parsing document"
+            content += str(e)
+    else:
+        content = "File not found"
 
-        return content
+    return content
