@@ -224,7 +224,10 @@ def get_toc_edition_links(project, edition_id, link_id):
         with connection.cursor() as cursor:
             cursor.execute(sql, [edition_id, link_id])
             toc_data = cursor.fetchall()
-            return_data["prev"] = toc_data[0]
+            if len(toc_data) > 0:
+                return_data["prev"] = toc_data[0]
+            else:
+                return_data["prev"] = None
 
         sql = "SELECT t1.title AS title, t1.toc_ed_id AS edition_id, t1.toc_linkID AS link_id " \
               "FROM tableofcontents t1 LEFT JOIN tableofcontents t2 " \
@@ -235,7 +238,10 @@ def get_toc_edition_links(project, edition_id, link_id):
         with connection.cursor() as cursor:
             cursor.execute(sql, [edition_id, link_id])
             toc_data = cursor.fetchall()
-            return_data["next"] = toc_data[0]
+            if len(toc_data) > 0:
+                return_data["next"] = toc_data[0]
+            else:
+                return_data["next"] = None
     else:
         sql = "SELECT t1.title AS title, t1.toc_ed_id AS edition_id, t1.toc_linkID AS link_id " \
               "FROM tableofcontents t1 LEFT JOIN tableofcontents t2 " \
@@ -262,7 +268,10 @@ def get_toc_edition_links(project, edition_id, link_id):
         with connection.cursor() as cursor:
             cursor.execute(sql, [edition_id, link_id])
             toc_data = cursor.fetchall()
-            return_data["next"] = toc_data[0]
+            if len(toc_data) > 0:
+                return_data["next"] = toc_data[0]
+            else:
+                return_data["next"] = None
 
     connection.close()
     return jsonify(return_data)
