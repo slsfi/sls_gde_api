@@ -26,3 +26,4 @@ semantic_data:
     database: 'semantic_data'
 xslt_root: '/var/xslt-files'
 log_file: '/log/digital_editions/api.log'
+cache_lifetime_seconds: 7200  # 2 hours

@@ -1,14 +1,14 @@
 from collections import OrderedDict
-from flask import abort, Blueprint, jsonify, request, safe_join
+from flask import abort, Blueprint, jsonify, safe_join
 import logging
 from logging.handlers import TimedRotatingFileHandler
 from lxml import etree
 import pymysql
 from ruamel.yaml import YAML
+import calendar
 import os
 import io
-
-# TODO cache invalidation - check modification time of cache file, if old, discard and regenerate cache
+import time
 
 digital_edition = Blueprint('digital_edition', __name__)
 
@@ -361,62 +361,38 @@ def get_toc_edition_firstentry(project, edition_id):
     return jsonify(result)
 
 
-@digital_edition.route("/<project>/cache/est/<edition_id>")  # est
-@digital_edition.route("/<project>/cache/com/<edition_id>/")  # com
-@digital_edition.route("/<project>/cache/inl/<edition_id>/<lang>")  # inl
-def check_last_modified(project, edition_id, lang=None):
-    """
-    Return the modification time for the XML containing the reading text, as seconds since the UNIX epoch
-    """
-    # TODO in future, check date_modified from database instead
-    text_type = request.path.split("/")[4]
-    if text_type == "est":
-        xml_file_path = safe_join(project_config[project]["file_root"], "xml", "est", "{}_est.xml".format(edition_id))
-    elif text_type == "com":
-        xml_file_path = safe_join(project_config[project]["file_root"], "xml", "com", "{}_com.xml".format(edition_id))
-    elif text_type == "inl":
-        lang_code = "fin" if lang == "fi" else "swe"
-        version = "int" if project_config[project]["show_internally_published"] else "ext"
-        filename = "{}_inl_{}_{}.xml".format(edition_id, lang_code, version)
-
-        xml_file_path = safe_join(project_config[project]["file_root"], "xml", "inl", filename)
-    else:
-        return ""
-    try:
-        return str(os.path.getmtime(xml_file_path)), 200
-    except OSError:
-        return abort(404)
-
-
 # routes/digitaledition/xml.php
 @digital_edition.route("/<project>/text/est/<edition_id>")
 def get_publication_est_text(project, edition_id):
-    logger.info("Getting XML /{}/text/est/{} and transforming".format(project, edition_id))
-
     can_show, content = publish_status(project, edition_id)
 
     if can_show:
         id_parts = edition_id.replace("_est", "").split(";")
         xml_file_path = safe_join(project_config[project]["file_root"], "xml", "est", "{}_est.xml".format(id_parts[0]))
+        logger.info("Getting contents for file {}".format(xml_file_path))
 
+        xsl_file_path = safe_join(project_config["xslt_root"], "est.xsl")
         cache_file_path = safe_join(project_config[project]["file_root"], "cache", "est", "{}_est.html".format(id_parts[0]))
 
         logger.debug("Cache file path is {}".format(cache_file_path))
         logger.debug("XML file path is {}".format(xml_file_path))
 
+        content = None
         if os.path.exists(cache_file_path):
-            try:
-                with io.open(cache_file_path, encoding="UTF-8") as cache_file:
-                    content = cache_file.read()
-            except Exception:
-                content = "Error reading file from cache."
+            if cache_is_recent(xml_file_path, xsl_file_path, cache_file_path):
+                try:
+                    with io.open(cache_file_path, encoding="UTF-8") as cache_file:
+                        content = cache_file.read()
+                except Exception:
+                    content = "Error reading file from cache."
+                else:
+                    logger.info("Content fetched from cache.")
             else:
-                logger.info("Content fetched from cache.")
-
-        elif os.path.exists(xml_file_path):
-            logger.warning("No cache found")
+                logger.info("Cache file is old or invalid, deleting cache file...")
+                os.remove(cache_file_path)
+        if os.path.exists(xml_file_path) and content is None:
+            logger.info("Getting contents from file and transforming...")
             try:
-                xsl_file_path = safe_join(project_config["xslt_root"], "est.xsl")
                 content = xml_to_html(xsl_file_path, xml_file_path)
                 try:
                     with io.open(cache_file_path, mode="w", encoding="UTF-8") as cache_file:
@@ -428,7 +404,7 @@ def get_publication_est_text(project, edition_id):
             except Exception:
                 logger.exception("Error when parsing XML file")
                 content = "Error parsing document."
-        else:
+        elif content is None:
             content = "File not found."
 
     data = {
@@ -452,32 +428,35 @@ def get_publication_com_text(project, edition_id, note_id=None):
         est_file_path = safe_join(project_config[project]["file_root"], "xml", "est", "{}_est.xml".format(id_parts[0]))
         logger.info("Getting contents for file {}".format(xml_file_path))
 
+        params = {
+            "estDocument": '"file://{}"'.format(est_file_path)
+        }
+        xsl_file = "com.xsl"
+        if note_id is not None:
+            params["noteId"] = '"{}"'.format(note_id)
+            xsl_file = "notes.xsl"
+        xsl_file_path = safe_join(project_config["xslt_root"], xsl_file)
         cache_file_path = safe_join(project_config[project]["file_root"], "cache", "com", "note_{}_com_{}.html".format(id_parts[0], note_id))
         logger.debug("Cache file path is {}".format(cache_file_path))
         logger.debug("XML file path is {}".format(xml_file_path))
         logger.debug("est XML file path is {}".format(est_file_path))
 
+        content = None
         if os.path.exists(cache_file_path):
-            try:
-                with io.open(cache_file_path, encoding="UTF-8") as cache_file:
-                    content = cache_file.read()
-            except Exception:
-                content = "Error reading content from cache."
+            if cache_is_recent(xml_file_path, xsl_file_path, cache_file_path):  # TODO also check est file mtime
+                try:
+                    with io.open(cache_file_path, encoding="UTF-8") as cache_file:
+                        content = cache_file.read()
+                except Exception:
+                    content = "Error reading content from cache."
+                else:
+                    logger.info("Content fetched from cache.")
             else:
-                logger.info("Content fetched from cache.")
-        elif os.path.exists(xml_file_path):
-            logger.warning("No cache found")
+                logger.info("Cache file is old or invalid, deleting cache file...")
+                os.remove(cache_file_path)
+        if os.path.exists(xml_file_path) and content is None:
+            logger.info("Getting contents from file and transforming...")
             try:
-                params = {
-                    "estDocument": '"file://{}"'.format(est_file_path)
-                }
-                xsl_file = "com.xsl"
-                if note_id is not None:
-                    params["noteId"] = '"{}"'.format(note_id)
-                    xsl_file = "notes.xsl"
-
-                xsl_file_path = safe_join(project_config["xslt_root"], xsl_file)
-
                 content = xml_to_html(xsl_file_path, xml_file_path, params=params)
                 try:
                     with io.open(cache_file_path, mode="w", encoding="UTF-8") as cache_file:
@@ -489,7 +468,7 @@ def get_publication_com_text(project, edition_id, note_id=None):
             except Exception:
                 logger.exception("Error when parsing XML file")
                 content = "Error parsing document"
-        else:
+        elif content is None:
             content = "File not found"
 
     data = {
@@ -620,30 +599,33 @@ def get_publication_inl_tit_text(project, edition_id, lang=None, what="inl"):
 
         logger.info("Getting contents for file {}".format(xml_file_path))
 
+        if what == "tit":
+            xsl_file = "title.xsl"
+        else:
+            xsl_file = "introduction.xsl"
+        xsl_file_path = safe_join(project_config["xslt_root"], xsl_file)
         cache_file_path = safe_join(project_config[project]["file_root"], "cache", what, filename.replace(".xml", ".html"))
 
         logger.debug("Cache file path is {}".format(cache_file_path))
         logger.debug("XML file path is {}".format(xml_file_path))
 
+        content = None
         if os.path.exists(cache_file_path):
-            try:
-                with io.open(cache_file_path, encoding="UTF-8") as cache_file:
-                    content = cache_file.read()
-            except Exception:
-                logger.exception("Error reading content from cache")
-                content = "Error reading content from cache"
-            else:
-                logger.info("Content fetched from cache.")
-        elif os.path.exists(xml_file_path):
-            logger.warning("No cache found")
-            try:
-
-                if what == "tit":
-                    xsl_file = "title.xsl"
+            if cache_is_recent(xml_file_path, xsl_file_path, cache_file_path):
+                try:
+                    with io.open(cache_file_path, encoding="UTF-8") as cache_file:
+                        content = cache_file.read()
+                except Exception:
+                    logger.exception("Error reading content from cache")
+                    content = "Error reading content from cache"
                 else:
-                    xsl_file = "introduction.xsl"
-
-                xsl_file_path = safe_join(project_config["xslt_root"], xsl_file)
+                    logger.info("Content fetched from cache.")
+            else:
+                logger.info("Cache file is old or invalid, deleting cache file...")
+                os.remove(cache_file_path)
+        if os.path.exists(xml_file_path) and content is None:
+            logger.info("Getting contents from file and transforming...")
+            try:
                 content = xml_to_html(xsl_file_path, xml_file_path)
                 try:
                     with io.open(cache_file_path, mode="w", encoding="UTF-8") as cache_file:
@@ -655,7 +637,7 @@ def get_publication_inl_tit_text(project, edition_id, lang=None, what="inl"):
             except Exception:
                 logger.exception("Error parsing document")
                 content = "Error parsing document"
-        else:
+        elif content is None:
             logger.warning("No preface found")
             content = "File not found"
 
@@ -745,6 +727,25 @@ def get_list_of_places():
 '''
 
 
+def cache_is_recent(source_file, xsl_file, cache_file):
+    """
+    Returns False if the source or xsl file have been modified since the creation of the cache file
+    Returns False if the cache is more than 'cache_lifetime_seconds' seconds old, as defined in config file
+    Otherwise, returns True
+    """
+    try:
+        source_file_mtime = os.path.getmtime(source_file)
+        xsl_file_mtime = os.path.getmtime(xsl_file)
+        cache_file_mtime = os.path.getmtime(cache_file)
+    except OSError:
+        return False
+    if source_file_mtime > cache_file_mtime or xsl_file_mtime > cache_file_mtime:
+        return False
+    elif calendar.timegm(time.gmtime()) > (cache_file_mtime + project_config["cache_lifetime_seconds"]):
+        return False
+    return True
+
+
 def publish_status(project, edition_id):
     """Get info on the publications status
     Is is visible to the public etc...
@@ -814,17 +815,22 @@ def get_content(project, folder, xml_filename, xsl_filename, parameters):
     xml_file_path = safe_join(project_config[project]["file_root"], "xml", folder, xml_filename)
     xsl_file_path = safe_join(project_config["xslt_root"], xsl_filename)
     cache_file_path = xml_file_path.replace("/xml/", "/cache/").replace(".xml", ".html")
+    content = None
 
     if os.path.exists(cache_file_path):
-        try:
-            with io.open(cache_file_path, encoding="UTF-8") as cache_file:
-                content = cache_file.read()
-        except Exception:
-            content = "Error reading content from cache."
+        if cache_is_recent(xml_file_path, xsl_file_path, cache_file_path):
+            try:
+                with io.open(cache_file_path, encoding="UTF-8") as cache_file:
+                    content = cache_file.read()
+            except Exception:
+                content = "Error reading content from cache."
+            else:
+                logger.info("Content fetched from cache.")
         else:
-            logger.info("Content fetched from cache.")
-    elif os.path.exists(xml_file_path):
-        logger.warning("No cache found")
+            logger.info("Cache file is old or invalid, deleting cache file...")
+            os.remove(cache_file_path)
+    if os.path.exists(xml_file_path) and content is None:
+        logger.info("Getting contents from file and transforming...")
         try:
             content = xml_to_html(xsl_file_path, xml_file_path, params=parameters).replace('\n', '').replace('\r', '')
             try:
@@ -837,7 +843,7 @@ def get_content(project, folder, xml_filename, xsl_filename, parameters):
             logger.exception("Error when parsing XML file")
             content = "Error parsing document"
             content += str(e)
-    else:
+    elif content is None:
         content = "File not found"
 
     return content
