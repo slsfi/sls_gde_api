@@ -512,7 +512,7 @@ def get_publication_manuscripts(project, edition_id, changes=False):
         manuscript_info = []
 
         # the content has chapters in the same xml
-        sql = "SELECT m_title, m_type, m_filename, m_id FROM manuscripts WHERE m_filename like %s ORDER BY m_sort"
+        sql = "SELECT m_title as title, m_type as type, m_filename as filename, m_id as id FROM manuscripts WHERE m_filename like %s ORDER BY m_sort"
         with connection.cursor() as cursor:
             cursor.execute(sql, [item_id  + "_ms_%"])
             manuscript_info = cursor.fetchall()
@@ -524,8 +524,8 @@ def get_publication_manuscripts(project, edition_id, changes=False):
             params = {
                 "bookId": book_id
             }
-            manuscript_info[i]["manuscript_changes"] = getContent(project, "ms", manuscript["m_filename"], "ms_changes.xsl", params)
-            manuscript_info[i]["manuscript_normalized"] = getContent(project, "ms", manuscript["m_filename"], "ms_normalized.xsl", params)
+            manuscript_info[i]["manuscript_changes"] = getContent(project, "ms", manuscript["filename"], "ms_changes.xsl", params)
+            manuscript_info[i]["manuscript_normalized"] = getContent(project, "ms", manuscript["filename"], "ms_normalized.xsl", params)
 
         data = {
             "id": item_id,
@@ -559,7 +559,7 @@ def get_publication_variations(project, edition_id):
                 cursor.execute(sql, [item_id  + "_var_%", section_id])
                 variation_info = cursor.fetchall()
         else:
-            sql = "SELECT v_title, v_type, v_filename, v_id FROM versions WHERE v_filename like %s ORDER BY v_sort"
+            sql = "SELECT v_title as title, v_type as type, v_filename as filename, v_id as id FROM versions WHERE v_filename like %s ORDER BY v_sort"
             with connection.cursor() as cursor:
                 cursor.execute(sql, [item_id + "_var_%"])
                 variation_info = cursor.fetchall()
@@ -572,7 +572,7 @@ def get_publication_variations(project, edition_id):
             }
             # chapters_xsl_file = "chapters.xsl"
 
-            if variation["v_type"] == "1":
+            if variation["type"] == "1":
                 xsl_file = "poem_variants_est.xsl"
             else:
                 xsl_file = "poem_variants_other.xsl"
@@ -580,7 +580,7 @@ def get_publication_variations(project, edition_id):
             if (section_id is not None):
                 params["sectionId"] = section_id
 
-            variation_info[i] = getContent(project, "var", variation["v_filename"], xsl_file, params)
+            variation_info[i]["content"] = getContent(project, "var", variation["filename"], xsl_file, params)
 
         data = {
             "id": edition_id,
