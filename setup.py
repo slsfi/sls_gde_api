@@ -6,9 +6,9 @@ setup(
     version="0.0.1",
     include_package_data=True,
     install_requires=[
-        'flask==0.12.*',
+        'flask==1.*',
         'flasgger==0.8.*',
-        'lxml==4.1.*',
+        'lxml==4.2.*',
         'PyMySQL==0.8.* ',
         'python-dateutil==2.7.*',
         'ruamel.yaml==0.15.*',

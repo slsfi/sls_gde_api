@@ -1,5 +1,6 @@
 from collections import OrderedDict
-from flask import abort, Blueprint, jsonify, safe_join
+from flask import abort, Blueprint, safe_join
+from flask.json import jsonify
 import logging
 from logging.handlers import TimedRotatingFileHandler
 from lxml import etree
