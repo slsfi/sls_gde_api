@@ -218,7 +218,7 @@ def get_toc_edition_links(project, edition_id, link_id):
         cursor.execute(sql, [edition_id])
         edition_data = cursor.fetchall()
 
-    if edition_data[0]["multiple_files"] == "0":
+    if edition_data[0]["multiple_files"] == 0:
         sql = "SELECT t1.title AS title, t1.toc_ed_id AS edition_id, t1.toc_linkID AS link_id FROM tableofcontents t1 " \
               "LEFT JOIN tableofcontents t2 ON t1.toc_linkType=t2.toc_linkType AND t1.toc_ed_id=t2.toc_ed_id " \
               "WHERE t2.toc_ed_id=%s AND t2.toc_linkID=%s AND t1.toc_id < t2.toc_id ORDER BY t1.sortorder DESC LIMIT 1"
@@ -612,7 +612,7 @@ def get_publication_inl_tit_text(project, edition_id, lang=None, what="inl"):
         if what == "tit":
             xsl_file = "title.xsl"
         else:
-            xsl_file = "introduction.xsl"
+            xsl_file = "est.xsl"
         xsl_file_path = safe_join(project_config["xslt_root"], xsl_file)
         cache_file_path = safe_join(project_config[project]["file_root"], "cache", what, filename.replace(".xml", ".html"))
 
