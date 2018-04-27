@@ -40,10 +40,10 @@ def xml_to_html(xsl_file_path, xml_file_path, replace_namespace=True, params=Non
     if not os.path.exists(xml_file_path):
         return "XML file {!r} not found!".format(xml_file_path)
 
-    with io.open(xml_file_path, encoding="UTF-8") as xml_file:
+    with io.open(xml_file_path, mode="rb") as xml_file:
         xml_contents = xml_file.read()
         if replace_namespace:
-            xml_contents = xml_contents.replace('xmlns="http://www.sls.fi/tei"', 'xmlns="http://www.tei-c.org/ns/1.0"')
+            xml_contents = xml_contents.replace(b'xmlns="http://www.sls.fi/tei"', b'xmlns="http://www.tei-c.org/ns/1.0"')
 
         xml_root = etree.fromstring(xml_contents)
 
