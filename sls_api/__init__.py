@@ -43,6 +43,9 @@ if os.path.exists(os.path.join("sls_api", "configs", "digital_editions.yml")):
 if os.path.exists(os.path.join("sls_api", "configs", "oai.yml")):
     from sls_api.endpoints.oai import oai
     app.register_blueprint(oai, url_prefix="/oai")
+if os.path.exists(os.path.join("sls_api", "configs", "oai_library.yml")):
+    from sls_api.endpoints.oai_library import oai as oai_library
+    app.register_blueprint(oai_library, url_prefix="/oai_library")
 if os.path.exists(os.path.join("sls_api", "configs", "swift_auth.yml")):
     from sls_api.endpoints.swift_accessfiles import swift
     app.register_blueprint(swift, url_prefix="/accessfiles")
