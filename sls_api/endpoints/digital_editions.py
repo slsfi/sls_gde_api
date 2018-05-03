@@ -105,6 +105,22 @@ def get_html_contents_as_json(project, filename):
     else:
         abort(404)
 
+# routes/digitaledition/html.php
+@digital_edition.route("/<project>/md/<filename>")
+def get_md_contents_as_json(project, filename):
+    logger.info("Getting static content from /{}/md/{}".format(project, filename))
+    file_path = safe_join(project_config[project]["file_root"], "md", "{}.md".format(filename))
+    if os.path.exists(file_path):
+        with io.open(file_path, encoding="UTF-8") as md_file:
+            contents = md_file.read()
+        data = {
+            "filename": filename,
+            "content": contents
+        }
+        return jsonify(data), 200, {"Access-Control-Allow-Origin": "*"}
+    else:
+        abort(404)
+
 
 # routes/digitaledition/manuscripts.php
 @digital_edition.route("/<project>/manuscript/<publication_id>")
@@ -800,7 +816,7 @@ def publish_status(project, edition_id):
 
 
 def get_id_parts(edition_id):
-    id_parts = edition_id.replace("_est", "").split(";")  # 12_1_est;ch5  - Finland framställt i teckningar.
+    id_parts = edition_id.replace("_est", "").split(";")
 
     item_id = id_parts[0]  # 1_1
     item_parts = item_id.split("_")
