@@ -1,14 +1,15 @@
+import calendar
 from collections import OrderedDict
 from flask import abort, Blueprint, safe_join
 from flask.json import jsonify
+import io
 import logging
 from logging.handlers import TimedRotatingFileHandler
 from lxml import etree
-import pymysql
-from ruamel.yaml import YAML
-import calendar
 import os
-import io
+from ruamel.yaml import YAML
+from sqlalchemy import create_engine
+import sqlalchemy.sql
 import time
 
 digital_edition = Blueprint('digital_edition', __name__)
@@ -65,22 +66,14 @@ def xml_to_html(xsl_file_path, xml_file_path, replace_namespace=True, params=Non
 
 
 def open_mysql_connection(database):
-    class OrderedDictCursor(pymysql.cursors.DictCursorMixin, pymysql.cursors.Cursor):
-        dict_type = OrderedDict
-
+    global engine
     global connection
     if database not in project_config:
         connection = None
+        engine = None
     else:
-        connection = pymysql.connect(
-            host=project_config[database]["address"],
-            port=project_config[database]["port"],
-            user=project_config[database]["username"],
-            password=project_config[database]["password"],
-            db=project_config[database]["database"],
-            charset="utf8",
-            cursorclass=OrderedDictCursor
-        )
+        engine = create_engine(project_config[database]["engine"])
+        connection = engine.connect()
 
 
 @digital_edition.after_request
@@ -118,10 +111,11 @@ def get_html_contents_as_json(project, filename):
 def get_manuscripts(project, publication_id):
     logger.info("Getting manuscript /{}/manuscript/{}".format(project, publication_id))
     open_mysql_connection(project)
-    sql = "SELECT * FROM manuscripts WHERE m_publication_id=%s ORDER BY m_sort"
-    with connection.cursor() as cursor:
-        cursor.execute(sql, [publication_id])
-        results = cursor.fetchall()
+    sql = sqlalchemy.sql.text("SELECT * FROM manuscripts WHERE m_publication_id=:pub_id ORDER BY m_sort")
+    statement = sql.bindparams(pub_id=publication_id)
+    results = []
+    for row in connection.execute(statement).fetchall():
+        results.append(dict(row))
     connection.close()
     return jsonify(results)
 
@@ -131,10 +125,11 @@ def get_manuscripts(project, publication_id):
 def get_publication(project, publication_id):
     logger.info("Getting publication /{}/publication/{}".format(project, publication_id))
     open_mysql_connection(project)
-    sql = "SELECT * FROM publications WHERE p_id=%s ORDER BY p_title"
-    with connection.cursor() as cursor:
-        cursor.execute(sql, [publication_id])
-        results = cursor.fetchall()
+    sql = sqlalchemy.sql.text("SELECT * FROM publications WHERE p_id=:p_id ORDER BY p_title")
+    statement = sql.bindparams(p_id=publication_id)
+    results = []
+    for row in connection.execute(statement).fetchall():
+        results.append(dict(row))
     connection.close()
     return jsonify(results)
 
@@ -151,11 +146,12 @@ def get_toc_editions(project):
     else:
         sql = "SELECT ed_id AS id, ed_title AS title, ed_filediv AS divchapters FROM publications_ed WHERE ed_lansering=2 ORDER BY ed_datumlansering"
 
-    with connection.cursor() as cursor:
-        cursor.execute(sql)
-        result = cursor.fetchall()
-
+    statement = sqlalchemy.sql.text(sql)
+    result = []
+    for row in connection.execute(statement).fetchall():
+        result.append(dict(row))
     connection.close()
+
     return_data = []
     for row in result:
         if row["id"] not in project_config.get(project).get("disabled_publications"):
@@ -179,14 +175,15 @@ def get_toc_root(project, edition_id):
         sql = "SELECT toc.* FROM tableofcontents toc " \
               "JOIN publications_ed ped ON toc.toc_ed_id = ped.ed_id " \
               "JOIN publications_group pgroup ON toc.toc_group_id = pgroup.group_id " \
-              "WHERE toc_ed_id=%s AND pgroup.group_lansering>={} AND toc_groupid IS NULL ORDER BY sortOrder".format(show_published)
+              "WHERE toc_ed_id=:ed_id AND pgroup.group_lansering>={} AND toc_groupid IS NULL ORDER BY sortOrder".format(show_published)
     else:
         sql = "SELECT toc.* FROM tableofcontents toc " \
-              "WHERE toc_ed_id=%s AND toc_group_id IS NULL AND toc_groupid IS NULL ORDER BY sortOrder"
+              "WHERE toc_ed_id=:ed_id AND toc_group_id IS NULL AND toc_groupid IS NULL ORDER BY sortOrder"
 
-    with connection.cursor() as cursor:
-        cursor.execute(sql, [edition_id])
-        results = cursor.fetchall()
+    statement = sqlalchemy.sql.text(sql).bindparams(ed_id=edition_id)
+    results = []
+    for row in connection.execute(statement).fetchall():
+        results.append(dict(row))
     connection.close()
 
     return jsonify(results)
@@ -197,10 +194,11 @@ def get_toc_root(project, edition_id):
 def get_toc_root_elements(project, edition_id, group_id):
     logger.info("Getting \"root elements\" /{}/table-of-contents/edition/{}/group/{}".format(project, edition_id, group_id))
     open_mysql_connection(project)
-    sql = "SELECT * FROM tableofcontents WHERE toc_ed_id=%s AND toc_groupid=%s AND toc_linkType!=6 ORDER BY sortOrder"
-    with connection.cursor() as cursor:
-        cursor.execute(sql, [edition_id, group_id])
-        results = cursor.fetchall()
+    sql = "SELECT * FROM tableofcontents WHERE toc_ed_id=:ed_id AND toc_groupid=:g_id AND toc_linkType!=6 ORDER BY sortOrder"
+    statement = sqlalchemy.sql.text(sql).bindparams(ed_id=edition_id, g_id=group_id)
+    results = []
+    for row in connection.execute(statement).fetchall():
+        results.append(dict(row))
     connection.close()
     return jsonify(results)
 
@@ -213,51 +211,49 @@ def get_toc_edition_links(project, edition_id, link_id):
     open_mysql_connection(project)
     sql = "SELECT ed_id AS id, ed_lansering, ed_title AS title, " \
           "ed_filediv AS multiple_files, ed_date_swe AS info_sv, ed_date_fin AS info_fi " \
-          "FROM publications_ed WHERE ed_id=%s ORDER BY ed_datumlansering"
-    with connection.cursor() as cursor:
-        cursor.execute(sql, [edition_id])
-        edition_data = cursor.fetchall()
+          "FROM publications_ed WHERE ed_id=:ed_id ORDER BY ed_datumlansering"
+    statement = sqlalchemy.sql.text(sql).bindparams(ed_id=edition_id)
+    edition_data = []
+    for row in connection.execute(statement).fetchall():
+        edition_data.append(dict(row))
 
     if edition_data[0]["multiple_files"] == 0:
         sql = "SELECT t1.title AS title, t1.toc_ed_id AS edition_id, t1.toc_linkID AS link_id FROM tableofcontents t1 " \
               "LEFT JOIN tableofcontents t2 ON t1.toc_linkType=t2.toc_linkType AND t1.toc_ed_id=t2.toc_ed_id " \
-              "WHERE t2.toc_ed_id=%s AND t2.toc_linkID=%s AND t1.toc_id < t2.toc_id ORDER BY t1.sortorder DESC LIMIT 1"
-        with connection.cursor() as cursor:
-            cursor.execute(sql, [edition_id, link_id])
-            toc_data = cursor.fetchall()
-            if len(toc_data) > 0:
-                return_data["prev"] = toc_data[0]
-            else:
-                return_data["prev"] = None
+              "WHERE t2.toc_ed_id=:ed_id AND t2.toc_linkID=:l_id AND t1.toc_id < t2.toc_id ORDER BY t1.sortorder DESC LIMIT 1"
+        statement = sqlalchemy.sql.text(sql).bindparams(ed_id=edition_id, l_id=link_id)
+        toc_data = connection.execute(statement).fetchone()
+        if toc_data:
+            return_data["prev"] = dict(toc_data)
+        else:
+            return_data["prev"] = None
 
         sql = "SELECT t1.title AS title, t1.toc_ed_id AS edition_id, t1.toc_linkID AS link_id " \
               "FROM tableofcontents t1 LEFT JOIN tableofcontents t2 " \
               "ON t1.toc_linkType=t2.toc_linkType " \
               "AND t1.toc_ed_id=t2.toc_ed_id " \
-              "WHERE t2.toc_ed_id=%s AND t2.toc_linkID=%s " \
+              "WHERE t2.toc_ed_id=:ed_id AND t2.toc_linkID=:l_id " \
               "AND t1.toc_id > t2.toc_id ORDER BY t1.sortorder ASC LIMIT 1"
-        with connection.cursor() as cursor:
-            cursor.execute(sql, [edition_id, link_id])
-            toc_data = cursor.fetchall()
-            if len(toc_data) > 0:
-                return_data["next"] = toc_data[0]
-            else:
-                return_data["next"] = None
+        statement = sqlalchemy.sql.text(sql).bindparams(ed_id=edition_id, l_id=link_id)
+        toc_data = connection.execute(statement).fetchone()
+        if toc_data:
+            return_data["next"] = dict(toc_data)
+        else:
+            return_data["next"] = None
     else:
         sql = "SELECT t1.title AS title, t1.toc_ed_id AS edition_id, t1.toc_linkID AS link_id " \
               "FROM tableofcontents t1 LEFT JOIN tableofcontents t2 " \
               "ON t1.toc_groupid=t2.toc_groupid " \
               "AND t1.toc_linkType=t2.toc_linkType " \
               "AND t1.toc_ed_id=t2.toc_ed_id " \
-              "WHERE t2.toc_ed_id=%s AND t2.toc_linkID=%s " \
+              "WHERE t2.toc_ed_id=:ed_id AND t2.toc_linkID=:l_id " \
               "AND t1.toc_id < t2.toc_id ORDER BY t1.sortorder DESC LIMIT 1"
-        with connection.cursor() as cursor:
-            cursor.execute(sql, [edition_id, link_id])
-            toc_data = cursor.fetchall()
-            if len(toc_data) > 0:
-                return_data["prev"] = toc_data[0]
-            else:
-                return_data["prev"] = None
+        statement = sqlalchemy.sql.text(sql).bindparams(ed_id=edition_id, l_id=link_id)
+        toc_data = connection.execute(statement).fetchone()
+        if toc_data:
+            return_data["prev"] = dict(toc_data)
+        else:
+            return_data["prev"] = None
 
         sql = "SELECT t1.title AS title, t1.toc_ed_id AS edition_id, t1.toc_linkID AS link_id " \
               "FROM tableofcontents t1 LEFT JOIN tableofcontents t2 " \
@@ -266,13 +262,12 @@ def get_toc_edition_links(project, edition_id, link_id):
               "AND t1.toc_ed_id=t2.toc_ed_id " \
               "WHERE t2.toc_ed_id=%s AND t2.toc_linkID=%s " \
               "AND t1.toc_id > t2.toc_id ORDER BY t1.sortorder ASC LIMIT 1"
-        with connection.cursor() as cursor:
-            cursor.execute(sql, [edition_id, link_id])
-            toc_data = cursor.fetchall()
-            if len(toc_data) > 0:
-                return_data["next"] = toc_data[0]
-            else:
-                return_data["next"] = None
+        statement = sqlalchemy.sql.text(sql).bindparams(ed_id=edition_id, l_id=link_id)
+        toc_data = connection.execute(statement).fetchone()
+        if toc_data:
+            return_data["next"] = dict(toc_data)
+        else:
+            return_data["next"] = None
 
     connection.close()
     return jsonify(return_data)
@@ -293,15 +288,15 @@ def get_toc_edition(project, edition_id):
     if edition_id == 15:
         sql = "SELECT toc.* FROM tableofcontents toc JOIN publications_ed ped ON toc.toc_ed_id = ped.ed_id " \
               "JOIN publications_group pgroup ON toc.toc_group_id = pgroup.group_id " \
-              "WHERE toc_ed_id = %s AND (toc_linkType!=6 OR toc_linkType IS NULL) AND prgroup.group_lansering>={} " \
+              "WHERE toc_ed_id = :ed_id AND (toc_linkType!=6 OR toc_linkType IS NULL) AND prgroup.group_lansering>={} " \
               "ORDER BY toc_groupid, toc.sortOrder".format(show_published)
     else:
-        sql = "SELECT toc.* FROM tableofcontents toc WHERE toc_ed_id=%s AND (toc_linkType!=6 OR toc_linkType IS NULL) " \
+        sql = "SELECT toc.* FROM tableofcontents toc WHERE toc_ed_id=:ed_id AND (toc_linkType!=6 OR toc_linkType IS NULL) " \
               "AND toc.toc_group_id IS NULL ORDER BY toc_groupid, toc.sortOrder"
-
-    with connection.cursor() as cursor:
-        cursor.execute(sql, [edition_id])
-        toc_data = cursor.fetchall()
+    statement = sqlalchemy.sql.text(sql).bindparams(ed_id=edition_id)
+    toc_data = []
+    for row in connection.execute(statement).fetchall():
+        toc_data.append(dict(row))
     connection.close()
 
     return_data = OrderedDict()
@@ -363,11 +358,12 @@ def get_toc_edition(project, edition_id):
 def get_toc_edition_firstentry(project, edition_id):
     logger.info("Getting first edition /{}/table-of-contents/edition/{}/first".format(project, edition_id))
     open_mysql_connection(project)
-    sql = "SELECT title, toc_ed_id, toc_linkID FROM tableofcontents WHERE toc_ed_id=%s AND toc_linkID IS NOT NULL ORDER BY sortOrder ASC LIMIT 1"
-    with connection.cursor() as cursor:
-        cursor.execute(sql, [edition_id])
-        result = cursor.fetchone()
+    sql = "SELECT title, toc_ed_id, toc_linkID FROM tableofcontents WHERE toc_ed_id=:ed_id AND toc_linkID IS NOT NULL ORDER BY sortOrder ASC LIMIT 1"
+    statement = sqlalchemy.sql.text(sql).bindparams(ed_id=edition_id)
+    result = connection.execute(statement).fetchone()
     connection.close()
+    if result is not None:
+        result = dict(result)
     return jsonify(result)
 
 
@@ -500,10 +496,11 @@ def get_publication_manuscripts(project, edition_id, changes=False):
         open_mysql_connection(project)
 
         # the content has chapters in the same xml
-        sql = "SELECT m_title, m_type, m_filename, m_id FROM manuscripts WHERE m_filename like %s ORDER BY m_sort"
-        with connection.cursor() as cursor:
-            cursor.execute(sql, [item_id + "_ms_%"])
-            manuscript_info = cursor.fetchall()
+        sql = "SELECT m_title, m_type, m_filename, m_id FROM manuscripts WHERE m_filename LIKE :f_name ORDER BY m_sort"
+        statement = sqlalchemy.sql.text(sql).bindparams(f_name=item_id+"_ms_%")
+        manuscript_info = []
+        for row in connection.execute(statement).fetchall():
+            manuscript_info.append(dict(row))
 
         connection.close()
 
@@ -541,15 +538,18 @@ def get_publication_variations(project, edition_id):
 
         # the content has chapters in the same xml
         if section_id is not None:
-            sql = "SELECT v_title, v_type, v_filename, v_id FROM versions WHERE v_filename like %s AND v_section_id=%s ORDER BY v_sort"
-            with connection.cursor() as cursor:
-                cursor.execute(sql, [item_id + "_var_%", section_id])
-                variation_info = cursor.fetchall()
+            sql = "SELECT v_title, v_type, v_filename, v_id FROM versions WHERE v_filename LIKE :f_name AND v_section_id=:s_id ORDER BY v_sort"
+            statement = sqlalchemy.sql.text(sql).bindparams(f_name=item_id+"_var_%", s_id=section_id)
+            variation_info = []
+            for row in connection.execute(statement).fetchall():
+                variation_info.append(dict(row))
+
         else:
-            sql = "SELECT v_title, v_type, v_filename, v_id FROM versions WHERE v_filename like %s ORDER BY v_sort"
-            with connection.cursor() as cursor:
-                cursor.execute(sql, [item_id + "_var_%"])
-                variation_info = cursor.fetchall()
+            sql = "SELECT v_title, v_type, v_filename, v_id FROM versions WHERE v_filename LIKE :f_name ORDER BY v_sort"
+            statement = sqlalchemy.sql.text(sql).bindparams(f_name=item_id+"_var_%")
+            variation_info = []
+            for row in connection.execute(statement).fetchall():
+                variation_info.append(dict(row))
         connection.close()
 
         for i in range(len(variation_info)):
@@ -665,16 +665,12 @@ def get_person_tooltip(person_id):
     logger.info("Getting tooltip /semantic_data/persons/tooltip/{}".format(person_id))
     open_mysql_connection("semantic_data")
     sql = "SELECT c_webbnamn_1_sort AS title, ed_tooltip AS content, c_webbfornamn1, c_webbefternamn1 " \
-          "FROM persons WHERE id_p=%s"
-
-    with connection.cursor() as cursor:
-        cursor.execute(sql, [person_id])
-        ms_data = cursor.fetchall()
-
+          "FROM persons WHERE id_p=:p_id"
+    statement = sqlalchemy.sql.text(sql).bindparams(p_id=person_id)
+    ms_data = connection.execute(statement).fetchone()
     connection.close()
-
-    if ms_data and ms_data[0] is not None:
-        return jsonify(ms_data[0])
+    if ms_data:
+        return jsonify(dict(ms_data))
     else:
         return jsonify("Person not found"), 404
 
@@ -686,14 +682,12 @@ def get_list_of_persons(data_source_id):
     open_mysql_connection("semantic_data")
     sql = "SELECT c_webbnamn_1_sort AS title, ed_tooltip AS content, " \
           "c_webbfornamn1, c_webbefternamn1, ed_tooltip, id_p, c_webbsok " \
-          "FROM persons WHERE data_source_id=%s ORDER BY id_p ASC"
-
-    with connection.cursor() as cursor:
-        cursor.execute(sql, [data_source_id])
-        ms_data = cursor.fetchall()
-
+          "FROM persons WHERE data_source_id=:ds_id ORDER BY id_p ASC"
+    statement = sqlalchemy.sql.text(sql).bindparams(ds_id=data_source_id)
+    ms_data = []
+    for row in connection.execute(statement).fetchall():
+        ms_data.append(dict(row))
     connection.close()
-
     return jsonify(ms_data)
 
 
@@ -704,17 +698,14 @@ def get_place_tooltip(place_id):
     open_mysql_connection("semantic_data")
     place_id = place_id.replace("pl", "").replace("PlId", "")
 
-    sql = "SELECT o_ortnamn AS title, o_beskrivning AS content FROM places WHERE id=%s"
-    with connection.cursor() as cursor:
-        cursor.execute(sql, [place_id])
-        ms_data = cursor.fetchall()
-
+    sql = "SELECT o_ortnamn AS title, o_beskrivning AS content FROM places WHERE id=:p_id"
+    statement = sqlalchemy.sql.text(sql).bindparams(p_id=place_id)
+    ms_data = connection.execute(statement).fetchone()
     connection.close()
-
-    if ms_data and ms_data[0] is not None:
-        return jsonify(ms_data[0])
+    if ms_data:
+        return jsonify(dict(ms_data))
     else:
-        return jsonify("Place not found"), 404
+        return jsonify("Place not found."), 404
 
 
 # routes/semantic_data/places.php
@@ -724,10 +715,10 @@ def get_list_of_places():
     open_mysql_connection("semantic_data")
 
     sql = "SELECT c_webbsok, o_id AS id FROM places ORDER BY o_id ASC"
-    with connection.cursor() as cursor:
-        cursor.execute(sql)
-        ms_data = cursor.fetchall()
-
+    statement = sqlalchemy.sql.text(sql)
+    ms_data = []
+    for row in connection.execute(statement).fetchall():
+        ms_data.append(dict(row))
     connection.close()
     return jsonify(ms_data)
 
@@ -769,23 +760,22 @@ def publish_status(project, edition_id):
     open_mysql_connection(project)
     sql = "SELECT ed_id AS id, ed_lansering, ed_title AS title, ed_filediv AS multiple_files, " \
           "ed_date_swe AS info_sv, ed_date_fin AS info_fi " \
-          "FROM publications_ed WHERE ed_id = %s ORDER BY ed_datumlansering"
-
-    with connection.cursor() as cursor:
-        cursor.execute(sql, [edition_id.split("_")[0]])  # edition_id is like 1_1, we need the first digit here
-        edition_data = cursor.fetchall()
+          "FROM publications_ed WHERE ed_id = :ed_id ORDER BY ed_datumlansering"
+    statement = sqlalchemy.sql.text(sql).bindparams(ed_id=edition_id.split("_")[0])  # edition_id is like 1_1, we need the first digit here
+    edition_data = connection.execute(statement).fetchone()
+    if edition_data:
+        edition_data = dict(edition_data)
 
     sql = "SELECT DISTINCT p.p_identifier FROM digital_edition_topelius.publications_ed ped " \
           "JOIN digital_edition_topelius.publications p ON p.p_ed_id = ped.ed_id " \
           "JOIN digital_edition_topelius.publications_collection pc ON pc.coll_ed_id = p.p_ed_id " \
           "JOIN digital_edition_topelius.publications_group pg ON pg.group_id = p.p_group_id " \
-          "WHERE ped.ed_lansering = 2 AND pg.group_lansering != 1 AND ped.ed_id = 15 AND p.p_identifier = %s"
-
-    with connection.cursor() as cursor:
-        cursor.execute(sql, [edition_id])
-        letters = cursor.fetchall()
-        letter_published = False
-
+          "WHERE ped.ed_lansering = 2 AND pg.group_lansering != 1 AND ped.ed_id = 15 AND p.p_identifier = :ed_id"
+    statement = sqlalchemy.sql.text(sql).bindparams(ed_id=edition_id)
+    letters = []
+    for row in connection.execute(statement).fetchall():
+        letters.append(dict(row))
+    letter_published = False
     connection.close()
 
     if len(letters) > 0 or not edition_id.startswith("15_"):
@@ -794,11 +784,11 @@ def publish_status(project, edition_id):
     can_show = False
     content = ""
 
-    if len(edition_data) < 1:
+    if not edition_data:
         content = "Content does not exist"
-    elif edition_data[0]["ed_lansering"] < 1 and not project_config[project]["show_unpublished"]:
+    elif edition_data["ed_lansering"] < 1 and not project_config[project]["show_unpublished"]:
         content = "Content is not published"
-    elif edition_data[0]["ed_lansering"] == 1 and not project_config[project]["show_internally_published"] and not project_config[project]["show_unpublished"]:
+    elif edition_data["ed_lansering"] == 1 and not project_config[project]["show_internally_published"] and not project_config[project]["show_unpublished"]:
         content = "Content is not externally published"
     else:
         if not project_config[project]["show_internally_published"] and not letter_published:
