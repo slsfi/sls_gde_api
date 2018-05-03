@@ -2,7 +2,7 @@ FROM python:3-slim-stretch
 
 RUN apt update && apt install -y build-essential
 
-RUN pip install Twisted
+RUN pip install Twisted[tls]
 
 RUN mkdir /app
 WORKDIR /app

@@ -14,8 +14,12 @@
   },
   "servers": [
     {
+      "url": "http://topelius-m.sls.fi:8000",
+      "description": "Staging version used by some sls.fi projects in development"
+    },
+    {
       "url": "http://api.sls.fi",
-      "description": "Live version used by sls.fi projects"
+      "description": "Future production version used by sls.fi projects (Not yet live)"
     },
     {
       "url": "http://127.0.0.1:5000",
@@ -331,9 +335,160 @@
         }
       }
     },
+    "/digitaledition/{project}/text/com/{edition_id}": {
+      "get": {
+        "summary": "Get all notes/commentary for a specific edition",
+        "description": "Returns the formatted notes/commentary text for the given edition.",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project",
+            "description": "The Digital Edition project this request concerns (topelius, parland, etc)",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "example": "topelius"
+            }
+          },
+          {
+            "in": "path",
+            "name": "edition_id",
+            "description": "The ID for the desired edition",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "example": "1_1"
+            }
+          }
+        ],
+        "tags": [
+          "digitaledition"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "id": "1_1",
+                    "content": "<p>This word refers to an example.</p>"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/digitaledition/{project}/text/ms/{edition_id}": {
+      "get": {
+        "summary": "Get manuscript texts for a given edition",
+        "description": "Returns a list of manuscript files and their formatted contents for the given edition.",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project",
+            "description": "The Digital Edition project this request concerns (topelius, parland, etc)",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "example": "topelius"
+            }
+          },
+          {
+            "in": "path",
+            "name": "edition_id",
+            "description": "The ID for the desired edition",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "example": "1_1"
+            }
+          }
+        ],
+        "tags": [
+          "digitaledition"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "id": "1_1",
+                    "manuscripts": [
+                      {
+                        "m_filename": "1_1_test.xml",
+                        "m_id": 11,
+                        "m_title": "Test manuscript",
+                        "m_type": 1,
+                        "manuscript_changes": "<p>Formatted changes</p>",
+                        "manuscript_normalized": "<p>Full manuscript text contents.</p>"
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/digitaledition/{project}/text/var/{edition_id}": {
+      "get": {
+        "summary": "Get all variants of the reading text for the given edition",
+        "description": "Returns a list of all variations of the reading text for the given edition",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project",
+            "description": "The Digital Edition project this request concerns (topelius, parland, etc)",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "example": "topelius"
+            }
+          },
+          {
+            "in": "path",
+            "name": "edition_id",
+            "description": "The ID for the desired edition",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "example": "1_1"
+            }
+          }
+        ],
+        "tags": [
+          "digitaledition"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "id": "1_1",
+                    "variations": [
+                      "<p>Variant 1</p>",
+                      "<p>Variant 2</p>",
+                      "<div>Variant 3</div>"
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/digitaledition/{project}/text/inl/{edition_id}": {
       "get": {
-        "summary": "Get internationalized text for a given edition",
+        "summary": "Get preamble text for a given edition",
         "description": "Returns the formatted text for the desired edition",
         "parameters": [
           {
@@ -379,7 +534,7 @@
     },
     "/digitaledition/{project}/text/inl/{edition_id}/{language}": {
       "get": {
-        "summary": "Get translated text for a given edition",
+        "summary": "Get translated preamble for a given edition",
         "description": "Returns the formatted text for the desired edition, in the desired language",
         "parameters": [
           {
@@ -430,6 +585,113 @@
                   "example": {
                     "id": "1_1",
                     "content": "<div><p>Hejsan Världen!</p></div>"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/digitaledition/{project}/text/tit/{edition_id}": {
+      "get": {
+        "summary": "Get title page for a given edition",
+        "description": "Returns the formatted title page for the given edition",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project",
+            "description": "The Digital Edition project this request concerns (topelius, parland, etc)",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "example": "topelius"
+            }
+          },
+          {
+            "in": "path",
+            "name": "edition_id",
+            "description": "The ID for the desired edition",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "example": "1_1"
+            }
+          }
+        ],
+        "tags": [
+          "digitaledition"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "id": "1_1",
+                    "content": "<p>Title Page For Edition 1_1</p>"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/digitaledition/{project}/text/tit/{edition_id}/{language}": {
+      "get": {
+        "summary": "Get translated title page for given edition",
+        "description": "Returns a translation of the title page for the given edition, in the given language",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project",
+            "description": "The Digital Edition project this request concerns (topelius, parland, etc)",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "example": "topelius"
+            }
+          },
+          {
+            "in": "path",
+            "name": "edition_id",
+            "description": "The ID for the desired edition",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "example": "1_1"
+            }
+          },
+          {
+            "in": "path",
+            "name": "language",
+            "description": "The languge code for the desired text",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "fin",
+                "swe",
+                "eng"
+              ],
+              "example": "swe"
+            }
+          }
+        ],
+        "tags": [
+          "digitaledition"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "id": "1_1",
+                    "content": "<p>Titelsida för 1_1</p>"
                   }
                 }
               }
@@ -663,7 +925,11 @@
             "description": "Choose display format for metadata (use verb=ListMetadataFormats to get available formats)",
             "schema": {
               "type": "string",
-              "enum": ["oai_dc", "europeana", "ead"],
+              "enum": [
+                "oai_dc",
+                "europeana",
+                "ead"
+              ],
               "example": "oai_dc"
             }
           }
@@ -675,33 +941,25 @@
           "200": {
             "description": "A valid OAI-PMH return containing metadata",
             "content": {
-              "text/xml": {
-
-              }
+              "text/xml": {}
             }
           },
           "400": {
             "description": "A valid OAI-PMH return containing an error message, due to a malformed request",
             "content": {
-              "text/xml": {
-
-              }
+              "text/xml": {}
             }
           },
           "404": {
             "description": "A valid OAI-PMH return containing an error message, as the requested metadata was not found",
             "content": {
-              "text/xml": {
-
-              }
+              "text/xml": {}
             }
           },
           "500": {
             "description": "A valid OAI-PMH return containing an error message, due to an internal server error",
             "content": {
-              "text/xml": {
-
-              }
+              "text/xml": {}
             }
           }
         }

@@ -4,7 +4,8 @@ from dateutil.parser import parse
 from flask import Blueprint, Response, request
 from lxml.etree import Element, SubElement, tostring
 import os
-import pymysql
+from sqlalchemy import create_engine
+import sqlalchemy.sql
 from ruamel.yaml import YAML
 import traceback
 
@@ -111,9 +112,6 @@ def process_oai_request():
         else:
             # Return 400 - Bad Request. Browser... should still render XML?
             return_status = 400
-    # Ensure the MySQL connection is closed before returning, so that the connection won't be kept alive until timeout
-    if connection is not None and connection.open:
-        connection.close()
     return Response(response=return_content, status=return_status, content_type="text/xml; charset=utf-8")
 
 
@@ -245,13 +243,8 @@ def open_mysql_connection():
     Open a MySQL connection, storing it in a module-level variable 'connection'
     """
     global connection
-    connection = pymysql.connect(host=oai_config["address"],
-                                 port=oai_config["port"],
-                                 user=oai_config["username"],
-                                 password=oai_config["password"],
-                                 db=oai_config["database"],
-                                 charset="utf8",
-                                 cursorclass=pymysql.cursors.DictCursor)
+    engine = create_engine(oai_config["engine"])
+    connection = engine.connect()
 
 
 def get_metadata_from_mysql(valid_params, error):
@@ -262,9 +255,10 @@ def get_metadata_from_mysql(valid_params, error):
     if error is None:
         sql_query = generate_sql_query(valid_params)
         try:
-            with connection.cursor() as cursor:
-                cursor.execute(sql_query)
-                result = cursor.fetchall()
+            statement = sqlalchemy.sql.text(sql_query)
+            result = []
+            for row in connection.execute(statement).fetchall():
+                result.append(dict(row))
 
             if (valid_params["verb"] == "GetRecord" or (valid_params["verb"] == "ListMetadataFormats" and "identifier" in valid_params)) and len(result) == 0:
                 error = ("idDoesNotExist", "No record with that id could be found")

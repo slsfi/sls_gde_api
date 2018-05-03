@@ -1,29 +1,23 @@
+# For more information on database engine configurations, see http://docs.sqlalchemy.org/en/latest/core/engines.html
+
 parland:
-    address: 'mysql_server.example.com'
-    port: 3306
-    username: 'web_user'
-    password: 'SecretMySQLPassword'
-    database: 'parland'
+    # This engine connects to a MySQL server at mysql_server.com, on port 3306
+    # It uses username 'web_user' with the password 'SecretPassword' and connects to a database named 'parland'
+    engine: 'mysql://web_user:SecretPassword@mysql_server.example.com:3306/parland'
     show_internally_published: True
     show_unpublished: True
     disabled_publications: []
     file_root: '/var/parland-files'
 topelius:
-    address: 'mysql_server.example.com'
-    port: 3306
-    username: 'web_user'
-    password: 'SecretMySQLPassword'
-    database: 'topelius'
+    # This engine connects to a PostgreSQL server at postgres_server.example.com, on post 5432
+    # It uses username 'web_user' with the password 'SecretPassword' and connects to a database named 'topelius'
+    engine: 'postgresql://web_user:SecretPassword@postgres_server.example.com:5432/topelius'
     show_internally_published: True
     show_unpublished: True
     disabled_publications: [10,12,13,14,9,20,28]
     file_root: '/var/topelius-files'
 semantic_data:
-    address: 'mysql_server.example.com'
-    port: 3306
-    username: 'web_user'
-    password: 'SecretMySQLPassword'
-    database: 'semantic_data'
+    engine: 'mysql://web_user:SecretPassword@mysql_server.example.com:3306/semantic_data'
 xslt_root: '/var/xslt-files'
 log_file: '/log/digital_editions/api.log'
 cache_lifetime_seconds: 7200  # 2 hours
