@@ -522,8 +522,8 @@ def get_publication_manuscripts(project, edition_id, changes=False):
             params = {
                 "bookId": book_id
             }
-            manuscript_info[i]["manuscript_changes"] = getContent(project, "ms", manuscript["filename"], "ms_changes.xsl", params)
-            manuscript_info[i]["manuscript_normalized"] = getContent(project, "ms", manuscript["filename"], "ms_normalized.xsl", params)
+            manuscript_info[i]["manuscript_changes"] = get_content(project, "ms", manuscript["filename"], "ms_changes.xsl", params)
+            manuscript_info[i]["manuscript_normalized"] = get_content(project, "ms", manuscript["filename"], "ms_normalized.xsl", params)
 
         data = {
             "id": item_id,
@@ -577,7 +577,7 @@ def get_publication_variations(project, edition_id):
             if section_id is not None:
                 params["sectionId"] = section_id
 
-            variation_info[i]["content"] = getContent(project, "var", variation["filename"], xsl_file, params)
+            variation_info[i]["content"] = get_content(project, "var", variation["filename"], xsl_file, params)
 
         data = {
             "id": edition_id,
