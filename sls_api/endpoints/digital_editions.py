@@ -105,6 +105,20 @@ def get_html_contents_as_json(project, filename):
     else:
         abort(404)
 
+@digital_edition.route("/<project>/md/<filename>")
+def get_md_contents_as_json(project, filename):
+    logger.info("Getting static content from /{}/md/{}".format(project, filename))
+    file_path = safe_join(project_config[project]["file_root"], "md", "{}.md".format(filename))
+    if os.path.exists(file_path):
+        with io.open(file_path, encoding="UTF-8") as md_file:
+            contents = md_file.read()
+        data = {
+            "filename": filename,
+            "content": contents
+        }
+        return jsonify(data), 200, {"Access-Control-Allow-Origin": "*"}
+    else:
+        abort(404)
 
 # routes/digitaledition/manuscripts.php
 @digital_edition.route("/<project>/manuscript/<publication_id>")
@@ -496,11 +510,10 @@ def get_publication_manuscripts(project, edition_id, changes=False):
         open_mysql_connection(project)
 
         # the content has chapters in the same xml
-        sql = "SELECT m_title, m_type, m_filename, m_id FROM manuscripts WHERE m_filename LIKE :f_name ORDER BY m_sort"
-        statement = sqlalchemy.sql.text(sql).bindparams(f_name=item_id+"_ms_%")
-        manuscript_info = []
-        for row in connection.execute(statement).fetchall():
-            manuscript_info.append(dict(row))
+        sql = "SELECT m_title as title, m_type as type, m_filename as filename, m_id as id FROM manuscripts WHERE m_filename like %s ORDER BY m_sort"
+        with connection.cursor() as cursor:
+            cursor.execute(sql, [item_id + "_ms_%"])
+            manuscript_info = cursor.fetchall()
 
         connection.close()
 
@@ -509,8 +522,8 @@ def get_publication_manuscripts(project, edition_id, changes=False):
             params = {
                 "bookId": book_id
             }
-            manuscript_info[i]["manuscript_changes"] = get_content(project, "ms", manuscript["m_filename"], "ms_changes.xsl", params)
-            manuscript_info[i]["manuscript_normalized"] = get_content(project, "ms", manuscript["m_filename"], "ms_normalized.xsl", params)
+            manuscript_info[i]["manuscript_changes"] = getContent(project, "ms", manuscript["filename"], "ms_changes.xsl", params)
+            manuscript_info[i]["manuscript_normalized"] = getContent(project, "ms", manuscript["filename"], "ms_normalized.xsl", params)
 
         data = {
             "id": item_id,
@@ -538,18 +551,15 @@ def get_publication_variations(project, edition_id):
 
         # the content has chapters in the same xml
         if section_id is not None:
-            sql = "SELECT v_title, v_type, v_filename, v_id FROM versions WHERE v_filename LIKE :f_name AND v_section_id=:s_id ORDER BY v_sort"
-            statement = sqlalchemy.sql.text(sql).bindparams(f_name=item_id+"_var_%", s_id=section_id)
-            variation_info = []
-            for row in connection.execute(statement).fetchall():
-                variation_info.append(dict(row))
-
+            sql = "SELECT v_title as title, v_type as type, v_filename as filename, v_id as id FROM versions WHERE v_filename like %s AND v_section_id=%s ORDER BY v_sort"
+            with connection.cursor() as cursor:
+                cursor.execute(sql, [item_id + "_var_%", section_id])
+                variation_info = cursor.fetchall()
         else:
-            sql = "SELECT v_title, v_type, v_filename, v_id FROM versions WHERE v_filename LIKE :f_name ORDER BY v_sort"
-            statement = sqlalchemy.sql.text(sql).bindparams(f_name=item_id+"_var_%")
-            variation_info = []
-            for row in connection.execute(statement).fetchall():
-                variation_info.append(dict(row))
+            sql = "SELECT v_title as title, v_type as type, v_filename as filename, v_id as id FROM versions WHERE v_filename like %s ORDER BY v_sort"
+            with connection.cursor() as cursor:
+                cursor.execute(sql, [item_id + "_var_%"])
+                variation_info = cursor.fetchall()
         connection.close()
 
         for i in range(len(variation_info)):
@@ -559,7 +569,7 @@ def get_publication_variations(project, edition_id):
             }
             # chapters_xsl_file = "chapters.xsl"
 
-            if variation["v_type"] == "1":
+            if variation["type"] == "1":
                 xsl_file = "poem_variants_est.xsl"
             else:
                 xsl_file = "poem_variants_other.xsl"
@@ -567,7 +577,7 @@ def get_publication_variations(project, edition_id):
             if section_id is not None:
                 params["sectionId"] = section_id
 
-            variation_info[i] = get_content(project, "var", variation["v_filename"], xsl_file, params)
+            variation_info[i]["content"] = getContent(project, "var", variation["filename"], xsl_file, params)
 
         data = {
             "id": edition_id,
