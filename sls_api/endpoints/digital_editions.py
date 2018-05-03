@@ -510,11 +510,11 @@ def get_publication_manuscripts(project, edition_id, changes=False):
         open_mysql_connection(project)
 
         # the content has chapters in the same xml
-        sql = "SELECT m_title as title, m_type as type, m_filename as filename, m_id as id FROM manuscripts WHERE m_filename like %s ORDER BY m_sort"
-        with connection.cursor() as cursor:
-            cursor.execute(sql, [item_id + "_ms_%"])
-            manuscript_info = cursor.fetchall()
-
+        sql = "SELECT m_title as title, m_type as type, m_filename as filename, m_id as id FROM manuscripts WHERE m_filename LIKE :f_name ORDER BY m_sort"
+        statement = sqlalchemy.sql.text(sql).bindparams(f_name=item_id + "_ms_%")
+        manuscript_info = []
+        for row in connection.execute(statement).fetchall():
+            manuscript_info.append(dict(row))
         connection.close()
 
         for i in range(len(manuscript_info)):
@@ -551,15 +551,17 @@ def get_publication_variations(project, edition_id):
 
         # the content has chapters in the same xml
         if section_id is not None:
-            sql = "SELECT v_title as title, v_type as type, v_filename as filename, v_id as id FROM versions WHERE v_filename like %s AND v_section_id=%s ORDER BY v_sort"
-            with connection.cursor() as cursor:
-                cursor.execute(sql, [item_id + "_var_%", section_id])
-                variation_info = cursor.fetchall()
+            sql = "SELECT v_title as title, v_type as type, v_filename as filename, v_id as id FROM versions WHERE v_filename LIKE :f_name AND v_section_id=:s_id ORDER BY v_sort"
+            statement = sqlalchemy.sql.text(sql).bindparams(f_name=item_id + "_var_%", s_id=section_id)
+            variation_info = []
+            for row in connection.execute(statement).fetchall():
+                variation_info.append(dict(row))
         else:
-            sql = "SELECT v_title as title, v_type as type, v_filename as filename, v_id as id FROM versions WHERE v_filename like %s ORDER BY v_sort"
-            with connection.cursor() as cursor:
-                cursor.execute(sql, [item_id + "_var_%"])
-                variation_info = cursor.fetchall()
+            sql = "SELECT v_title as title, v_type as type, v_filename as filename, v_id as id FROM versions WHERE v_filename LIKE :f_name ORDER BY v_sort"
+            statement = sqlalchemy.sql.text(sql).bindparams(f_name=item_id + "_var_%")
+            variation_info = []
+            for row in connection.execute(statement).fetchall():
+                variation_info.append(dict(row))
         connection.close()
 
         for i in range(len(variation_info)):
