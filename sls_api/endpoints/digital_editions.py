@@ -11,6 +11,8 @@ from ruamel.yaml import YAML
 from sqlalchemy import create_engine
 import sqlalchemy.sql
 import time
+import glob
+import re
 
 digital_edition = Blueprint('digital_edition', __name__)
 
@@ -105,19 +107,29 @@ def get_html_contents_as_json(project, filename):
     else:
         abort(404)
 
-# routes/digitaledition/html.php
-@digital_edition.route("/<project>/md/<filename>")
-def get_md_contents_as_json(project, filename):
-    logger.info("Getting static content from /{}/md/{}".format(project, filename))
-    file_path = safe_join(project_config[project]["file_root"], "md", "{}.md".format(filename))
+# routes/digitaledition/md.php
+@digital_edition.route("/<project>/md/<path:fileid>")
+def get_md_contents_as_json(project, fileid):
+    file_path = safe_join(project_config[project]["file_root"], "md", "{}.md".format(fileid.encode('UTF-8')))
     if os.path.exists(file_path):
         with io.open(file_path, encoding="UTF-8") as md_file:
             contents = md_file.read()
         data = {
-            "filename": filename,
+            "fileid": fileid,
             "content": contents
         }
         return jsonify(data), 200, {"Access-Control-Allow-Origin": "*"}
+    else:
+        abort(404)
+
+# routes/digitaledition/toc.php
+@digital_edition.route("/<project>/static-pages-toc/<language>")
+def get_static_pages_as_json(project, language):
+    logger.info("Getting static content from /{}/static-pages-toc/{}".format(project, language))
+    folder_path = safe_join(project_config[project]["file_root"], "md", language)
+
+    if os.path.exists(folder_path):
+        return jsonify(path_hierarchy(folder_path, language)), 200, {"Access-Control-Allow-Origin": "*"}
     else:
         abort(404)
 
@@ -743,6 +755,54 @@ def get_list_of_places():
     HELPER FUNCTIONS  
 '''
 
+def slugify_route(path):
+    path = path.replace(" - ", "")
+    path = path.replace(" ", "-")
+    path = ''.join([i for i in path.lstrip('-') if not i.isdigit()])
+    path = re.sub('[^a-zA-Z0-9\\\/-]|_', '', re.sub('.md', '', path))
+    return path.lower()
+
+def slugify_id(path, language):
+    path = filter(type(path).isdigit, path)
+    path = language + path
+    path = '-'.join(path[i:i+2] for i in range(0, len(path), 2))
+    return path
+
+def slugify_path(path):
+    path = split_after(path, "/topelius_required/md/")
+    path = path = re.sub('.md', '', path)
+    return path
+
+def path_hierarchy(path, language):
+    hierarchy = {
+        'id': slugify_id(path, language),
+        'title': filter_title(os.path.basename(path)),
+        'basename': re.sub('.md', '', os.path.basename(path)),
+        'path': slugify_path(path),
+        'fullpath': path,
+        'route': slugify_route(split_after(path, "/topelius_required/md/")),
+        'type': 'folder',
+    }
+
+    hierarchy['children'] = [path_hierarchy(p, language) for p in glob.glob(os.path.join(path, '*'))]
+    if not hierarchy['children']:
+        del hierarchy['children']
+        hierarchy['type'] = 'file'
+
+    return hierarchy
+
+def filter_title(path):
+    path = ''.join([i for i in path.lstrip('-') if not i.isdigit()])
+    path = re.sub('-', '', path)
+    path = re.sub('.md', '', path)
+    return path.strip()
+
+def split_after(value, a):
+    pos_a = value.rfind(a)
+    if pos_a == -1: return ""
+    adjusted_pos_a = pos_a + len(a)
+    if adjusted_pos_a >= len(value): return ""
+    return value[adjusted_pos_a:]
 
 def cache_is_recent(source_file, xsl_file, cache_file):
     """
