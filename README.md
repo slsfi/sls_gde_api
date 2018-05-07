@@ -1,7 +1,6 @@
-# Unified REST API for sls.fi (api.sls.fi)
-- Flask-driven REST API for sls.fi
+# REST API for SLS Generic Digital Editions project
+- Flask-driven REST API
 - Runs on Python >=3.6 (Python2 may work, but will likely run slower and may have issues with unicode)
-- Unified API for all publically accessible sls.fi data 
 ---
 Copyright 2018 Svenska Litteratursällskapet i Finland, r.f.
 
@@ -40,16 +39,6 @@ limitations under the License.
 - Provides Swagger UI API documentation
 - Documentation also available as OpenAPI 3.0.0 spec, see `openapi.json`
 
-### /accessfiles endpoint
-- Provides accessfiles through Isilon Swift for Finna and Europeana
-- Needs a list of allowed accessfiles and swift authentication details to work
-    - configs/swift_file_list.txt and configs/swift_auth.yml
-    - See _example files for more specific details
-- List of allowed files can be generated from FileMaker .csv export using
-    - https://bitbucket.org/rasek_sls/accessfile_list_generator  (private repo)
-- swift_file_list.txt should be a newline-separated list of valid filepaths inside the Swift home directory
-    - In other words, filepaths relative to the home directory of the swift user configured in swift_auth.yml
-
 ### /digitaleditions endpoint
 - Endpoints used for the SLS Generic Digital Edition platform
 - Currently made for the SLS metadata database, being re-made for the GDE 2018 database spec, see branch `gde2018-database-spec`
@@ -59,11 +48,3 @@ limitations under the License.
 - Needs connection details for MySQL server and paths to folders for XML, HTML, and XSL files
     - configs/digital_editions.yml
     - See digital_editions_example.yml for specifics    
-
-### /oai endpoint
-- Provides OAI-PMH metadata in XML format for Finna and Europeana
-- Follows https://www.openarchives.org/OAI/openarchivesprotocol.html
-- Needs connection details to MySQL server housing metadata
-- Currently made for the SLS metadata database, specification for this TBD
-    - configs/oai.yml
-    - See oai_example.yml for specifics

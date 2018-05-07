@@ -40,11 +40,5 @@ else:
 if os.path.exists(os.path.join("sls_api", "configs", "digital_editions.yml")):
     from sls_api.endpoints.digital_editions import digital_edition
     app.register_blueprint(digital_edition, url_prefix="/digitaledition")
-if os.path.exists(os.path.join("sls_api", "configs", "oai.yml")):
-    from sls_api.endpoints.oai import oai
-    app.register_blueprint(oai, url_prefix="/oai")
-if os.path.exists(os.path.join("sls_api", "configs", "swift_auth.yml")):
-    from sls_api.endpoints.swift_accessfiles import swift
-    app.register_blueprint(swift, url_prefix="/accessfiles")
 
 logger.info(" * Loaded endpoints: {}".format(", ".join(app.blueprints)))

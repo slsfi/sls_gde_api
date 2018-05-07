@@ -1,3 +1,0 @@
-auth_url: 'https://isilon-swift.example-company.com:8083/auth/v1.0'
-username: 'swift-username:username@domain'
-password: '!PassW0rd'

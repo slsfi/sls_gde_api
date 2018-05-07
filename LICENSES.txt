@@ -6,7 +6,6 @@ The SLS API makes use of several open-source libraries:
     - lxml is published under a BSD 3-clause license, see LICENSES/lxml.txt
     - mysqlclient is published under a GPLv2 license, see LICENSES/mysqlclient.txt
     - psycopg2 is published under an LGPLv3 license, see LICENSES/psycopg2.txt
-    - python-dateutil is published under an Apache 2.0 license and a BSD 3-clause license, see LICENSES/dateutil.txt
     - ruamel.yaml is published under an MIT license, see LICENSES/yaml.txt
     - requests is published under an Apache 2.0 license, see LICENSES/requests.txt
     - sqlalchemy is published under an MIT license, see LICENSES/sqlalchemy.txt

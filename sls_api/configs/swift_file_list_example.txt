@@ -1,3 +1,0 @@
-thumbnails/test/test.jpg
-thumbnails/test2/test.png
-audio/test/test.mp3

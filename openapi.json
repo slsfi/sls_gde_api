@@ -28,56 +28,15 @@
   ],
   "tags": [
     {
-      "name": "accessfiles",
-      "description": "Provides image and audio files of objects in the SLS Digital Archives, as seen on http://sls.finna.fi"
-    },
-    {
       "name": "digitaledition",
       "description": "Endpoints used by the Generic Platform for Digital Editions",
       "externalDocs": {
         "description": "Github repo for old API",
         "url": "https://github.com/slsfi/digital_editions_API"
       }
-    },
-    {
-      "name": "oai",
-      "description": "Provides OAI metadata for objects in the SLS Digital Archives, as seen on http://sls.finna.fi",
-      "externalDocs": {
-        "description": "OAI-PMH spec",
-        "url": "https://www.openarchives.org/OAI/openarchivesprotocol.html"
-      }
     }
   ],
   "paths": {
-    "/accessfiles/{file_path}": {
-      "get": {
-        "summary": "Get a file from the SLS archives if it exists and is publically accessible",
-        "description": "NOTE: The Content-Type header of the response matches the MIME type of the file.",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "file_path",
-            "description": "The path to a file in the Swift home directory",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "example": "thumbnails/test/test.jpg"
-            }
-          }
-        ],
-        "tags": [
-          "accessfiles"
-        ],
-        "responses": {
-          "200": {
-            "description": "The requested file in its entirety, with matching Content-Type header"
-          },
-          "404": {
-            "description": "The file was not found, or is otherwise not available"
-          }
-        }
-      }
-    },
     "/digitaledition/{project}/html/{filename}": {
       "get": {
         "summary": "Get static HTML content for a given project",
@@ -855,111 +814,6 @@
                   ]
                 }
               }
-            }
-          }
-        }
-      }
-    },
-    "/oai": {
-      "get": {
-        "summary": "Perform OAI-PMH queries against SLS databases",
-        "description": "Follows the Open Archives Initiative Protocol for Metadata Harvesting",
-        "parameters": [
-          {
-            "in": "query",
-            "name": "verb",
-            "description": "A valid OAI-PMH verb",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "enum": [
-                "Identify",
-                "ListSets",
-                "ListMetadataFormats",
-                "ListIdentifiers",
-                "ListRecords",
-                "GetRecord"
-              ],
-              "example": "Identify"
-            }
-          },
-          {
-            "in": "query",
-            "name": "from",
-            "description": "Only get metadata newer than this timestamp (YYYY-MM-DD)",
-            "schema": {
-              "type": "string",
-              "example": "2017-12-31"
-            }
-          },
-          {
-            "in": "query",
-            "name": "until",
-            "description": "Only get metadata older than this timestamp (YYYY-MM-DD)",
-            "schema": {
-              "type": "string",
-              "example": "2017-12-31"
-            }
-          },
-          {
-            "in": "query",
-            "name": "identifier",
-            "description": "Only get metadata with this ID (use verb=ListIdentifiers to get available IDs)",
-            "schema": {
-              "type": "string",
-              "example": "129"
-            }
-          },
-          {
-            "in": "query",
-            "name": "set",
-            "description": "Only get metadata from this archival set (use verb=ListSets to get available sets)",
-            "schema": {
-              "type": "string",
-              "example": "SLSfinna"
-            }
-          },
-          {
-            "in": "query",
-            "name": "metadataPrefix",
-            "description": "Choose display format for metadata (use verb=ListMetadataFormats to get available formats)",
-            "schema": {
-              "type": "string",
-              "enum": [
-                "oai_dc",
-                "europeana",
-                "ead"
-              ],
-              "example": "oai_dc"
-            }
-          }
-        ],
-        "tags": [
-          "oai"
-        ],
-        "responses": {
-          "200": {
-            "description": "A valid OAI-PMH return containing metadata",
-            "content": {
-              "text/xml": {}
-            }
-          },
-          "400": {
-            "description": "A valid OAI-PMH return containing an error message, due to a malformed request",
-            "content": {
-              "text/xml": {}
-            }
-          },
-          "404": {
-            "description": "A valid OAI-PMH return containing an error message, as the requested metadata was not found",
-            "content": {
-              "text/xml": {}
-            }
-          },
-          "500": {
-            "description": "A valid OAI-PMH return containing an error message, due to an internal server error",
-            "content": {
-              "text/xml": {}
             }
           }
         }
