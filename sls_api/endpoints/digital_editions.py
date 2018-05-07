@@ -766,6 +766,7 @@ def get_list_of_places():
     HELPER FUNCTIONS  
 '''
 
+
 def slugify_route(path):
     path = path.replace(" - ", "")
     path = path.replace(" ", "-")
@@ -773,34 +774,31 @@ def slugify_route(path):
     path = re.sub('[^a-zA-Z0-9\\\/-]|_', '', re.sub('.md', '', path))
     return path.lower()
 
+
 def slugify_id(path, language):
     path = re.sub('[^0-9]', '', path) 
     path = language + path
     path = '-'.join(path[i:i+2] for i in range(0, len(path), 2))
     return path
 
+
 def slugify_path(path):
     path = split_after(path, "/topelius_required/md/")
-    path = path = re.sub('.md', '', path)
-    return path
+    return re.sub('.md', '', path)
+
 
 def path_hierarchy(path, language):
-    hierarchy = {
-        'id': slugify_id(path, language),
-        'title': filter_title(os.path.basename(path)),
-        'basename': re.sub('.md', '', os.path.basename(path)),
-        'path': slugify_path(path),
-        'fullpath': path,
-        'route': slugify_route(split_after(path, "/topelius_required/md/")),
-        'type': 'folder',
-    }
+    hierarchy = {'id': slugify_id(path, language), 'title': filter_title(os.path.basename(path)),
+                 'basename': re.sub('.md', '', os.path.basename(path)), 'path': slugify_path(path), 'fullpath': path,
+                 'route': slugify_route(split_after(path, "/topelius_required/md/")), 'type': 'folder',
+                 'children': [path_hierarchy(p, language) for p in glob.glob(os.path.join(path, '*'))]}
 
-    hierarchy['children'] = [path_hierarchy(p, language) for p in glob.glob(os.path.join(path, '*'))]
     if not hierarchy['children']:
         del hierarchy['children']
         hierarchy['type'] = 'file'
 
     return dict(hierarchy)
+
 
 def filter_title(path):
     path = ''.join([i for i in path.lstrip('-') if not i.isdigit()])
@@ -808,12 +806,14 @@ def filter_title(path):
     path = re.sub('.md', '', path)
     return path.strip()
 
+
 def split_after(value, a):
     pos_a = value.rfind(a)
     if pos_a == -1: return ""
     adjusted_pos_a = pos_a + len(a)
     if adjusted_pos_a >= len(value): return ""
     return value[adjusted_pos_a:]
+
 
 def cache_is_recent(source_file, xsl_file, cache_file):
     """
