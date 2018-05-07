@@ -240,6 +240,11 @@ def get_toc_root_elements(project, edition_id, group_id):
     results = []
     for row in connection.execute(statement).fetchall():
         results.append(dict(row))
+    if len(results) < 1:
+        sql = "SELECT * FROM tableofcontents WHERE toc_ed_id=:ed_id AND toc_groupid=:g_id ORDER BY sortOrder"
+        statement = sqlalchemy.sql.text(sql).bindparams(ed_id=edition_id, g_id=group_id)
+        for row in connection.execute(statement).fetchall():
+            results.append(dict(row))
     connection.close()
     return jsonify(results)
 
