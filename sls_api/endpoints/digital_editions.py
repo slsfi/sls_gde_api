@@ -11,8 +11,8 @@ from ruamel.yaml import YAML
 from sqlalchemy import create_engine
 import sqlalchemy.sql
 import time
-import glob
 import re
+import glob
 
 digital_edition = Blueprint('digital_edition', __name__)
 
@@ -212,7 +212,7 @@ def get_toc_root(project, edition_id):
     elif project_config.get(project).get("show_internally_published"):
         show_published = 1
 
-    if edition_id == 15:
+    if int(edition_id) == 15:
         sql = "SELECT toc.* FROM tableofcontents toc " \
               "JOIN publications_ed ped ON toc.toc_ed_id = ped.ed_id " \
               "JOIN publications_group pgroup ON toc.toc_group_id = pgroup.group_id " \
@@ -887,7 +887,7 @@ def publish_status(project, edition_id):
 
 
 def get_id_parts(edition_id):
-    id_parts = edition_id.replace("_est", "").split(";")
+    id_parts = edition_id.replace("_est", "").split(";")  # 12_1_est;ch5  - Finland framställt i teckningar.
 
     item_id = id_parts[0]  # 1_1
     item_parts = item_id.split("_")
