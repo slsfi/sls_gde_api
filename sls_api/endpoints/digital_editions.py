@@ -25,6 +25,11 @@ file_handler = TimedRotatingFileHandler(filename=project_config["log_file"], whe
 file_handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s', '%H:%M:%S'))
 logger.addHandler(file_handler)
 
+db_engines = {}
+for project, configuration in project_config.items():
+    if isinstance(configuration, dict) and "engine" in configuration:
+        db_engines[project] = create_engine(configuration["engine"])
+
 
 class FileResolver(etree.Resolver):
     def resolve(self, system_url, public_id, context):
@@ -66,14 +71,11 @@ def xml_to_html(xsl_file_path, xml_file_path, replace_namespace=True, params=Non
 
 
 def open_mysql_connection(database):
-    global engine
     global connection
-    if database not in project_config:
+    if database not in db_engines:
         connection = None
-        engine = None
     else:
-        engine = create_engine(project_config[database]["engine"])
-        connection = engine.connect()
+        connection = db_engines[database].connect()
 
 
 @digital_edition.after_request
