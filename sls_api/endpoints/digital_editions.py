@@ -107,6 +107,7 @@ def get_html_contents_as_json(project, filename):
     else:
         abort(404)
 
+
 @digital_edition.route("/<project>/md/<filename>")
 def get_md_contents_as_json(project, filename):
     logger.info("Getting static content from /{}/md/{}".format(project, filename))
@@ -121,6 +122,7 @@ def get_md_contents_as_json(project, filename):
         return jsonify(data), 200, {"Access-Control-Allow-Origin": "*"}
     else:
         abort(404)
+
 
 # routes/digitaledition/manuscripts.php
 @digital_edition.route("/<project>/manuscript/<publication_id>")
@@ -187,7 +189,7 @@ def get_toc_root(project, edition_id):
     elif project_config.get(project).get("show_internally_published"):
         show_published = 1
 
-    if edition_id == 15:
+    if int(edition_id) == 15:
         sql = "SELECT toc.* FROM tableofcontents toc " \
               "JOIN publications_ed ped ON toc.toc_ed_id = ped.ed_id " \
               "JOIN publications_group pgroup ON toc.toc_group_id = pgroup.group_id " \
