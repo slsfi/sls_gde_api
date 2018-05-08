@@ -72,12 +72,10 @@ def xml_to_html(xsl_file_path, xml_file_path, replace_namespace=True, params=Non
     return str(result)
 
 
-def open_mysql_connection(database):
-    global connection
+def get_mysql_connection(database):
     if database not in db_engines:
-        connection = None
-    else:
-        connection = db_engines[database].connect()
+        return None
+    return db_engines[database].connect()
 
 
 @digital_edition.after_request
@@ -151,7 +149,7 @@ def get_static_pages_as_json(project, language):
 @digital_edition.route("/<project>/manuscript/<publication_id>")
 def get_manuscripts(project, publication_id):
     logger.info("Getting manuscript /{}/manuscript/{}".format(project, publication_id))
-    open_mysql_connection(project)
+    connection = get_mysql_connection(project)
     sql = sqlalchemy.sql.text("SELECT * FROM manuscripts WHERE m_publication_id=:pub_id ORDER BY m_sort")
     statement = sql.bindparams(pub_id=publication_id)
     results = []
@@ -165,7 +163,7 @@ def get_manuscripts(project, publication_id):
 @digital_edition.route("/<project>/publication/<publication_id>")
 def get_publication(project, publication_id):
     logger.info("Getting publication /{}/publication/{}".format(project, publication_id))
-    open_mysql_connection(project)
+    connection = get_mysql_connection(project)
     sql = sqlalchemy.sql.text("SELECT * FROM publications WHERE p_id=:p_id ORDER BY p_title")
     statement = sql.bindparams(p_id=publication_id)
     results = []
@@ -179,7 +177,7 @@ def get_publication(project, publication_id):
 @digital_edition.route("/<project>/table-of-contents/editions")
 def get_toc_editions(project):
     logger.info("Getting editions /{}/table-of-contents/editions".format(project))
-    open_mysql_connection(project)
+    connection = get_mysql_connection(project)
     if project_config.get(project).get("show_unpublished"):
         sql = "SELECT ed_id AS id, ed_title AS title, ed_filediv AS divchapters FROM publications_ed ORDER BY ed_datumlansering"
     elif project_config.get(project).get("show_internally_published"):
@@ -205,7 +203,7 @@ def get_toc_editions(project):
 @digital_edition.route("/<project>/table-of-contents/edition/<edition_id>/root")
 def get_toc_root(project, edition_id):
     logger.info("Getting root s/{}/table-of-contents/{}/root".format(project, edition_id))
-    open_mysql_connection(project)
+    connection = get_mysql_connection(project)
     show_published = 2
     if project_config.get(project).get("show_unpublished"):
         show_published = 0
@@ -234,7 +232,7 @@ def get_toc_root(project, edition_id):
 @digital_edition.route("/<project>/table-of-contents/edition/<edition_id>/group/<group_id>")
 def get_toc_root_elements(project, edition_id, group_id):
     logger.info("Getting \"root elements\" /{}/table-of-contents/edition/{}/group/{}".format(project, edition_id, group_id))
-    open_mysql_connection(project)
+    connection = get_mysql_connection(project)
     sql = "SELECT * FROM tableofcontents WHERE toc_ed_id=:ed_id AND toc_groupid=:g_id AND toc_linkType!=6 ORDER BY sortOrder"
     statement = sqlalchemy.sql.text(sql).bindparams(ed_id=edition_id, g_id=group_id)
     results = []
@@ -254,7 +252,7 @@ def get_toc_root_elements(project, edition_id, group_id):
 def get_toc_edition_links(project, edition_id, link_id):
     logger.info("Getting links /{}/table-of-contents/edition/{}/prevnext/{}".format(project, edition_id, link_id))
     return_data = OrderedDict()
-    open_mysql_connection(project)
+    connection = get_mysql_connection(project)
     sql = "SELECT ed_id AS id, ed_lansering, ed_title AS title, " \
           "ed_filediv AS multiple_files, ed_date_swe AS info_sv, ed_date_fin AS info_fi " \
           "FROM publications_ed WHERE ed_id=:ed_id ORDER BY ed_datumlansering"
@@ -323,7 +321,7 @@ def get_toc_edition_links(project, edition_id, link_id):
 @digital_edition.route("/<project>/table-of-contents/edition/<edition_id>")
 def get_toc_edition(project, edition_id):
     logger.info("Getting edition /{}/table-of-contents/edition/{}".format(project, edition_id))
-    open_mysql_connection(project)
+    connection = get_mysql_connection(project)
 
     show_published = 2
     if project_config.get(project).get("show_unpublished"):
@@ -403,7 +401,7 @@ def get_toc_edition(project, edition_id):
 @digital_edition.route("/<project>/table-of-contents/edition/<edition_id>/first")
 def get_toc_edition_firstentry(project, edition_id):
     logger.info("Getting first edition /{}/table-of-contents/edition/{}/first".format(project, edition_id))
-    open_mysql_connection(project)
+    connection = get_mysql_connection(project)
     sql = "SELECT title, toc_ed_id, toc_linkID FROM tableofcontents WHERE toc_ed_id=:ed_id AND toc_linkID IS NOT NULL ORDER BY sortOrder ASC LIMIT 1"
     statement = sqlalchemy.sql.text(sql).bindparams(ed_id=edition_id)
     result = connection.execute(statement).fetchone()
@@ -539,7 +537,7 @@ def get_publication_manuscripts(project, edition_id, changes=False):
 
     if can_show:
         item_id, book_id, text_id, section_id = get_id_parts(edition_id)
-        open_mysql_connection(project)
+        connection = get_mysql_connection(project)
 
         # the content has chapters in the same xml
         sql = "SELECT m_title as title, m_type as type, m_filename as filename, m_id as id FROM manuscripts WHERE m_filename LIKE :f_name ORDER BY m_sort"
@@ -579,7 +577,7 @@ def get_publication_variations(project, edition_id):
 
     if can_show:
         item_id, book_id, text_id, section_id = get_id_parts(edition_id)
-        open_mysql_connection(project)
+        connection = get_mysql_connection(project)
 
         # the content has chapters in the same xml
         if section_id is not None:
@@ -707,7 +705,7 @@ def get_publication_inl_tit_text(project, edition_id, lang=None, what="inl"):
 @digital_edition.route("/semantic_data/persons/tooltip/<person_id>")
 def get_person_tooltip(person_id):
     logger.info("Getting tooltip /semantic_data/persons/tooltip/{}".format(person_id))
-    open_mysql_connection("semantic_data")
+    connection = get_mysql_connection("semantic_data")
     sql = "SELECT c_webbnamn_1_sort AS title, ed_tooltip AS content, c_webbfornamn1, c_webbefternamn1 " \
           "FROM persons WHERE id_p=:p_id"
     statement = sqlalchemy.sql.text(sql).bindparams(p_id=person_id)
@@ -723,7 +721,7 @@ def get_person_tooltip(person_id):
 @digital_edition.route("/semantic_data/persons/list/<data_source_id>")
 def get_list_of_persons(data_source_id):
     logger.info("Getting list of persons /semantic_data/persons/list/{}".format(data_source_id))
-    open_mysql_connection("semantic_data")
+    connection = get_mysql_connection("semantic_data")
     sql = "SELECT c_webbnamn_1_sort AS title, ed_tooltip AS content, " \
           "c_webbfornamn1, c_webbefternamn1, ed_tooltip, id_p, c_webbsok " \
           "FROM persons WHERE data_source_id=:ds_id ORDER BY id_p ASC"
@@ -739,7 +737,7 @@ def get_list_of_persons(data_source_id):
 @digital_edition.route("/semantic_data/places/tooltip/<place_id>")
 def get_place_tooltip(place_id):
     logger.info("Getting tooltip /semantic_data/places/tooltip/{}".format(place_id))
-    open_mysql_connection("semantic_data")
+    connection = get_mysql_connection("semantic_data")
     place_id = place_id.replace("pl", "").replace("PlId", "")
 
     sql = "SELECT o_ortnamn AS title, o_beskrivning AS content FROM places WHERE id=:p_id"
@@ -756,7 +754,7 @@ def get_place_tooltip(place_id):
 @digital_edition.route("/semantic_data/places/list")
 def get_list_of_places():
     logger.info("Getting list of places /semantic_data/places/list")
-    open_mysql_connection("semantic_data")
+    connection = get_mysql_connection("semantic_data")
 
     sql = "SELECT c_webbsok, o_id AS id FROM places ORDER BY o_id ASC"
     statement = sqlalchemy.sql.text(sql)
@@ -849,7 +847,7 @@ def publish_status(project, edition_id):
     """
     logger.info("Checking if /{} {} is published".format(project, edition_id))
 
-    open_mysql_connection(project)
+    connection = get_mysql_connection(project)
     sql = "SELECT ed_id AS id, ed_lansering, ed_title AS title, ed_filediv AS multiple_files, " \
           "ed_date_swe AS info_sv, ed_date_fin AS info_fi " \
           "FROM publications_ed WHERE ed_id = :ed_id ORDER BY ed_datumlansering"
