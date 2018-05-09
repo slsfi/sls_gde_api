@@ -12,8 +12,8 @@ class User(db.Model):
     __tablename__ = 'users'
 
     ident = db.Column(db.Integer, primary_key=True)
-    email = db.Column(db.String(255), unique=True, nullable=False)
-    password = db.Column(db.Text, nullable=False)
+    email = db.Column(db.Unicode(255), unique=True, nullable=False)
+    password = db.Column(db.UnicodeText, nullable=False)
     projects = db.Column(db.UnicodeText, nullable=True, comment="Comma-separated list of projects this user has edit rights to")
 
     def save_to_db(self):
