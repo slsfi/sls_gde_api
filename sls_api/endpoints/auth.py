@@ -41,7 +41,7 @@ def register_user():
                 "refresh_token": create_refresh_token(identity=identity)
 
             }
-        ), 200
+        ), 201
     except Exception:
         return jsonify({"msg": "Error in user registration"}), 500
 
@@ -70,7 +70,7 @@ def login_user():
             "access_token": create_access_token(identity=identity),
             "refresh_token": create_refresh_token(identity=identity)
         }
-    )
+    ), 200
 
 
 @auth.route("/refresh", methods=["POST"])
@@ -83,4 +83,4 @@ def refresh_token():
             "msg": "Logged in as {!r}".format(identity["email"]),
             "access_token": access_token
         }
-    )
+    ), 200
