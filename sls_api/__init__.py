@@ -61,11 +61,5 @@ if os.path.exists(os.path.join("sls_api", "configs", "security.yml")):
     @app.before_first_request
     def create_tables():
         db.create_all()
-        if not User.find_by_email("test@test.com"):
-            new_user = User(
-                email="test@test.com",
-                password="test"
-            )
-            new_user.save_to_db()
 
 logger.info(" * Loaded endpoints: {}".format(", ".join(app.blueprints)))
