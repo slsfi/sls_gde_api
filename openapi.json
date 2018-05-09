@@ -28,6 +28,14 @@
   ],
   "tags": [
     {
+      "name": "auth",
+      "description": "Endpoints for JWT-based authentication towards the API",
+      "externalDocs": {
+        "description": "JSON Web Tokens documentation",
+        "url": "https://jwt.io/"
+      }
+    },
+    {
       "name": "digitaledition",
       "description": "Endpoints used by the Generic Platform for Digital Editions",
       "externalDocs": {
@@ -812,6 +820,153 @@
                       "id": "PlId002"
                     }
                   ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/register": {
+      "post": {
+        "summary": "Register as a new user",
+        "description": "Note that a new user cannot access any GDE projects until given editing rights by support. This is done by editing the database and adding the project names into the 'projects' column of the 'users' table.",
+        "tags": [
+          "auth"
+        ],
+        "requestBody": {
+          "description": "Desired credentials for new user",
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "example": {
+                  "email": "test@test.com",
+                  "password": "testPassword1!"
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "msg": "User 'test@test.com' was created. Contact support to be given editing rights for GDE projects.",
+                    "access_token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpZGVudGl0eSI6eyJzdWIiOiJ0ZXN0QHRlc3QuY29tIiwicHJvamVjdHMiOm51bGx9LCJ0eXBlIjoiYWNjZXNzIn0.XtShkUBz6AboojEi07D7S-RCCCezQFbBVHFkFMY1ZWs",
+                    "refresh_token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpZGVudGl0eSI6eyJzdWIiOiJ0ZXN0QHRlc3QuY29tIiwicHJvamVjdHMiOm51bGx9LCJ0eXBlIjoicmVmcmVzaCJ9.hLAFlxz8_AVAL-x1kIrPbsbn0zlVJfhE9jw-gG1gPaw"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "msg": "User 'test@test.com' already exists."
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "msg": "Error in user registration"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/login": {
+      "post": {
+        "summary": "Authenticate towards API",
+        "tags": [
+          "auth"
+        ],
+        "requestBody": {
+          "description": "Login credentials",
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "example": {
+                  "email": "test@test.com",
+                  "password": "testPassword1!"
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "msg": "Logged in as 'test@test.com'",
+                    "access_token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpZGVudGl0eSI6eyJzdWIiOiJ0ZXN0QHRlc3QuY29tIiwicHJvamVjdHMiOm51bGx9LCJ0eXBlIjoiYWNjZXNzIn0.XtShkUBz6AboojEi07D7S-RCCCezQFbBVHFkFMY1ZWs",
+                    "refresh_token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpZGVudGl0eSI6eyJzdWIiOiJ0ZXN0QHRlc3QuY29tIiwicHJvamVjdHMiOm51bGx9LCJ0eXBlIjoicmVmcmVzaCJ9.hLAFlxz8_AVAL-x1kIrPbsbn0zlVJfhE9jw-gG1gPaw"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "msg": "Incorrect email or password"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/refresh": {
+      "post": {
+        "summary": "Refresh login using JWT Refresh Token to receive new Access Token",
+        "tags": [
+          "auth"
+        ],
+        "parameters": [
+          {
+            "in": "header",
+            "required": true,
+            "name": "Authorization",
+            "description": "JWT Refresh Token, as 'Bearer JWT_TOKEN_HERE'",
+            "schema": {
+              "example": "Authorization: Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpZGVudGl0eSI6eyJzdWIiOiJ0ZXN0QHRlc3QuY29tIiwicHJvamVjdHMiOm51bGx9LCJ0eXBlIjoicmVmcmVzaCJ9.hLAFlxz8_AVAL-x1kIrPbsbn0zlVJfhE9jw-gG1gPaw"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "msg": "Logged in as 'test@test.com'",
+                    "access_token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpZGVudGl0eSI6eyJzdWIiOiJ0ZXN0QHRlc3QuY29tIiwicHJvamVjdHMiOm51bGx9LCJ0eXBlIjoiYWNjZXNzIn0.XtShkUBz6AboojEi07D7S-RCCCezQFbBVHFkFMY1ZWs"
+                  }
                 }
               }
             }
