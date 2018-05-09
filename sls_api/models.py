@@ -18,14 +18,18 @@ class User(db.Model):
     password = db.Column(db.UnicodeText, nullable=False)
     projects = db.Column(db.UnicodeText, nullable=True, comment="Comma-separated list of projects this user has edit rights to")
 
-    def save_to_db(self):
+    @classmethod
+    def create_new_user(cls, email, password):
         """
-        Save the current user to the database - to be used ONLY for creation of new User objects
+        Create a new user object in the database and return it
         """
-        hashed_password = pwd_context.hash(self.password)
-        self.password = hashed_password
-        db.session.add(self)
+        new_user = cls(
+            email=email,
+            password=pwd_context.hash(password)
+        )
+        db.session.add(new_user)
         db.session.commit()
+        return cls.query.filter_by(email=email).first()
 
     @classmethod
     def find_by_email(cls, email):
