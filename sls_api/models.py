@@ -19,26 +19,49 @@ class User(db.Model):
     projects = db.Column(db.UnicodeText, nullable=True, comment="Comma-separated list of projects this user has edit rights to")
 
     def save_to_db(self):
+        """
+        Save the current user to the database - to be used ONLY for creation of new User objects
+        """
         hashed_password = pwd_context.hash(self.password)
         self.password = hashed_password
         db.session.add(self)
         db.session.commit()
 
+    @classmethod
+    def find_by_email(cls, email):
+        """
+        Returns a User object if one exists for the given email, otherwise None
+        """
+        return cls.query.filter_by(email=email).first()
+
     def get_projects(self):
+        """
+        Returns a list of all projects the User can edit
+        """
         if self.projects:
             return self.projects.split(",")
         return None
 
     def get_token_identity(self):
+        """
+        Generate the JWT identity for the User
+        """
         return {
             "sub": self.email,
             "projects": self.get_projects()
         }
 
-    @classmethod
-    def find_by_email(cls, email):
-        return cls.query.filter_by(email=email).first()
+    def check_password(self, password):
+        """
+        Verifies that 'password' matches against the stored password hash for the user
+        """
+        return pwd_context.verify(password, self.password)
 
-    @staticmethod
-    def verify_password_hash(password, stored_hash):
-        return pwd_context.verify(password, stored_hash)
+    def can_edit_project(self, project):
+        """
+        Returns True if the User can edit the given project
+        """
+        if self.projects:
+            return project in self.projects.split(",")
+        else:
+            return False

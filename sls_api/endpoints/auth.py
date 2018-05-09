@@ -56,7 +56,7 @@ def login_user():
     password = data.get("password", None)
     current_user = User.find_by_email(email)
     try:
-        success = User.verify_password_hash(password, current_user.password)
+        success = current_user.check_password(password)
     except Exception:
         return jsonify({"msg": "Incorrect email or password."}), 400
     if not success:
