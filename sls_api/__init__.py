@@ -1,6 +1,5 @@
 from flask import Flask, redirect, url_for
-from flask_jwt_extended import JWTManager, jwt_required
-from flask_sqlalchemy import SQLAlchemy
+from flask_jwt_extended import JWTManager
 from flasgger import Swagger
 import logging
 import json
