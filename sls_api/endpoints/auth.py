@@ -5,20 +5,27 @@ from sls_api.models import User
 
 auth = Blueprint('auth', __name__)
 
+"""
+JWT-based Authorization
+
+Routes in the API protected by @jwt_required can only be accessed with a proper JWT token in the header
+JWT Header format is "Authorization: Bearer <JWT_TOKEN>"
+"""
+
 
 @auth.route("/register", methods=["POST"])
 def register_user():
     data = request.get_json()
     if not data:
-        return jsonify({"message": "No JSON in payload."}), 400
+        return jsonify({"msg": "No JSON in payload."}), 400
 
     email = data.get("email", None)
     password = data.get("password", None)
 
     if not email or not password:
-        return jsonify({"message": "email or password not in JSON payload."}), 400
+        return jsonify({"msg": "email or password not in JSON payload."}), 400
     if User.find_by_email(data["email"]):
-        return jsonify({"message": "User {!r} already exists.".format(data["email"])}), 400
+        return jsonify({"msg": "User {!r} already exists.".format(data["email"])}), 400
 
     try:
         new_user = User(
@@ -26,27 +33,24 @@ def register_user():
             password=data["password"]
         )
         new_user.save_to_db()
-        identity = {
-            "email": data["email"],
-            "projects": new_user.get_projects()
-        }
+        identity = new_user.get_token_identity()
         return jsonify(
             {
-                "message": "User {!r} was created. Contact support to be given editing rights for GDE projects.".format(data["email"]),
+                "msg": "User {!r} was created. Contact support to be given editing rights for GDE projects.".format(data["email"]),
                 "access_token": create_access_token(identity=identity),
                 "refresh_token": create_refresh_token(identity=identity)
 
             }
         ), 200
     except Exception:
-        return jsonify({"message": "Error in user registration"}), 500
+        return jsonify({"msg": "Error in user registration"}), 500
 
 
 @auth.route("/login", methods=["POST"])
 def login_user():
     data = request.get_json()
     if not data:
-        return jsonify({"message": "No credentials provided."}), 400
+        return jsonify({"msg": "No credentials provided."}), 400
 
     email = data.get("email", None)
     password = data.get("password", None)
@@ -54,16 +58,15 @@ def login_user():
     try:
         success = User.verify_password_hash(password, current_user.password)
     except Exception:
-        return jsonify({"message": "Incorrect email or password."}), 400
+        return jsonify({"msg": "Incorrect email or password."}), 400
     if not success:
-        return jsonify({"message": "Incorrect email or password."}), 400
-    identity = {
-        "email": data["email"],
-        "projects": current_user.get_projects()
-    }
+        return jsonify({"msg": "Incorrect email or password."}), 400
+
+    identity = current_user.get_token_identity()
+
     return jsonify(
         {
-            "message": "Logged in as {!r}".format(data["email"]),
+            "msg": "Logged in as {!r}".format(data["email"]),
             "access_token": create_access_token(identity=identity),
             "refresh_token": create_refresh_token(identity=identity)
         }
@@ -77,7 +80,7 @@ def refresh_token():
     access_token = create_access_token(identity=identity)
     return jsonify(
         {
-            "message": "Logged in as {!r}".format(identity["email"]),
+            "msg": "Logged in as {!r}".format(identity["email"]),
             "access_token": access_token
         }
     )

@@ -6,16 +6,17 @@ setup(
     version="0.0.1",
     include_package_data=True,
     install_requires=[
-        'flask==1.*',
-        'flask-jwt-extended==3.8.*',
-        'flask-sqlalchemy==2.3.*',
-        'flasgger==0.8.*',
-        'lxml==4.2.*',
-        'mysqlclient==1.3.*',
-        'passlib==1.7.*',
-        'psycopg2==2.7.*',
-        'ruamel.yaml==0.15.*',
-        'requests==2.18.*',
-        'sqlalchemy==1.2.*'
+        'argon2_cffi',
+        'flask',
+        'flask-jwt-extended',
+        'flask-sqlalchemy',
+        'flasgger',
+        'lxml',
+        'mysqlclient',
+        'passlib',
+        'psycopg2',
+        'ruamel.yaml',
+        'requests',
+        'sqlalchemy'
     ]
 )

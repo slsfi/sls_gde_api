@@ -1,5 +1,5 @@
 from flask import Flask, redirect, url_for
-from flask_jwt_extended import JWTManager
+from flask_jwt_extended import JWTManager, jwt_required
 from flask_sqlalchemy import SQLAlchemy
 from flasgger import Swagger
 import logging
@@ -45,18 +45,27 @@ if os.path.exists(os.path.join("sls_api", "configs", "digital_editions.yml")):
     app.register_blueprint(digital_edition, url_prefix="/digitaledition")
 if os.path.exists(os.path.join("sls_api", "configs", "security.yml")):
     from sls_api.endpoints.auth import auth
+    from sls_api.models import db, User
     yaml = YAML()
     with open(os.path.join("sls_api", "configs", "security.yml")) as config_file:
         security_config = yaml.load(config_file.read())
-    app.config["JWT_SECRET_KEY"] = security_config["secret_key"]
+    app.config["SECRET_KEY"] = security_config["secret_key"]
     app.config["SQLALCHEMY_DATABASE_URI"] = security_config["user_database"]
+    app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
     jwt = JWTManager(app)
-    db = SQLAlchemy(app)
+    db.init_app(app)
+
     app.register_blueprint(auth, url_prefix="/auth")
 
     @app.before_first_request
     def create_tables():
         db.create_all()
+        if not User.find_by_email("test@test.com"):
+            new_user = User(
+                email="test@test.com",
+                password="test"
+            )
+            new_user.save_to_db()
 
 logger.info(" * Loaded endpoints: {}".format(", ".join(app.blueprints)))

@@ -1,11 +1,13 @@
+from flask_sqlalchemy import SQLAlchemy
 from passlib.context import CryptContext
-from sls_api import db
 
 
 pwd_context = CryptContext(
     schemes=["argon2", "pbkdf2_sha512", "pbkdf2_sha256"],
     deprecated="auto"
 )
+
+db = SQLAlchemy()
 
 
 class User(db.Model):
@@ -23,7 +25,15 @@ class User(db.Model):
         db.session.commit()
 
     def get_projects(self):
-        return self.projects.split(",")
+        if self.projects:
+            return self.projects.split(",")
+        return None
+
+    def get_token_identity(self):
+        return {
+            "sub": self.email,
+            "projects": self.get_projects()
+        }
 
     @classmethod
     def find_by_email(cls, email):
