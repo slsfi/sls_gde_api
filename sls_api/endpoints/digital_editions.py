@@ -304,7 +304,7 @@ def get_toc_edition_links(project, edition_id, link_id):
               "ON t1.toc_groupid=t2.toc_groupid " \
               "AND t1.toc_linkType=t2.toc_linkType " \
               "AND t1.toc_ed_id=t2.toc_ed_id " \
-              "WHERE t2.toc_ed_id=%s AND t2.toc_linkID=%s " \
+              "WHERE t2.toc_ed_id=:ed_id AND t2.toc_linkID=:l_id " \
               "AND t1.toc_id > t2.toc_id ORDER BY t1.sortorder ASC LIMIT 1"
         statement = sqlalchemy.sql.text(sql).bindparams(ed_id=edition_id, l_id=link_id)
         toc_data = connection.execute(statement).fetchone()
