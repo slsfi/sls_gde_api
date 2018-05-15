@@ -1,10 +1,14 @@
 The SLS API itself is licensed under an Apache 2.0 license - see LICENSE
 
 The SLS API makes use of several open-source libraries:
+    - argon2_cffi is published under an MIT license, see LICENSES/argon2.txt
     - Flask is published under a BSD 3-clause license, see LICENSES/flask.txt
+    - flask-jwt-extended is published under an MIT license, see LICENSES/flask-jwt.txt
+    - flask-sqlalchemy is published under a BSD 3-clause license, see LICENSES/flask-sqlalchemy.txt
     - flasgger is published under an MIT license, see LICENSES/flasgger.txt
     - lxml is published under a BSD 3-clause license, see LICENSES/lxml.txt
     - mysqlclient is published under a GPLv2 license, see LICENSES/mysqlclient.txt
+    - passlib is published under a BSD 3-clause license, see LICENSES/passlib.txt
     - psycopg2 is published under an LGPLv3 license, see LICENSES/psycopg2.txt
     - ruamel.yaml is published under an MIT license, see LICENSES/yaml.txt
     - requests is published under an Apache 2.0 license, see LICENSES/requests.txt
