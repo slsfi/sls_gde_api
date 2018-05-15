@@ -60,3 +60,35 @@ def get_file_tree_from_remote(project, file_path=None):
     Get a file listing from the git remote
     """
     pass
+
+
+@de_tools.route("/<project>/fascimile_collection/new", methods=["POST"])
+def create_fascimile_collection(project):
+    """
+    Create a new publicationFascimileCollection
+    """
+    pass
+
+
+@de_tools.route("/<project>/fascimile_collection/list")
+def list_fascimile_collections(project):
+    """
+    List all available publicationFascimileCollections
+    """
+    pass
+
+
+@de_tools.route("/<project>/fascimile_collection/link")
+def link_fascimile_collection_to_publication(project):
+    """
+    Link a publicationFascimileCollection to a publication through publicationFascimile table
+    """
+    pass
+
+
+@de_tools.route("/<project>/fascimile_collection/list_links")
+def list_fascimile_collection_links(project):
+    """
+    List all links between a publicationFascimileCollection and its publicationFascimile objects
+    """
+    pass
