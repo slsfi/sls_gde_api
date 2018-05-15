@@ -39,6 +39,10 @@ limitations under the License.
 - Provides Swagger UI API documentation
 - Documentation also available as OpenAPI 3.0.0 spec, see `openapi.json`
 
+### /auth endpoint
+- Enables JWT-based authentication towards protected endpoints
+- Provides registration, login, and token refresh for users
+
 ### /digitaleditions endpoint
 - Endpoints used for the SLS Generic Digital Edition platform
 - Currently made for the SLS metadata database, being re-made for the GDE 2018 database spec, see branch `gde2018-database-spec`
