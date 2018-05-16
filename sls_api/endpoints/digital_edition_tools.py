@@ -46,7 +46,7 @@ def project_permission_required(fn):
     return wrapper
 
 
-@de_tools.route("/<project>/new_location", methods=["POST"])
+@de_tools.route("/<project>/locations/new", methods=["POST"])
 @project_permission_required
 def add_new_location(project):
     """
@@ -95,7 +95,7 @@ def add_new_location(project):
         return jsonify(result), 500
 
 
-@de_tools.route("/<project>/new_subject", methods=["POST"])
+@de_tools.route("/<project>/subjects/new", methods=["POST"])
 @project_permission_required
 def add_new_subject(project):
     """
@@ -150,7 +150,7 @@ def add_new_subject(project):
         return jsonify(result), 500
 
 
-@de_tools.route("/<project>/new_tag", methods=["POST"])
+@de_tools.route("/<project>/tags/new", methods=["POST"])
 @project_permission_required
 def add_new_tag(project):
     """
@@ -195,7 +195,7 @@ def add_new_tag(project):
         return jsonify(result), 500
 
 
-@de_tools.route("/<project>/new_event", methods=["POST"])
+@de_tools.route("/<project>/events/new", methods=["POST"])
 @project_permission_required
 def add_new_event(project):
     """
@@ -204,7 +204,7 @@ def add_new_event(project):
     pass
 
 
-@de_tools.route("/update_xml/<project>/by_path/<file_path>", methods=["POST", "UPDATE"])
+@de_tools.route("/<project>/update_xml/by_path/<file_path>", methods=["POST", "UPDATE"])
 @project_permission_required
 def update_file_in_remote(project, file_path):
     """
@@ -213,7 +213,7 @@ def update_file_in_remote(project, file_path):
     pass
 
 
-@de_tools.route("/get_latest/<project>/by_path/<file_path>")
+@de_tools.route("/<project>/get_latest_file/by_path/<file_path>")
 @project_permission_required
 def get_file_from_remote(project, file_path):
     """
