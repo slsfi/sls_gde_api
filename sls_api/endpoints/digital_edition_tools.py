@@ -1,22 +1,93 @@
-from flask import Blueprint, request
-from flask_jwt_extended import jwt_required
+from flask import Blueprint, jsonify, request
+from flask_jwt_extended import get_jwt_identity, jwt_required, verify_jwt_in_request
+from functools import wraps
+import io
+import logging
+import os
 from ruamel.yaml import YAML
+from sqlalchemy import create_engine, MetaData, Table
+from sqlalchemy.sql import select
 import subprocess
 
 de_tools = Blueprint("digital_edition_tools", __name__)
 
+metadata = MetaData()
+
+logger = logging.getLogger("sls_api.de_tools")
+
+config_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "configs")
+with io.open(os.path.join(config_dir, "digital_editions.yml"), encoding="UTF-8") as config:
+    yaml = YAML()
+    digital_edition_config = yaml.load(config)
+
+    db_engines = {}
+    for proj, conf in digital_edition_config.items():
+        if isinstance(conf, dict) and "engine" in conf:
+            db_engines[proj] = create_engine(conf["engine"])
+
+
+def project_permission_required(fn):
+    """
+    Function decorator that checks for JWT authorization and that the user has edit rights for the project.
+    The project the method concerns should be the first positional argument or a keyword argument.
+    """
+    @wraps(fn)
+    def wrapper(*args, **kwargs):
+        verify_jwt_in_request()
+        identity = get_jwt_identity()
+        if len(args) > 0:
+            if args[0] in identity["projects"]:
+                return fn(*args, **kwargs)
+        elif "projects" in kwargs:
+            if kwargs["projects"] in identity["projects"]:
+                return fn(*args, **kwargs)
+        else:
+            return jsonify({"msg": "No access to this project."}), 403
+    return wrapper
+
 
 @de_tools.route("/<project>/new_location", methods=["POST"])
-@jwt_required
+@project_permission_required
 def add_new_location(project):
     """
     Add a new location object to the database
+
+    POST data MUST contain:
+    name: location name
+
+    POST data SHOULD also contain:
+    description: location description
+
+    POST data CAN also contain:
+    legacyXMLId: legacy XML id for location
+    latitude: latitude coordinate for location
+    longitude: longitude coordinate for location
     """
-    pass
+    request_data = request.get_json()
+    if not request_data:
+        return jsonify({"msg": "No data provided."}), 400
+    locations = Table('location', metadata, autoload=True, autoload_with=db_engines[project])
+    connection = db_engines[project].connect()
+    new_location = {
+        "name": request_data["name"],
+        "description": request_data.get("desription", None),
+        "legacyXMLId": request_data.get("legacyXMLId", None),
+        "latitude": request_data.get("latitude", None),
+        "longitude": request_data.get("longitude", None)
+    }
+    insert = locations.insert()
+    result = connection.execute(insert, **new_location)
+    new_row = select([locations]).where(locations.c.id == result.inserted_primary_key[0])
+    new_row = dict(connection.execute(new_row).fetchone())
+    result = {
+        "msg": "Created new location with ID {}".format(result.inserted_primary_key[0]),
+        "row": new_row
+    }
+    return jsonify(result), 201
 
 
 @de_tools.route("/<project>/new_subject", methods=["POST"])
-@jwt_required
+@project_permission_required
 def add_new_subject(project):
     """
     Add a new subject object to the database
@@ -25,7 +96,7 @@ def add_new_subject(project):
 
 
 @de_tools.route("/<project>/new_tag", methods=["POST"])
-@jwt_required
+@project_permission_required
 def add_new_tag(project):
     """
     Add a new tag object to the database
@@ -34,7 +105,7 @@ def add_new_tag(project):
 
 
 @de_tools.route("/<project>/new_event", methods=["POST"])
-@jwt_required
+@project_permission_required
 def add_new_event(project):
     """
     Add a new eventOccurance, event, and evnetConnection to the database for a location, subject, or tag
@@ -43,7 +114,7 @@ def add_new_event(project):
 
 
 @de_tools.route("/update_xml/<project>/by_path/<file_path>", methods=["POST", "UPDATE"])
-@jwt_required
+@project_permission_required
 def update_file_in_remote(project, file_path):
     """
     Add new XML or update existing XML in git remote
@@ -52,7 +123,7 @@ def update_file_in_remote(project, file_path):
 
 
 @de_tools.route("/get_latest/<project>/by_path/<file_path>")
-@jwt_required
+@project_permission_required
 def get_file_from_remote(project, file_path):
     """
     Get latest XML file from git remote
@@ -62,7 +133,7 @@ def get_file_from_remote(project, file_path):
 
 @de_tools.route("/<project>/get_tree/")
 @de_tools.route("/<project>/get_tree/<file_path>")
-@jwt_required
+@project_permission_required
 def get_file_tree_from_remote(project, file_path=None):
     """
     Get a file listing from the git remote
@@ -71,7 +142,7 @@ def get_file_tree_from_remote(project, file_path=None):
 
 
 @de_tools.route("/<project>/fascimile_collection/new", methods=["POST"])
-@jwt_required
+@project_permission_required
 def create_fascimile_collection(project):
     """
     Create a new publicationFascimileCollection
@@ -80,7 +151,7 @@ def create_fascimile_collection(project):
 
 
 @de_tools.route("/<project>/fascimile_collection/list")
-@jwt_required
+@project_permission_required
 def list_fascimile_collections(project):
     """
     List all available publicationFascimileCollections
@@ -89,7 +160,7 @@ def list_fascimile_collections(project):
 
 
 @de_tools.route("/<project>/fascimile_collection/link")
-@jwt_required
+@project_permission_required
 def link_fascimile_collection_to_publication(project):
     """
     Link a publicationFascimileCollection to a publication through publicationFascimile table
@@ -98,7 +169,7 @@ def link_fascimile_collection_to_publication(project):
 
 
 @de_tools.route("/<project>/fascimile_collection/list_links")
-@jwt_required
+@project_permission_required
 def list_fascimile_collection_links(project):
     """
     List all links between a publicationFascimileCollection and its publicationFascimile objects
@@ -116,7 +187,7 @@ def list_projects():
 
 
 @de_tools.route("/<project>/publication_collection/list")
-@jwt_required
+@project_permission_required
 def list_publication_collections(project):
     """
     List all publicationCollection objects for a given project
@@ -125,7 +196,7 @@ def list_publication_collections(project):
 
 
 @de_tools.route("/<project>/publication_collection/new", methods=["POST"])
-@jwt_required
+@project_permission_required
 def new_publication_collection(project):
     """
     Create a new publicationCollection object and associated Introduction and Title objects.
@@ -134,7 +205,7 @@ def new_publication_collection(project):
 
 
 @de_tools.route("/<project>/publication/<collection_id>/")
-@jwt_required
+@project_permission_required
 def list_publications(project, collection_id):
     """
     List all publications in a given collection
@@ -143,7 +214,7 @@ def list_publications(project, collection_id):
 
 
 @de_tools.route("/<project>/publication/<collection_id>/<publication_id>")
-@jwt_required
+@project_permission_required
 def get_publication(project, collection_id, publication_id):
     """
     Get a publication object from the database
@@ -152,7 +223,7 @@ def get_publication(project, collection_id, publication_id):
 
 
 @de_tools.route("/<project>/publication/<collection_id>/new", methods=["POST"])
-@jwt_required
+@project_permission_required
 def new_publication(project, collection_id):
     """
     Create a new publication object as part of the given publicationCollection
@@ -161,7 +232,7 @@ def new_publication(project, collection_id):
 
 
 @de_tools.route("/<project>/publication/<collection_id>/<publication_id>/link_file", methods=["POST"])
-@jwt_required
+@project_permission_required
 def link_file_to_publication(project, collection_id, publication_id):
     """
     Link an XML file to a publication,
