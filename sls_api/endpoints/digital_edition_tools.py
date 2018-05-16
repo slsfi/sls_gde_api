@@ -36,10 +36,10 @@ def project_permission_required(fn):
         verify_jwt_in_request()
         identity = get_jwt_identity()
         if len(args) > 0:
-            if args[0] in identity["projects"]:
+            if args[0] in db_engines and args[0] in identity["projects"]:
                 return fn(*args, **kwargs)
         elif "projects" in kwargs:
-            if kwargs["projects"] in identity["projects"]:
+            if kwargs["projects"] in db_engines and kwargs["projects"] in identity["projects"]:
                 return fn(*args, **kwargs)
         else:
             return jsonify({"msg": "No access to this project."}), 403
@@ -51,6 +51,8 @@ def project_permission_required(fn):
 def add_new_location(project):
     """
     Add a new location object to the database
+
+    POST data MUST be in JSON format.
 
     POST data MUST contain:
     name: location name
@@ -75,15 +77,22 @@ def add_new_location(project):
         "latitude": request_data.get("latitude", None),
         "longitude": request_data.get("longitude", None)
     }
-    insert = locations.insert()
-    result = connection.execute(insert, **new_location)
-    new_row = select([locations]).where(locations.c.id == result.inserted_primary_key[0])
-    new_row = dict(connection.execute(new_row).fetchone())
-    result = {
-        "msg": "Created new location with ID {}".format(result.inserted_primary_key[0]),
-        "row": new_row
-    }
-    return jsonify(result), 201
+    try:
+        insert = locations.insert()
+        result = connection.execute(insert, **new_location)
+        new_row = select([locations]).where(locations.c.id == result.inserted_primary_key[0])
+        new_row = dict(connection.execute(new_row).fetchone())
+        result = {
+            "msg": "Created new location with ID {}".format(result.inserted_primary_key[0]),
+            "row": new_row
+        }
+        return jsonify(result), 201
+    except Exception as e:
+        result = {
+            "msg": "Failed to create new location",
+            "reason": str(e)
+        }
+        return jsonify(result), 500
 
 
 @de_tools.route("/<project>/new_subject", methods=["POST"])
@@ -91,8 +100,56 @@ def add_new_location(project):
 def add_new_subject(project):
     """
     Add a new subject object to the database
+
+    POST data MUST be in JSON format
+
+    POST data SHOULD contain:
+    type: subject type
+    description: subject descrtiption
+
+    POST data CAN also contain:
+    firstName: Subject first or given name
+    lastName Subject surname
+    preposition: preposition for subject
+    fullName: Subject full name
+    legacyXMLId: Legacy XML id for subject
+    dateBorn: Subject date of birth
+    dateDeceased: Subject date of death
+    project_id: The project ID for the project this subject belongs to
     """
-    pass
+    request_data = request.get_json()
+    if not request_data:
+        return jsonify({"msg": "No data provided."}), 400
+    subjects = Table('subject', metadata, autoload=True, autoload_with=db_engines[project])
+    connection = db_engines[project].connect()
+    new_subject = {
+        "type": request_data.get("type", None),
+        "description": request_data.get("description", None),
+        "firstName": request_data.get("firstName", None),
+        "lastName": request_data.get("lastName", None),
+        "preposition": request_data.get("preposition", None),
+        "fullName": request_data.get("fullName", None),
+        "legacyXMLId": request_data.get("legacyXMLId", None),
+        "dateBorn": request_data.get("dateBorn", None),
+        "dateDeceased": request_data.get("dateDeceased", None),
+        "project_id": request_data.get("project_id", None)
+    }
+    try:
+        insert = subjects.insert()
+        result = connection.execute(insert, **new_subject)
+        new_row = select([subjects]).where(subjects.c.id == result.inserted_primary_key[0])
+        new_row = dict(connection.execute(new_row).fetchone())
+        result = {
+            "msg": "Created new subject with ID {}".format(result.inserted_primary_key[0]),
+            "row": new_row
+        }
+        return jsonify(result), 201
+    except Exception as e:
+        result = {
+            "msg": "Failed to create new subject.",
+            "reason": str(e)
+        }
+        return jsonify(result), 500
 
 
 @de_tools.route("/<project>/new_tag", methods=["POST"])
