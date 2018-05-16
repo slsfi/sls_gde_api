@@ -115,7 +115,6 @@ def add_new_subject(project):
     legacyXMLId: Legacy XML id for subject
     dateBorn: Subject date of birth
     dateDeceased: Subject date of death
-    project_id: The project ID for the project this subject belongs to
     """
     request_data = request.get_json()
     if not request_data:
@@ -131,8 +130,7 @@ def add_new_subject(project):
         "fullName": request_data.get("fullName", None),
         "legacyXMLId": request_data.get("legacyXMLId", None),
         "dateBorn": request_data.get("dateBorn", None),
-        "dateDeceased": request_data.get("dateDeceased", None),
-        "project_id": request_data.get("project_id", None)
+        "dateDeceased": request_data.get("dateDeceased", None)
     }
     try:
         insert = subjects.insert()
@@ -157,8 +155,44 @@ def add_new_subject(project):
 def add_new_tag(project):
     """
     Add a new tag object to the database
+
+    POST data MUST be in JSON format.
+
+    POST data SHOULD contain:
+    type: tag type
+    name: tag name
+
+    POST data CAN also contain:
+    description: tag description
+    legacyXMLId: Legacy XML id for tag
     """
-    pass
+    request_data = request.get_json()
+    if not request_data:
+        return jsonify({"msg": "No data provided."}), 400
+    tags = Table("tag", metadata, autoload=True, autoload_with=db_engines[project])
+    connection = db_engines[project].connect()
+    new_tag = {
+        "type": request_data.get("type", None),
+        "name": request_data.get("name", None),
+        "description": request_data.get("description", None),
+        "legacyXMLId": request_data.get("legacyXMLId", None)
+    }
+    try:
+        insert = tags.insert()
+        result = connection.execute(insert, **new_tag)
+        new_row = select([tags]).where(tags.c.id == result.inserted_primary_key[0])
+        new_row = dict(connection.execute(new_row).fetchone())
+        result = {
+            "msg": "Created new subject with ID {}".format(result.inserted_primary_key[0]),
+            "row": new_row
+        }
+        return jsonify(result), 201
+    except Exception as e:
+        result = {
+            "msg": "Failed to create new tag",
+            "reason": str(e)
+        }
+        return jsonify(result), 500
 
 
 @de_tools.route("/<project>/new_event", methods=["POST"])
