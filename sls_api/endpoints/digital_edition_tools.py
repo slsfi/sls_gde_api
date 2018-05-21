@@ -73,6 +73,9 @@ def add_new_location(project):
     request_data = request.get_json()
     if not request_data:
         return jsonify({"msg": "No data provided."}), 400
+    if "name" not in request_data:
+        return jsonify({"msg": "No name in POST data"}), 400
+
     locations = Table('location', metadata, autoload=True, autoload_with=db_engine)
     connection = db_engine.connect()
 
@@ -232,7 +235,31 @@ def get_events():
 @de_tools.route("/events/search", methods=["POST"])
 @jwt_required
 def find_event_by_description():
-    pass
+    """
+    List all events whose description contains a given phrase
+
+    POST data MUST be in JSON format.
+
+    POST data MUST contain the following:
+    phrase: search-phrase for event description
+    """
+    request_data = request.get_json()
+    if not request_data:
+        return jsonify({"msg": "No data provided."}), 400
+    if "phrase" not in request_data:
+        return jsonify({"msg": "No phrase in POST data"}), 400
+
+    events = Table("event", metadata, autoload=True, autoload_with=db_engine)
+    connection = db_engine.connect()
+
+    statement = select([events]).where(events.c.description.like("%{}%".format(request_data["phrase"])))
+    rows = connection.execute(statement).fetchall()
+
+    result = []
+    for row in rows:
+        result.append(dict(row))
+    connection.close()
+    return jsonify(result), 200
 
 
 @de_tools.route("/events/new", methods=["POST"])
