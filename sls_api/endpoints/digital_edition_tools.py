@@ -15,6 +15,7 @@ metadata = MetaData()
 
 logger = logging.getLogger("sls_api.de_tools")
 
+# TODO new config for GDE_tools, since they're working with new database structures
 config_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "configs")
 with io.open(os.path.join(config_dir, "digital_editions.yml"), encoding="UTF-8") as config:
     yaml = YAML()
@@ -211,11 +212,39 @@ def add_new_tag(project):
         connection.close()
 
 
-@de_tools.route("/<project>/events/new", methods=["POST"])
-@project_permission_required
-def add_new_event(project):
+@de_tools.route("/events/")
+@jwt_required
+def get_events():
     """
-    Add a new eventOccurance, event, and evnetConnection to the database for a location, subject, or tag
+    Get a list of all available events in the database
+    """
+    pass
+
+
+@de_tools.route("/events/new", methods=["POST"])
+@jwt_required
+def add_new_event():
+    """
+    Add a new event to the database, optionally connecting it to a location, subject, or tag using eventConnection
+    """
+    pass
+
+
+@de_tools.route("/event_occurances/")
+@de_tools.route("/event_occurances/<event_id>")
+@jwt_required
+def get_event_occurances(event_id=None):
+    """
+    Get a list of all eventOccurances in the database, optionally limiting to a given event
+    """
+    pass
+
+
+@de_tools.route("/event_occurances/new", methods=["POST"])
+@jwt_required
+def new_event_occurance():
+    """
+    Add a new eventOccurance to the database
     """
     pass
 
