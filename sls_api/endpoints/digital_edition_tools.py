@@ -18,12 +18,8 @@ logger = logging.getLogger("sls_api.de_tools")
 config_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "configs")
 with io.open(os.path.join(config_dir, "digital_editions.yml"), encoding="UTF-8") as config:
     yaml = YAML()
-    digital_edition_config = yaml.load(config)
-
-    db_engines = {}
-    for proj, conf in digital_edition_config.items():
-        if isinstance(conf, dict) and "engine" in conf:
-            db_engines[proj] = create_engine(conf["engine"])
+    config = yaml.load(config)
+    db_engine = create_engine(config["engine"])
 
 
 def project_permission_required(fn):
@@ -36,14 +32,22 @@ def project_permission_required(fn):
         verify_jwt_in_request()
         identity = get_jwt_identity()
         if len(args) > 0:
-            if args[0] in db_engines and args[0] in identity["projects"]:
+            if args[0] in identity["projects"]:
                 return fn(*args, **kwargs)
         elif "projects" in kwargs:
-            if kwargs["projects"] in db_engines and kwargs["projects"] in identity["projects"]:
+            if kwargs["projects"] in identity["projects"]:
                 return fn(*args, **kwargs)
         else:
             return jsonify({"msg": "No access to this project."}), 403
     return wrapper
+
+
+def get_project_id_from_name(project):
+    projects = Table('project', metadata, autoload=True, autoload_with=db_engine)
+    connection = db_engine.connect()
+    statement = select([projects.c.id]).where(projects.c.name == project)
+    project_id = connection.execute(statement).fetchone()
+    return int(project_id["id"])
 
 
 @de_tools.route("/<project>/locations/new", methods=["POST"])
@@ -68,11 +72,13 @@ def add_new_location(project):
     request_data = request.get_json()
     if not request_data:
         return jsonify({"msg": "No data provided."}), 400
-    locations = Table('location', metadata, autoload=True, autoload_with=db_engines[project])
-    connection = db_engines[project].connect()
+    locations = Table('location', metadata, autoload=True, autoload_with=db_engine)
+    connection = db_engine.connect()
+
     new_location = {
         "name": request_data["name"],
         "description": request_data.get("desription", None),
+        "project_id": get_project_id_from_name(project),
         "legacyXMLId": request_data.get("legacyXMLId", None),
         "latitude": request_data.get("latitude", None),
         "longitude": request_data.get("longitude", None)
@@ -93,6 +99,8 @@ def add_new_location(project):
             "reason": str(e)
         }
         return jsonify(result), 500
+    finally:
+        connection.close()
 
 
 @de_tools.route("/<project>/subjects/new", methods=["POST"])
@@ -119,11 +127,13 @@ def add_new_subject(project):
     request_data = request.get_json()
     if not request_data:
         return jsonify({"msg": "No data provided."}), 400
-    subjects = Table('subject', metadata, autoload=True, autoload_with=db_engines[project])
-    connection = db_engines[project].connect()
+    subjects = Table('subject', metadata, autoload=True, autoload_with=db_engine)
+    connection = db_engine.connect()
+
     new_subject = {
         "type": request_data.get("type", None),
         "description": request_data.get("description", None),
+        "project_id": get_project_id_from_name(project),
         "firstName": request_data.get("firstName", None),
         "lastName": request_data.get("lastName", None),
         "preposition": request_data.get("preposition", None),
@@ -148,6 +158,8 @@ def add_new_subject(project):
             "reason": str(e)
         }
         return jsonify(result), 500
+    finally:
+        connection.close()
 
 
 @de_tools.route("/<project>/tags/new", methods=["POST"])
@@ -169,11 +181,13 @@ def add_new_tag(project):
     request_data = request.get_json()
     if not request_data:
         return jsonify({"msg": "No data provided."}), 400
-    tags = Table("tag", metadata, autoload=True, autoload_with=db_engines[project])
-    connection = db_engines[project].connect()
+    tags = Table("tag", metadata, autoload=True, autoload_with=db_engine)
+    connection = db_engine.connect()
+
     new_tag = {
         "type": request_data.get("type", None),
         "name": request_data.get("name", None),
+        "project_id": get_project_id_from_name(project),
         "description": request_data.get("description", None),
         "legacyXMLId": request_data.get("legacyXMLId", None)
     }
@@ -193,6 +207,8 @@ def add_new_tag(project):
             "reason": str(e)
         }
         return jsonify(result), 500
+    finally:
+        connection.close()
 
 
 @de_tools.route("/<project>/events/new", methods=["POST"])
@@ -274,7 +290,15 @@ def list_projects():
     """
     List all GDE projects
     """
-    pass
+    projects = Table("project", metadata, autoload=True, autoload_with=db_engine)
+    connection = db_engine.connect()
+    statement = select([projects])
+    rows = connection.execute(statement).fetchall()
+    result = []
+    for row in rows:
+        result.append(dict(row))
+    connection.close()
+    return jsonify(result), 200
 
 
 @de_tools.route("/<project>/publication_collection/list")
