@@ -198,7 +198,7 @@ def add_new_tag(project):
         new_row = select([tags]).where(tags.c.id == result.inserted_primary_key[0])
         new_row = dict(connection.execute(new_row).fetchone())
         result = {
-            "msg": "Created new subject with ID {}".format(result.inserted_primary_key[0]),
+            "msg": "Created new tag with ID {}".format(result.inserted_primary_key[0]),
             "row": new_row
         }
         return jsonify(result), 201
@@ -233,7 +233,49 @@ def get_events():
 @jwt_required
 def add_new_event():
     """
-    Add a new event to the database, optionally connecting it to a location, subject, or tag using eventConnection
+    Add a new event to the database
+
+    POST data MUST be in JSON format.
+
+    POST data SHOULD contain:
+    type: event type
+    description: event description
+    """
+    request_data = request.get_json()
+    if not request_data:
+        return jsonify({"msg": "No data provided."}), 400
+    events = Table("event", metadata, autoload=True, autoload_with=db_engine)
+    connection = db_engine.connect()
+
+    new_event = {
+        "type": request_data.get("type", None),
+        "description": request_data.get("description", None),
+    }
+    try:
+        insert = events.insert()
+        result = connection.execute(insert, **new_event)
+        new_row = select([events]).where(events.c.id == result.inserted_primary_key[0])
+        new_row = dict(connection.execute(new_row).fetchone())
+        result = {
+            "msg": "Created new event with ID {}".format(result.inserted_primary_key[0]),
+            "row": new_row
+        }
+        return jsonify(result), 201
+    except Exception as e:
+        result = {
+            "msg": "Failed to create new event",
+            "reason": str(e)
+        }
+        return jsonify(result), 500
+    finally:
+        connection.close()
+
+
+@de_tools.route("/events/<event_id>/link")
+@jwt_required
+def connect_event(event_id):
+    """
+    Link an event to a location, subject, or tag
     """
     pass
 
