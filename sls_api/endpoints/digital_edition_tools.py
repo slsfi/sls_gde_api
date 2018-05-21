@@ -229,6 +229,12 @@ def get_events():
     return jsonify(result), 200
 
 
+@de_tools.route("/events/search", methods=["POST"])
+@jwt_required
+def find_event_by_description():
+    pass
+
+
 @de_tools.route("/events/new", methods=["POST"])
 @jwt_required
 def add_new_event():
@@ -271,11 +277,20 @@ def add_new_event():
         connection.close()
 
 
-@de_tools.route("/events/<event_id>/link")
+@de_tools.route("/events/<event_id>/link", methods=["POST"])
 @jwt_required
 def connect_event(event_id):
     """
-    Link an event to a location, subject, or tag
+    Link an event to a location, subject, or tag through eventConnection
+    """
+    pass
+
+
+@de_tools.route("/events/<event_id>/links")
+@jwt_required
+def list_event_connections(event_id):
+    """
+    List all eventConnections for a given event, to find related locations, subjects, and tags
     """
     pass
 
