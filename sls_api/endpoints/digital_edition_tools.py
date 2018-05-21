@@ -247,7 +247,10 @@ def get_event_occurances(event_id=None):
     """
     event_occurances = Table("eventOccurance", metadata, autoload=True, autoload_with=db_engine)
     connection = db_engine.connect()
-    statement = select([event_occurances])
+    if event_id is None:
+        statement = select([event_occurances])
+    else:
+        statement = select([event_occurances]).where(event_occurances.c.event_id == event_id)
     rows = connection.execute(statement).fetchall()
     result = []
     for row in rows:
