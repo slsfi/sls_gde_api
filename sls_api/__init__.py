@@ -60,5 +60,10 @@ if os.path.exists(os.path.join("sls_api", "configs", "security.yml")):
     @app.before_first_request
     def create_tables():
         db.create_all()
+        if not User.find_by_email("test@test.com"):
+            User.create_new_user("test@test.com", "test")
+
+from sls_api.endpoints.digital_edition_tools import de_tools
+app.register_blueprint(de_tools, url_prefix="/de_tools")
 
 logger.info(" * Loaded endpoints: {}".format(", ".join(app.blueprints)))

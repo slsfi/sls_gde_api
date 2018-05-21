@@ -215,6 +215,33 @@ def add_new_tag(project):
         connection.close()
 
 
+@de_tools.route("/locations/")
+@jwt_required
+def get_locations():
+    """
+    Get all locations from the database
+    """
+    pass
+
+
+@de_tools.route("/subjects/")
+@jwt_required
+def get_subjects():
+    """
+    Get all subjects from the database
+    """
+    pass
+
+
+@de_tools.route("/tags/")
+@jwt_required
+def get_tags():
+    """
+    Get all tags from the database
+    """
+    pass
+
+
 @de_tools.route("/events/")
 @jwt_required
 def get_events():
@@ -309,6 +336,13 @@ def add_new_event():
 def connect_event(event_id):
     """
     Link an event to a location, subject, or tag through eventConnection
+
+    POST data MUST be in JSON format.
+
+    POST data MUST contain at least one of the following:
+    subject_id: ID for the subject involved in the given event
+    location_id: ID for the location involced in the given event
+    tag_id: ID for the tag involved in the given event
     """
     pass
 
