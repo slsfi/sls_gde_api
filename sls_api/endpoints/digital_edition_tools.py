@@ -218,7 +218,15 @@ def get_events():
     """
     Get a list of all available events in the database
     """
-    pass
+    events = Table("event", metadata, autoload=True, autoload_with=db_engine)
+    connection = db_engine.connect()
+    statement = select([events])
+    rows = connection.execute(statement).fetchall()
+    result = []
+    for row in rows:
+        result.append(dict(row))
+    connection.close()
+    return jsonify(result), 200
 
 
 @de_tools.route("/events/new", methods=["POST"])
@@ -237,7 +245,15 @@ def get_event_occurances(event_id=None):
     """
     Get a list of all eventOccurances in the database, optionally limiting to a given event
     """
-    pass
+    event_occurances = Table("eventOccurance", metadata, autoload=True, autoload_with=db_engine)
+    connection = db_engine.connect()
+    statement = select([event_occurances])
+    rows = connection.execute(statement).fetchall()
+    result = []
+    for row in rows:
+        result.append(dict(row))
+    connection.close()
+    return jsonify(result), 200
 
 
 @de_tools.route("/event_occurances/new", methods=["POST"])
