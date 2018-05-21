@@ -1,0 +1,7 @@
+*.pyc
+*.log.*
+*.log
+.vscode
+*.egg-info
+__pycache__
+.DS_Store
