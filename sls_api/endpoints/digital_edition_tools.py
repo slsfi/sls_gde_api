@@ -426,7 +426,92 @@ def get_event_occurances(event_id):
 def new_event_occurance(event_id):
     """
     Add a new eventOccurance to the database
+
+    POST data MUST be in JSON format.
+
+    POST data SHOULD contain the following:
+    type: event occurance type
+    description: event occurance description
+
+    POST data SHOULD also contain at least one of the following:
+    publication_id: ID for publication the event occurs in
+    publicationVersion_id: ID for publication version the event occurs in
+    publicationManuscript_id: ID for publication manuscript the event occurs in
+    publicationFascimile_id: ID for publication fascimile the event occurs in
+    publicationComment_id: ID for publication comment the event occurs in
     """
+    request_data = request.get_json()
+    if not request_data:
+        return jsonify({"msg": "No data provided."}), 400
+    events = Table("event", metadata, autoload=True, autoload_with=db_engine)
+    connection = db_engine.connect()
+    select_event = select([events]).where(events.c.id == int(event_id))
+    event_exists = connection.execute(select_event).fetchall()
+    if len(event_exists) != 1:
+        return jsonify(
+            {
+                "msg": "Event ID not found in database"
+            }
+        ), 404
+
+    event_occurances = Table("eventOccurance", metadata, autoload=True, autoload_with=db_engine)
+    insert = event_occurances.insert()
+    new_occurance = {
+        "event_id": int(event_id),
+        "type": request_data.get("type", None),
+        "description": request_data.get("description", None),
+        "publication_id": int(request_data["publication_id"]) if request_data.get("publication_id", None) else None,
+        "publicationVersion_id": int(request_data["publicationVersion_id"]) if request_data.get("publicationVersion_id", None) else None,
+        "publicationManuscript_id": int(request_data["publicationManuscript_id"]) if request_data.get("publicationManuscript_id", None) else None,
+        "publicationFascimile_id": int(request_data["publicationFascimile_id"]) if request_data.get("publicationFascimile_id", None) else None,
+        "publicationComment_id": int(request_data["publicationComment_id"]) if request_data.get("publicationComment_id", None) else None,
+    }
+    try:
+        result = connection.execute(insert, **new_occurance)
+        new_row = select([event_occurances]).where(event_occurances.c.id == result.inserted_primary_key[0])
+        new_row = dict(connection.execute(new_row).fetchone())
+        result = {
+            "msg": "Created new eventOccurance with ID {}".format(result.inserted_primary_key[0]),
+            "row": new_row
+        }
+        return jsonify(result), 201
+    except Exception as e:
+        result = {
+            "msg": "Failed to create new eventOccurance",
+            "reason": str(e)
+        }
+        return jsonify(result), 500
+    finally:
+        connection.close()
+
+
+@de_tools.route("/<project>/publications")
+@jwt_required
+def get_publications(project):
+    pass
+
+
+@de_tools.route("/<project>/publication/<publication_id>/versions")
+@jwt_required
+def get_publication_versions(project, publication_id):
+    pass
+
+
+@de_tools.route("/<project>/publication/<publication_id>/manuscripts")
+@jwt_required
+def get_publication_manuscripts(project, publication_id):
+    pass
+
+
+@de_tools.route("/<project>/publication/<publication_id>/fascimiles")
+@jwt_required
+def get_publication_fascimiles(project, publication_id):
+    pass
+
+
+@de_tools.route("/<project>/publication/<publication_id>/comments")
+@jwt_required
+def get_publication_comments(project, publication_id):
     pass
 
 
