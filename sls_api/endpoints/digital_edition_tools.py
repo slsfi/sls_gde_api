@@ -48,6 +48,7 @@ def get_project_id_from_name(project):
     connection = db_engine.connect()
     statement = select([projects.c.id]).where(projects.c.name == project)
     project_id = connection.execute(statement).fetchone()
+    connection.close()
     return int(project_id["id"])
 
 
@@ -488,31 +489,95 @@ def new_event_occurance(event_id):
 @de_tools.route("/<project>/publications")
 @jwt_required
 def get_publications(project):
-    pass
+    """
+    List all available publications in the given project
+    """
+    project_id = get_project_id_from_name(project)
+    connection = db_engine.connect()
+    publication_collections = Table("publicationCollection", metadata, autoload=True, autoload_with=db_engine)
+    publications = Table("publication", metadata, autoload=True, autoload_with=db_engine)
+    statement = select([publication_collections.c.id]).where(publication_collections.c.project_id == project_id)
+    collection_ids = connection.execute(statement).fetchall()
+    collection_ids = [int(row["id"]) for row in collection_ids]
+    statement = select([publications]).where(publications.c.id.in_(collection_ids))
+    rows = connection.execute(statement).fetchall()
+    result = []
+    for row in rows:
+        result.append(dict(row))
+    connection.close()
+    return jsonify(result), 200
 
 
 @de_tools.route("/<project>/publication/<publication_id>/versions")
 @jwt_required
 def get_publication_versions(project, publication_id):
-    pass
+    """
+    List all versions of the given publication
+    """
+    connection = db_engine.connect()
+    publication_versions = Table("publicationVersion", metadata, autoload=True, autoload_with=db_engine)
+    statement = select([publication_versions]).where(publication_versions.c.publication_id == int(publication_id))
+    rows = connection.execute(statement).fetchall()
+    result = []
+    for row in rows:
+        result.append(dict(row))
+    connection.close()
+    return jsonify(result), 200
 
 
 @de_tools.route("/<project>/publication/<publication_id>/manuscripts")
 @jwt_required
 def get_publication_manuscripts(project, publication_id):
-    pass
+    """
+    List all manuscripts for the given publication
+    """
+    connection = db_engine.connect()
+    publication_manuscripts = Table("publicationManuscript", metadata, autoload=True, autoload_with=db_engine)
+    statement = select([publication_manuscripts]).where(publication_manuscripts.c.publication_id == int(publication_id))
+    rows = connection.execute(statement).fetchall()
+    result = []
+    for row in rows:
+        result.append(dict(row))
+    connection.close()
+    return jsonify(result), 200
 
 
 @de_tools.route("/<project>/publication/<publication_id>/fascimiles")
 @jwt_required
 def get_publication_fascimiles(project, publication_id):
-    pass
+    """
+    List all fascimilies for the given publication
+    """
+    connection = db_engine.connect()
+    publication_fascimiles = Table("publicationFascimile", metadata, autoload=True, autoload_with=db_engine)
+    statement = select([publication_fascimiles]).where(publication_fascimiles.c.publication_id == int(publication_id))
+    rows = connection.execute(statement).fetchall()
+    result = []
+    for row in rows:
+        result.append(dict(row))
+    connection.close()
+    return jsonify(result), 200
 
 
 @de_tools.route("/<project>/publication/<publication_id>/comments")
 @jwt_required
 def get_publication_comments(project, publication_id):
-    pass
+    """
+    List all comments for the given publication
+    """
+    connection = db_engine.connect()
+    publications = Table("publication", metadata, autoload=True, autoload_with=db_engine)
+    publication_comments = Table("publicationComment", metadata, autoload=True, autoload_with=db_engine)
+    statement = select([publications.c.publictionComment_id]).where(publications.c.id == int(publication_id))
+    comment_ids = connection.execute(statement).fetchall()
+    comment_ids = [int(row["id"]) for row in comment_ids]
+    statement = select([publication_comments]).where(publication_comments.c.id.in_(comment_ids))
+    rows = connection.execute(statement).fetchall()
+    result = []
+    for row in rows:
+        result.append(dict(row))
+    connection.close()
+    return jsonify(result), 200
 
 
 @de_tools.route("/<project>/update_xml/by_path/<file_path>", methods=["POST", "UPDATE"])
