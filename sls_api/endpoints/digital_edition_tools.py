@@ -334,7 +334,7 @@ def add_new_event():
         connection.close()
 
 
-@de_tools.route("/events/<event_id>/link", methods=["POST"])
+@de_tools.route("/event/<event_id>/connections/new", methods=["POST"])
 @jwt_required
 def connect_event(event_id):
     """
@@ -387,9 +387,9 @@ def connect_event(event_id):
         connection.close()
 
 
-@de_tools.route("/events/<event_id>/links")
+@de_tools.route("/event/<event_id>/connections")
 @jwt_required
-def list_event_connections(event_id):
+def get_event_connections(event_id):
     """
     List all eventConnections for a given event, to find related locations, subjects, and tags
     """
@@ -404,19 +404,15 @@ def list_event_connections(event_id):
     return jsonify(result), 200
 
 
-@de_tools.route("/event_occurances/")
-@de_tools.route("/event_occurances/<event_id>")
+@de_tools.route("/event/<event_id>/occurances")
 @jwt_required
-def get_event_occurances(event_id=None):
+def get_event_occurances(event_id):
     """
     Get a list of all eventOccurances in the database, optionally limiting to a given event
     """
     event_occurances = Table("eventOccurance", metadata, autoload=True, autoload_with=db_engine)
     connection = db_engine.connect()
-    if event_id is None:
-        statement = select([event_occurances])
-    else:
-        statement = select([event_occurances]).where(event_occurances.c.event_id == int(event_id))
+    statement = select([event_occurances]).where(event_occurances.c.event_id == int(event_id))
     rows = connection.execute(statement).fetchall()
     result = []
     for row in rows:
@@ -425,9 +421,9 @@ def get_event_occurances(event_id=None):
     return jsonify(result), 200
 
 
-@de_tools.route("/event_occurances/new", methods=["POST"])
+@de_tools.route("/event/<event_id>/occurances/new", methods=["POST"])
 @jwt_required
-def new_event_occurance():
+def new_event_occurance(event_id):
     """
     Add a new eventOccurance to the database
     """
@@ -500,7 +496,7 @@ def list_fascimile_collection_links(project):
 
 @de_tools.route("/projects/")
 @jwt_required
-def list_projects():
+def get_projects():
     """
     List all GDE projects
     """
