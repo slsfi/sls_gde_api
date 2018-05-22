@@ -347,7 +347,44 @@ def connect_event(event_id):
     location_id: ID for the location involced in the given event
     tag_id: ID for the tag involved in the given event
     """
-    pass
+    request_data = request.get_json()
+    if not request_data:
+        return jsonify({"msg": "No data provided."}), 400
+    events = Table("event", metadata, autoload=True, autoload_with=db_engine)
+    connection = db_engine.connect()
+    select_event = select([events]).where(events.c.id == int(event_id))
+    event_exists = connection.execute(select_event).fetchall()
+    if len(event_exists) != 1:
+        return jsonify(
+            {
+                "msg": "Event ID not found in database"
+            }
+        ), 404
+    event_connections = Table("eventConnection", metadata, autoload=True, autoload_with=db_engine)
+    insert = event_connections.insert()
+    new_event_connection = {
+        "event_id": int(event_id),
+        "subject_id": int(request_data["subject_id"]) if request_data.get("subject_id", None) else None,
+        "location_id": int(request_data["location_id"]) if request_data.get("location_id", None) else None,
+        "tag_id": int(request_data["tag_id"]) if request_data.get("tag_id", None) else None
+    }
+    try:
+        result = connection.execute(insert, **new_event_connection)
+        new_row = select([event_connections]).where(event_connections.c.id == result.inserted_primary_key[0])
+        new_row = dict(connection.execute(new_row).fetchone())
+        result = {
+            "msg": "Created new eventConnection with ID {}".format(result.inserted_primary_key[0]),
+            "row": new_row
+        }
+        return jsonify(result), 201
+    except Exception as e:
+        result = {
+            "msg": "Failed to create new eventConnection",
+            "reason": str(e)
+        }
+        return jsonify(result), 500
+    finally:
+        connection.close()
 
 
 @de_tools.route("/events/<event_id>/links")
