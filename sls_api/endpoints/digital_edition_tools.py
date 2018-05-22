@@ -16,6 +16,8 @@ metadata = MetaData()
 logger = logging.getLogger("sls_api.de_tools")
 
 # TODO new config for GDE_tools, since they're working with new database structures
+# TODO git configuration?
+# TODO branches?
 config_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "configs")
 with io.open(os.path.join(config_dir, "digital_editions.yml"), encoding="UTF-8") as config:
     yaml = YAML()
@@ -580,7 +582,7 @@ def get_publication_comments(project, publication_id):
     return jsonify(result)
 
 
-@de_tools.route("/<project>/update_xml/by_path/<file_path>", methods=["POST", "UPDATE"])
+@de_tools.route("/<project>/update_xml/by_path/<path:file_path>", methods=["POST", "UPDATE"])
 @project_permission_required
 def update_file_in_remote(project, file_path):
     """
@@ -589,7 +591,7 @@ def update_file_in_remote(project, file_path):
     pass
 
 
-@de_tools.route("/<project>/get_latest_file/by_path/<file_path>")
+@de_tools.route("/<project>/get_latest_file/by_path/<path:file_path>")
 @project_permission_required
 def get_file_from_remote(project, file_path):
     """
@@ -599,7 +601,7 @@ def get_file_from_remote(project, file_path):
 
 
 @de_tools.route("/<project>/get_tree/")
-@de_tools.route("/<project>/get_tree/<file_path>")
+@de_tools.route("/<project>/get_tree/<path:file_path>")
 @project_permission_required
 def get_file_tree_from_remote(project, file_path=None):
     """
@@ -613,8 +615,49 @@ def get_file_tree_from_remote(project, file_path=None):
 def create_fascimile_collection(project):
     """
     Create a new publicationFascimileCollection
+
+    POST data MUST be in JSON format.
+
+    POST data SHOULD contain:
+    title: collection type
+    description: collection description
+    folderPath: path to fascimiles for this collection
+
+    POST data MAY also contain:
+    numberOfPages: total number of pages in this collection
+    startPageNumber: number for starting page of this collection
     """
-    pass
+    request_data = request.get_json()
+    if not request_data:
+        return jsonify({"msg": "No data provided."}), 400
+    collections = Table("publicationFascimileCollection", metadata, autoload=True, autoload_with=db_engine)
+    connection = db_engine.connect()
+    insert = collections.insert()
+
+    new_collection = {
+        "title": request_data.get("title", None),
+        "description": request_data.get("description", None),
+        "folderPath": request_data.get("folderPath", None),
+        "numberOfPages": request_data.get("numberOfPages", None),
+        "startPageNumber": request_data.get("startPageNumber", None)
+    }
+    try:
+        result = connection.execute(insert, **new_collection)
+        new_row = select([collections]).where(collections.c.id == result.inserted_primary_key[0])
+        new_row = dict(connection.execute(new_row).fetchone())
+        result = {
+            "msg": "Created new publicationFascimileCollection with ID {}".format(result.inserted_primary_key[0]),
+            "row": new_row
+        }
+        return jsonify(result), 201
+    except Exception as e:
+        result = {
+            "msg": "Failed to create new publicationFascimileCollection",
+            "reason": str(e)
+        }
+        return jsonify(result), 500
+    finally:
+        connection.close()
 
 
 @de_tools.route("/<project>/fascimile_collection/list")
@@ -750,5 +793,10 @@ def link_file_to_publication(project, publication_id):
     """
     Link an XML file to a publication,
     creating the appropriate publicationComment, publicationManuscript, or publicationVersion object.
+
+    POST data MUST be in JSON format
+
+    POST data MUST contain the following:
+    file_path: path to the file to be linked
     """
     pass
