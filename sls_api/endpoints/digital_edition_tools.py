@@ -233,7 +233,7 @@ def get_locations():
     """
     Get all locations from the database
     """
-    return select_all_from_table("location"), 200
+    return select_all_from_table("location")
 
 
 @de_tools.route("/subjects/")
@@ -242,7 +242,7 @@ def get_subjects():
     """
     Get all subjects from the database
     """
-    return select_all_from_table("subject"), 200
+    return select_all_from_table("subject")
 
 
 @de_tools.route("/tags/")
@@ -251,7 +251,7 @@ def get_tags():
     """
     Get all tags from the database
     """
-    return select_all_from_table("tag"), 200
+    return select_all_from_table("tag")
 
 
 @de_tools.route("/events/")
@@ -260,7 +260,7 @@ def get_events():
     """
     Get a list of all available events in the database
     """
-    return select_all_from_table("event"), 200
+    return select_all_from_table("event")
 
 
 @de_tools.route("/events/search", methods=["POST"])
@@ -290,7 +290,7 @@ def find_event_by_description():
     for row in rows:
         result.append(dict(row))
     connection.close()
-    return jsonify(result), 200
+    return jsonify(result)
 
 
 @de_tools.route("/events/new", methods=["POST"])
@@ -402,7 +402,7 @@ def get_event_connections(event_id):
     for row in rows:
         result.append(dict(row))
     connection.close()
-    return jsonify(result), 200
+    return jsonify(result)
 
 
 @de_tools.route("/event/<event_id>/occurances")
@@ -419,7 +419,7 @@ def get_event_occurances(event_id):
     for row in rows:
         result.append(dict(row))
     connection.close()
-    return jsonify(result), 200
+    return jsonify(result)
 
 
 @de_tools.route("/event/<event_id>/occurances/new", methods=["POST"])
@@ -505,7 +505,7 @@ def get_publications(project):
     for row in rows:
         result.append(dict(row))
     connection.close()
-    return jsonify(result), 200
+    return jsonify(result)
 
 
 @de_tools.route("/<project>/publication/<publication_id>/versions")
@@ -522,7 +522,7 @@ def get_publication_versions(project, publication_id):
     for row in rows:
         result.append(dict(row))
     connection.close()
-    return jsonify(result), 200
+    return jsonify(result)
 
 
 @de_tools.route("/<project>/publication/<publication_id>/manuscripts")
@@ -539,7 +539,7 @@ def get_publication_manuscripts(project, publication_id):
     for row in rows:
         result.append(dict(row))
     connection.close()
-    return jsonify(result), 200
+    return jsonify(result)
 
 
 @de_tools.route("/<project>/publication/<publication_id>/fascimiles")
@@ -556,7 +556,7 @@ def get_publication_fascimiles(project, publication_id):
     for row in rows:
         result.append(dict(row))
     connection.close()
-    return jsonify(result), 200
+    return jsonify(result)
 
 
 @de_tools.route("/<project>/publication/<publication_id>/comments")
@@ -577,7 +577,7 @@ def get_publication_comments(project, publication_id):
     for row in rows:
         result.append(dict(row))
     connection.close()
-    return jsonify(result), 200
+    return jsonify(result)
 
 
 @de_tools.route("/<project>/update_xml/by_path/<file_path>", methods=["POST", "UPDATE"])
@@ -623,7 +623,7 @@ def list_fascimile_collections(project):
     """
     List all available publicationFascimileCollections
     """
-    pass
+    return select_all_from_table("publicationFascimileCollections")
 
 
 @de_tools.route("/<project>/fascimile_collection/<collection_id>/link", methods=["POST"])
@@ -637,11 +637,19 @@ def link_fascimile_collection_to_publication(project):
 
 @de_tools.route("/<project>/fascimile_collection/<collection_id>/list_links")
 @project_permission_required
-def list_fascimile_collection_links(project):
+def list_fascimile_collection_links(project, collection_id):
     """
-    List all links between a publicationFascimileCollection and its publicationFascimile objects
+    List all publicationFascimile objects in the given publicationFascimileCollection
     """
-    pass
+    connection = db_engine.connect()
+    fascimiles = Table("publicationFascimile", metadata, autoload=True, autoload_with=db_engine)
+    statement = select([fascimiles]).where(fascimiles.c.publicationFascimileCollection_id == int(collection_id))
+    rows = connection.execute(statement).fetchall()
+    result = []
+    for row in rows:
+        result.append(dict(row))
+    connection.close()
+    return jsonify(result)
 
 
 @de_tools.route("/projects/")
@@ -650,7 +658,7 @@ def get_projects():
     """
     List all GDE projects
     """
-    return select_all_from_table("project"), 200
+    return select_all_from_table("project")
 
 
 @de_tools.route("/<project>/publication_collection/list")
@@ -659,7 +667,16 @@ def list_publication_collections(project):
     """
     List all publicationCollection objects for a given project
     """
-    pass
+    project_id = get_project_id_from_name(project)
+    connection = db_engine.connect()
+    collections = Table("publicationCollection", metadata, autoload=True, autoload_with=db_engine)
+    statement = select([collections]).where(collections.c.project_id == int(project_id))
+    rows = connection.execute(statement).fetchall()
+    result = []
+    for row in rows:
+        result.append(dict(row))
+    connection.close()
+    return jsonify(result)
 
 
 @de_tools.route("/<project>/publication_collection/new", methods=["POST"])
@@ -677,7 +694,31 @@ def list_publications(project, collection_id):
     """
     List all publications in a given collection
     """
-    pass
+    project_id = get_project_id_from_name(project)
+    connection = db_engine.connect()
+    collections = Table("publicationCollection", metadata, autoload=True, autoload_with=db_engine)
+    publications = Table("publication", metadata, autoload=True, autoload_with=db_engine)
+    statement = select([collections]).where(collections.c.id == int(collection_id))
+    rows = connection.execute(statement).fetchall()
+    if len(rows) != 1:
+        return jsonify(
+            {
+                "msg": "Could not find collection in database."
+            }
+        ), 404
+    elif rows[0]["project_id"] != int(project_id):
+        return jsonify(
+            {
+                "msg": "Found collection not part of {!r} with ID {}.".format(project, project_id)
+            }
+        ), 400
+    statement = select([publications]).where(publications.c.publicationCollection_id == int(collection_id))
+    rows = connection.execute(statement).fetchall()
+    result = []
+    for row in rows:
+        result.append(dict(row))
+    connection.close()
+    return jsonify(result)
 
 
 @de_tools.route("/<project>/publication/<publication_id>")
@@ -686,7 +727,12 @@ def get_publication(project, publication_id):
     """
     Get a publication object from the database
     """
-    pass
+    connection = db_engine.connect()
+    publications = Table("publication", metadata, autoload=True, autoload_with=db_engine)
+    statement = select([publications]).where(publications.c.id == int(publication_id))
+    rows = connection.execute(statement).fetchall()
+    result = dict(rows[0])
+    return jsonify(result)
 
 
 @de_tools.route("/<project>/publication_collection/<collection_id>/publications/new", methods=["POST"])
