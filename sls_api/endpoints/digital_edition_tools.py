@@ -215,13 +215,24 @@ def add_new_tag(project):
         connection.close()
 
 
+def select_all_from_table(table_name):
+    table = Table(table_name, metadata, autoload=True, autoload_with=db_engine)
+    connection = db_engine.connect()
+    rows = connection.execute(select([table])).fetchall()
+    result = []
+    for row in rows:
+        result.append(dict(row))
+    connection.close()
+    return jsonify(result)
+
+
 @de_tools.route("/locations/")
 @jwt_required
 def get_locations():
     """
     Get all locations from the database
     """
-    pass
+    return select_all_from_table("location"), 200
 
 
 @de_tools.route("/subjects/")
@@ -230,7 +241,7 @@ def get_subjects():
     """
     Get all subjects from the database
     """
-    pass
+    return select_all_from_table("subject"), 200
 
 
 @de_tools.route("/tags/")
@@ -239,7 +250,7 @@ def get_tags():
     """
     Get all tags from the database
     """
-    pass
+    return select_all_from_table("tag"), 200
 
 
 @de_tools.route("/events/")
@@ -248,15 +259,7 @@ def get_events():
     """
     Get a list of all available events in the database
     """
-    events = Table("event", metadata, autoload=True, autoload_with=db_engine)
-    connection = db_engine.connect()
-    statement = select([events])
-    rows = connection.execute(statement).fetchall()
-    result = []
-    for row in rows:
-        result.append(dict(row))
-    connection.close()
-    return jsonify(result), 200
+    return select_all_from_table("event"), 200
 
 
 @de_tools.route("/events/search", methods=["POST"])
@@ -456,15 +459,7 @@ def list_projects():
     """
     List all GDE projects
     """
-    projects = Table("project", metadata, autoload=True, autoload_with=db_engine)
-    connection = db_engine.connect()
-    statement = select([projects])
-    rows = connection.execute(statement).fetchall()
-    result = []
-    for row in rows:
-        result.append(dict(row))
-    connection.close()
-    return jsonify(result), 200
+    return select_all_from_table("project"), 200
 
 
 @de_tools.route("/<project>/publication_collection/list")
