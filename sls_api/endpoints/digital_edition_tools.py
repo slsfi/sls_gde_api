@@ -855,8 +855,76 @@ def get_publication(project, publication_id):
 def new_publication(project, collection_id):
     """
     Create a new publication object as part of the given publicationCollection
+
+    POST data MUST be in JSON format.
+
+    POST data SHOULD contain the following:
+    name: publication name
+
+    POST data MAY also contain the following:
+    publicationInformation_id: ID for related publicationInformation object
+    publicationComment_id: ID for related publicationComment object
+    datePublishedExternally: date of external publication for publication
+    published: publish status for publication
+    legacyId: legacy ID for publication
+    publishedBy: person responsible for publishing the publication
+    originalFilename: filepath to publication XML file
     """
-    pass
+    request_data = request.get_json()
+    if not request_data:
+        return jsonify({"msg": "No data provided."}), 400
+
+    project_id = get_project_id_from_name(project)
+
+    connection = db_engine.connect()
+    collections = Table("publicationCollection", metadata, autoload=True, autoload_with=db_engine)
+    publications = Table("publication", metadata, autoload=True, autoload_with=db_engine)
+
+    statement = select([collections.c.project_id]).where(collections.c.id == int(collection_id))
+    result = connection.execute(statement).fetchall()
+    if len(result) != 1:
+        return jsonify(
+            {
+                "msg": "publicationCollection not found."
+            }
+        ), 404
+
+    if result[0]["project_id"] != project_id:
+        return jsonify(
+            {
+                "msg": "publicationCollection {} does not belong to project {!r}".format(collection_id, project)
+            }
+        ), 400
+
+    insert = publications.insert()
+
+    publication = {
+        "name": request_data.get("name", None),
+        "publicationInformation_id": request_data.get("publicationInformation_id", None),
+        "publicationComment_id": request_data.get("publicationComment_id", None),
+        "datePublishedExternally": request_data.get("datePublishedExternally", None),
+        "published": request_data.get("published", None),
+        "legacyId": request_data.get("legacyId", None),
+        "publishedBy": request_data.get("publishedBy", None),
+        "originalFilename": request_data.get("originalFileName", None)
+    }
+    try:
+        result = connection.execute(insert, **publication)
+        new_row = select([publications]).where(publications.c.id == result.inserted_primary_key[0])
+        new_row = dict(connection.execute(new_row).fetchone())
+        result = {
+            "msg": "Created new publication with ID {}".format(result.inserted_primary_key[0]),
+            "row": new_row
+        }
+        return jsonify(result), 201
+    except Exception as e:
+        result = {
+            "msg": "Failed to create new publication",
+            "reason": str(e)
+        }
+        return jsonify(result), 500
+    finally:
+        connection.close()
 
 
 @de_tools.route("/<project>/publication/<publication_id>/link_file", methods=["POST"])
