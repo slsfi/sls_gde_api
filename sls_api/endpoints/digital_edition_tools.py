@@ -671,11 +671,83 @@ def list_fascimile_collections(project):
 
 @de_tools.route("/<project>/fascimile_collection/<collection_id>/link", methods=["POST"])
 @project_permission_required
-def link_fascimile_collection_to_publication(project):
+def link_fascimile_collection_to_publication(project, collection_id):
     """
     Link a publicationFascimileCollection to a publication through publicationFascimile table
+
+    POST data MUST be in JSON format.
+
+    POST data MUST contain the following:
+    publication_id: ID for the publication to link to
+
+    POST data MAY also contain the following:
+    publicationManuscript_id: ID for the specific publication manuscript to link to
+    publicationVersion_id: ID for the specific publication version to link to
     """
-    pass
+    request_data = request.get_json()
+    if not request_data:
+        return jsonify({"msg": "No data provided."}), 400
+    if "publication_id" not in request_data:
+        return jsonify({"msg": "No publication_id in POST data."}), 400
+
+    connection = db_engine.connect()
+    publication_id = int(request_data["publication_id"])
+    project_id = get_project_id_from_name(project)
+
+    publication_fascimiles = Table("publicationFascimile", metadata, autoload=True, autoload_with=db_engine)
+    publication_collections = Table("publicationCollection", metadata, autoload=True, autoload_with=db_engine)
+    publications = Table("publication", metadata, autoload=True, autoload_with=db_engine)
+
+    statement = select([publications.c.publicationCollection_id]).where(publications.c.id == publication_id)
+    result = connection.execute(statement).fetchall()
+    if len(result) != 1:
+        return jsonify(
+            {
+                "msg": "Could not find publication collection for publication, unable to verify that publication belongs to {!r}".format(project)
+            }
+        ), 404
+    publication_collection_id = int(result[0]["publicationCollection_id"])
+
+    statement = select([publication_collections.c.project_id]).where(publication_collections.c.id == publication_collection_id)
+    result = connection.execute(statement).fetchall()
+    if len(result) != 1:
+        return jsonify(
+            {
+                "msg": "Could not find publication collection for publication, unable to verify that publication belongs to {!r}".format(project)
+            }
+        ), 404
+
+    if result[0]["project_id"] != project_id:
+        return jsonify(
+            {
+                "msg": "Publication {} appears to not belong to project {!r}".format(publication_id, project)
+            }
+        ), 400
+
+    insert = publication_fascimiles.insert()
+    new_fascimile = {
+        "publicationFascimileCollection_id": collection_id,
+        "publication_id": publication_id,
+        "publicationManuscript_id": request_data.get("publicationManuscript_id", None),
+        "publicationVersion_id": request_data.get("publicationVersion_id", None)
+    }
+    try:
+        result = connection.execute(insert, **new_fascimile)
+        new_row = select([publication_fascimiles]).where(publication_fascimiles.c.id == result.inserted_primary_key[0])
+        new_row = dict(connection.execute(new_row).fetchone())
+        result = {
+            "msg": "Created new publicationFascimile with ID {}".format(result.inserted_primary_key[0]),
+            "row": new_row
+        }
+        return jsonify(result), 201
+    except Exception as e:
+        result = {
+            "msg": "Failed to create new publicationFascimile",
+            "reason": str(e)
+        }
+        return jsonify(result), 500
+    finally:
+        connection.close()
 
 
 @de_tools.route("/<project>/fascimile_collection/<collection_id>/list_links")
