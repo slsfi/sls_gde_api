@@ -52,6 +52,17 @@ def get_project_id_from_name(project):
     return int(project_id["id"])
 
 
+def select_all_from_table(table_name):
+    table = Table(table_name, metadata, autoload=True, autoload_with=db_engine)
+    connection = db_engine.connect()
+    rows = connection.execute(select([table])).fetchall()
+    result = []
+    for row in rows:
+        result.append(dict(row))
+    connection.close()
+    return jsonify(result)
+
+
 @de_tools.route("/<project>/locations/new", methods=["POST"])
 @project_permission_required
 def add_new_location(project):
@@ -214,17 +225,6 @@ def add_new_tag(project):
         return jsonify(result), 500
     finally:
         connection.close()
-
-
-def select_all_from_table(table_name):
-    table = Table(table_name, metadata, autoload=True, autoload_with=db_engine)
-    connection = db_engine.connect()
-    rows = connection.execute(select([table])).fetchall()
-    result = []
-    for row in rows:
-        result.append(dict(row))
-    connection.close()
-    return jsonify(result)
 
 
 @de_tools.route("/locations/")
@@ -626,7 +626,7 @@ def list_fascimile_collections(project):
     pass
 
 
-@de_tools.route("/<project>/fascimile_collection/link")
+@de_tools.route("/<project>/fascimile_collection/<collection_id>/link", methods=["POST"])
 @project_permission_required
 def link_fascimile_collection_to_publication(project):
     """
@@ -635,7 +635,7 @@ def link_fascimile_collection_to_publication(project):
     pass
 
 
-@de_tools.route("/<project>/fascimile_collection/list_links")
+@de_tools.route("/<project>/fascimile_collection/<collection_id>/list_links")
 @project_permission_required
 def list_fascimile_collection_links(project):
     """
@@ -671,7 +671,7 @@ def new_publication_collection(project):
     pass
 
 
-@de_tools.route("/<project>/publication/<collection_id>/")
+@de_tools.route("/<project>/publication_collection/<collection_id>/publications")
 @project_permission_required
 def list_publications(project, collection_id):
     """
@@ -680,16 +680,16 @@ def list_publications(project, collection_id):
     pass
 
 
-@de_tools.route("/<project>/publication/<collection_id>/<publication_id>")
+@de_tools.route("/<project>/publication/<publication_id>")
 @project_permission_required
-def get_publication(project, collection_id, publication_id):
+def get_publication(project, publication_id):
     """
     Get a publication object from the database
     """
     pass
 
 
-@de_tools.route("/<project>/publication/<collection_id>/new", methods=["POST"])
+@de_tools.route("/<project>/publication_collection/<collection_id>/publications/new", methods=["POST"])
 @project_permission_required
 def new_publication(project, collection_id):
     """
@@ -698,9 +698,9 @@ def new_publication(project, collection_id):
     pass
 
 
-@de_tools.route("/<project>/publication/<collection_id>/<publication_id>/link_file", methods=["POST"])
+@de_tools.route("/<project>/publication/<publication_id>/link_file", methods=["POST"])
 @project_permission_required
-def link_file_to_publication(project, collection_id, publication_id):
+def link_file_to_publication(project, publication_id):
     """
     Link an XML file to a publication,
     creating the appropriate publicationComment, publicationManuscript, or publicationVersion object.
