@@ -1,23 +1,28 @@
 # For more information on database engine configurations, see http://docs.sqlalchemy.org/en/latest/core/engines.html
 
+engine: 'mysql://web_user:SecretPassword@mysql_server.example.com:3306'
+# This engine config tells the system to connect to a MySQL server at mysql_server.example.com on port 3306
+# It uses the username 'web_user' with the password 'SecretPassword'
+
 parland:
-    # This engine connects to a MySQL server at mysql_server.com, on port 3306
-    # It uses username 'web_user' with the password 'SecretPassword' and connects to a database named 'parland'
-    engine: 'mysql://web_user:SecretPassword@mysql_server.example.com:3306/parland'
-    show_internally_published: True
-    show_unpublished: True
-    disabled_publications: []
-    file_root: '/var/parland-files'
+    git_repository: 'publisher@parland:slsfi/parland.git'
+    git_config: |
+        host parland
+          HostName github.com
+          IdentityFile ~/.ssh/github-id-rsa
+          User publisher
+    git_branch: 'staging'
+    file_root: '/var/www/parland'
+
 topelius:
-    # This engine connects to a PostgreSQL server at postgres_server.example.com, on post 5432
-    # It uses username 'web_user' with the password 'SecretPassword' and connects to a database named 'topelius'
-    engine: 'postgresql://web_user:SecretPassword@postgres_server.example.com:5432/topelius'
-    show_internally_published: True
-    show_unpublished: True
-    disabled_publications: [10,12,13,14,9,20,28]
-    file_root: '/var/topelius-files'
-semantic_data:
-    engine: 'mysql://web_user:SecretPassword@mysql_server.example.com:3306/semantic_data'
-xslt_root: '/var/xslt-files'
+    git_repository: 'publisher@topelius:slsfi/topelius.git'
+    git_config: |
+        host topelius
+          HostName bitbucket.org
+          IdentityFile ~/.ssh/bitbucket-id-rsa
+          User publisher
+    git_branch: 'master'
+    file_root: '/var/www/topelius'
+
 log_file: '/log/digital_editions/api.log'
 cache_lifetime_seconds: 7200  # 2 hours

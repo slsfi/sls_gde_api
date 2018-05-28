@@ -1,4 +1,4 @@
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, jsonify, request, safe_join
 from flask_jwt_extended import get_jwt_identity, jwt_required, verify_jwt_in_request
 from functools import wraps
 import io
@@ -8,6 +8,7 @@ from ruamel.yaml import YAML
 from sqlalchemy import create_engine, MetaData, Table
 from sqlalchemy.sql import select
 import subprocess
+from werkzeug.utils import secure_filename
 
 de_tools = Blueprint("digital_edition_tools", __name__)
 
@@ -582,13 +583,84 @@ def get_publication_comments(project, publication_id):
     return jsonify(result)
 
 
-@de_tools.route("/<project>/update_xml/by_path/<path:file_path>", methods=["POST", "UPDATE"])
+def check_project_git_config(project):
+    """
+    Check the config file for project git repository configuration.
+    Returns True if config okay, otherwise False and a message
+    """
+    if project not in config:
+        return False, "Project config not found."
+    if "git_repository" not in config[project]:
+        return False, "git_repository not in project config."
+    if "git_config" not in config[project]:
+        return False, "git_config (SSH config) not in project config."
+    if "git_branch" not in config[project]:
+        return False, "git_branch information not in project config-"
+    if "file_root" not in config[project]:
+        return False, "file_root information not in project config."
+    return True, "Project config OK."
+
+
+def file_exists_in_git_root(project, file_path):
+    """
+    Check if the given file exists in the git repository for the given project
+    Returns True if the file exists, otherwise False.
+    """
+    return os.path.exists(safe_join(config[project]["file_root"], file_path))
+
+
+@de_tools.route("/<project>/update_file/by_path/<path:file_path>", methods=["PUT"])
 @project_permission_required
 def update_file_in_remote(project, file_path):
     """
-    Add new XML or update existing XML in git remote
+    Add new or update existing file in git remote.
+
+    PUT data MUST be in JSON format
+
+    PUT data MUST contain the following:
+    xml_file: xml file to be created or updated in git repository
+
+    PUT data MAY contain the following override information:
+    author: email of the person authoring this change, if not given, JWT identity is used instead
+    message: commit message for this change, if not given, generic "File update by <author>" message is used instead
+    force: boolean value, if True uses force-push to override errors and possibly mangle the git remote to get the update through
     """
-    pass
+    # Check if request has valid JSON and set author/message/force accordingly
+    request_data = request.get_json()
+    if not request_data:
+        return jsonify({"msg": "No JSON data in PUT request."}), 400
+    elif "xml_file" not in request.files:
+        return jsonify({"msg": "No xml_file in PUT request."}), 400
+    else:
+        author = request_data.get("author", get_jwt_identity()["sub"])
+        message = request_data.get("message", "File update by {}".format(author))
+        force = bool(request_data.get("force", False))
+
+        xml_file = request.files["xml_file"]
+
+    # verify git config
+    config_okay = check_project_git_config(project)
+    if not config_okay[0]:
+        return jsonify({"msg": config_okay[1]}), 500
+
+    # TODO git remote update && git pull
+    # TODO git whatchanged, if file being updated in list of changed files, error out unless force is True
+
+    # check the status of the git repo
+    file_exists = file_exists_in_git_root(project, file_path)
+
+    # Secure filename and save file to local repo
+    filename = secure_filename(xml_file.filename)
+    if xml_file and filename:
+        xml_file.save(os.path.join(config[project]["file_root"], filename))
+
+    # Add/commit file to local repo and push to remote
+    if not file_exists:
+        # TODO git add
+        pass
+
+    # TODO git commit
+    # TODO git push
 
 
 @de_tools.route("/<project>/get_latest_file/by_path/<path:file_path>")
