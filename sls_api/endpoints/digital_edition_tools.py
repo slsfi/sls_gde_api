@@ -1,8 +1,9 @@
-from flask import Blueprint, jsonify, request, safe_join
+from flask import abort, Blueprint, jsonify, request, Response, safe_join
 from flask_jwt_extended import get_jwt_identity, jwt_required, verify_jwt_in_request
 from functools import wraps
 import io
 import logging
+import mimetypes
 import os
 from ruamel.yaml import YAML
 from sqlalchemy import create_engine, MetaData, Table
@@ -669,7 +670,26 @@ def get_file_from_remote(project, file_path):
     """
     Get latest XML file from git remote
     """
-    pass
+    config_okay = check_project_git_config(project)
+    if not config_okay[0]:
+        return jsonify({"msg": config_okay[1]}), 500
+
+    # TODO git fetch && git checkout origin/<branch> -- file_path
+    # This will download latest changes for this branch, but only update the file we're interested in in the local repo
+    # This way, we don't have to wait for other file updates if there are lots of changes in the repo
+
+    if file_exists_in_git_root(project, file_path):
+        with io.open(safe_join(config[project]["file_root"], file_path), "rb") as file:
+            output = io.BytesIO()
+            output.write(file.read())
+            content = output.getvalue()
+            output.close()
+            mimetype = mimetypes.guess_type(safe_join(config[project]["file_root"], file_path))[0]
+            if mimetype is None:
+                mimetype = "application/octet-stream"  # if unable to guess filetype, mark as arbitrary binary data and let user sort it out
+            return Response(content, 200, mimetype=mimetype, content_type=mimetype)
+    else:
+        abort(404)
 
 
 @de_tools.route("/<project>/get_tree/")
