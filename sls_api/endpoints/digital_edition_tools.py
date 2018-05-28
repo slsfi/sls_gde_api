@@ -1,4 +1,4 @@
-from flask import abort, Blueprint, jsonify, request, Response, safe_join
+from flask import Blueprint, jsonify, request, Response, safe_join
 from flask_jwt_extended import get_jwt_identity, jwt_required, verify_jwt_in_request
 from functools import wraps
 import io
@@ -674,7 +674,22 @@ def get_file_from_remote(project, file_path):
     if not config_okay[0]:
         return jsonify({"msg": config_okay[1]}), 500
 
-    # TODO git fetch && git checkout origin/<branch> -- file_path
+    # git fetch && git checkout origin/<branch> -- file_path
+    try:
+        subprocess.check_output(["git", "fetch"])
+    except subprocess.CalledProcessError as e:
+        return jsonify({
+            "msg": "Git fetch failed to execute properly.",
+            "reason": str(e.output)
+        }), 500
+    try:
+        subprocess.check_output(["git", "checkout", "origin/{}".format(config[project]["git_branch"]), "--", file_path])
+    except subprocess.CalledProcessError as e:
+        return jsonify({
+            "msg": "Git checkout failed to execute properly.",
+            "reason": str(e.output)
+        }), 500
+
     # This will download latest changes for this branch, but only update the file we're interested in in the local repo
     # This way, we don't have to wait for other file updates if there are lots of changes in the repo
 
@@ -689,7 +704,7 @@ def get_file_from_remote(project, file_path):
                 mimetype = "application/octet-stream"  # if unable to guess filetype, mark as arbitrary binary data and let user sort it out
             return Response(content, 200, mimetype=mimetype, content_type=mimetype)
     else:
-        abort(404)
+        return jsonify({"msg": "The requested file was not found in the git repository."}), 404
 
 
 @de_tools.route("/<project>/get_tree/")
