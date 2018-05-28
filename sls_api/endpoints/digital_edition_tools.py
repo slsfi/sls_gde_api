@@ -610,6 +610,17 @@ def file_exists_in_git_root(project, file_path):
     return os.path.exists(safe_join(config[project]["file_root"], file_path))
 
 
+def run_git_command(project, command):
+    """
+    Helper method to run arbitrary git commands as if in the project's file_root folder
+    @type project: str
+    @type command: list
+    """
+    git_root = config[project]["file_root"]
+    git_command = ["git", "-C", git_root, [c for c in command]]
+    return subprocess.check_output(["git", "-C", git_root, git_command])
+
+
 @de_tools.route("/<project>/sync_files_from_remote", methods=["POST"])
 @project_permission_required
 def pull_repository_changes_from_remote(project):
@@ -622,7 +633,7 @@ def pull_repository_changes_from_remote(project):
         return jsonify({"msg": config_okay[1]}), 500
 
     try:
-        subprocess.check_output(["git", "fetch"])
+        run_git_command(project, ["fetch"])
     except subprocess.CalledProcessError as e:
         return jsonify({
             "msg": "Git fetch failed to execute properly.",
@@ -630,7 +641,7 @@ def pull_repository_changes_from_remote(project):
         }), 500
 
     try:
-        output = subprocess.check_output(['git', 'show', '--pretty=format:', '--name-only', '..origin/{}'.format(config[project]["git_branch"])])
+        output = run_git_command(project, ["show", "--pretty=format:", "--name-only", "..origin/{}".format(config[project]["git_branch"])])
         new_and_changed_files = [s.strip().decode('utf-8', 'ignore') for s in output.splitlines()]
     except subprocess.CalledProcessError as e:
         return jsonify({
@@ -639,7 +650,7 @@ def pull_repository_changes_from_remote(project):
         }), 500
     # merge in latest changes so that repository is updated
     try:
-        subprocess.check_output(["git", "merge", "origin/{}".format(config[project]["git_branch"])])
+        run_git_command(project, ["merge", "origin/{}".format(config[project]["git_branch"])])
     except subprocess.CalledProcessError as e:
         return jsonify({
             "msg": "Git merge failed to execute properly.",
@@ -687,7 +698,7 @@ def update_file_in_remote(project, file_path):
 
     # fetch latest changes from remote
     try:
-        subprocess.check_output(["git", "fetch"])
+        run_git_command(project, ["fetch"])
     except subprocess.CalledProcessError as e:
         return jsonify({
             "msg": "Git fetch failed to execute properly.",
@@ -697,7 +708,7 @@ def update_file_in_remote(project, file_path):
     # check if desired file has changed in remote since last update
     # if so, fail and return both user file and repo file to user, unless force=True
     try:
-        output = subprocess.check_output(['git', 'show', '--pretty=format:', '--name-only', '..origin/{}'.format(config[project]["git_branch"])])
+        output = run_git_command(project, ["show", "--pretty=format:", "--name-only", "..origin/{}".format(config[project]["git_branch"])])
         new_and_changed_files = [s.strip().decode('utf-8', 'ignore') for s in output.splitlines()]
     except subprocess.CalledProcessError as e:
         return jsonify({
@@ -714,7 +725,7 @@ def update_file_in_remote(project, file_path):
 
     # merge in latest changes so that the local repository is updated
     try:
-        subprocess.check_output(["git", "merge", "origin/{}".format(config[project]["git_branch"])])
+        run_git_command(project, ["merge",  "origin/{}".format(config[project]["git_branch"])])
     except subprocess.CalledProcessError as e:
         return jsonify({
             "msg": "Git merge failed to execute properly.",
@@ -750,14 +761,14 @@ def get_file_from_remote(project, file_path):
 
     # git fetch && git checkout origin/<branch> -- file_path
     try:
-        subprocess.check_output(["git", "fetch"])
+        run_git_command(project, ["fetch"])
     except subprocess.CalledProcessError as e:
         return jsonify({
             "msg": "Git fetch failed to execute properly.",
             "reason": str(e.output)
         }), 500
     try:
-        subprocess.check_output(["git", "checkout", "origin/{}".format(config[project]["git_branch"]), "--", file_path])
+        run_git_command(project, ["checkout", "origin/{}".format(config[project]["git_branch"]), "--", file_path])
     except subprocess.CalledProcessError as e:
         return jsonify({
             "msg": "Git checkout failed to execute properly.",
