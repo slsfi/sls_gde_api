@@ -610,6 +610,47 @@ def file_exists_in_git_root(project, file_path):
     return os.path.exists(safe_join(config[project]["file_root"], file_path))
 
 
+@de_tools.route("/<project>/sync_files_from_remote", methods=["POST"])
+@project_permission_required
+def pull_repository_changes_from_remote(project):
+    """
+    Sync API's local repo with the git remote, ensuring that all files are updated to their latest versions
+    """
+    # verify git config
+    config_okay = check_project_git_config(project)
+    if not config_okay[0]:
+        return jsonify({"msg": config_okay[1]}), 500
+
+    try:
+        subprocess.check_output(["git", "fetch"])
+    except subprocess.CalledProcessError as e:
+        return jsonify({
+            "msg": "Git fetch failed to execute properly.",
+            "reason": str(e.output)
+        }), 500
+
+    try:
+        output = subprocess.check_output(['git', 'show', '--pretty=format:', '--name-only', '..origin/{}'.format(config[project]["git_branch"])])
+        new_and_changed_files = [s.strip().decode('utf-8', 'ignore') for s in output.splitlines()]
+    except subprocess.CalledProcessError as e:
+        return jsonify({
+            "msg": "Git show failed to execute properly.",
+            "reason": str(e.output)
+        }), 500
+    # merge in latest changes so that repository is updated
+    try:
+        subprocess.check_output(["git", "merge", "origin/{}".format(config[project]["git_branch"])])
+    except subprocess.CalledProcessError as e:
+        return jsonify({
+            "msg": "Git merge failed to execute properly.",
+            "reason": str(e.output)
+        }), 500
+    return jsonify({
+        "msg": "Git repository successfully synced for project {}".format(project),
+        "changed_files": new_and_changed_files
+    })
+
+
 @de_tools.route("/<project>/update_file/by_path/<path:file_path>", methods=["PUT"])
 @project_permission_required
 def update_file_in_remote(project, file_path):
@@ -644,13 +685,46 @@ def update_file_in_remote(project, file_path):
     if not config_okay[0]:
         return jsonify({"msg": config_okay[1]}), 500
 
-    # TODO git remote update && git pull
-    # TODO git whatchanged, if file being updated in list of changed files, error out unless force is True
+    # fetch latest changes from remote
+    try:
+        subprocess.check_output(["git", "fetch"])
+    except subprocess.CalledProcessError as e:
+        return jsonify({
+            "msg": "Git fetch failed to execute properly.",
+            "reason": str(e.output)
+        }), 500
 
-    # check the status of the git repo
+    # check if desired file has changed in remote since last update
+    # if so, fail and return both user file and repo file to user, unless force=True
+    try:
+        output = subprocess.check_output(['git', 'show', '--pretty=format:', '--name-only', '..origin/{}'.format(config[project]["git_branch"])])
+        new_and_changed_files = [s.strip().decode('utf-8', 'ignore') for s in output.splitlines()]
+    except subprocess.CalledProcessError as e:
+        return jsonify({
+            "msg": "Git show failed to execute properly.",
+            "reason": str(e.output)
+        }), 500
+    if safe_join(config[project]["file_root"], file_path) in new_and_changed_files and not force:
+        with io.open(safe_join(config[project]["file_root"], file_path), encoding="UTF-8", mode="rb") as repo_file:
+            return jsonify({
+                "msg": "File {} has been changed in git repository since last update, please manually check file changes.",
+                "your_file": xml_file,
+                "repo_file": repo_file.read()
+            }), 400
+
+    # merge in latest changes so that the local repository is updated
+    try:
+        subprocess.check_output(["git", "merge", "origin/{}".format(config[project]["git_branch"])])
+    except subprocess.CalledProcessError as e:
+        return jsonify({
+            "msg": "Git merge failed to execute properly.",
+            "reason": str(e.output)
+        }), 500
+
+    # check the status of the git repo, so we know if we need to git add later
     file_exists = file_exists_in_git_root(project, file_path)
 
-    # Secure filename and save file to local repo
+    # Secure filename and save new file to local repo
     filename = secure_filename(xml_file.filename)
     if xml_file and filename:
         xml_file.save(os.path.join(config[project]["file_root"], filename))
