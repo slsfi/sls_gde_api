@@ -621,6 +621,40 @@ def run_git_command(project, command):
     return subprocess.check_output(["git", "-C", git_root, git_command])
 
 
+def git_update_files_in_repo(project, specific_file=False):
+    """
+    Helper method to sync local repositories with remote to get latest changes
+    """
+    git_branch = config[project]["git_branch"]
+
+    # First, fetch latest changes from remote, but don't update local
+    try:
+        run_git_command(project, ["fetch"])
+    except subprocess.CalledProcessError as e:
+        return False, str(e.output)
+
+    if not specific_file:
+        # If we're updating all files, get the list of changed files and then merge in remote changes to local repo
+        try:
+            output = run_git_command(project, ["show", "--pretty=format:", "--name-only", "..origin/{}".format(git_branch)])
+            new_and_changed_files = [s.strip().decode('utf-8', 'ignore') for s in output.splitlines()]
+        except subprocess.CalledProcessError as e:
+            return False, str(e.output)
+        try:
+            run_git_command(project, ["merge", "origin/{}".format(git_branch)])
+        except subprocess.CalledProcessError as e:
+            return False, str(e.output)
+        return True, new_and_changed_files
+    else:
+        # If we're only updating one file, checkout that specific file, ignoring the others
+        # This makes things go faster if we're not concerned with the changes in other files at the moment
+        try:
+            run_git_command(project, ["checkout", "origin/{}".format(git_branch), "--", specific_file])
+        except subprocess.CalledProcessError as e:
+            return False, str(e.output)
+        return True, specific_file
+
+
 @de_tools.route("/<project>/sync_files_from_remote", methods=["POST"])
 @project_permission_required
 def pull_repository_changes_from_remote(project):
@@ -632,34 +666,18 @@ def pull_repository_changes_from_remote(project):
     if not config_okay[0]:
         return jsonify({"msg": config_okay[1]}), 500
 
-    try:
-        run_git_command(project, ["fetch"])
-    except subprocess.CalledProcessError as e:
-        return jsonify({
-            "msg": "Git fetch failed to execute properly.",
-            "reason": str(e.output)
-        }), 500
+    sync_repo = git_update_files_in_repo(project)
 
-    try:
-        output = run_git_command(project, ["show", "--pretty=format:", "--name-only", "..origin/{}".format(config[project]["git_branch"])])
-        new_and_changed_files = [s.strip().decode('utf-8', 'ignore') for s in output.splitlines()]
-    except subprocess.CalledProcessError as e:
+    if sync_repo[0]:
         return jsonify({
-            "msg": "Git show failed to execute properly.",
-            "reason": str(e.output)
-        }), 500
-    # merge in latest changes so that repository is updated
-    try:
-        run_git_command(project, ["merge", "origin/{}".format(config[project]["git_branch"])])
-    except subprocess.CalledProcessError as e:
+            "msg": "Git repository successfully synced for project {}".format(project),
+            "changed_files": sync_repo[1]
+        })
+    else:
         return jsonify({
-            "msg": "Git merge failed to execute properly.",
-            "reason": str(e.output)
+            "msg": "Git update failed to execute properly.",
+            "reason": sync_repo[1]
         }), 500
-    return jsonify({
-        "msg": "Git repository successfully synced for project {}".format(project),
-        "changed_files": new_and_changed_files
-    })
 
 
 @de_tools.route("/<project>/update_file/by_path/<path:file_path>", methods=["PUT"])
@@ -742,8 +760,13 @@ def update_file_in_remote(project, file_path):
 
     # Add/commit file to local repo and push to remote
     if not file_exists:
-        # TODO git add
-        pass
+        try:
+            run_git_command(project, ["add", filename])
+        except subprocess.CalledProcessError as e:
+            return jsonify({
+                "msg": "Git add failed to execute properly.",
+                "reason": str(e.output)
+            }), 500
 
     # TODO git commit
     # TODO git push
@@ -759,24 +782,13 @@ def get_file_from_remote(project, file_path):
     if not config_okay[0]:
         return jsonify({"msg": config_okay[1]}), 500
 
-    # git fetch && git checkout origin/<branch> -- file_path
-    try:
-        run_git_command(project, ["fetch"])
-    except subprocess.CalledProcessError as e:
+    # Sync the desired file from remote repository to local API repository
+    update_repo = git_update_files_in_repo(project, file_path)
+    if not update_repo[0]:
         return jsonify({
-            "msg": "Git fetch failed to execute properly.",
-            "reason": str(e.output)
+            "msg": "Git update failed to execute properly.",
+            "reason": update_repo[1]
         }), 500
-    try:
-        run_git_command(project, ["checkout", "origin/{}".format(config[project]["git_branch"]), "--", file_path])
-    except subprocess.CalledProcessError as e:
-        return jsonify({
-            "msg": "Git checkout failed to execute properly.",
-            "reason": str(e.output)
-        }), 500
-
-    # This will download latest changes for this branch, but only update the file we're interested in in the local repo
-    # This way, we don't have to wait for other file updates if there are lots of changes in the repo
 
     if file_exists_in_git_root(project, file_path):
         with io.open(safe_join(config[project]["file_root"], file_path), "rb") as file:
@@ -799,7 +811,46 @@ def get_file_tree_from_remote(project, file_path=None):
     """
     Get a file listing from the git remote
     """
-    pass
+    # Fetch changes (to update index) but don't merge, and then run ls-files to get file listing.
+    try:
+        run_git_command(project, ["fetch"])
+        if file_path is None:
+            output = run_git_command(project, ["ls-files"])
+        else:
+            output = run_git_command(project, ["ls-files", file_path])
+        file_listing = [s.strip().decode('utf-8', 'ignore') for s in output.splitlines()]
+    except subprocess.CalledProcessError as e:
+        return jsonify({
+            "msg": "Git file listing failed.",
+            "reason": str(e.output)
+        }), 500
+
+    return jsonify(path_list_to_tree(file_listing))
+
+
+def path_list_to_tree(path_list):
+    """
+    Turn a list of filepaths into a nested dict
+    """
+    file_tree = {}
+    for path in path_list:
+        _recurse(path, file_tree)
+    return file_tree
+
+
+def _recurse(path, container):
+    """
+    Recurse over path and container to make a nested dict of path in container
+    """
+    parts = path.split("/")
+    head = parts[0]
+    tail = parts[1:]
+    if not tail:
+        container[head] = None
+    else:
+        if head not in container:
+            container[head] = {}
+        _recurse("/".join(tail), container[head])
 
 
 @de_tools.route("/<project>/fascimile_collection/new", methods=["POST"])
