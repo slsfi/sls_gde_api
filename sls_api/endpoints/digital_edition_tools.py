@@ -703,7 +703,9 @@ def update_file_in_remote(project, file_path):
     elif "xml_file" not in request.files:
         return jsonify({"msg": "No xml_file in PUT request."}), 400
     else:
-        author = request_data.get("author", get_jwt_identity()["sub"])
+        # git commit requires author info to be in the format "Name <email>"
+        # As we only have an email address to work with, give as "email <email>"
+        author = "{txt} <{txt}>".format(txt=request_data.get("author", get_jwt_identity()["sub"]))
         message = request_data.get("message", "File update by {}".format(author))
         force = bool(request_data.get("force", False))
 
@@ -758,7 +760,7 @@ def update_file_in_remote(project, file_path):
     if xml_file and filename:
         xml_file.save(os.path.join(config[project]["file_root"], filename))
 
-    # Add/commit file to local repo and push to remote
+    # Add file to local repo if it wasn't already in the repository
     if not file_exists:
         try:
             run_git_command(project, ["add", filename])
@@ -768,8 +770,27 @@ def update_file_in_remote(project, file_path):
                 "reason": str(e.output)
             }), 500
 
-    # TODO git commit
-    # TODO git push
+    # Commit changes to local repo, noting down user and commit message
+    try:
+        run_git_command(project, ["commit", "--author={}".format(author), "-m", message])
+    except subprocess.CalledProcessError as e:
+        return jsonify({
+            "msg": "Git commit failed to execute properly.",
+            "reason": str(e.output)
+        }), 500
+
+    # push new commit to remote repository
+    try:
+        run_git_command(project, ["push"])
+    except subprocess.CalledProcessError as e:
+        return jsonify({
+            "msg": "Git push failed to execute properly.",
+            "reason": str(e.output)
+        }), 500
+
+    return jsonify({
+        "msg": "File updated successfully in repository."
+    })
 
 
 @de_tools.route("/<project>/get_latest_file/by_path/<path:file_path>")
