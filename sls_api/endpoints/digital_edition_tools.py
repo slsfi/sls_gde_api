@@ -704,8 +704,13 @@ def update_file_in_remote(project, file_path):
         return jsonify({"msg": "No xml_file in PUT request."}), 400
     else:
         # git commit requires author info to be in the format "Name <email>"
-        # As we only have an email address to work with, give as "email <email>"
-        author = "{txt} <{txt}>".format(txt=request_data.get("author", get_jwt_identity()["sub"]))
+        # As we only have an email address to work with, split email on @ and give first part as name
+        # - foo@bar.org becomes "foo <foo@bar.org>"
+        author_email = request_data.get("author", get_jwt_identity()["sub"])
+        author = "{} <{}>".format(
+            author_email.split("@")[0],
+            author_email
+        )
         message = request_data.get("message", "File update by {}".format(author))
         force = bool(request_data.get("force", False))
 
