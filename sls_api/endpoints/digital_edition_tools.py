@@ -786,7 +786,10 @@ def update_file_in_remote(project, file_path):
 
     # push new commit to remote repository
     try:
-        run_git_command(project, ["push"])
+        if force:
+            run_git_command(project, ["push", "-f"])
+        else:
+            run_git_command(project, ["push"])
     except subprocess.CalledProcessError as e:
         return jsonify({
             "msg": "Git push failed to execute properly.",
