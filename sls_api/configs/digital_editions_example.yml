@@ -10,6 +10,7 @@ parland:
         host parland
           HostName github.com
           IdentityFile ~/.ssh/github-id-rsa
+          IdentitiesOnly yes
           User publisher
     git_branch: 'staging'
     file_root: '/var/www/parland'
@@ -20,6 +21,7 @@ topelius:
         host topelius
           HostName bitbucket.org
           IdentityFile ~/.ssh/bitbucket-id-rsa
+          IdentitiesOnly yes
           User publisher
     git_branch: 'master'
     file_root: '/var/www/topelius'
