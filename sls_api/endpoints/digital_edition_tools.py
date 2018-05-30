@@ -855,8 +855,13 @@ def get_file_tree_from_remote(project, file_path=None):
             "msg": "Git file listing failed.",
             "reason": str(e.output)
         }), 500
-
-    return jsonify(path_list_to_tree(file_listing))
+    if file_path is not None:
+        tree = path_list_to_tree(file_listing)
+        if file_path in tree:
+            tree = tree[file_path]
+    else:
+        tree = path_list_to_tree(file_listing)
+    return jsonify(tree)
 
 
 def path_list_to_tree(path_list):
