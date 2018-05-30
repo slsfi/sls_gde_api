@@ -17,9 +17,6 @@ metadata = MetaData()
 
 logger = logging.getLogger("sls_api.de_tools")
 
-# TODO new config for GDE_tools, since they're working with new database structures
-# TODO git configuration?
-# TODO branches?
 config_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "configs")
 with io.open(os.path.join(config_dir, "digital_editions.yml"), encoding="UTF-8") as config:
     yaml = YAML()
@@ -696,25 +693,29 @@ def update_file_in_remote(project, file_path):
     message: commit message for this change, if not given, generic "File update by <author>" message is used instead
     force: boolean value, if True uses force-push to override errors and possibly mangle the git remote to get the update through
     """
+    # First, check for XML file, and error out if none given
+    if "xml_file" not in request.files:
+        return jsonify({"msg": "No xml_file in PUT request."}), 400
+
     # Check if request has valid JSON and set author/message/force accordingly
     request_data = request.get_json()
     if not request_data:
-        return jsonify({"msg": "No JSON data in PUT request."}), 400
-    elif "xml_file" not in request.files:
-        return jsonify({"msg": "No xml_file in PUT request."}), 400
+        author_email = get_jwt_identity()["sub"]
+        message = "File update by {}".format(author_email)
+        force = False
     else:
-        # git commit requires author info to be in the format "Name <email>"
-        # As we only have an email address to work with, split email on @ and give first part as name
-        # - foo@bar.org becomes "foo <foo@bar.org>"
         author_email = request_data.get("author", get_jwt_identity()["sub"])
-        author = "{} <{}>".format(
-            author_email.split("@")[0],
-            author_email
-        )
-        message = request_data.get("message", "File update by {}".format(author))
+        message = request_data.get("message", "File update by {}".format(author_email))
         force = bool(request_data.get("force", False))
 
-        xml_file = request.files["xml_file"]
+    # git commit requires author info to be in the format "Name <email>"
+    # As we only have an email address to work with, split email on @ and give first part as name
+    # - foo@bar.org becomes "foo <foo@bar.org>"
+    author = "{} <{}>".format(
+        author_email.split("@")[0],
+        author_email
+    )
+    xml_file = request.files["xml_file"]
 
     # verify git config
     config_okay = check_project_git_config(project)
@@ -807,6 +808,7 @@ def get_file_from_remote(project, file_path):
     """
     Get latest XML file from git remote
     """
+    # TODO swift and/or S3 support for large files (images/fascimiles)
     config_okay = check_project_git_config(project)
     if not config_okay[0]:
         return jsonify({"msg": config_okay[1]}), 500
@@ -1072,7 +1074,12 @@ def new_publication_collection(project):
     """
     Create a new publicationCollection object and associated Introduction and Title objects.
     """
-    pass
+    # TODO this fucking thing
+    request_data = request.get_json()
+    if not request_data:
+        return jsonify({"msg": "No data provided."}), 400
+
+    project_id = get_project_id_from_name(project)
 
 
 @de_tools.route("/<project>/publication_collection/<collection_id>/publications")
@@ -1199,6 +1206,84 @@ def new_publication(project, collection_id):
         connection.close()
 
 
+@de_tools.route("/<project>/publication/<publication_id>/information")
+@project_permission_required
+def get_information(project, publication_id):
+    """
+    List all publicationInformation objects in database for a given publication
+    """
+    connection = db_engine.connect()
+    informations = Table("publicationInformation", metadata, autoload=True, autoload_with=db_engine)
+    publications = Table("publication", metadata, autoload=True, autoload_with=db_engine)
+
+    statement = select([informations])\
+        .select_from(informations.join(publications, informations.c.id == publications.c.publicationInformation_id))\
+        .where(publications.c.id == int(publication_id))
+
+    rows = connection.execute(statement).fetchall()
+    result = []
+    for row in rows:
+        result.append(dict(row))
+    connection.close()
+    return jsonify(result)
+
+
+@de_tools.route("/<project>/publication/<publication_id>/information", methods=["POST"])
+@project_permission_required
+def add_information(project, publication_id):
+    """
+    Add a new publicationInformation object
+
+    POST data MUST be in JSON format
+
+    POST data SHOULD contain the following:
+    title: title information for the given publication
+    genre: genre information for the given publication
+    originalPublicationDate: original publication date for the given publication
+    """
+    request_data = request.get_json()
+    if not request_data:
+        return jsonify({"msg": "No data provided."}), 400
+
+    connection = db_engine.connect()
+    information = Table("publicationInformation", metadata, autoload=True, autoload_with=db_engine)
+    publications = Table("publication", metadata, autoload=True, autoload_with=db_engine)
+
+    new_info = {
+        "title": request_data.get("title", None),
+        "genre": request_data.get("genre", None),
+        "originalPublicationDate": request_data.get("originalPublicationDate", None)
+    }
+
+    insert = information.insert()
+    transaction = connection.begin()
+    try:
+        result = connection.execute(insert, **new_info)
+        new_row = select([information]).where(information.c.id == result.inserted_primary_key[0])
+        new_row = dict(connection.execute(new_row).fetchone())
+
+        # update publication object in database with new publicationInformation ID
+        update_stmt = publications.update().where(publications.c.id == int(publication_id)).\
+            values(publications.c.publicationInformation_id == result.inserted_primary_key[0])
+        connection.execute(update_stmt)
+
+        result = {
+            "msg": "Created new publication with ID {}".format(result.inserted_primary_key[0]),
+            "row": new_row
+        }
+        transaction.commit()
+        return jsonify(result), 201
+    except Exception as e:
+        transaction.rollback()
+        result = {
+            "msg": "Failed to create new publicationInformation object",
+            "reason": str(e)
+        }
+        return jsonify(result), 500
+    finally:
+        connection.close()
+
+
 @de_tools.route("/<project>/publication/<publication_id>/link_file", methods=["POST"])
 @project_permission_required
 def link_file_to_publication(project, publication_id):
@@ -1209,6 +1294,23 @@ def link_file_to_publication(project, publication_id):
     POST data MUST be in JSON format
 
     POST data MUST contain the following:
+    file_type: one of [comment, manuscript, version] indicating which type of file the given file_path points to
     file_path: path to the file to be linked
+
+    POST data SHOULD also contain the following:
+    datePublishedExternally: date of external publication
+    published: 0 or 1, is this file published and ready for viewing
+    publishedBy: person responsible for publishing
+
+    POST data MAY also contain:
+    informationId: ID for related "information" object, used for manuscripts and versions - contains additional information
+    legacyId: legacy ID for this publication file object
     """
-    pass
+    # TODO ALSO THIS
+    request_data = request.get_json()
+    if not request_data:
+        return jsonify({"msg": "No data provided."}), 400
+    if "file_path" not in request_data or "file_type" not in request_data or request_data.get("file_type", None) not in ["comment", "manuscript", "version"]:
+        return jsonify({"msg": "POST data JSON doesn't contain required data."}), 400
+
+    project_id = get_project_id_from_name(project)
