@@ -1,3 +1,4 @@
+import base64
 from flask import Blueprint, jsonify, request, Response, safe_join
 from flask_jwt_extended import get_jwt_identity, jwt_required, verify_jwt_in_request
 from functools import wraps
@@ -686,27 +687,24 @@ def update_file_in_remote(project, file_path):
     PUT data MUST be in JSON format
 
     PUT data MUST contain the following:
-    xml_file: xml file to be created or updated in git repository
+    file: xml file data in base64, to be created or updated in git repository
 
     PUT data MAY contain the following override information:
     author: email of the person authoring this change, if not given, JWT identity is used instead
     message: commit message for this change, if not given, generic "File update by <author>" message is used instead
     force: boolean value, if True uses force-push to override errors and possibly mangle the git remote to get the update through
     """
-    # First, check for XML file, and error out if none given
-    if "xml_file" not in request.files:
-        return jsonify({"msg": "No xml_file in PUT request."}), 400
 
     # Check if request has valid JSON and set author/message/force accordingly
     request_data = request.get_json()
     if not request_data:
-        author_email = get_jwt_identity()["sub"]
-        message = "File update by {}".format(author_email)
-        force = False
-    else:
-        author_email = request_data.get("author", get_jwt_identity()["sub"])
-        message = request_data.get("message", "File update by {}".format(author_email))
-        force = bool(request_data.get("force", False))
+        return jsonify({"msg": "No JSON in PUT request."}), 400
+    elif "file" not in request_data:
+        return jsonify({"msg": "No file in JSON data."}), 400
+
+    author_email = request_data.get("author", get_jwt_identity()["sub"])
+    message = request_data.get("message", "File update by {}".format(author_email))
+    force = bool(request_data.get("force", False))
 
     # git commit requires author info to be in the format "Name <email>"
     # As we only have an email address to work with, split email on @ and give first part as name
@@ -715,7 +713,7 @@ def update_file_in_remote(project, file_path):
         author_email.split("@")[0],
         author_email
     )
-    xml_file = request.files["xml_file"]
+    file = io.BytesIO(base64.b64decode(request_data["file"]))
 
     # verify git config
     config_okay = check_project_git_config(project)
@@ -745,8 +743,8 @@ def update_file_in_remote(project, file_path):
         with io.open(safe_join(config[project]["file_root"], file_path), encoding="UTF-8", mode="rb") as repo_file:
             return jsonify({
                 "msg": "File {} has been changed in git repository since last update, please manually check file changes.",
-                "your_file": xml_file,
-                "repo_file": repo_file.read()
+                "your_file": request_data["file"],
+                "repo_file": base64.b64encode(repo_file.read())
             }), 400
 
     # merge in latest changes so that the local repository is updated
@@ -762,9 +760,10 @@ def update_file_in_remote(project, file_path):
     file_exists = file_exists_in_git_root(project, file_path)
 
     # Secure filename and save new file to local repo
-    filename = secure_filename(xml_file.filename)
-    if xml_file and filename:
-        xml_file.save(os.path.join(config[project]["file_root"], filename))
+    filename = secure_filename(file_path)
+    if file and filename:
+        with io.open(filename, mode="wb", encoding="utf-8") as new_file:
+            new_file.write(file.getvalue())
 
     # Add file to local repo if it wasn't already in the repository
     if not file_exists:
