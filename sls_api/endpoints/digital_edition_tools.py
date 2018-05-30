@@ -1335,11 +1335,11 @@ def add_information(project, publication_id):
             values(publications.c.publicationInformation_id == result.inserted_primary_key[0])
         connection.execute(update_stmt)
 
+        transaction.commit()
         result = {
-            "msg": "Created new publication with ID {}".format(result.inserted_primary_key[0]),
+            "msg": "Created new publicationInformation with ID {}".format(result.inserted_primary_key[0]),
             "row": new_row
         }
-        transaction.commit()
         return jsonify(result), 201
     except Exception as e:
         transaction.rollback()
@@ -1374,11 +1374,83 @@ def link_file_to_publication(project, publication_id):
     informationId: ID for related "information" object, used for manuscripts and versions - contains additional information
     legacyId: legacy ID for this publication file object
     """
-    # TODO ALSO THIS
     request_data = request.get_json()
     if not request_data:
         return jsonify({"msg": "No data provided."}), 400
     if "file_path" not in request_data or "file_type" not in request_data or request_data.get("file_type", None) not in ["comment", "manuscript", "version"]:
         return jsonify({"msg": "POST data JSON doesn't contain required data."}), 400
 
-    project_id = get_project_id_from_name(project)
+    file_type = request_data["file_type"]
+
+    connection = db_engine.connect()
+
+    if file_type == "comment":
+        comments = Table("publicationComment", metadata, autoload=True, autoload_with=db_engine)
+        publications = Table("publication", metadata, autoload=True, autoload_with=db_engine)
+        transaction = connection.begin()
+        new_comment = {
+            "originalFileName": request_data.get("file_path"),
+            "datePublishedExternally": request_data.get("datePublishedExternally", None),
+            "published": request_data.get("published", None),
+            "publishedBy": request_data.get("publishedBy", None),
+            "legacyId": request_data.get("legacyId", None)
+        }
+        ins = comments.insert()
+        try:
+            result = connection.execute(ins, **new_comment)
+            new_row = select([comments]).where(comments.c.id == result.inserted_primary_key[0])
+            new_row = dict(connection.execute(new_row).fetchone())
+
+            # update publication object in database with new publicationComment ID
+            update_stmt = publications.update().where(publications.c.id == int(publication_id)). \
+                values(publications.c.publicationComment_id == result.inserted_primary_key[0])
+            connection.execute(update_stmt)
+
+            transaction.commit()
+            result = {
+                "msg": "Created new publicationComment with ID {}".format(result.inserted_primary_key[0]),
+                "row": new_row
+            }
+            return jsonify(result), 201
+        except Exception as e:
+            transaction.rollback()
+            result = {
+                "msg": "Failed to create new publicationComment object",
+                "reason": str(e)
+            }
+            return jsonify(result), 500
+        finally:
+            connection.close()
+    else:
+        new_object = {
+            "originalFileName": request_data.get("file_path"),
+            "publication_id": int(publication_id),
+            "datePublishedExternally": request_data.get("datePublishedExternally", None),
+            "published": request_data.get("published", None),
+            "publishedBy": request_data.get("publishedBy", None),
+            "legacyId": request_data.get("legacyId", None),
+            "publicationInformation_id": request_data.get("informationId", None)
+        }
+        if file_type == "manuscript":
+            table = Table("publicationManuscript", metadata, autoload=True, autoload_with=False)
+        else:
+            table = Table("publicationVersion", metadata, autoload=True, autoload_with=False)
+        ins = table.insert()
+        try:
+            result = connection.execute(ins, **new_object)
+            new_row = select([table]).where(table.c.id == result.inserted_primary_key[0])
+            new_row = dict(connection.execute(new_row).fetchone())
+            result = {
+                "msg": "Created new publication{} with ID {}".format(file_type.capitalize(), result.inserted_primary_key[0]),
+                "row": new_row
+            }
+            return jsonify(result), 201
+        except Exception as e:
+            result = {
+                "msg": "Failed to create new object",
+                "reason": str(e)
+            }
+            return jsonify(result), 500
+
+        finally:
+            connection.close()
