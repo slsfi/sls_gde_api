@@ -1073,13 +1073,81 @@ def list_publication_collections(project):
 def new_publication_collection(project):
     """
     Create a new publicationCollection object and associated Introduction and Title objects.
+
+    POST data MUST be in JSON format
+
+    POST data SHOULD contain the following:
+    name: publication collection name or title
+    datePublishedExternally: date of external publishing for collection
+    published: 0 or 1, is collection published or not
+
+    POST data MAY also contain the following
+    intro_legacyID: legacy ID for publicationCollectionIntroduction
+    title_legacyID: legacy ID for publicationCollectionTitle
     """
-    # TODO this fucking thing
     request_data = request.get_json()
     if not request_data:
         return jsonify({"msg": "No data provided."}), 400
 
-    project_id = get_project_id_from_name(project)
+    collections = Table("publicationCollection", metadata, autoload=True, autoload_with=db_engine)
+    introductions = Table("publicationCollectionIntroduction", metadata, autoload=True, autoload_with=db_engine)
+    titles = Table("publicationCollectionTitle", metadata, autoload=True, autoload_with=db_engine)
+
+    connection = db_engine.connect()
+    transaction = connection.begin()
+    try:
+        new_intro = {
+            "datePublishedExternally": request_data.get("datePublishedExternally", None),
+            "published": request_data.get("published", None),
+            "legacyId": request_data.get("intro_legacyID", None)
+        }
+
+        new_title = {
+            "datePublishedExternally": request_data.get("datePublishedExternally", None),
+            "published": request_data.get("published", None),
+            "legacyId": request_data.get("title_legacyID", None)
+        }
+
+        ins = introductions.insert()
+        result = connection.execute(ins, **new_intro)
+        new_intro_row = select([introductions]).where(introductions.c.id == result.inserted_primary_key[0])
+        new_intro_row = dict(connection.execute(new_intro_row).fetchone())
+
+        ins = titles.insert()
+        result = connection.execute(ins, **new_title)
+        new_title_row = select([titles]).where(titles.c.id == result.inserted_primary_key[0])
+        new_title_row = dict(connection.execute(new_title_row).fetchone())
+
+        new_collection = {
+            "project_id": get_project_id_from_name(project),
+            "name": request_data.get("name", None),
+            "datePublishedExternally": request_data.get("datePublishedExternally", None),
+            "published": request_data.get("published", None),
+            "publicationCollectionIntroduction_id": new_intro_row["id"],
+            "publicationCollectionTitle_id": new_title_row["id"]
+        }
+
+        ins = collections.insert()
+        result = connection.execute(ins, **new_collection)
+        new_collection_row = select([collections]).where(collections.c.id == result.inserted_primary_key[0])
+        new_collection_row = dict(connection.execute(new_collection_row).fetchone())
+        transaction.commit()
+
+        return jsonify({
+            "msg": "New publicationCollection created.",
+            "new_collection": new_collection_row,
+            "new_collection_intro": new_intro_row,
+            "new_collection_title": new_title_row
+        })
+    except Exception as e:
+        transaction.rollback()
+        result = {
+            "msg": "Failed to create new publicationCollection object",
+            "reason": str(e)
+        }
+        return jsonify(result), 500
+    finally:
+        connection.close()
 
 
 @de_tools.route("/<project>/publication_collection/<collection_id>/publications")
