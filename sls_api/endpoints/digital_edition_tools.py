@@ -856,9 +856,10 @@ def get_file_tree_from_remote(project, file_path=None):
             "reason": str(e.output)
         }), 500
     if file_path is not None:
+        file_listing = [path.split(file_path)[1] for path in file_listing]
+        if file_listing[0][0] == "/":
+            file_listing = [path.lstrip("/") for path in file_listing]
         tree = path_list_to_tree(file_listing)
-        if file_path in tree:
-            tree = tree[file_path]
     else:
         tree = path_list_to_tree(file_listing)
     return jsonify(tree)
