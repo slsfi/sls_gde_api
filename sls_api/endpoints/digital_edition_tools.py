@@ -740,7 +740,7 @@ def update_file_in_remote(project, file_path):
             "reason": str(e.output)
         }), 500
     if safe_join(config[project]["file_root"], file_path) in new_and_changed_files and not force:
-        with io.open(safe_join(config[project]["file_root"], file_path), encoding="UTF-8", mode="rb") as repo_file:
+        with io.open(safe_join(config[project]["file_root"], file_path), mode="rb") as repo_file:
             return jsonify({
                 "msg": "File {} has been changed in git repository since last update, please manually check file changes.",
                 "your_file": request_data["file"],
@@ -762,7 +762,7 @@ def update_file_in_remote(project, file_path):
     # Secure filename and save new file to local repo
     filename = secure_filename(file_path)
     if file and filename:
-        with io.open(filename, mode="wb", encoding="utf-8") as new_file:
+        with io.open(filename, mode="wb") as new_file:
             new_file.write(file.getvalue())
 
     # Add file to local repo if it wasn't already in the repository
@@ -805,7 +805,7 @@ def update_file_in_remote(project, file_path):
 @project_permission_required
 def get_file_from_remote(project, file_path):
     """
-    Get latest XML file from git remote
+    Get latest file from git remote
     """
     # TODO swift and/or S3 support for large files (images/fascimiles)
     config_okay = check_project_git_config(project)
@@ -821,15 +821,13 @@ def get_file_from_remote(project, file_path):
         }), 500
 
     if file_exists_in_git_root(project, file_path):
-        with io.open(safe_join(config[project]["file_root"], file_path), "rb") as file:
-            output = io.BytesIO()
-            output.write(file.read())
-            content = output.getvalue()
-            output.close()
-            mimetype = mimetypes.guess_type(safe_join(config[project]["file_root"], file_path))[0]
-            if mimetype is None:
-                mimetype = "application/octet-stream"  # if unable to guess filetype, mark as arbitrary binary data and let user sort it out
-            return Response(content, 200, mimetype=mimetype, content_type=mimetype)
+        # read file, encode as base64 string and return to user as JSON data.
+        with io.open(safe_join(config[project]["file_root"], file_path), mode="rb") as file:
+            file_string = base64.b64encode(file.read())
+            return jsonify({
+                "file": file_string,
+                "filepath": file_path
+            })
     else:
         return jsonify({"msg": "The requested file was not found in the git repository."}), 404
 
