@@ -1,10 +1,9 @@
 import base64
-from flask import Blueprint, jsonify, request, Response, safe_join
+from flask import Blueprint, jsonify, request, safe_join
 from flask_jwt_extended import get_jwt_identity, jwt_required, verify_jwt_in_request
 from functools import wraps
 import io
 import logging
-import mimetypes
 import os
 from ruamel.yaml import YAML
 from sqlalchemy import create_engine, MetaData, Table

@@ -16,7 +16,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 ---
-- For full details on licenses in-use by the SLS API and its components, see `LICENSES.txt`
+- For full license text, see `LICENSE` file.
 
 - Installation details:
     - Create config files from _example files in `config` folder
@@ -29,7 +29,7 @@ limitations under the License.
     
 - Manually testing the API without Docker, using a python virtualenv
     - `source /path/to/virtualenv/bin/activate` or `/path/to/virtualenv/Scripts/activate_this.bat` on Windows
-    - `pip install -e .`
+    - `pip install --upgrade -e .`
     - `export FLASK_APP=/path/to/sls_api` or `set FLASK_APP=/path/to/sls_api` on Windows
     - `export FLASK_DEBUG=1` or `set FLASK_DEBUG=1`on Windows to activate DEBUG mode
     - `flask run` - note that this uses port 5000 by default

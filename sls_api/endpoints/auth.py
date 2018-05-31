@@ -35,7 +35,6 @@ def register_user():
                 "msg": "User {!r} was created. Contact support to be given editing rights for GDE projects.".format(data["email"]),
                 "access_token": create_access_token(identity=identity),
                 "refresh_token": create_refresh_token(identity=identity)
-
             }
         ), 201
     except Exception:
