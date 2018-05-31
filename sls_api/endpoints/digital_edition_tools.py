@@ -662,7 +662,10 @@ def pull_repository_changes_from_remote(project):
     # verify git config
     config_okay = check_project_git_config(project)
     if not config_okay[0]:
-        return jsonify({"msg": config_okay[1]}), 500
+        return jsonify({
+            "msg": "Error in git configuration, check configuration file.",
+            "reason": config_okay[1]
+        }), 500
 
     sync_repo = git_update_files_in_repo(project)
 
@@ -718,7 +721,10 @@ def update_file_in_remote(project, file_path):
     # verify git config
     config_okay = check_project_git_config(project)
     if not config_okay[0]:
-        return jsonify({"msg": config_okay[1]}), 500
+        return jsonify({
+            "msg": "Error in git configuration, check configuration file.",
+            "reason": config_okay[1]
+        }), 500
 
     # fetch latest changes from remote
     try:
@@ -810,7 +816,10 @@ def get_file_from_remote(project, file_path):
     # TODO swift and/or S3 support for large files (images/fascimiles)
     config_okay = check_project_git_config(project)
     if not config_okay[0]:
-        return jsonify({"msg": config_okay[1]}), 500
+        return jsonify({
+            "msg": "Error in git configuration, check configuration file.",
+            "reason": config_okay[1]
+        }), 500
 
     # Sync the desired file from remote repository to local API repository
     update_repo = git_update_files_in_repo(project, file_path)
