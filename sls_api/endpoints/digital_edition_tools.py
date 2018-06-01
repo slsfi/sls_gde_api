@@ -284,7 +284,7 @@ def find_event_by_description():
     events = Table("event", metadata, autoload=True, autoload_with=db_engine)
     connection = db_engine.connect()
 
-    statement = select([events]).where(events.c.description.like("%{}%".format(request_data["phrase"])))
+    statement = select([events]).where(events.c.description.ilike("%{}%".format(request_data["phrase"])))
     rows = connection.execute(statement).fetchall()
 
     result = []
@@ -715,6 +715,8 @@ def update_file_in_remote(project, file_path):
         author_email.split("@")[0],
         author_email
     )
+
+    # Read the file from request and decode the base64 string into raw binary data
     file = io.BytesIO(base64.b64decode(request_data["file"]))
 
     # verify git config
@@ -750,7 +752,7 @@ def update_file_in_remote(project, file_path):
                 "msg": "File {} has been changed in git repository since last update, please manually check file changes.",
                 "your_file": request_data["file"],
                 "repo_file": base64.b64encode(repo_file.read())
-            }), 400
+            }), 409
 
     # merge in latest changes so that the local repository is updated
     try:
