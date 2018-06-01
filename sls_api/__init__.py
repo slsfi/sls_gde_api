@@ -42,6 +42,8 @@ else:
 if os.path.exists(os.path.join("sls_api", "configs", "digital_editions.yml")):
     from sls_api.endpoints.digital_editions import digital_edition
     app.register_blueprint(digital_edition, url_prefix="/digitaledition")
+    from sls_api.endpoints.digital_edition_tools import de_tools
+    app.register_blueprint(de_tools, url_prefix="/digitaledition")
 if os.path.exists(os.path.join("sls_api", "configs", "security.yml")):
     from sls_api.endpoints.auth import auth
     from sls_api.models import db, User
@@ -62,8 +64,5 @@ if os.path.exists(os.path.join("sls_api", "configs", "security.yml")):
         db.create_all()
         if not User.find_by_email("test@test.com"):
             User.create_new_user("test@test.com", "test")
-
-from sls_api.endpoints.digital_edition_tools import de_tools
-app.register_blueprint(de_tools, url_prefix="/de_tools")
 
 logger.info(" * Loaded endpoints: {}".format(", ".join(app.blueprints)))
