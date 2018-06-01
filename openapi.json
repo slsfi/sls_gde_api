@@ -39,8 +39,16 @@
       "name": "digitaledition",
       "description": "Endpoints used by the Generic Platform for Digital Editions",
       "externalDocs": {
-        "description": "Github repo for old API",
-        "url": "https://github.com/slsfi/digital_editions_API"
+        "description": "Configuration",
+        "url": "https://bitbucket.org/slssu/digital_edition_configuration"
+      }
+    },
+    {
+      "name": "tools",
+      "description": "Endpoints used by the publication tools, protected by JWT authorization",
+      "externalDocs": {
+        "description": "Bitbucket repo for tools",
+        "url": "https://bitbucket.org/slssu/digital_edition_tools"
       }
     }
   ],
@@ -967,6 +975,1413 @@
                     "msg": "Logged in as 'test@test.com'",
                     "access_token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpZGVudGl0eSI6eyJzdWIiOiJ0ZXN0QHRlc3QuY29tIiwicHJvamVjdHMiOm51bGx9LCJ0eXBlIjoiYWNjZXNzIn0.XtShkUBz6AboojEi07D7S-RCCCezQFbBVHFkFMY1ZWs"
                   }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/digitaledition/locations": {
+      "get": {
+        "summary": "Get list of all locations",
+        "tags": [
+          "tools"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": [
+                    {
+                      "id": 1,
+                      "name": "Example Plaza"
+                    },
+                    {
+                      "id": 2,
+                      "name": "Example Building"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/digitaledition/{project}/locations/new": {
+      "post": {
+        "summary": "Add a new location to the database",
+        "description": "Add a new location object to the database under the given project",
+        "tags": [
+          "tools"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "required": true,
+            "name": "project",
+            "description": "Name for the project in question",
+            "schema": {
+              "type": "string",
+              "example": "topelius"
+            }
+          }
+        ],
+        "requestBody": {
+          "description": "Data for new location",
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "example": {
+                  "name": "Example Plaza",
+                  "description": "Deeply uninteresting",
+                  "legacyXMLId": "123",
+                  "latitude": "3.14159",
+                  "longitude": "6.28318"
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "msg": "Created new location with ID 1",
+                    "new_row": {
+                      "id": 1,
+                      "key": "value"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "msg": "No name in POST data"
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "msg": "Failed to create new location",
+                    "reason": "DatabaseError: Failed to connect to database."
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/digitaledition/subjects": {
+      "get": {
+        "summary": "Get list of all subjects",
+        "tags": [
+          "tools"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": [
+                    {
+                      "id": 1,
+                      "fullName": "Mr Bob Example, III"
+                    },
+                    {
+                      "id": 2,
+                      "fullName": "Mrs Bobbina Example"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/digitaledition/{project}/subjects/new": {
+      "post": {
+        "summary": "Add a new subject to the database",
+        "description": "Add a new subject object to the database under the given project",
+        "tags": [
+          "tools"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "required": true,
+            "name": "project",
+            "description": "Name for the project in question",
+            "schema": {
+              "type": "string",
+              "example": "topelius"
+            }
+          }
+        ],
+        "requestBody": {
+          "description": "Data for new subject",
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "example": {
+                  "type": "person",
+                  "description": "Deeply uninteresting",
+                  "firstName": "Bob",
+                  "lastName": "Example",
+                  "preposition": "Mr",
+                  "fullName": "Mr Bob Example, III",
+                  "legacyXMLId": "32429_3",
+                  "dateBorn": "1992-01-01",
+                  "dateDeceased": null
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "msg": "Created new subject with ID 1",
+                    "new_row": {
+                      "id": 1,
+                      "key": "value"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "msg": "No data provided"
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "msg": "Failed to create new subject",
+                    "reason": "DatabaseError: Failed to connect to database."
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/digitaledition/tags": {
+      "get": {
+        "summary": "Get list of all tags",
+        "tags": [
+          "tools"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": [
+                    {
+                      "id": 1,
+                      "name": "chair"
+                    },
+                    {
+                      "id": 2,
+                      "name": "sofa"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/digitaledition/{project}/tag/new": {
+      "post": {
+        "summary": "Add a new tag to the database",
+        "description": "Add a new tag object to the database under the given project",
+        "tags": [
+          "tools"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "required": true,
+            "name": "project",
+            "description": "Name for the project in question",
+            "schema": {
+              "type": "string",
+              "example": "topelius"
+            }
+          }
+        ],
+        "requestBody": {
+          "description": "Data for new tag",
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "example": {
+                  "type": "object",
+                  "name": "chair",
+                  "description": "Seating arrangement for 1 person",
+                  "legacyXMLId": "2835"
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "msg": "Created new tag with ID 1",
+                    "new_row": {
+                      "id": 1,
+                      "key": "value"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "msg": "No data provided"
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "msg": "Failed to create new tag",
+                    "reason": "DatabaseError: Failed to connect to database."
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/digitaledition/events": {
+      "get": {
+        "summary": "Get list of all events",
+        "tags": [
+          "tools"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": [
+                    {
+                      "id": 1,
+                      "description": "Christmas Party 1879"
+                    },
+                    {
+                      "id": 2,
+                      "name": "New Years Party 1995"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/digitaledition/events/search": {
+      "post": {
+        "summary": "Find events by description",
+        "description": "Search for specific events by looking at their description text",
+        "tags": [
+          "tools"
+        ],
+        "requestBody": {
+          "description": "Searchquery",
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "example": {
+                  "phrase": "Christmas"
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": [
+                    {
+                      "id": 1,
+                      "description": "Christmas Party 1879"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "msg": "No phrase in POST data"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/digitaledition/events/new": {
+      "post": {
+        "summary": "Add a new event to the database",
+        "description": "Create a new event object in the database",
+        "tags": [
+          "tools"
+        ],
+        "requestBody": {
+          "description": "Data for new event",
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "example": {
+                  "type": "party",
+                  "description": "Christmas Party 1879"
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "msg": "Created new event with ID 1",
+                    "new_row": {
+                      "id": 1,
+                      "key": "value"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "msg": "No data provided"
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "msg": "Failed to create new event",
+                    "reason": "DatabaseError: Failed to connect to database."
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/digitaledition/event/{event_id}/connections": {
+      "get": {
+        "summary": "Get a list of connections for an event",
+        "description": "Return eventConnections for an event, describing locations, subjects, and tags involved with the event.",
+        "tags": [
+          "tools"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "event_id",
+            "description": "numerical ID for the event in question",
+            "required": true,
+            "schema": {
+              "example": 1
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": [
+                    {
+                      "id": 213,
+                      "location_id": null,
+                      "subject_id": 12,
+                      "tag_id": null,
+                      "event_id": 1
+                    },
+                    {
+                      "id": 43782,
+                      "location_id": 43,
+                      "subject_id": null,
+                      "tag_id": null,
+                      "event_id": 1
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "msg": "Event ID not found in database"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/digitaledition/event/{event_id}/connections/new": {
+      "post": {
+        "summary": "Create a new connection for an event",
+        "description": "Create a new eventConnection for an event, describing locations, subjects, and tags involved with the event.",
+        "tags": [
+          "tools"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "event_id",
+            "description": "numerical ID for the event in question",
+            "required": true,
+            "schema": {
+              "example": 1
+            }
+          }
+        ],
+        "requestBody": {
+          "description": "data for new eventConnection",
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "example": {
+                  "subject_id": null,
+                  "location_id": 4,
+                  "tag_id": 1
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "msg": "Created new eventConnection with ID 1",
+                    "new_row": {
+                      "id": 1,
+                      "key": "value"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "msg": "No data provided"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "msg": "Event ID not found in database"
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "msg": "Failed to create new eventConnection",
+                    "reason": "DatabaseError: Failed to connect to database."
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/digitaledition/event/{event_id}/occurances": {
+      "get": {
+        "summary": "Get a list of occurances for an event",
+        "description": "Return eventOccurances for an event, describing the publications in which this event is mentioned.",
+        "tags": [
+          "tools"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "event_id",
+            "description": "numerical ID for the event in question",
+            "required": true,
+            "schema": {
+              "example": 1
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": [
+                    {
+                      "id": 54,
+                      "description": "Mentioned in passing.",
+                      "publication_id": 125,
+                      "publicationVersion_id": null,
+                      "publicationManuscript_id": null,
+                      "publicationFascimile_id": null,
+                      "publicationComment_id": null,
+                      "event_id": 1
+                    },
+                    {
+                      "id": 4342,
+                      "description": "Explained in detail.",
+                      "publication_id": 558,
+                      "publicationVersion_id": null,
+                      "publicationManuscript_id": null,
+                      "publicationFascimile_id": null,
+                      "publicationComment_id": null,
+                      "event_id": 1
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "msg": "Event ID not found in database"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/digitaledition/event/{event_id}/occurances/new": {
+      "post": {
+        "summary": "Create a new occurance for an event",
+        "description": "Create a new eventOccurance for an event, describing a publication in which this event is mentioned.",
+        "tags": [
+          "tools"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "event_id",
+            "description": "numerical ID for the event in question",
+            "required": true,
+            "schema": {
+              "example": 1
+            }
+          }
+        ],
+        "requestBody": {
+          "description": "data for new eventOccurance",
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "example": {
+                  "type": "mention",
+                  "description": "Mentioned in passing",
+                  "publication_id": 125,
+                  "publicationVersion_id": null,
+                  "publicationManuscript_id": null,
+                  "publicationFascimile_id": null,
+                  "publicationComment_id": null
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "msg": "Created new eventOccurance with ID 1",
+                    "new_row": {
+                      "id": 1,
+                      "key": "value"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "msg": "No data provided"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "msg": "Event ID not found in database"
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "msg": "Failed to create new eventOccurance",
+                    "reason": "DatabaseError: Failed to connect to database."
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/digitaledition/{project}/publication/{publication_id}/versions": {
+      "get": {
+        "summary": "Get version details for the given publication",
+        "tags": [
+          "tools"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "required": true,
+            "name": "project",
+            "description": "Name for the project in question",
+            "schema": {
+              "type": "string",
+              "example": "topelius"
+            }
+          },
+          {
+            "in": "path",
+            "required": true,
+            "name": "publication_id",
+            "description": "Numerical ID for the publication in question",
+            "schema": {
+              "type": "string",
+              "example": "343"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {}
+            }
+          }
+        }
+      }
+    },
+    "/digitaledition/{project}/publication/{publication_id}/manuscripts": {
+      "get": {
+        "summary": "Get manuscript details for the given publication",
+        "tags": [
+          "tools"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "required": true,
+            "name": "project",
+            "description": "Name for the project in question",
+            "schema": {
+              "type": "string",
+              "example": "topelius"
+            }
+          },
+          {
+            "in": "path",
+            "required": true,
+            "name": "publication_id",
+            "description": "Numerical ID for the publication in question",
+            "schema": {
+              "type": "string",
+              "example": "343"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {}
+            }
+          }
+        }
+      }
+    },
+    "/digitaledition/{project}/publication/{publication_id}/fascimiles": {
+      "get": {
+        "summary": "Get fascimile details for the given publication",
+        "tags": [
+          "tools"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "required": true,
+            "name": "project",
+            "description": "Name for the project in question",
+            "schema": {
+              "type": "string",
+              "example": "topelius"
+            }
+          },
+          {
+            "in": "path",
+            "required": true,
+            "name": "publication_id",
+            "description": "Numerical ID for the publication in question",
+            "schema": {
+              "type": "string",
+              "example": "343"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {}
+            }
+          }
+        }
+      }
+    },
+    "/digitaledition/{project}/publication/{publication_id}/comments": {
+      "get": {
+        "summary": "Get comment details for the given publication",
+        "tags": [
+          "tools"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "required": true,
+            "name": "project",
+            "description": "Name for the project in question",
+            "schema": {
+              "type": "string",
+              "example": "topelius"
+            }
+          },
+          {
+            "in": "path",
+            "required": true,
+            "name": "publication_id",
+            "description": "Numerical ID for the publication in question",
+            "schema": {
+              "type": "string",
+              "example": "343"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {}
+            }
+          }
+        }
+      }
+    },
+    "/digitaledition/{project}/sync_files_from_remote": {
+      "post": {
+        "summary": "Ensure API files are in sync",
+        "description": "Syncs local API files with remote git repository",
+        "tags": [
+          "tools"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "required": true,
+            "name": "project",
+            "description": "Name for the project in question",
+            "schema": {
+              "type": "string",
+              "example": "topelius"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "msg": "Git repository successfully synced for project topelius",
+                    "changed_files": [
+                      "README.md",
+                      "setup.py"
+                    ]
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Interal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "msg": "Git update failed to execute properly",
+                    "reason": "Permission denied (publickey)"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/digitaledition/{project}/update_file/by_path/{file_path}": {
+      "put": {
+        "summary": "Upload a new file or update an existing one",
+        "description": "Accepts file_data encoded as a base64 string, decodes it into a file and pushes the file to the remote git repository for the project in question.",
+        "tags": [
+          "tools"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "required": true,
+            "name": "project",
+            "description": "Name for the project in question",
+            "schema": {
+              "type": "string",
+              "example": "topelius"
+            }
+          },
+          {
+            "in": "path",
+            "required": true,
+            "name": "file_path",
+            "description": "File path for file, relative to root of git repository",
+            "schema": {
+              "type": "string",
+              "example": "est/1_1_est.xml"
+            }
+          }
+        ],
+        "requestBody": {
+          "description": "File contents and metadata for git update",
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "example": {
+                  "file": "binary_file_data_encoded_as_base64",
+                  "author": "test@company.com",
+                  "message": "Update of file 1_1_est.xml for testing",
+                  "force": false
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "msg": "File updated successfully in repository."
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "msg": "No file in JSON data."
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "msg": "File est/1_1_est.xml has been changed in git repository since last update, please manually check file changes.",
+                    "your_file": "provided_file_data_in_base64",
+                    "repo_file": "existing_file_data_in_base64"
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "msg": "Git merge failed to execute properly.",
+                    "reason": "Permission denied (publickey)"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/digitaledition/{project}/get_latest_file/by_path/{file_path}": {
+      "get": {
+        "summary": "Retrieve a file from the API",
+        "description": "Fetch the latest file from the remote git repository for editing or inspection, return file contents to user as base64-encoded string",
+        "tags": [
+          "tools"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "required": true,
+            "name": "project",
+            "description": "Name for the project in question",
+            "schema": {
+              "type": "string",
+              "example": "topelius"
+            }
+          },
+          {
+            "in": "path",
+            "required": true,
+            "name": "file_path",
+            "description": "File path for file, relative to root of git repository",
+            "schema": {
+              "type": "string",
+              "example": "est/1_1_est.xml"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "filepath": "est/1_1_est.xml",
+                    "file": "base64_encoded_file_data"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "msg": "The requested file was not found in the git repository."
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "msg": "Git update failed to execute properly.",
+                    "reason": "Permission denied (publickey)"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/digitaledition/{project}/get_tree/": {
+      "get": {
+        "summary": "Get a nested JSON tree of all available files for project.",
+        "description": "Retrieve a listing of available file paths for the project in question as a nested JSON array. Outermost array represents the root of the repository for the project, folders inside it are mapped as arrays folder_name: array, with files being mapped as file_name: null",
+        "tags": [
+          "tools"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "required": true,
+            "name": "project",
+            "description": "Name for the project in question",
+            "schema": {
+              "type": "string",
+              "example": "topelius"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "est": {
+                      "1_1_est.xml": null
+                    },
+                    "com": {
+                      "1_1_com_1.xml": null,
+                      "1_1_com_2.xml": null
+                    },
+                    "inl": {
+                      "1_1_eng.xml": null,
+                      "1_1_fin.xml": null,
+                      "1_1_swe.xml": null
+                    },
+                    "xslt": {
+                      "est.xsl": null,
+                      "com.xsl": null,
+                      "inl.xsl": null
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "msg": "Git file listing failed.",
+                    "reason": "Permission denied (publickey)"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/digitaledition/{project}/get_tree/{folder_path}": {
+      "get": {
+        "summary": "Get a nested JSON tree of available files in a specific folder.",
+        "description": "Retrieve a listing of available file paths for the project in question as a nested JSON array. Outermost array represents the folder_path specified, folders inside it are mapped as arrays folder_name: array, with files being mapped as file_name: null",
+        "tags": [
+          "tools"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "required": true,
+            "name": "project",
+            "description": "Name for the project in question",
+            "schema": {
+              "type": "string",
+              "example": "topelius"
+            }
+          },
+          {
+            "in": "path",
+            "required": true,
+            "name": "folder_path",
+            "description": "Folder path relative to root of repository to list contents of.",
+            "schema": {
+              "type": "string",
+              "example": "est/"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "1_1_est.xml": null
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "msg": "Git file listing failed.",
+                    "reason": "Permission denied (publickey)"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/digitaledition/{project}/fascimile_collection/new": {
+      "post": {
+        "summary": "Create a new fascimile collection",
+        "description": "Create a new publicationFascimileCollection in the database for the given project",
+        "tags": [
+          "tools"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "required": true,
+            "name": "project",
+            "description": "Name for the project in question",
+            "schema": {
+              "type": "string",
+              "example": "topelius"
+            }
+          }
+        ],
+        "requestBody": {
+          "description": "Data for new fascimile collection",
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "example": {
+                  "title": "Night Witches",
+                  "description": "An example collection",
+                  "folderPath": "fascimiles/night_witches/",
+                  "numberOfPages": 12,
+                  "startPageNumber": 1
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "msg": "Created new publicationFascimileCollection with ID 1",
+                    "new_row": {
+                      "id": 1,
+                      "key": "value"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "msg": "No data provided."
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "msg": "Failed to create new publicationFascimileCollection",
+                    "reason": "Could not connect to database (Connection Timed Out)"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/digitaledition/{project}/fascimile_collection/list": {
+      "get": {
+        "summary": "List all fascimile collections",
+        "description": "Returns a list of all publicationFascimileCollection objects associated with the given project",
+        "tags": [
+          "tools"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "required": true,
+            "name": "project",
+            "description": "Name for the project in question",
+            "schema": {
+              "type": "string",
+              "example": "topelius"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": [
+                    {
+                      "id": 1,
+                      "key": "value"
+                    },
+                    {
+                      "id": 2,
+                      "key": "value"
+                    }
+                  ]
                 }
               }
             }
