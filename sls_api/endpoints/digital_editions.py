@@ -13,6 +13,9 @@ import sqlalchemy.sql
 import time
 import re
 import glob
+from PIL import Image
+from hashlib import md5
+
 
 digital_edition = Blueprint('digital_edition', __name__)
 
@@ -173,10 +176,100 @@ def get_publication(project, publication_id):
     return jsonify(results)
 
 
+def getFacsimileImage(project, edition_id, publication_id, size=(300,300)):
+    logger.info("Getting facsimile image from funciton getFacsimileImage({},{},{})".format(project, edition_id, publication_id))
+
+    outfile = md5("{}-{}-{}-{}".format(edition_id, publication_id, size[0], size[1]).encode('utf-8'))
+    cache_file_path = safe_join(project_config[project]["file_root"], "cache", "faksimil", "{}.png".format(outfile))
+    image_file_path = safe_join(project_config[project]["file_root"], "faksimil", edition_id, "{}.png".format(publication_id))
+    if os.path.exists(cache_file_path):
+        logger.debug("cache_file_path exists: {}".format(cache_file_path))
+        return cache_file_path
+    else:
+        try:
+            logger.debug("cache_file_path does not exist: {}".format(cache_file_path))
+            logger.debug("Will create new image")
+            im = Image.open(image_file_path)
+            im.thumbnail(size, Image.ANTIALIAS)
+            im.save(cache_file_path, "JPEG")
+            logger.debug("I think it was successful")
+            return cache_file_path
+        except Exception as e:
+            logger.debug("there was an exception: \n-----------\n{}\n-----------\n".format(str(e)))
+            return ""
+
+# routes/digitaledition/table-of-contents.php
+@digital_edition.route("/<project>/facsimiles/<edition_id>/<size>/<publication_id>")
+def get_facsimiles(project, edition_id, size, publication_id):
+    logger.info("Getting facsimiles /{}/facsimiles/{}/{}".format(project, edition_id, publication_id))
+
+    connection = get_mysql_connection(project)
+    sql = "select fp.*, f.title, f.pages, f.description, f.pdf, f.pre_page_count from publications_ed as e left join publications as p on p.p_ed_id=e.ed_id left join facsimiles as f on f.publication_id=p.p_id left join facsimile_publications as fp on fp.publications_id=p.p_id where p.p_id=:p_id and e.ed_id=:ed_id"
+
+    if project_config.get(project).get("show_internally_published"):
+        sql = " ".join([sql, "and e.ed_lansering>0"])
+    elif not project_config.get(project).get("show_unpublished"):
+        sql = " ".join([sql, "and e.ed_lansering>2"])
+
+    statement = sqlalchemy.sql.text(sql).bindparams(ed_id=edition_id, p_id=publication_id)
+
+    result = []
+    for row in connection.execute(statement).fetchall():
+        facsimile = dict(row)
+        facsimile["image"] = safe_join(project_config[project]["file_root"],
+                                       "faksimil", edition_id,
+                                       "{}/{}/{}.png".format(publication_id, size, publication_id)
+                                       )
+        result.append(facsimile)
+    connection.close()
+
+    return_data = []
+    for row in result:
+        if row["facs_id"] not in project_config.get(project).get("disabled_publications"):
+            return_data.append(row)
+
+    return jsonify(return_data), 200, {"Access-Control-Allow-Origin": "*"}
+
+
+# routes/digitaledition/table-of-contents.php
+@digital_edition.route("/<project>/facsimile/<facs_id>/<size>")
+def get_facsimile(project, facs_id, size):
+    logger.info("Getting facsimile /{}/facsimile/{}/{}".format(project, facs_id, size))
+
+    connection = get_mysql_connection(project)
+    sql = "select fp.*, f.title, f.pages, f.description, f.pdf, f.pre_page_count, e.ed_id, p.p_id from publications_ed as e left join publications as p on p.p_ed_id=e.ed_id left join facsimiles as f on f.publication_id=p.p_id left join facsimile_publications as fp on fp.publications_id=p.p_id where facs_id=:facs_id"
+
+    if project_config.get(project).get("show_internally_published"):
+        sql = " ".join([sql, "and e.ed_lansering>0"])
+    elif not project_config.get(project).get("show_unpublished"):
+        sql = " ".join([sql, "and e.ed_lansering>2"])
+
+    statement = sqlalchemy.sql.text(sql).bindparams(facs_id=facs_id)
+
+    result = []
+    for row in connection.execute(statement).fetchall():
+        p_id = str(row["p_id"])
+        facsimile = dict(row)
+        facsimile["image"] = safe_join(project_config[project]["file_root"],
+                                       "faksimil", row["ed_id"], size,
+                                       f"{p_id}.png"
+                                       )
+        result.append(facsimile)
+    connection.close()
+
+    return_data = []
+    for row in result:
+        if row["facs_id"] not in project_config.get(project).get("disabled_publications"):
+            return_data.append(row)
+
+    return jsonify(return_data), 200, {"Access-Control-Allow-Origin": "*"}
+
+
+
 # routes/digitaledition/table-of-contents.php
 @digital_edition.route("/<project>/table-of-contents/editions")
 def get_toc_editions(project):
-    logger.info("Getting editions /{}/table-of-contents/editions".format(project))
+    logger.info("Getting editions /{}/table-of-contqents/editions".format(project))
     connection = get_mysql_connection(project)
     if project_config.get(project).get("show_unpublished"):
         sql = "SELECT ed_id AS id, ed_title AS title, ed_filediv AS divchapters FROM publications_ed ORDER BY ed_datumlansering"

@@ -17,6 +17,7 @@ setup(
         'psycopg2',
         'ruamel.yaml',
         'requests',
-        'sqlalchemy'
+        'sqlalchemy',
+        'Pillow'
     ]
 )
