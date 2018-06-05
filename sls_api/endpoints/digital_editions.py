@@ -145,6 +145,7 @@ def get_static_pages_as_json(project, language):
         data = path_hierarchy(folder_path, language)
         return jsonify(data), 200, {"Access-Control-Allow-Origin": "*"}
     else:
+        logger.log("did not find {}".format(folder_path))
         abort(404)
 
 
