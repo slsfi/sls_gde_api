@@ -140,12 +140,13 @@ def get_md_contents_as_json(project, fileid):
 def get_static_pages_as_json(project, language):
     logger.info("Getting static content from /{}/static-pages-toc/{}".format(project, language))
     folder_path = safe_join(project_config[project]["file_root"], "md", language)
+    logger.info("Checking for {}".format(folder_path))
 
     if os.path.exists(folder_path):
         data = path_hierarchy(folder_path, language)
         return jsonify(data), 200, {"Access-Control-Allow-Origin": "*"}
     else:
-        logger.log("did not find {}".format(folder_path))
+        logger.info("did not find {}".format(folder_path))
         abort(404)
 
 
