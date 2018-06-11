@@ -21,7 +21,7 @@ config_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file
 with io.open(os.path.join(config_dir, "digital_editions.yml"), encoding="UTF-8") as config:
     yaml = YAML()
     config = yaml.load(config)
-    db_engine = create_engine(config["engine"])
+    db_engine = create_engine(config["engine"], pool_pre_ping=True)
 
 
 def project_permission_required(fn):

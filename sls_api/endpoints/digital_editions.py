@@ -30,7 +30,7 @@ logger.addHandler(file_handler)
 db_engines = {}
 for project, configuration in project_config.items():
     if isinstance(configuration, dict) and "engine" in configuration:
-        db_engines[project] = create_engine(configuration["engine"])
+        db_engines[project] = create_engine(configuration["engine"], pool_pre_ping=True)
 
 
 class FileResolver(etree.Resolver):
