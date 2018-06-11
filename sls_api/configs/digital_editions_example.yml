@@ -1,6 +1,6 @@
 # For more information on database engine configurations, see http://docs.sqlalchemy.org/en/latest/core/engines.html
 
-engine: 'mysql://web_user:SecretPassword@mysql_server.example.com:3306'
+engine: 'mysql://web_user:SecretPassword@mysql_server.example.com:3306?charset=utf8mb4'
 # This engine config tells the system to connect to a MySQL server at mysql_server.example.com on port 3306
 # It uses the username 'web_user' with the password 'SecretPassword'
 
