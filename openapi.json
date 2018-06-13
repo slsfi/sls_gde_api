@@ -3025,6 +3025,93 @@
           }
         }
       }
+    },
+    "/digitaledition/{project}/publication/{id}/link_file": {
+      "post": {
+        "summary": "Link an XML file to a given publication",
+        "description": "Link an XML file in the project's git repository to the publication in question, creating the appropriate comment, manuscript, or version object in the database.",
+        "tags": [
+          "publications"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "required": true,
+            "name": "project",
+            "description": "Name for the project in question",
+            "schema": {
+              "type": "string",
+              "example": "topelius"
+            }
+          },
+          {
+            "in": "path",
+            "required": true,
+            "name": "id",
+            "description": "Numerical ID for the publication",
+            "schema": {
+              "type": "string",
+              "example": "23"
+            }
+          }
+        ],
+        "requestBody": {
+          "description": "File metadata",
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "example": {
+                  "file_type": "comment",
+                  "file_path": "test/comment.xml",
+                  "datePublishedExternally": "2016-31-12",
+                  "published": 1,
+                  "publishedBy": "Bob McGee"
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "msg": "Created new publicationComment with ID 4"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "msg": "POST data JSON doesn't contain required data"
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "msg": "Failed to create new object",
+                    "reason": "Failed to connect to database (connection refused)"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
     }
   }
 }
