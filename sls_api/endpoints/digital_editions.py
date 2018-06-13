@@ -227,23 +227,24 @@ def get_facsimiles(project, edition_id, publication_id):
     result = []
     for row in connection.execute(statement).fetchall():
         facsimile = dict(row)
-        #facsimile["start_url"] = safe_join(
-        #        "digitaledition",
-        #        project,
-        #        "faksimil",
-        #        str(row["facs_id"]),
-        #        "1"
-        #)
-        #facsimile["first_page"] = row["pre_page_count"] + row["page_nr"] - 1
+        facsimile["start_url"] = safe_join(
+                "digitaledition",
+                project,
+                "faksimil",
+                str(row["facs_id"]),
+                "1"
+        )
+        pre_pages = row["pre_page_count"] or 0
 
-        #sql2 = "select * from facsimile_publications where facs_id=:facs_id and page_nr>:page_nr order by page_nr asc limit 1"
-        #statement2 = sqlalchemy.sql.text(sql2).bindparams(facs_id=row["facs_id"], page_nr=row["page_nr"])
-        #for row2 in connection.execute(statement2).fetchall():
-        #    logger.debug(str(row2))
-        #    facsimile["last_page"] = row2["page_nr"] - 1
+        facsimile["first_page"] = pre_pages + row["page_nr"]
 
-        #if "last_page" not in facsimile.keys():
-        #    facsimile["last_page"] = row["pages"]
+        sql2 = "select * from facsimile_publications where facs_id=:facs_id and page_nr>:page_nr order by page_nr asc limit 1"
+        statement2 = sqlalchemy.sql.text(sql2).bindparams(facs_id=row["facs_id"], page_nr=row["page_nr"])
+        for row2 in connection.execute(statement2).fetchall():
+            facsimile["last_page"] = pre_pages + row2["page_nr"] - 1
+
+        if "last_page" not in facsimile.keys():
+            facsimile["last_page"] = row["pages"]
 
         result.append(facsimile)
         '''try:
