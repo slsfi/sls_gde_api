@@ -196,8 +196,8 @@ def getFacsimileImage(project, edition_id, publication_id, size=(300,300)):
             im.save(cache_file_path, "JPEG")
             logger.debug("I think it was successful")
             return cache_file_path
-        except Exception as e:
-            logger.debug("there was an exception: \n-----------\n{}\n-----------\n".format(str(e)))
+        except Exception:
+            logger.exception("Exception when creating image cache file.")
             return ""
 
 # routes/digitaledition/table-of-contents.php
@@ -207,13 +207,13 @@ def get_facsimiles(project, edition_id, publication_id):
 
     connection = get_mysql_connection(project)
 
-    sql = """select f.*, fp.*, m_title, e.ed_id, fp.publications_id as fp_publications_id from publications_ed as e
-    left join publications as p on p.p_ed_id=e.ed_id
-    left join facsimile_publications as fp on p.p_id=fp.publications_id
-    left outer join facsimiles as f on f.faksimil=fp.facs_id and f.publication_id=p.p_id
-    left outer join manuscripts as m on m.m_id=fp.ms_id
-    where p.p_id=:p_id and e.ed_id=:ed_id
-    order by fp.priority"""
+    sql = """SELECT f.*, fp.*, m_title, e.ed_id, fp.publications_id AS fp_publications_id FROM publications_ed AS e
+    LEFT JOIN publications AS p ON p.p_ed_id=e.ed_id
+    LEFT JOIN facsimile_publications AS fp ON p.p_id=fp.publications_id
+    LEFT OUTER JOIN facsimiles AS f ON f.faksimil=fp.facs_id AND f.publication_id=p.p_id
+    LEFT OUTER JOIN manuscripts AS m ON m.m_id=fp.ms_id
+    WHERE p.p_id=:p_id AND e.ed_id=:ed_id
+    ORDER BY fp.priority"""
 
 
     if project_config.get(project).get("show_internally_published"):
@@ -238,7 +238,7 @@ def get_facsimiles(project, edition_id, publication_id):
 
         facsimile["first_page"] = pre_pages + row["page_nr"]
 
-        sql2 = "select * from facsimile_publications where facs_id=:facs_id and page_nr>:page_nr order by page_nr asc limit 1"
+        sql2 = "SELECT * FROM facsimile_publications WHERE facs_id=:facs_id AND page_nr>:page_nr ORDER BY page_nr ASC LIMIT 1"
         statement2 = sqlalchemy.sql.text(sql2).bindparams(facs_id=row["facs_id"], page_nr=row["page_nr"])
         for row2 in connection.execute(statement2).fetchall():
             facsimile["last_page"] = pre_pages + row2["page_nr"] - 1
@@ -269,7 +269,12 @@ def get_facsimile(project, facs_id, size, page):
     logger.info("Getting facsimile /{}/facsimile/{}/{}/{}".format(project, facs_id, size, page))
 
     connection = get_mysql_connection(project)
-    sql = "select fp.*, f.title, f.pages, f.description, f.pdf, f.pre_page_count, e.ed_id, p.p_id from publications_ed as e left join publications as p on p.p_ed_id=e.ed_id left join facsimiles as f on f.publication_id=p.p_id left join facsimile_publications as fp on fp.publications_id=p.p_id where facs_id=:facs_id"
+    sql = """SELECT fp.*, f.title, f.pages, f.description, f.pdf, f.pre_page_count, e.ed_id, p.p_id 
+    FROM publications_ed AS e 
+    LEFT JOIN publications AS p ON p.p_ed_id=e.ed_id 
+    LEFT JOIN facsimiles AS f ON f.publication_id=p.p_id 
+    LEFT JOIN facsimile_publications AS fp ON fp.publications_id=p.p_id 
+    WHERE facs_id=:facs_id"""
 
     if project_config.get(project).get("show_internally_published"):
         sql = " ".join([sql, "and e.ed_lansering>0"])
@@ -295,7 +300,7 @@ def get_facsimile(project, facs_id, size, page):
 # routes/digitaledition/table-of-contents.php
 @digital_edition.route("/<project>/table-of-contents/editions")
 def get_toc_editions(project):
-    logger.info("Getting editions /{}/table-of-contqents/editions".format(project))
+    logger.info("Getting editions /{}/table-of-contents/editions".format(project))
     connection = get_mysql_connection(project)
     if project_config.get(project).get("show_unpublished"):
         sql = "SELECT ed_id AS id, ed_title AS title, ed_filediv AS divchapters FROM publications_ed ORDER BY ed_datumlansering"
@@ -1009,7 +1014,7 @@ def publish_status(project, edition_id):
 
 
 def get_id_parts(edition_id):
-    id_parts = edition_id.replace("_est", "").split(";")  # 12_1_est;ch5  - Finland framst√§llt i teckningar.
+    id_parts = edition_id.replace("_est", "").split(";")  # 12_1_est;ch5  - Finland framst‰llt i teckningar.
 
     item_id = id_parts[0]  # 1_1
     item_parts = item_id.split("_")
