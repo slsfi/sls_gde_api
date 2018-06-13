@@ -1,6 +1,6 @@
 import calendar
 from collections import OrderedDict
-from flask import abort, Blueprint, safe_join
+from flask import abort, Blueprint, safe_join, send_from_directory
 from flask.json import jsonify
 import io
 import logging
@@ -15,7 +15,7 @@ import re
 import glob
 from PIL import Image
 from hashlib import md5
-
+import base64
 
 digital_edition = Blueprint('digital_edition', __name__)
 
@@ -201,12 +201,20 @@ def getFacsimileImage(project, edition_id, publication_id, size=(300,300)):
             return ""
 
 # routes/digitaledition/table-of-contents.php
-@digital_edition.route("/<project>/facsimiles/<edition_id>/<size>/<publication_id>")
-def get_facsimiles(project, edition_id, size, publication_id):
+@digital_edition.route("/<project>/facsimiles/<edition_id>/<publication_id>")
+def get_facsimiles(project, edition_id, publication_id):
     logger.info("Getting facsimiles /{}/facsimiles/{}/{}".format(project, edition_id, publication_id))
 
     connection = get_mysql_connection(project)
-    sql = "select fp.*, f.title, f.pages, f.description, f.pdf, f.pre_page_count from publications_ed as e left join publications as p on p.p_ed_id=e.ed_id left join facsimiles as f on f.publication_id=p.p_id left join facsimile_publications as fp on fp.publications_id=p.p_id where p.p_id=:p_id and e.ed_id=:ed_id"
+
+    sql = """select f.*, fp.*, m_title, e.ed_id, fp.publications_id as fp_publications_id from publications_ed as e
+    left join publications as p on p.p_ed_id=e.ed_id
+    left join facsimile_publications as fp on p.p_id=fp.publications_id
+    left outer join facsimiles as f on f.faksimil=fp.facs_id and f.publication_id=p.p_id
+    left outer join manuscripts as m on m.m_id=fp.ms_id
+    where p.p_id=:p_id and e.ed_id=:ed_id
+    order by fp.priority"""
+
 
     if project_config.get(project).get("show_internally_published"):
         sql = " ".join([sql, "and e.ed_lansering>0"])
@@ -215,28 +223,49 @@ def get_facsimiles(project, edition_id, size, publication_id):
 
     statement = sqlalchemy.sql.text(sql).bindparams(ed_id=edition_id, p_id=publication_id)
 
+    images = {}
     result = []
     for row in connection.execute(statement).fetchall():
         facsimile = dict(row)
-        facsimile["image"] = safe_join(project_config[project]["file_root"],
-                                       "faksimil", edition_id,
-                                       "{}/{}/{}.png".format(publication_id, size, publication_id)
-                                       )
+        #facsimile["start_url"] = safe_join(
+        #        "digitaledition",
+        #        project,
+        #        "faksimil",
+        #        str(row["facs_id"]),
+        #        "1"
+        #)
+        #facsimile["first_page"] = row["pre_page_count"] + row["page_nr"] - 1
+
+        #sql2 = "select * from facsimile_publications where facs_id=:facs_id and page_nr>:page_nr order by page_nr asc limit 1"
+        #statement2 = sqlalchemy.sql.text(sql2).bindparams(facs_id=row["facs_id"], page_nr=row["page_nr"])
+        #for row2 in connection.execute(statement2).fetchall():
+        #    logger.debug(str(row2))
+        #    facsimile["last_page"] = row2["page_nr"] - 1
+
+        #if "last_page" not in facsimile.keys():
+        #    facsimile["last_page"] = row["pages"]
+
         result.append(facsimile)
+        '''try:
+            with open(facsimile_image, "rb") as imageFile:
+                facsimile["image_data"] = base64.b64encode(imageFile.read()).decode("utf-8")
+        except:
+            logger.error("Missing facsimile image: {}".format(facsimile_image))
+        '''
     connection.close()
 
     return_data = []
     for row in result:
-        if row["facs_id"] not in project_config.get(project).get("disabled_publications"):
+        if row["ed_id"] not in project_config.get(project).get("disabled_publications"):
             return_data.append(row)
 
     return jsonify(return_data), 200, {"Access-Control-Allow-Origin": "*"}
 
 
 # routes/digitaledition/table-of-contents.php
-@digital_edition.route("/<project>/facsimile/<facs_id>/<size>")
-def get_facsimile(project, facs_id, size):
-    logger.info("Getting facsimile /{}/facsimile/{}/{}".format(project, facs_id, size))
+@digital_edition.route("/<project>/facsimile/<facs_id>/<size>/<page>")
+def get_facsimile(project, facs_id, size, page):
+    logger.info("Getting facsimile /{}/facsimile/{}/{}/{}".format(project, facs_id, size, page))
 
     connection = get_mysql_connection(project)
     sql = "select fp.*, f.title, f.pages, f.description, f.pdf, f.pre_page_count, e.ed_id, p.p_id from publications_ed as e left join publications as p on p.p_ed_id=e.ed_id left join facsimiles as f on f.publication_id=p.p_id left join facsimile_publications as fp on fp.publications_id=p.p_id where facs_id=:facs_id"
@@ -247,26 +276,20 @@ def get_facsimile(project, facs_id, size):
         sql = " ".join([sql, "and e.ed_lansering>2"])
 
     statement = sqlalchemy.sql.text(sql).bindparams(facs_id=facs_id)
+    if int(page) < 1:
+        return jsonify("Image not found"), 404
 
     result = []
     for row in connection.execute(statement).fetchall():
-        p_id = str(row["p_id"])
-        facsimile = dict(row)
-        facsimile["image"] = safe_join(project_config[project]["file_root"],
-                                       "faksimil", row["ed_id"], size,
-                                       f"{p_id}.png"
-                                       )
-        result.append(facsimile)
-    connection.close()
+        if int(page) > row["pages"]:
+            return jsonify("Image not found"), 404
 
-    return_data = []
-    for row in result:
-        if row["facs_id"] not in project_config.get(project).get("disabled_publications"):
-            return_data.append(row)
-
-    return jsonify(return_data), 200, {"Access-Control-Allow-Origin": "*"}
-
-
+        folder = safe_join(project_config[project]["file_root"],
+                           "faksimil", str(facs_id), str(size)
+                           )
+        return send_from_directory(folder, f"{page}.jpg")
+        connection.close()
+    return jsonify("Image not found"), 404
 
 # routes/digitaledition/table-of-contents.php
 @digital_edition.route("/<project>/table-of-contents/editions")
