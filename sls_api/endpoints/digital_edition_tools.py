@@ -1151,7 +1151,7 @@ def new_publication_collection(project):
             "new_collection": new_collection_row,
             "new_collection_intro": new_intro_row,
             "new_collection_title": new_title_row
-        })
+        }), 201
     except Exception as e:
         transaction.rollback()
         result = {
@@ -1184,7 +1184,7 @@ def list_publications(project, collection_id):
     elif rows[0]["project_id"] != int(project_id):
         return jsonify(
             {
-                "msg": "Found collection not part of {!r} with ID {}.".format(project, project_id)
+                "msg": "Found collection not part of project {!r} with ID {}.".format(project, project_id)
             }
         ), 400
     statement = select([publications]).where(publications.c.publicationCollection_id == int(collection_id))
