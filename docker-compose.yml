@@ -15,5 +15,5 @@ services:
         restart: always
         ports:
             # Port syntax is host_port:container_port
-            # Dockerfile uses port 8080, the TwistedWeb default port
-            - "8080:8080"
+            # Dockerfile uses port 8000
+            - "8000:8000"
