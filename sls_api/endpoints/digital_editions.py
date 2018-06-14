@@ -206,6 +206,54 @@ def get_variant(project, collection_id, publication_id, version_id, lang=None):
     pass
 
 
+@digital_edition.route("/tooltips/subjects")
+def subject_tooltips():
+    """
+    List all available subject tooltips as id and name
+    """
+    return jsonify(list_tooltips("subject"))
+
+
+@digital_edition.route("/tooltips/tags")
+def tag_tooltips():
+    """
+    List all available tag tooltips as id and name
+    """
+    return jsonify(list_tooltips("tag"))
+
+
+@digital_edition.route("/tooltips/locations")
+def location_tooltips():
+    """
+    List all available location tooltips as id and name
+    """
+    return jsonify(list_tooltips("location"))
+
+
+@digital_edition.route("/tooltips/subject/<ident>")
+def get_subject_tooltip(ident):
+    """
+    Get a specific subject tooltip by ID
+    """
+    return jsonify(get_tooltip("subject", ident))
+
+
+@digital_edition.route("/tooltips/tag/<ident>")
+def get_tag_tooltip(ident):
+    """
+    Get a specific tag tooltip by ID
+    """
+    return jsonify(get_tooltip("tag", ident))
+
+
+@digital_edition.route("/tooltips/location/<ident>")
+def get_location_tooltip(ident):
+    """
+    Get a specific location tooltip by ID
+    """
+    return jsonify(get_tooltip("location", ident))
+
+
 def list_tooltips(table):
     """
     List available tooltips for subjects, tags, or locations
@@ -224,7 +272,7 @@ def list_tooltips(table):
     return results
 
 
-def get_tooltip(row_id, table):
+def get_tooltip(table, row_id):
     """
     Get 'tooltip' style info for a single subject, tag, or location by its ID
     table should be 'subject', 'tag', or 'location'
@@ -239,7 +287,7 @@ def get_tooltip(row_id, table):
     statement = sql.bindparams(id=row_id)
     result = connection.execute(statement).fetchone()
     connection.close()
-    return jsonify(result)
+    return dict(result)
 
 
 '''
