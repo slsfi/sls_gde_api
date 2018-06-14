@@ -162,32 +162,52 @@ def get_publication(project, publication_id):
     return jsonify(results)
 
 
-def get_numeric_id_from_legacy_id(legacy_id, table):
+# TODO get inl (inledning/introduction?)
+def get_introduction(project):
     pass
 
 
-def get_publication_contents(project, publication_id):
+# TODO get tit (title)
+def get_title(project):
     pass
 
 
-def get_publication_comment(project, comment_id):
+# TODO get est (reading text)
+def get_reading_text(project):
     pass
 
 
-def get_publication_information(project, information_id):
+# TODO get com (comments?)
+def get_comments(project):
     pass
 
 
-def get_publication_manuscript(project, manuscript_id):
+# TODO get ms (manuscript)
+def get_manuscript(project):
     pass
 
 
-def get_publication_version(project, version_id):
+# TODO get var (version/variant)
+def get_variant(project):
     pass
 
 
-def get_review_comment(project, comment_id):
-    pass
+def list_tooltips(table):
+    """
+    List available tooltips for subjects, tags, or locations
+    table should be 'subject', 'tag', or 'location'
+    """
+    if table not in ["subject", "tag", "location"]:
+        return ""
+    connection = db_engine.connect()
+    if table == "subject":
+        sql = sqlalchemy.sql.text("SELECT id, fullName FROM subject")
+    else:
+        sql = sqlalchemy.sql.text("SELECT id, name FROM {}".format(table))
+    results = []
+    for row in connection.execute(sql).fetchall():
+        results.append(dict(row))
+    return results
 
 
 def get_tooltip(row_id, table):
