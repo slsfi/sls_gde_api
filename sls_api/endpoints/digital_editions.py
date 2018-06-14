@@ -263,9 +263,9 @@ def list_tooltips(table):
         return ""
     connection = db_engine.connect()
     if table == "subject":
-        sql = sqlalchemy.sql.text("SELECT id, fullName FROM subject")
+        sql = sqlalchemy.sql.text("SELECT id, fullName, project_id FROM subject")
     else:
-        sql = sqlalchemy.sql.text("SELECT id, name FROM {}".format(table))
+        sql = sqlalchemy.sql.text("SELECT id, name, project_id FROM {}".format(table))
     results = []
     for row in connection.execute(sql).fetchall():
         results.append(dict(row))
