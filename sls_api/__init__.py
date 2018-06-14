@@ -1,5 +1,6 @@
 from flask import Flask, redirect, url_for
 from flask_jwt_extended import JWTManager
+from flask_sslify import SSLify
 from flasgger import Swagger
 import logging
 import json
@@ -14,7 +15,9 @@ root_logger = logging.getLogger()
 if int(os.environ.get("FLASK_DEBUG", 0)) == 1:
     root_logger.setLevel(logging.DEBUG)
 else:
+    # Only enable SSL redirects if we're not in debugging mode
     root_logger.setLevel(logging.INFO)
+    sslify = SSLify(app)
 stream_handler = logging.StreamHandler(stream=stdout)
 stream_handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s', '%H:%M:%S'))
 root_logger.addHandler(stream_handler)
