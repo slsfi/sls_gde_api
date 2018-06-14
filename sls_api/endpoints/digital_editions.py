@@ -162,33 +162,41 @@ def get_publication(project, publication_id):
     return jsonify(results)
 
 
-# TODO get inl (inledning/introduction?)
-def get_introduction(project):
+# /<project>/text/<collection_id>/<publication_id>/<inl/tit/est/com/ms/var>/<extra_stuff>
+
+# TODO get inl (inledning/introduction?) one unique
+@digital_edition.route("/<project>/text/<collection_id>/<publication_id>/inl")
+def get_introduction(project, collection_id, publication_id):
     pass
 
 
-# TODO get tit (title)
-def get_title(project):
+# TODO get tit (title) one unique
+@digital_edition.route("/<project>/text/<collection_id>/<publication_id>/tit")
+def get_title(project, collection_id, publication_id):
     pass
 
 
-# TODO get est (reading text)
-def get_reading_text(project):
+# TODO get est (reading text) one unique
+@digital_edition.route("/<project>/text/<collection_id>/<publication_id>/est")
+def get_reading_text(project, collection_id, publication_id):
     pass
 
 
-# TODO get com (comments?)
-def get_comments(project):
+# TODO get com (comments?) one unique
+@digital_edition.route("/<project>/text/<collection_id>/<publication_id>/com")
+def get_comments(project, collection_id, publication_id):
     pass
 
 
-# TODO get ms (manuscript)
-def get_manuscript(project):
+# TODO get ms (manuscript) one of many
+@digital_edition.route("/<project>/text/<collection_id>/<publication_id>/ms/<manuscript_id>")
+def get_manuscript(project, collection_id, publication_id, manuscript_id):
     pass
 
 
-# TODO get var (version/variant)
-def get_variant(project):
+# TODO get var (version/variant) one of many
+@digital_edition.route("/<project>/text/<collection_id>/<publication_id>/var/<version_id>")
+def get_variant(project, collection_id, publication_id, version_id):
     pass
 
 
@@ -300,6 +308,13 @@ def cache_is_recent(source_file, xsl_file, cache_file):
     elif calendar.timegm(time.gmtime()) > (cache_file_mtime + project_config["cache_lifetime_seconds"]):
         return False
     return True
+
+
+def is_published(project, collection_id, publication_id):
+    """
+    Return true if publication is published and thus externally viewable
+    """
+    pass
 
 
 def get_content(project, folder, xml_filename, xsl_filename, parameters):
