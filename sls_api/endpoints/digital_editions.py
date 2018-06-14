@@ -166,37 +166,43 @@ def get_publication(project, publication_id):
 
 # TODO get inl (inledning/introduction?) one unique
 @digital_edition.route("/<project>/text/<collection_id>/<publication_id>/inl")
-def get_introduction(project, collection_id, publication_id):
+@digital_edition.route("/<project>/text/<collection_id>/<publication_id>/inl/<lang>")
+def get_introduction(project, collection_id, publication_id, lang=None):
     pass
 
 
 # TODO get tit (title) one unique
 @digital_edition.route("/<project>/text/<collection_id>/<publication_id>/tit")
-def get_title(project, collection_id, publication_id):
+@digital_edition.route("/<project>/text/<collection_id>/<publication_id>/tit/<lang>")
+def get_title(project, collection_id, publication_id, lang=None):
     pass
 
 
 # TODO get est (reading text) one unique
 @digital_edition.route("/<project>/text/<collection_id>/<publication_id>/est")
-def get_reading_text(project, collection_id, publication_id):
+@digital_edition.route("/<project>/text/<collection_id>/<publication_id>/est/<lang>")
+def get_reading_text(project, collection_id, publication_id, lang=None):
     pass
 
 
 # TODO get com (comments?) one unique
 @digital_edition.route("/<project>/text/<collection_id>/<publication_id>/com")
-def get_comments(project, collection_id, publication_id):
+@digital_edition.route("/<project>/text/<collection_id>/<publication_id>/com/<lang>")
+def get_comments(project, collection_id, publication_id, lang=None):
     pass
 
 
 # TODO get ms (manuscript) one of many
 @digital_edition.route("/<project>/text/<collection_id>/<publication_id>/ms/<manuscript_id>")
-def get_manuscript(project, collection_id, publication_id, manuscript_id):
+@digital_edition.route("/<project>/text/<collection_id>/<publication_id>/ms/<manuscript_id>/<lang>")
+def get_manuscript(project, collection_id, publication_id, manuscript_id, lang=None):
     pass
 
 
 # TODO get var (version/variant) one of many
 @digital_edition.route("/<project>/text/<collection_id>/<publication_id>/var/<version_id>")
-def get_variant(project, collection_id, publication_id, version_id):
+@digital_edition.route("/<project>/text/<collection_id>/<publication_id>/var/<version_id>/<lang>")
+def get_variant(project, collection_id, publication_id, version_id, lang=None):
     pass
 
 
