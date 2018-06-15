@@ -278,10 +278,10 @@ def get_variant(project, collection_id, publication_id, section_id=None):
         connection = db_engine.connect()
         filename_search = "{}_{}_var_%".format(collection_id, publication_id)
         if section_id is not None:
-            select = "SELECT title, type, originalFilename, id FROM publicationVersion WHERE originalFilename LIKE :f_name AND section_id = :s_id"
+            select = "SELECT name, type, originalFilename, id FROM publicationVersion WHERE originalFilename LIKE :f_name AND section_id = :s_id"
             statement = sqlalchemy.sql.text(select).bindparams(f_name=filename_search, s_id=section_id)
         else:
-            select = "SELECT title, type, originalFilename, id FROM publicationVersion WHERE originalFilename LIKE :f_name"
+            select = "SELECT name, type, originalFilename, id FROM publicationVersion WHERE originalFilename LIKE :f_name"
             statement = sqlalchemy.sql.text(select).bindparams(f_name=filename_search)
         variation_info = []
         for row in connection.execute(statement).fetchall():
