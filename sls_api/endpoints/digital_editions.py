@@ -30,45 +30,6 @@ logger.addHandler(file_handler)
 db_engine = create_engine(project_config["engine"], pool_pre_ping=True)
 
 
-class FileResolver(etree.Resolver):
-    def resolve(self, system_url, public_id, context):
-        logger.debug("Resolving {}".format(system_url))
-        return self.resolve_filename(system_url, context)
-
-
-def xml_to_html(xsl_file_path, xml_file_path, replace_namespace=True, params=None):
-    logger.debug("Transforming {} using {}".format(xml_file_path, xsl_file_path))
-    if params is not None:
-        logger.debug("Parameters are {}".format(params))
-    if not os.path.exists(xsl_file_path):
-        return "XSL file {!r} not found!".format(xsl_file_path)
-    if not os.path.exists(xml_file_path):
-        return "XML file {!r} not found!".format(xml_file_path)
-
-    with io.open(xml_file_path, mode="rb") as xml_file:
-        xml_contents = xml_file.read()
-        if replace_namespace:
-            xml_contents = xml_contents.replace(b'xmlns="http://www.sls.fi/tei"', b'xmlns="http://www.tei-c.org/ns/1.0"')
-
-        xml_root = etree.fromstring(xml_contents)
-
-    xsl_parser = etree.XMLParser()
-    xsl_parser.resolvers.add(FileResolver())
-    with io.open(xsl_file_path, encoding="UTF-8") as xsl_file:
-        xslt_root = etree.parse(xsl_file, parser=xsl_parser)
-        xsl_transform = etree.XSLT(xslt_root)
-
-    if params is None:
-        result = xsl_transform(xml_root)
-    elif isinstance(params, dict) or isinstance(params, OrderedDict):
-        result = xsl_transform(xml_root, **params)
-    else:
-        raise Exception("Invalid parameters for XSLT transformation, must be of type dict or OrderedDict, not {}".format(type(params)))
-    if len(xsl_transform.error_log) > 0:
-        logging.debug(xsl_transform.error_log)
-    return str(result)
-
-
 @digital_edition.after_request
 def set_access_control_headers(response):
     if "Access-Control-Allow-Origin" not in response.headers:
@@ -162,11 +123,6 @@ def get_publication(project, publication_id):
     return jsonify(results)
 
 
-# /<project>/text/<collection_id>/<publication_id>/<inl/tit/est/com/ms/var>/<extra_stuff>
-
-# TODO check for publication status from database before getting any content
-
-# TODO get inl (inledning/introduction?) one unique
 @digital_edition.route("/<project>/text/<collection_id>/<publication_id>/inl")
 @digital_edition.route("/<project>/text/<collection_id>/<publication_id>/inl/<lang>")
 def get_introduction(project, collection_id, publication_id, lang="swe"):
@@ -190,10 +146,12 @@ def get_introduction(project, collection_id, publication_id, lang="swe"):
         }), 403
 
 
-# TODO get tit (title) one unique
 @digital_edition.route("/<project>/text/<collection_id>/<publication_id>/tit")
 @digital_edition.route("/<project>/text/<collection_id>/<publication_id>/tit/<lang>")
 def get_title(project, collection_id, publication_id, lang="swe"):
+    """
+    Get title page for a given publication
+    """
     if is_published(project, collection_id, publication_id):
         logger.info("Getting XML for {} and transforming...".format(request.full_path))
         filename = "{}_{}_tit_{}.xml".format(collection_id, publication_id, lang)
@@ -211,9 +169,11 @@ def get_title(project, collection_id, publication_id, lang="swe"):
         }), 403
 
 
-# TODO get est (reading text) one unique
 @digital_edition.route("/<project>/text/<collection_id>/<publication_id>/est")
 def get_reading_text(project, collection_id, publication_id):
+    """
+    Get reading text for a given publication
+    """
     if is_published(project, collection_id, publication_id):
         logger.info("Getting XML for {} and transforming...".format(request.full_path))
         filename = "{}_{}_est.xml".format(collection_id, publication_id)
@@ -231,10 +191,12 @@ def get_reading_text(project, collection_id, publication_id):
         }), 403
 
 
-# TODO get com (comments?) one unique
 @digital_edition.route("/<project>/text/<collection_id>/<publication_id>/com")
 @digital_edition.route("/<project>/text/<collection_id>/<publication_id>/com/<note_id>")
 def get_comments(project, collection_id, publication_id, note_id=None):
+    """
+    Get comments file text for a given publication
+    """
     if is_published(project, collection_id, publication_id):
         logger.info("Getting XML for {} and transforming...".format(request.full_path))
         filename = "{}_{}_com.xml".format(collection_id, publication_id)
@@ -260,10 +222,12 @@ def get_comments(project, collection_id, publication_id, note_id=None):
         }), 403
 
 
-# TODO get ms (manuscript) many or one of many
 @digital_edition.route("/<project>/text/<collection_id>/<publication_id>/ms/")
 @digital_edition.route("/<project>/text/<collection_id>/<publication_id>/ms/<manuscript_id>")
 def get_manuscript(project, collection_id, publication_id, manuscript_id=None):
+    """
+    Get one or all manuscripts for a given publication
+    """
     if is_published(project, collection_id, publication_id):
         logger.info("Getting XML for {} and transforming...".format(request.full_path))
         connection = db_engine.connect()
@@ -303,10 +267,12 @@ def get_manuscript(project, collection_id, publication_id, manuscript_id=None):
         }), 403
 
 
-# TODO get var (version/variant) one of many
 @digital_edition.route("/<project>/text/<collection_id>/<publication_id>/var/")
 @digital_edition.route("/<project>/text/<collection_id>/<publication_id>/var/<section_id>")
 def get_variant(project, collection_id, publication_id, section_id=None):
+    """
+    Get all variants for a given publication, optionally specifying a section (chapter)
+    """
     if is_published(project, collection_id, publication_id):
         logger.info("Getting XML for {} and transforming...".format(request.full_path))
         connection = db_engine.connect()
@@ -528,6 +494,45 @@ def is_published(project, collection_id, publication_id):
             published = False
 
     return published
+
+
+class FileResolver(etree.Resolver):
+    def resolve(self, system_url, public_id, context):
+        logger.debug("Resolving {}".format(system_url))
+        return self.resolve_filename(system_url, context)
+
+
+def xml_to_html(xsl_file_path, xml_file_path, replace_namespace=True, params=None):
+    logger.debug("Transforming {} using {}".format(xml_file_path, xsl_file_path))
+    if params is not None:
+        logger.debug("Parameters are {}".format(params))
+    if not os.path.exists(xsl_file_path):
+        return "XSL file {!r} not found!".format(xsl_file_path)
+    if not os.path.exists(xml_file_path):
+        return "XML file {!r} not found!".format(xml_file_path)
+
+    with io.open(xml_file_path, mode="rb") as xml_file:
+        xml_contents = xml_file.read()
+        if replace_namespace:
+            xml_contents = xml_contents.replace(b'xmlns="http://www.sls.fi/tei"', b'xmlns="http://www.tei-c.org/ns/1.0"')
+
+        xml_root = etree.fromstring(xml_contents)
+
+    xsl_parser = etree.XMLParser()
+    xsl_parser.resolvers.add(FileResolver())
+    with io.open(xsl_file_path, encoding="UTF-8") as xsl_file:
+        xslt_root = etree.parse(xsl_file, parser=xsl_parser)
+        xsl_transform = etree.XSLT(xslt_root)
+
+    if params is None:
+        result = xsl_transform(xml_root)
+    elif isinstance(params, dict) or isinstance(params, OrderedDict):
+        result = xsl_transform(xml_root, **params)
+    else:
+        raise Exception("Invalid parameters for XSLT transformation, must be of type dict or OrderedDict, not {}".format(type(params)))
+    if len(xsl_transform.error_log) > 0:
+        logging.debug(xsl_transform.error_log)
+    return str(result)
 
 
 def get_content(project, folder, xml_filename, xsl_filename, parameters):
