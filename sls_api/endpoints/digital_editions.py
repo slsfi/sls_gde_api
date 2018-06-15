@@ -1,6 +1,6 @@
 import calendar
 from collections import OrderedDict
-from flask import abort, Blueprint, safe_join
+from flask import abort, Blueprint, request, safe_join
 from flask.json import jsonify
 import io
 import logging
@@ -93,7 +93,7 @@ def get_html_contents_as_json(project, filename):
             "filename": filename,
             "content": contents
         }
-        return jsonify(data), 200, {"Access-Control-Allow-Origin": "*"}
+        return jsonify(data), 200
     else:
         abort(404)
 
@@ -116,7 +116,7 @@ def get_md_contents_as_json(project, fileid):
                 "fileid": fileid,
                 "content": contents
             }
-            return jsonify(data), 200, {"Access-Control-Allow-Origin": "*"}
+            return jsonify(data), 200
         else:
             abort(404)
     except Exception:
@@ -131,7 +131,7 @@ def get_static_pages_as_json(project, language):
 
     if os.path.exists(folder_path):
         data = path_hierarchy(folder_path, language)
-        return jsonify(data), 200, {"Access-Control-Allow-Origin": "*"}
+        return jsonify(data), 200
     else:
         abort(404)
 
@@ -164,46 +164,190 @@ def get_publication(project, publication_id):
 
 # /<project>/text/<collection_id>/<publication_id>/<inl/tit/est/com/ms/var>/<extra_stuff>
 
+# TODO check for publication status from database before getting any content
+
 # TODO get inl (inledning/introduction?) one unique
 @digital_edition.route("/<project>/text/<collection_id>/<publication_id>/inl")
 @digital_edition.route("/<project>/text/<collection_id>/<publication_id>/inl/<lang>")
-def get_introduction(project, collection_id, publication_id, lang=None):
-    pass
+def get_introduction(project, collection_id, publication_id, lang="swe"):
+    """
+    Get introduction text for a given publiction
+    """
+    if is_published(project, collection_id, publication_id):
+        logger.info("Getting XML for {} and transforming...".format(request.full_path))
+        filename = "{}_{}_inl_{}.xml".format(collection_id, publication_id, lang)
+        xsl_file = "est.xsl"
+        content = get_content(project, "inl", filename, xsl_file, None)
+        data = {
+            "id": "{}_{}_inl".format(collection_id, publication_id),
+            "content": content
+        }
+        return jsonify(data), 200
+    else:
+        return jsonify({
+            "id": "{}_{}".format(collection_id, publication_id),
+            "error": "Content not published for external viewing."
+        }), 403
 
 
 # TODO get tit (title) one unique
 @digital_edition.route("/<project>/text/<collection_id>/<publication_id>/tit")
 @digital_edition.route("/<project>/text/<collection_id>/<publication_id>/tit/<lang>")
-def get_title(project, collection_id, publication_id, lang=None):
-    pass
+def get_title(project, collection_id, publication_id, lang="swe"):
+    if is_published(project, collection_id, publication_id):
+        logger.info("Getting XML for {} and transforming...".format(request.full_path))
+        filename = "{}_{}_tit_{}.xml".format(collection_id, publication_id, lang)
+        xsl_file = "title.xsl"
+        content = get_content(project, "tit", filename, xsl_file, None)
+        data = {
+            "id": "{}_{}_tit".format(collection_id, publication_id),
+            "content": content
+        }
+        return jsonify(data), 200
+    else:
+        return jsonify({
+            "id": "{}_{}".format(collection_id, publication_id),
+            "error": "Content not published for external viewing."
+        }), 403
 
 
 # TODO get est (reading text) one unique
 @digital_edition.route("/<project>/text/<collection_id>/<publication_id>/est")
-@digital_edition.route("/<project>/text/<collection_id>/<publication_id>/est/<lang>")
-def get_reading_text(project, collection_id, publication_id, lang=None):
-    pass
+def get_reading_text(project, collection_id, publication_id):
+    if is_published(project, collection_id, publication_id):
+        logger.info("Getting XML for {} and transforming...".format(request.full_path))
+        filename = "{}_{}_est.xml".format(collection_id, publication_id)
+        xsl_file = "est.xsl"
+        content = get_content(project, "est", filename, xsl_file, None)
+        data = {
+            "id": "{}_{}_est".format(collection_id, publication_id),
+            "content": content.replace("id=", "data-id=")
+        }
+        return jsonify(data), 200
+    else:
+        return jsonify({
+            "id": "{}_{}".format(collection_id, publication_id),
+            "error": "Content not published for external viewing."
+        }), 403
 
 
 # TODO get com (comments?) one unique
 @digital_edition.route("/<project>/text/<collection_id>/<publication_id>/com")
-@digital_edition.route("/<project>/text/<collection_id>/<publication_id>/com/<lang>")
-def get_comments(project, collection_id, publication_id, lang=None):
-    pass
+@digital_edition.route("/<project>/text/<collection_id>/<publication_id>/com/<note_id>")
+def get_comments(project, collection_id, publication_id, note_id=None):
+    if is_published(project, collection_id, publication_id):
+        logger.info("Getting XML for {} and transforming...".format(request.full_path))
+        filename = "{}_{}_com.xml".format(collection_id, publication_id)
+        params = {
+            "estDocument": '"file://{}'.format(safe_join(project_config[project]["file_root"], "xml", "est", filename.replace("com", "est")))
+        }
+        if note_id is not None:
+            params["noteId"] = '"{}"'.format(note_id)
+            xsl_file = "notes.xsl"
+        else:
+            xsl_file = "com.xsl"
+
+        content = get_content(project, "com", filename, xsl_file, params)
+        data = {
+            "id": "{}_{}_com".format(collection_id, publication_id),
+            "content": content
+        }
+        return jsonify(data), 200
+    else:
+        return jsonify({
+            "id": "{}_{}".format(collection_id, publication_id),
+            "error": "Content not published for external viewing."
+        }), 403
 
 
-# TODO get ms (manuscript) one of many
+# TODO get ms (manuscript) many or one of many
+@digital_edition.route("/<project>/text/<collection_id>/<publication_id>/ms/")
 @digital_edition.route("/<project>/text/<collection_id>/<publication_id>/ms/<manuscript_id>")
-@digital_edition.route("/<project>/text/<collection_id>/<publication_id>/ms/<manuscript_id>/<lang>")
-def get_manuscript(project, collection_id, publication_id, manuscript_id, lang=None):
-    pass
+def get_manuscript(project, collection_id, publication_id, manuscript_id=None):
+    if is_published(project, collection_id, publication_id):
+        logger.info("Getting XML for {} and transforming...".format(request.full_path))
+        connection = db_engine.connect()
+        if manuscript_id is None:
+            filename_search = "{}_{}_ms_%".format(collection_id, publication_id)
+            select = "SELECT name, originalFilename, id FROM publicationManuscript WHERE originalFilename LIKE :query"
+            statement = sqlalchemy.sql.text(select).bindparams(query=filename_search)
+            manuscript_info = []
+            for row in connection.execute(statement).fetchall():
+                manuscript_info.append(dict(row))
+            connection.close()
+        else:
+            select = "SELECT name, originalFilename, id FROM publicationManuscript WHERE id = :m_id"
+            statement = sqlalchemy.sql.text(select).bindparams(m_id=manuscript_id)
+            manuscript_info = []
+            for row in connection.execute(statement).fetchall():
+                manuscript_info.append(dict(row))
+            connection.close()
+
+        for index in range(len(manuscript_info)):
+            manuscript = manuscript_info[index]
+            params = {
+                "bookId": collection_id
+            }
+            manuscript_info[index]["manuscript_changes"] = get_content(project, "ms", manuscript["originalFilename"], "ms_changes.xsl", params)
+            manuscript_info[index]["manuscript_normalized"] = get_content(project, "ms", manuscript["originalFilename"], "ms_normalized.xsl", params)
+
+        data = {
+            "id": "{}_{}".format(collection_id, publication_id),
+            "manuscripts": manuscript_info
+        }
+        return jsonify(data), 200
+    else:
+        return jsonify({
+            "id": "{}_{}".format(collection_id, publication_id),
+            "error": "Content not published for external viewing."
+        }), 403
 
 
 # TODO get var (version/variant) one of many
-@digital_edition.route("/<project>/text/<collection_id>/<publication_id>/var/<version_id>")
-@digital_edition.route("/<project>/text/<collection_id>/<publication_id>/var/<version_id>/<lang>")
-def get_variant(project, collection_id, publication_id, version_id, lang=None):
-    pass
+@digital_edition.route("/<project>/text/<collection_id>/<publication_id>/var/")
+@digital_edition.route("/<project>/text/<collection_id>/<publication_id>/var/<section_id>")
+def get_variant(project, collection_id, publication_id, section_id=None):
+    if is_published(project, collection_id, publication_id):
+        logger.info("Getting XML for {} and transforming...".format(request.full_path))
+        connection = db_engine.connect()
+        filename_search = "{}_{}_var_%".format(collection_id, publication_id)
+        if section_id is not None:
+            select = "SELECT title, type, originalFilename, id FROM publicationVersion WHERE originalFilename LIKE :f_name AND section_id = :s_id"
+            statement = sqlalchemy.sql.text(select).bindparams(f_name=filename_search, s_id=section_id)
+        else:
+            select = "SELECT title, type, originalFilename, id FROM publicationVersion WHERE originalFilename LIKE :f_name"
+            statement = sqlalchemy.sql.text(select).bindparams(f_name=filename_search)
+        variation_info = []
+        for row in connection.execute(statement).fetchall():
+            variation_info.append(dict(row))
+        connection.close()
+
+        for index in range(len(variation_info)):
+            variation = variation_info[index]
+            params = {
+                "bookId": collection_id
+            }
+
+            if variation["type"] == 1:
+                xsl_file = "poem_variants_est.xsl"
+            else:
+                xsl_file = "poem_variants_other.xsl"
+
+            if section_id is not None:
+                params["sectionId"] = section_id
+
+            variation_info[index]["content"] = get_content(project, "var", variation["originalFilename"], xsl_file, params)
+
+        data = {
+            "id": "{}_{}".format(collection_id, publication_id),
+            "variations": variation_info
+        }
+        return jsonify(data), 200
+    else:
+        return jsonify({
+            "id": "{}_{}".format(collection_id, publication_id),
+            "error": "Content not published for external viewing."
+        }), 403
 
 
 @digital_edition.route("/tooltips/subjects")
@@ -366,9 +510,24 @@ def cache_is_recent(source_file, xsl_file, cache_file):
 
 def is_published(project, collection_id, publication_id):
     """
-    Return true if publication is published and thus externally viewable
+    Returns true only if project, publicationCollection, and publication are all published
     """
-    pass
+    connection = db_engine.connect()
+    select = """SELECT project.published AS proj_pub, publicationCollection.published AS col_pub, publication.published as pub 
+    FROM project JOIN publicationCollection JOIN publication 
+    WHERE project.id = publicationCollection.project_id 
+    AND publication.publicationCollection_id = publicationCollection.id 
+    AND project.name = :project AND publicationCollection.id = :c_id AND publication.id = :p_id
+    """
+    statement = sqlalchemy.sql.text(select).bindparams(project=project, c_id=collection_id, p_id=publication_id)
+    result = connection.execute(statement)
+
+    published = True
+    for row in result.fetchall():
+        if row.proj_pub == 0 or row.col_pub == 0 or row.pub == 0:
+            published = False
+
+    return published
 
 
 def get_content(project, folder, xml_filename, xsl_filename, parameters):
