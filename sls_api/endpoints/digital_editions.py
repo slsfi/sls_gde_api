@@ -262,7 +262,7 @@ def get_manuscript(project, collection_id, publication_id, manuscript_id=None):
         return jsonify(data), 200
     else:
         return jsonify({
-            "id": "{}_{}".format(collection_id, publication_id),
+            "id": "{}_{}_ms".format(collection_id, publication_id),
             "error": "Content not published for external viewing."
         }), 403
 
@@ -305,7 +305,7 @@ def get_variant(project, collection_id, publication_id, section_id=None):
             variation_info[index]["content"] = get_content(project, "var", variation["originalFilename"], xsl_file, params)
 
         data = {
-            "id": "{}_{}".format(collection_id, publication_id),
+            "id": "{}_{}_var".format(collection_id, publication_id),
             "variations": variation_info
         }
         return jsonify(data), 200

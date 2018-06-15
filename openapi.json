@@ -147,6 +147,92 @@
         }
       }
     },
+    "/digitaledition/{project}/md/{file_id}": {
+      "get": {
+        "summary": "Get static Markdown content for a given project",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project",
+            "description": "The Digital Edition project this request concerns (topelius, parland, etc)",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "example": "topelius"
+            }
+          },
+          {
+            "in": "path",
+            "name": "file_id",
+            "description": "The ID for the desired markdown file",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "example": "sv-1-23"
+            }
+          }
+        ],
+        "tags": [
+          "text"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "fileid": "1-1-23",
+                    "content": "Hello World!"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "The requested content was not found"
+          }
+        }
+      }
+    },
+    "/digitaledition/{project}/static-pages-toc/{language}": {
+      "get": {
+        "summary": "Get table of contents for a given project",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project",
+            "description": "The Digital Edition project this request concerns (topelius, parland, etc)",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "example": "topelius"
+            }
+          },
+          {
+            "in": "path",
+            "name": "language",
+            "description": "Desired language for table of contents",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "example": "sv"
+            }
+          }
+        ],
+        "tags": [
+          "text"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "404": {
+            "description": "Not found"
+          }
+        }
+      }
+    },
     "/digitaledition/{project}/manuscript/{publication_id}": {
       "get": {
         "summary": "Get the manuscript record(s) for a given publication ID",
@@ -254,10 +340,13 @@
         }
       }
     },
-    "/digitaledition/{project}/text/est/{edition_id}": {
+    "/digitaledition/{project}/text/{c_id}/{p_id}/inl": {
       "get": {
-        "summary": "Get the reading text for a single edition",
-        "description": "Returns the formatted reading text for a single readition for the given project",
+        "summary": "Get introduction text for a publication",
+        "description": "Return HTML-formatted introduction text for a specific publication",
+        "tags": [
+          "text"
+        ],
         "parameters": [
           {
             "in": "path",
@@ -271,17 +360,24 @@
           },
           {
             "in": "path",
-            "name": "edition_id",
-            "description": "The ID for the desired edition",
+            "name": "c_id",
+            "description": "The numerical collection ID for the desired publication",
             "required": true,
             "schema": {
               "type": "string",
-              "example": "1_1"
+              "example": "1"
+            }
+          },
+          {
+            "in": "path",
+            "name": "p_id",
+            "description": "The numerical publication ID for the desired publication",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "example": "2"
             }
           }
-        ],
-        "tags": [
-          "text"
         ],
         "responses": {
           "200": {
@@ -290,20 +386,26 @@
               "application/json": {
                 "schema": {
                   "example": {
-                    "id": "1_1",
-                    "content": "<div><p>Hello, World!</p></div>"
+                    "id": "1_2_inl",
+                    "content": "<div>Hello world!</div>"
                   }
                 }
               }
             }
+          },
+          "403": {
+            "description": "The requested content is not available for viewing"
           }
         }
       }
     },
-    "/digitaledition/{project}/text/com/{edition_id}/{note_id}": {
+    "/digitaledition/{project}/text/{c_id}/{p_id}/inl/{lang}": {
       "get": {
-        "summary": "Get a specific note/commentary for a given edition",
-        "description": "Returns the formatted text for the desired note/comment",
+        "summary": "Get introduction text for a publication",
+        "description": "Return HTML-formatted introduction text for a specific publication",
+        "tags": [
+          "text"
+        ],
         "parameters": [
           {
             "in": "path",
@@ -317,12 +419,337 @@
           },
           {
             "in": "path",
-            "name": "edition_id",
-            "description": "The ID for the desired edition",
+            "name": "c_id",
+            "description": "The numerical collection ID for the desired publication",
             "required": true,
             "schema": {
               "type": "string",
-              "example": "1_1"
+              "example": "1"
+            }
+          },
+          {
+            "in": "path",
+            "name": "p_id",
+            "description": "The numerical publication ID for the desired publication",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "example": "2"
+            }
+          },
+          {
+            "in": "path",
+            "name": "lang",
+            "description": "The desired language",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "example": "swe"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "id": "1_2_inl",
+                    "content": "<div>Hejsan världen</div>"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The requested content is not available for viewing"
+          }
+        }
+      }
+    },
+    "/digitaledition/{project}/text/{c_id}/{p_id}/tit": {
+      "get": {
+        "summary": "Get title page text for a publication",
+        "description": "Return HTML-formatted title page text for a specific publication",
+        "tags": [
+          "text"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project",
+            "description": "The Digital Edition project this request concerns (topelius, parland, etc)",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "example": "topelius"
+            }
+          },
+          {
+            "in": "path",
+            "name": "c_id",
+            "description": "The numerical collection ID for the desired publication",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "example": "1"
+            }
+          },
+          {
+            "in": "path",
+            "name": "p_id",
+            "description": "The numerical publication ID for the desired publication",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "example": "2"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "id": "1_2_tit",
+                    "content": "<div>Hello world!</div>"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The requested content is not available for viewing"
+          }
+        }
+      }
+    },
+    "/digitaledition/{project}/text/{c_id}/{p_id}/tit/{lang}": {
+      "get": {
+        "summary": "Get title page text for a publication",
+        "description": "Return HTML-formatted title page text for a specific publication",
+        "tags": [
+          "text"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project",
+            "description": "The Digital Edition project this request concerns (topelius, parland, etc)",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "example": "topelius"
+            }
+          },
+          {
+            "in": "path",
+            "name": "c_id",
+            "description": "The numerical collection ID for the desired publication",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "example": "1"
+            }
+          },
+          {
+            "in": "path",
+            "name": "p_id",
+            "description": "The numerical publication ID for the desired publication",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "example": "2"
+            }
+          },
+          {
+            "in": "path",
+            "name": "lang",
+            "description": "The desired language",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "example": "swe"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "id": "1_2_tit",
+                    "content": "<div>Hejsan världen!</div>"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The requested content is not available for viewing"
+          }
+        }
+      }
+    },
+    "/digitaledition/{project}/text/{c_id}/{p_id}/est": {
+      "get": {
+        "summary": "Get reading text for a publication",
+        "description": "Return HTML-formatted reading text for a specific publication",
+        "tags": [
+          "text"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project",
+            "description": "The Digital Edition project this request concerns (topelius, parland, etc)",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "example": "topelius"
+            }
+          },
+          {
+            "in": "path",
+            "name": "c_id",
+            "description": "The numerical collection ID for the desired publication",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "example": "1"
+            }
+          },
+          {
+            "in": "path",
+            "name": "p_id",
+            "description": "The numerical publication ID for the desired publication",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "example": "2"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "id": "1_2_est",
+                    "content": "<div>Hello world!</div>"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The requested content is not available for viewing"
+          }
+        }
+      }
+    },
+    "/digitaledition/{project}/text/{c_id}/{p_id}/com": {
+      "get": {
+        "summary": "Get commentary text for a publication",
+        "description": "Return HTML-formatted commentary text for a specific publication",
+        "tags": [
+          "text"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project",
+            "description": "The Digital Edition project this request concerns (topelius, parland, etc)",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "example": "topelius"
+            }
+          },
+          {
+            "in": "path",
+            "name": "c_id",
+            "description": "The numerical collection ID for the desired publication",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "example": "1"
+            }
+          },
+          {
+            "in": "path",
+            "name": "p_id",
+            "description": "The numerical publication ID for the desired publication",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "example": "2"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "id": "1_2_com",
+                    "content": "<div>Hello world!</div>"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The requested content is not available for viewing"
+          }
+        }
+      }
+    },
+    "/digitaledition/{project}/text/{c_id}/{p_id}/com/{note_id}": {
+      "get": {
+        "summary": "Get a specific commentary note for a publication",
+        "description": "Return HTML-formatted commentary text for a specific publication",
+        "tags": [
+          "text"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project",
+            "description": "The Digital Edition project this request concerns (topelius, parland, etc)",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "example": "topelius"
+            }
+          },
+          {
+            "in": "path",
+            "name": "c_id",
+            "description": "The numerical collection ID for the desired publication",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "example": "1"
+            }
+          },
+          {
+            "in": "path",
+            "name": "p_id",
+            "description": "The numerical publication ID for the desired publication",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "example": "2"
             }
           },
           {
@@ -332,12 +759,9 @@
             "required": true,
             "schema": {
               "type": "string",
-              "example": "en350"
+              "example": "123"
             }
           }
-        ],
-        "tags": [
-          "text"
         ],
         "responses": {
           "200": {
@@ -346,20 +770,26 @@
               "application/json": {
                 "schema": {
                   "example": {
-                    "id": "1_1",
-                    "content": "<p>This word refers to an example.</p>"
+                    "id": "1_2_com",
+                    "content": "<div>Hello world!</div>"
                   }
                 }
               }
             }
+          },
+          "403": {
+            "description": "The requested content is not available for viewing"
           }
         }
       }
     },
-    "/digitaledition/{project}/text/com/{edition_id}": {
+    "/digitaledition/{project}/text/{c_id}/{p_id}/ms": {
       "get": {
-        "summary": "Get all notes/commentary for a specific edition",
-        "description": "Returns the formatted notes/commentary text for the given edition.",
+        "summary": "Get all manuscript texts for a publication",
+        "description": "Return HTML-formatted manuscript texts for a specific publication",
+        "tags": [
+          "text"
+        ],
         "parameters": [
           {
             "in": "path",
@@ -373,63 +803,24 @@
           },
           {
             "in": "path",
-            "name": "edition_id",
-            "description": "The ID for the desired edition",
+            "name": "c_id",
+            "description": "The numerical collection ID for the desired publication",
             "required": true,
             "schema": {
               "type": "string",
-              "example": "1_1"
-            }
-          }
-        ],
-        "tags": [
-          "text"
-        ],
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "example": {
-                    "id": "1_1",
-                    "content": "<p>This word refers to an example.</p>"
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/digitaledition/{project}/text/ms/{edition_id}": {
-      "get": {
-        "summary": "Get manuscript texts for a given edition",
-        "description": "Returns a list of manuscript files and their formatted contents for the given edition.",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "project",
-            "description": "The Digital Edition project this request concerns (topelius, parland, etc)",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "example": "topelius"
+              "example": "1"
             }
           },
           {
             "in": "path",
-            "name": "edition_id",
-            "description": "The ID for the desired edition",
+            "name": "p_id",
+            "description": "The numerical publication ID for the desired publication",
             "required": true,
             "schema": {
               "type": "string",
-              "example": "1_1"
+              "example": "2"
             }
           }
-        ],
-        "tags": [
-          "text"
         ],
         "responses": {
           "200": {
@@ -438,29 +829,39 @@
               "application/json": {
                 "schema": {
                   "example": {
-                    "id": "1_1",
+                    "id": "1_2",
                     "manuscripts": [
                       {
-                        "m_filename": "1_1_test.xml",
-                        "m_id": 11,
-                        "m_title": "Test manuscript",
-                        "m_type": 1,
-                        "manuscript_changes": "<p>Formatted changes</p>",
-                        "manuscript_normalized": "<p>Full manuscript text contents.</p>"
+                        "name": "Test manuscript 1",
+                        "originalFilename": "1_2_1_ms.xml",
+                        "manuscript_changes": null,
+                        "manuscript_normalized": "<p>Testing!</p>"
+                      },
+                      {
+                        "name": "Test manuscript 2",
+                        "originalFilename": "1_2_2_ms.xml",
+                        "manuscript_changes": "<p>Paragraph changed to div</p>",
+                        "manuscript_normalized": "<div>Testing!</div>"
                       }
                     ]
                   }
                 }
               }
             }
+          },
+          "403": {
+            "description": "The requested content is not available for viewing"
           }
         }
       }
     },
-    "/digitaledition/{project}/text/var/{edition_id}": {
+    "/digitaledition/{project}/text/{c_id}/{p_id}/ms/{ms_id}": {
       "get": {
-        "summary": "Get all variants of the reading text for the given edition",
-        "description": "Returns a list of all variations of the reading text for the given edition",
+        "summary": "Get a single manuscript text for a publication",
+        "description": "Return HTML-formatted manuscript text for a specific publication",
+        "tags": [
+          "text"
+        ],
         "parameters": [
           {
             "in": "path",
@@ -474,17 +875,34 @@
           },
           {
             "in": "path",
-            "name": "edition_id",
-            "description": "The ID for the desired edition",
+            "name": "c_id",
+            "description": "The numerical collection ID for the desired publication",
             "required": true,
             "schema": {
               "type": "string",
-              "example": "1_1"
+              "example": "1"
+            }
+          },
+          {
+            "in": "path",
+            "name": "p_id",
+            "description": "The numerical publication ID for the desired publication",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "example": "2"
+            }
+          },
+          {
+            "in": "path",
+            "name": "ms_id",
+            "description": "The numerical manuscript ID for the specific manuscript in question",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "example": "2"
             }
           }
-        ],
-        "tags": [
-          "text"
         ],
         "responses": {
           "200": {
@@ -493,24 +911,33 @@
               "application/json": {
                 "schema": {
                   "example": {
-                    "id": "1_1",
-                    "variations": [
-                      "<p>Variant 1</p>",
-                      "<p>Variant 2</p>",
-                      "<div>Variant 3</div>"
+                    "id": "1_2",
+                    "manuscripts": [
+                      {
+                        "name": "Test manuscript 2",
+                        "originalFilename": "1_2_2_ms.xml",
+                        "manuscript_changes": "<p>Paragraph changed to div</p>",
+                        "manuscript_normalized": "<div>Testing!</div>"
+                      }
                     ]
                   }
                 }
               }
             }
+          },
+          "403": {
+            "description": "The requested content is not available for viewing"
           }
         }
       }
     },
-    "/digitaledition/{project}/text/inl/{edition_id}": {
+    "/digitaledition/{project}/text/{c_id}/{p_id}/var": {
       "get": {
-        "summary": "Get preamble text for a given edition",
-        "description": "Returns the formatted text for the desired edition",
+        "summary": "Get all text variants for a publication",
+        "description": "Return HTML-formatted text variants for a specific publication",
+        "tags": [
+          "text"
+        ],
         "parameters": [
           {
             "in": "path",
@@ -524,17 +951,24 @@
           },
           {
             "in": "path",
-            "name": "edition_id",
-            "description": "The ID for the desired edition",
+            "name": "c_id",
+            "description": "The numerical collection ID for the desired publication",
             "required": true,
             "schema": {
               "type": "string",
-              "example": "1_1"
+              "example": "1"
+            }
+          },
+          {
+            "in": "path",
+            "name": "p_id",
+            "description": "The numerical publication ID for the desired publication",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "example": "2"
             }
           }
-        ],
-        "tags": [
-          "text"
         ],
         "responses": {
           "200": {
@@ -543,20 +977,39 @@
               "application/json": {
                 "schema": {
                   "example": {
-                    "id": "1_1",
-                    "content": "<div><p>Hello World!</p></div>"
+                    "id": "1_2",
+                    "variations": [
+                      {
+                        "title": "Test variant 1",
+                        "originalFilename": "1_2_var_1.xml",
+                        "id": 1,
+                        "content": "<p>Hello world!</p>"
+                      },
+                      {
+                        "title": "Test variant 2",
+                        "originalFilename": "1_2_var_2.xml",
+                        "id": 2,
+                        "content": "<p>Hello, world.</p>"
+                      }
+                    ]
                   }
                 }
               }
             }
+          },
+          "403": {
+            "description": "The requested content is not available for viewing"
           }
         }
       }
     },
-    "/digitaledition/{project}/text/inl/{edition_id}/{language}": {
+    "/digitaledition/{project}/text/{c_id}/{p_id}/var/{s_id}": {
       "get": {
-        "summary": "Get translated preamble for a given edition",
-        "description": "Returns the formatted text for the desired edition, in the desired language",
+        "summary": "Get text variants for a specific section of a publication",
+        "description": "Return HTML-formatted text variants for a specific publication",
+        "tags": [
+          "text"
+        ],
         "parameters": [
           {
             "in": "path",
@@ -570,32 +1023,34 @@
           },
           {
             "in": "path",
-            "name": "edition_id",
-            "description": "The ID for the desired edition",
+            "name": "c_id",
+            "description": "The numerical collection ID for the desired publication",
             "required": true,
             "schema": {
               "type": "string",
-              "example": "1_1"
+              "example": "1"
             }
           },
           {
             "in": "path",
-            "name": "language",
-            "description": "The languge code for the desired text",
+            "name": "p_id",
+            "description": "The numerical publication ID for the desired publication",
             "required": true,
             "schema": {
               "type": "string",
-              "enum": [
-                "fin",
-                "swe",
-                "eng"
-              ],
-              "example": "swe"
+              "example": "2"
+            }
+          },
+          {
+            "in": "path",
+            "name": "s_id",
+            "description": "Section ID for the desired section",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "example": "ch1"
             }
           }
-        ],
-        "tags": [
-          "text"
         ],
         "responses": {
           "200": {
@@ -604,180 +1059,36 @@
               "application/json": {
                 "schema": {
                   "example": {
-                    "id": "1_1",
-                    "content": "<div><p>Hejsan Världen!</p></div>"
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/digitaledition/{project}/text/tit/{edition_id}": {
-      "get": {
-        "summary": "Get title page for a given edition",
-        "description": "Returns the formatted title page for the given edition",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "project",
-            "description": "The Digital Edition project this request concerns (topelius, parland, etc)",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "example": "topelius"
-            }
-          },
-          {
-            "in": "path",
-            "name": "edition_id",
-            "description": "The ID for the desired edition",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "example": "1_1"
-            }
-          }
-        ],
-        "tags": [
-          "text"
-        ],
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "example": {
-                    "id": "1_1",
-                    "content": "<p>Title Page For Edition 1_1</p>"
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/digitaledition/{project}/text/tit/{edition_id}/{language}": {
-      "get": {
-        "summary": "Get translated title page for given edition",
-        "description": "Returns a translation of the title page for the given edition, in the given language",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "project",
-            "description": "The Digital Edition project this request concerns (topelius, parland, etc)",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "example": "topelius"
-            }
-          },
-          {
-            "in": "path",
-            "name": "edition_id",
-            "description": "The ID for the desired edition",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "example": "1_1"
-            }
-          },
-          {
-            "in": "path",
-            "name": "language",
-            "description": "The languge code for the desired text",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "enum": [
-                "fin",
-                "swe",
-                "eng"
-              ],
-              "example": "swe"
-            }
-          }
-        ],
-        "tags": [
-          "text"
-        ],
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "example": {
-                    "id": "1_1",
-                    "content": "<p>Titelsida för 1_1</p>"
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/digitaledition/semantic_data/persons/tooltip/{person_id}": {
-      "get": {
-        "summary": "Get tooltip text for the given person",
-        "description": "Returns a brief description of the person in question",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "person_id",
-            "description": "The unique string ID for the person in question",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "example": "spe1"
-            }
-          }
-        ],
-        "tags": [
-          "tooltips"
-        ],
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "example": {
-                    "title": "Test Person",
-                    "content": "Test Person is a very interesting person.",
-                    "givenname": "Test",
-                    "surname": "Person"
+                    "id": "1_2",
+                    "variations": [
+                      {
+                        "title": "Test variant 1",
+                        "originalFilename": "1_2_var_1.xml",
+                        "id": 1,
+                        "content": "<p>Hello world!</p>"
+                      },
+                      {
+                        "title": "Test variant 2",
+                        "originalFilename": "1_2_var_2.xml",
+                        "id": 2,
+                        "content": "<p>Hello, world.</p>"
+                      }
+                    ]
                   }
                 }
               }
             }
           },
-          "404": {
-            "description": "Person ID not found in database"
+          "403": {
+            "description": "The requested content is not available for viewing"
           }
         }
       }
     },
-    "/digitaledition/semantic_data/persons/list/{data_source_id}": {
+    "/digitaledition/tooltips/subjects": {
       "get": {
-        "summary": "Get a list of all available persons in the given data source",
-        "description": "Returns a list of database rows from the given data source",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "data_source_id",
-            "description": "The numeric ID for the desired data source",
-            "required": true,
-            "schema": {
-              "type": "integer",
-              "example": 1
-            }
-          }
-        ],
+        "summary": "Get available subject tooltips",
+        "description": "Get a list of available subject names, along with their ID and associated project_id.",
         "tags": [
           "tooltips"
         ],
@@ -789,16 +1100,19 @@
                 "schema": {
                   "example": [
                     {
-                      "id_p": "spe1",
-                      "title": "Test Person"
+                      "id": 1,
+                      "name": "Bob McGee III",
+                      "project_id": 2
                     },
                     {
-                      "id_p": "spe2",
-                      "title": "Butch Deadlift"
+                      "id": 2,
+                      "name": "Slartibartfast",
+                      "project_id": 2
                     },
                     {
-                      "id_p": "spe3",
-                      "title": "Big McLargeHuge"
+                      "id": 3,
+                      "name": "Stephen Example",
+                      "project_id": 5
                     }
                   ]
                 }
@@ -808,49 +1122,10 @@
         }
       }
     },
-    "/digitaledition/semantic_data/places/tooltip/{place_id}": {
+    "/digitaledition/tooltips/tags": {
       "get": {
-        "summary": "Get tooltip text for the given place",
-        "description": "Returns a brief description of the place in question",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "place_id",
-            "description": "The unique string ID for the place in question",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "example": "PlId110"
-            }
-          }
-        ],
-        "tags": [
-          "tooltips"
-        ],
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "example": {
-                    "title": "Example Place",
-                    "content": "Example Place is a very distinct and interesting place, used as an example."
-                  }
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Place ID not found in database"
-          }
-        }
-      }
-    },
-    "/digitaledition/semantic_data/places/list": {
-      "get": {
-        "summary": "Get a list of all available places",
-        "description": "Returns a list of available places and their associated IDs",
+        "summary": "Get available tag tooltips",
+        "description": "Get a list of available tag names, along with their ID and associated project_id.",
         "tags": [
           "tooltips"
         ],
@@ -862,18 +1137,161 @@
                 "schema": {
                   "example": [
                     {
-                      "title": "Example Place",
-                      "id": "PlId110"
+                      "id": 1,
+                      "name": "Party",
+                      "project_id": 2
                     },
                     {
-                      "title": "Test Plaza",
-                      "id": "PlId001"
-                    },
-                    {
-                      "title": "Idiot Crater",
-                      "id": "PlId002"
+                      "id": 2,
+                      "name": "Chair",
+                      "project_id": 2
                     }
                   ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/digitaledition/tooltips/locations": {
+      "get": {
+        "summary": "Get available location tooltips",
+        "description": "Get a list of available location names, along with their ID and associated project_id.",
+        "tags": [
+          "tooltips"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": [
+                    {
+                      "id": 1,
+                      "name": "Example Plaza",
+                      "project_id": 2
+                    },
+                    {
+                      "id": 2,
+                      "name": "Hotel California",
+                      "project_id": 5
+                    },
+                    {
+                      "id": 3,
+                      "name": "Rock Mountain",
+                      "project_id": 2
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/digitaledition/tooltips/subject/{id}": {
+      "get": {
+        "summary": "Get a tooltip for a specific subject",
+        "description": "Get the name and description for a given subject",
+        "tags": [
+          "tooltips"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "description": "The unique numerical ID for the desired subject",
+            "schema": {
+              "type": "string",
+              "example": "12"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "fullName": "Bob McGee III",
+                    "description": "Third of the Stockholm McGees"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/digitaledition/tooltips/tag/{id}": {
+      "get": {
+        "summary": "Get a tooltip for a specific tag",
+        "description": "Get the name and description for a given tag",
+        "tags": [
+          "tooltips"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "description": "The unique numerical ID for the desired tag",
+            "schema": {
+              "type": "string",
+              "example": "12"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "name": "Party",
+                    "description": "Party"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/digitaledition/tooltips/location/{id}": {
+      "get": {
+        "summary": "Get a tooltip for a specific location",
+        "description": "Get the name and description for a given location",
+        "tags": [
+          "tooltips"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "description": "The unique numerical ID for the desired location",
+            "schema": {
+              "type": "string",
+              "example": "12"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "name": "Example Plaza",
+                    "description": "Thoroughly uninteresting."
+                  }
                 }
               }
             }
@@ -1020,6 +1438,41 @@
                   "example": {
                     "msg": "Logged in as 'test@test.com'",
                     "access_token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpZGVudGl0eSI6eyJzdWIiOiJ0ZXN0QHRlc3QuY29tIiwicHJvamVjdHMiOm51bGx9LCJ0eXBlIjoiYWNjZXNzIn0.XtShkUBz6AboojEi07D7S-RCCCezQFbBVHFkFMY1ZWs"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/test": {
+      "post": {
+        "summary": "Test JWT auth",
+        "description": "Returns your JWT user identity, provided the used JWT access token is valid.",
+        "tags": [
+          "auth"
+        ],
+        "parameters": [
+          {
+            "in": "header",
+            "required": true,
+            "name": "Authorization",
+            "description": "JWT Access Token, as 'Bearer JWT_TOKEN_HERE'",
+            "schema": {
+              "example": "Authorization: Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpZGVudGl0eSI6eyJzdWIiOiJ0ZXN0QHRlc3QuY29tIiwicHJvamVjdHMiOm51bGx9LCJ0eXBlIjoiYWNjZXNzIn0.XtShkUBz6AboojEi07D7S-RCCCezQFbBVHFkFMY1ZWs"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "sub": "test@test.com",
+                    "projects": null
                   }
                 }
               }
