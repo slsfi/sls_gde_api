@@ -913,6 +913,8 @@ def create_fascimile_collection(project):
     POST data MAY also contain:
     numberOfPages: total number of pages in this collection
     startPageNumber: number for starting page of this collection
+    pageComment: Commentary on page numbering
+    externalURL: Externally viewable URL for this fascimile collection
     """
     request_data = request.get_json()
     if not request_data:
@@ -970,6 +972,9 @@ def link_fascimile_collection_to_publication(project, collection_id):
     POST data MAY also contain the following:
     publicationManuscript_id: ID for the specific publication manuscript to link to
     publicationVersion_id: ID for the specific publication version to link to
+    sectionId: Section or chapter number for this particular fascimile
+    pageNr: Page number for link
+    priority: Priority number for this link
     """
     request_data = request.get_json()
     if not request_data:
@@ -1228,6 +1233,9 @@ def new_publication(project, collection_id):
     legacyId: legacy ID for publication
     publishedBy: person responsible for publishing the publication
     originalFilename: filepath to publication XML file
+    genre: Genre for this publication
+    publicationGroup_id: ID for related publicationGroup, used to group publications for easy publishing of large numbers of publications
+    originalPublicationDate: Date of original publication for physical equivalent
     """
     request_data = request.get_json()
     if not request_data:
@@ -1264,7 +1272,10 @@ def new_publication(project, collection_id):
         "published": request_data.get("published", None),
         "legacyId": request_data.get("legacyId", None),
         "publishedBy": request_data.get("publishedBy", None),
-        "originalFilename": request_data.get("originalFileName", None)
+        "originalFilename": request_data.get("originalFileName", None),
+        "genre": request_data.get("genre", None),
+        "publicationGroup_id": request_data.get("publicationGroup_id", None),
+        "originalPublicationDate": request_data.get("originalPublicationDate", None)
     }
     try:
         result = connection.execute(insert, **publication)
@@ -1283,6 +1294,9 @@ def new_publication(project, collection_id):
         return jsonify(result), 500
     finally:
         connection.close()
+
+
+# TODO publicationGroup
 
 
 @de_tools.route("/<project>/publication/<publication_id>/link_file", methods=["POST"])
@@ -1305,6 +1319,8 @@ def link_file_to_publication(project, publication_id):
 
     POST data MAY also contain:
     legacyId: legacy ID for this publication file object
+    type: Type of file link, for Manuscripts and Versions
+    sectionId: Publication section or chapter number, for Manuscripts and Versions
     """
     request_data = request.get_json()
     if not request_data:
@@ -1360,7 +1376,9 @@ def link_file_to_publication(project, publication_id):
             "datePublishedExternally": request_data.get("datePublishedExternally", None),
             "published": request_data.get("published", None),
             "publishedBy": request_data.get("publishedBy", None),
-            "legacyId": request_data.get("legacyId", None)
+            "legacyId": request_data.get("legacyId", None),
+            "type": request_data.get("type", None),
+            "sectionId": request_data.get("sectionId", None)
         }
         if file_type == "manuscript":
             table = Table("publicationManuscript", metadata, autoload=True, autoload_with=False)
