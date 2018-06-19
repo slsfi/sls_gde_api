@@ -732,6 +732,39 @@ def get_list_of_persons(data_source_id):
     connection.close()
     return jsonify(ms_data)
 
+# routes/semantic_data/persons.php
+@digital_edition.route("/semantic_data/person/<person_id>/occurences")
+def get_person_ocurrences(person_id):
+    logger.info("Getting list of persons /semantic_data/person/{}/occurences".format(person_id))
+    connection = get_mysql_connection("semantic_data")
+    sql = "SELECT person_id, link_id, text_type FROM person_occurences WHERE person_id=:p_id ORDER BY person_id ASC"
+    # SELECT person_id, link_id, text_type FROM semantic_data.person_occurences WHERE person_occurences.person_id='spe1'
+
+    statement = sqlalchemy.sql.text(sql).bindparams(p_id=person_id)
+    ms_data = []
+    for row in connection.execute(statement).fetchall():
+        ms_data.append(dict(row))
+    connection.close()
+
+    print(ms_data)
+
+    if ms_data:
+        return jsonify(ms_data)
+    else:
+        return jsonify("Occurences not found."), 404
+
+# routes/semantic_data/publication.php
+@digital_edition.route("/<project>/publication/<p_identifier>/title")
+def get_publication_title(project, p_identifier):
+    connection = get_mysql_connection(project)
+    sql = sqlalchemy.sql.text("SELECT p_identifier, p_title, p_filename FROM publications WHERE p_identifier=:pub_ident ORDER BY p_title")
+    statement = sql.bindparams(pub_ident=p_identifier)
+    results = []
+    for row in connection.execute(statement).fetchall():
+        results.append(dict(row))
+    connection.close()
+    return jsonify(results)
+
 
 # routes/semantic_data/places.php
 @digital_edition.route("/semantic_data/places/tooltip/<place_id>")
@@ -890,9 +923,9 @@ def publish_status(project, edition_id):
 
 
 def get_id_parts(edition_id):
-    id_parts = edition_id.replace("_est", "").split(";")  # 12_1_est;ch5  - Finland framställt i teckningar.
+    id_parts = edition_id.replace("_est", "").split(";")
 
-    item_id = id_parts[0]  # 1_1
+    item_id = id_parts[0]
     item_parts = item_id.split("_")
     book_id = item_parts[0]
     text_id = item_parts[1]
