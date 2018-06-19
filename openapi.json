@@ -2305,7 +2305,6 @@
                   "example": {
                     "id": 23,
                     "publicationCollection_id": 1,
-                    "publicationInformation_id": 23,
                     "publicationComment_id": 2435,
                     "published": true,
                     "legacyId": 123,
@@ -3320,7 +3319,6 @@
               "schema": {
                 "example": {
                   "name": "Test publication",
-                  "publicationInformation_id": null,
                   "publicationComment_id": null,
                   "published": 1,
                   "legacyId": "test_old",
@@ -3366,111 +3364,6 @@
                   "example": {
                     "msg": "Failed to create new publication",
                     "reason": "Failed to connect to database. (connection refused)"
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/digitaledition/{project}/publication/{id}/information": {
-      "parameters": [
-        {
-          "in": "path",
-          "required": true,
-          "name": "project",
-          "description": "Name for the project in question",
-          "schema": {
-            "type": "string",
-            "example": "topelius"
-          }
-        },
-        {
-          "in": "path",
-          "required": true,
-          "name": "id",
-          "description": "Numerical ID for the publication",
-          "schema": {
-            "type": "string",
-            "example": "2"
-          }
-        }
-      ],
-      "get": {
-        "summary": "Get all information objects for a publication",
-        "description": "Returns a list of all publicationInformation objects for a given publication ID",
-        "tags": [
-          "publications"
-        ],
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "example": [
-                    {
-                      "id": 1,
-                      "title": "Test",
-                      "genre": "Drama",
-                      "originalPublicationDate": "2015-31-12"
-                    },
-                    {
-                      "id": 2,
-                      "title": "Test2",
-                      "genre": "Comedy",
-                      "originalPublicationDate": "2015-31-12"
-                    }
-                  ]
-                }
-              }
-            }
-          }
-        }
-      },
-      "post": {
-        "summary": "Add new information related to a publication",
-        "description": "Creates a new information object and ties it to the publication in question",
-        "tags": [
-          "publications"
-        ],
-        "requestBody": {
-          "description": "New information about the publication in question",
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "example": {
-                  "title": "Test info",
-                  "genre": "Test",
-                  "originalPublicationDate": "2012-01-01"
-                }
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "Created",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "example": {
-                    "msg": "Created new publicationInformation with ID 2"
-                  }
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Internal server error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "example": {
-                    "msg": "Failed to create new publicationInformation object",
-                    "reason": "Failed to connect to database (connection refused)"
                   }
                 }
               }

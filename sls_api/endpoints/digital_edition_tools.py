@@ -1222,7 +1222,6 @@ def new_publication(project, collection_id):
     name: publication name
 
     POST data MAY also contain the following:
-    publicationInformation_id: ID for related publicationInformation object
     publicationComment_id: ID for related publicationComment object
     datePublishedExternally: date of external publication for publication
     published: publish status for publication
@@ -1260,7 +1259,6 @@ def new_publication(project, collection_id):
 
     publication = {
         "name": request_data.get("name", None),
-        "publicationInformation_id": request_data.get("publicationInformation_id", None),
         "publicationComment_id": request_data.get("publicationComment_id", None),
         "datePublishedExternally": request_data.get("datePublishedExternally", None),
         "published": request_data.get("published", None),
@@ -1287,84 +1285,6 @@ def new_publication(project, collection_id):
         connection.close()
 
 
-@de_tools.route("/<project>/publication/<publication_id>/information")
-@project_permission_required
-def get_information(project, publication_id):
-    """
-    List all publicationInformation objects in database for a given publication
-    """
-    connection = db_engine.connect()
-    informations = Table("publicationInformation", metadata, autoload=True, autoload_with=db_engine)
-    publications = Table("publication", metadata, autoload=True, autoload_with=db_engine)
-
-    statement = select([informations])\
-        .select_from(informations.join(publications, informations.c.id == publications.c.publicationInformation_id))\
-        .where(publications.c.id == int(publication_id))
-
-    rows = connection.execute(statement).fetchall()
-    result = []
-    for row in rows:
-        result.append(dict(row))
-    connection.close()
-    return jsonify(result)
-
-
-@de_tools.route("/<project>/publication/<publication_id>/information", methods=["POST"])
-@project_permission_required
-def add_information(project, publication_id):
-    """
-    Add a new publicationInformation object
-
-    POST data MUST be in JSON format
-
-    POST data SHOULD contain the following:
-    title: title information for the given publication
-    genre: genre information for the given publication
-    originalPublicationDate: original publication date for the given publication
-    """
-    request_data = request.get_json()
-    if not request_data:
-        return jsonify({"msg": "No data provided."}), 400
-
-    connection = db_engine.connect()
-    information = Table("publicationInformation", metadata, autoload=True, autoload_with=db_engine)
-    publications = Table("publication", metadata, autoload=True, autoload_with=db_engine)
-
-    new_info = {
-        "title": request_data.get("title", None),
-        "genre": request_data.get("genre", None),
-        "originalPublicationDate": request_data.get("originalPublicationDate", None)
-    }
-
-    insert = information.insert()
-    transaction = connection.begin()
-    try:
-        result = connection.execute(insert, **new_info)
-        new_row = select([information]).where(information.c.id == result.inserted_primary_key[0])
-        new_row = dict(connection.execute(new_row).fetchone())
-
-        # update publication object in database with new publicationInformation ID
-        update_stmt = publications.update().where(publications.c.id == int(publication_id)).\
-            values(publications.c.publicationInformation_id == result.inserted_primary_key[0])
-        connection.execute(update_stmt)
-
-        transaction.commit()
-        result = {
-            "msg": "Created new publicationInformation with ID {}".format(result.inserted_primary_key[0]),
-            "row": new_row
-        }
-        return jsonify(result), 201
-    except Exception as e:
-        transaction.rollback()
-        result = {
-            "msg": "Failed to create new publicationInformation object",
-            "reason": str(e)
-        }
-        return jsonify(result), 500
-    finally:
-        connection.close()
-
-
 @de_tools.route("/<project>/publication/<publication_id>/link_file", methods=["POST"])
 @project_permission_required
 def link_file_to_publication(project, publication_id):
@@ -1384,7 +1304,6 @@ def link_file_to_publication(project, publication_id):
     publishedBy: person responsible for publishing
 
     POST data MAY also contain:
-    informationId: ID for related "information" object, used for manuscripts and versions - contains additional information
     legacyId: legacy ID for this publication file object
     """
     request_data = request.get_json()
@@ -1441,8 +1360,7 @@ def link_file_to_publication(project, publication_id):
             "datePublishedExternally": request_data.get("datePublishedExternally", None),
             "published": request_data.get("published", None),
             "publishedBy": request_data.get("publishedBy", None),
-            "legacyId": request_data.get("legacyId", None),
-            "publicationInformation_id": request_data.get("informationId", None)
+            "legacyId": request_data.get("legacyId", None)
         }
         if file_type == "manuscript":
             table = Table("publicationManuscript", metadata, autoload=True, autoload_with=False)
