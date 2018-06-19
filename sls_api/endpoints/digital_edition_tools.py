@@ -79,7 +79,7 @@ def add_new_location(project):
     description: location description
 
     POST data CAN also contain:
-    legacyXMLId: legacy XML id for location
+    legacyId: legacy id for location
     latitude: latitude coordinate for location
     longitude: longitude coordinate for location
     """
@@ -96,7 +96,7 @@ def add_new_location(project):
         "name": request_data["name"],
         "description": request_data.get("desription", None),
         "project_id": get_project_id_from_name(project),
-        "legacyXMLId": request_data.get("legacyXMLId", None),
+        "legacyId": request_data.get("legacyId", None),
         "latitude": request_data.get("latitude", None),
         "longitude": request_data.get("longitude", None)
     }
@@ -137,7 +137,7 @@ def add_new_subject(project):
     lastName Subject surname
     preposition: preposition for subject
     fullName: Subject full name
-    legacyXMLId: Legacy XML id for subject
+    legacyId: Legacy id for subject
     dateBorn: Subject date of birth
     dateDeceased: Subject date of death
     """
@@ -155,7 +155,7 @@ def add_new_subject(project):
         "lastName": request_data.get("lastName", None),
         "preposition": request_data.get("preposition", None),
         "fullName": request_data.get("fullName", None),
-        "legacyXMLId": request_data.get("legacyXMLId", None),
+        "legacyId": request_data.get("legacyId", None),
         "dateBorn": request_data.get("dateBorn", None),
         "dateDeceased": request_data.get("dateDeceased", None)
     }
@@ -193,7 +193,7 @@ def add_new_tag(project):
 
     POST data CAN also contain:
     description: tag description
-    legacyXMLId: Legacy XML id for tag
+    legacyId: Legacy id for tag
     """
     request_data = request.get_json()
     if not request_data:
@@ -206,7 +206,7 @@ def add_new_tag(project):
         "name": request_data.get("name", None),
         "project_id": get_project_id_from_name(project),
         "description": request_data.get("description", None),
-        "legacyXMLId": request_data.get("legacyXMLId", None)
+        "legacyId": request_data.get("legacyId", None)
     }
     try:
         insert = tags.insert()
