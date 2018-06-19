@@ -4,7 +4,9 @@ engine: 'mysql://web_user:SecretPassword@mysql_server.example.com:3306?charset=u
 # This engine config tells the system to connect to a MySQL server at mysql_server.example.com on port 3306
 # It uses the username 'web_user' with the password 'SecretPassword'
 
+# Each digital edition project has its own config section describing how its files are located and handled
 parland:
+    # First, settings about how the publication tools should communicate towards git
     git_repository: 'publisher@parland:slsfi/parland.git'
     git_config: |
         host parland
@@ -13,9 +15,11 @@ parland:
           IdentitiesOnly yes
           User publisher
     git_branch: 'staging'
+    # And then the actual local directory where the files are located (should be a local git repository with the above configured as its remote)
     file_root: '/var/www/parland'
 
 topelius:
+    # First, settings about how the publication tools should communicate towards git
     git_repository: 'publisher@topelius:slsfi/topelius.git'
     git_config: |
         host topelius
@@ -24,7 +28,10 @@ topelius:
           IdentitiesOnly yes
           User publisher
     git_branch: 'master'
+    # And then the actual local directory where the files are located (should be a local git repository with the above configured as its remote)
     file_root: '/var/www/topelius'
 
+# In addition to STDOUT, messages can also be logged to file
 log_file: '/log/digital_editions/api.log'
+# XML-to-HTML is somewhat computationally expensive, so HTML reading texts are cached for up to this amount of time
 cache_lifetime_seconds: 7200  # 2 hours
