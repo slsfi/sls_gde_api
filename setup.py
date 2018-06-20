@@ -16,6 +16,7 @@ setup(
         'mysqlclient',
         'passlib',
         'psycopg2',
+        'raven[flask]',
         'ruamel.yaml',
         'requests',
         'sqlalchemy',

@@ -5,10 +5,12 @@ from flasgger import Swagger
 import logging
 import json
 import os
+from raven.contrib.flask import Sentry
 from ruamel.yaml import YAML
 from sys import stdout
 
 app = Flask(__name__)
+yaml = YAML()
 
 # First, set up logging
 root_logger = logging.getLogger()
@@ -23,6 +25,18 @@ stream_handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(leveln
 root_logger.addHandler(stream_handler)
 
 logger = logging.getLogger("sls_api")
+
+# if there's a sentry.io config file, enable error tracking towards it
+if os.path.exists(os.path.join("sls_api", "configs", "sentry.yml")):
+    with open(os.path.join("sls_api", "configs", "sentry.yml")) as config_file:
+        sentry_config = yaml.load(config_file.read())
+    if "sentry_dsn" in sentry_config and sentry_config["sentry_dsn"] != "":
+        logger.info("Enabled sentry.io error tracking with settings from 'sentry.yml'")
+        sentry = Sentry(app, dsn=sentry_config["sentry_dsn"], logging=True, level=logging.ERROR)
+    else:
+        sentry = None
+else:
+    sentry = None
 
 # Load in Swagger UI to display api documentation at /apidocs, with a 302-redirect at the base URL
 if os.path.exists("openapi.json"):
@@ -50,7 +64,6 @@ if os.path.exists(os.path.join("sls_api", "configs", "digital_editions.yml")):
 if os.path.exists(os.path.join("sls_api", "configs", "security.yml")):
     from sls_api.endpoints.auth import auth
     from sls_api.models import db, User
-    yaml = YAML()
     with open(os.path.join("sls_api", "configs", "security.yml")) as config_file:
         security_config = yaml.load(config_file.read())
     app.config["SECRET_KEY"] = security_config["secret_key"]
