@@ -1387,7 +1387,7 @@ def add_publication_to_group(project, publication_id):
         connection.close()
 
 
-@de_tools.route("/<project>/publication_group/new", methods="POST")
+@de_tools.route("/<project>/publication_group/new", methods=["POST"])
 @project_permission_required
 def add_new_publication_group(project):
     """
