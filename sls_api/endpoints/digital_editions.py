@@ -753,6 +753,26 @@ def get_person_ocurrences(person_id):
     else:
         return jsonify("Occurences not found."), 404
 
+# routes/semantic_data/persons.php
+@digital_edition.route("/semantic_data/place/<place_id>/occurences")
+def get_place_ocurrences(place_id):
+    logger.info("Getting list of persons /semantic_data/place/{}/occurences".format(place_id))
+    connection = get_mysql_connection("semantic_data")
+    sql = "SELECT place_id, link_id, text_type FROM place_occurences WHERE place_id=:p_id ORDER BY place_id ASC"
+
+    statement = sqlalchemy.sql.text(sql).bindparams(p_id=place_id)
+    ms_data = []
+    for row in connection.execute(statement).fetchall():
+        ms_data.append(dict(row))
+    connection.close()
+
+    print(ms_data)
+
+    if ms_data:
+        return jsonify(ms_data)
+    else:
+        return jsonify("Occurences not found."), 404
+
 # routes/semantic_data/publication.php
 @digital_edition.route("/<project>/publication/<p_identifier>/title")
 def get_publication_title(project, p_identifier):
@@ -763,7 +783,7 @@ def get_publication_title(project, p_identifier):
     for row in connection.execute(statement).fetchall():
         results.append(dict(row))
     connection.close()
-    return jsonify(results)
+    return jsonify(results)  
 
 
 # routes/semantic_data/places.php
