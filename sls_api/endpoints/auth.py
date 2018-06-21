@@ -73,11 +73,10 @@ def login_user():
 @jwt_refresh_token_required
 def refresh_token():
     identity = get_jwt_identity()
-    access_token = create_access_token(identity=identity)
     return jsonify(
         {
-            "msg": "Logged in as {!r}".format(identity["email"]),
-            "access_token": access_token
+            "msg": "Logged in as {!r}".format(identity["sub"]),
+            "access_token": create_access_token(identity=identity)
         }
     ), 200
 
