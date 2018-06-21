@@ -1,7 +1,7 @@
 {
   "openapi": "3.0.0",
   "info": {
-    "description": "RESTful JSON API for sls.fi Generic Digital Editions platform. <br/>For additional information on the GDE project, visit the <a href='https://bitbucket.org/account/user/slssu/projects/GDE'>GDE bitbucket pages</a>. <br/><br/>Specifically, information about configuring the GDE platform can be found at the <a href='https://bitbucket.org/slssu/digital_edition_configuration'>GDE configuration repository</a>, while information about the publication tools can be found at the <a href='https://bitbucket.org/slssu/digital_edition_tools'>GDE tools repository</a>.<br/><br/> <b>Please note that swagger may represent 'null' values as '{}' in some examples.</b>",
+    "description": "RESTful JSON API for sls.fi Generic Digital Editions platform. <br/>For additional information on the GDE project, visit the <a href='https://bitbucket.org/account/user/slssu/projects/GDE'>GDE bitbucket pages</a>. <br/><br/>Specifically, information about configuring the GDE platform can be found at the <a href='https://bitbucket.org/slssu/digital_edition_configuration'>GDE configuration repository</a>, while information about the publication tools can be found at the <a href='https://bitbucket.org/slssu/digital_edition_tools'>GDE tools repository</a>.<br/><br/>",
     "version": "1.0.0",
     "title": "SLS API",
     "contact": {
