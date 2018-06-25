@@ -7,27 +7,20 @@ import logging
 from logging.handlers import TimedRotatingFileHandler
 from lxml import etree
 import os
-from ruamel.yaml import YAML
-from sqlalchemy import create_engine
 import sqlalchemy.sql
 import time
 import re
 import glob
 
-digital_edition = Blueprint('digital_edition', __name__)
+from sls_api.endpoints.generics import config, db_engine, select_all_from_table
 
-config_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "configs")
-with io.open(os.path.join(config_dir, "digital_editions.yml"), encoding="UTF-8") as digital_editions_config:
-    yaml = YAML()
-    project_config = yaml.load(digital_editions_config)
+digital_edition = Blueprint('digital_edition', __name__)
 
 logger = logging.getLogger("sls_api.digital_edition")
 
-file_handler = TimedRotatingFileHandler(filename=project_config["log_file"], when="midnight", backupCount=7)
+file_handler = TimedRotatingFileHandler(filename=config["log_file"], when="midnight", backupCount=7)
 file_handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s', '%H:%M:%S'))
 logger.addHandler(file_handler)
-
-db_engine = create_engine(project_config["engine"], pool_pre_ping=True)
 
 
 @digital_edition.after_request
@@ -43,10 +36,18 @@ def set_access_control_headers(response):
     return response
 
 
+@digital_edition.route("/projects/")
+def get_projects():
+    """
+    List all GDE projects
+    """
+    return select_all_from_table("project")
+
+
 @digital_edition.route("/<project>/html/<filename>")
 def get_html_contents_as_json(project, filename):
     logger.info("Getting static content from /{}/html/{}".format(project, filename))
-    file_path = safe_join(project_config[project]["file_root"], "html", "{}.html".format(filename))
+    file_path = safe_join(config[project]["file_root"], "html", "{}.html".format(filename))
     if os.path.exists(file_path):
         with io.open(file_path, encoding="UTF-8") as html_file:
             contents = html_file.read()
@@ -65,7 +66,7 @@ def get_md_contents_as_json(project, fileid):
 
     path = "*/".join(fileid.split("-")) + "*"
 
-    file_path_query = safe_join(project_config[project]["file_root"], "md", path)
+    file_path_query = safe_join(config[project]["file_root"], "md", path)
 
     try:
         file_path = [f for f in glob.iglob(file_path_query)][0]
@@ -88,7 +89,7 @@ def get_md_contents_as_json(project, fileid):
 @digital_edition.route("/<project>/static-pages-toc/<language>")
 def get_static_pages_as_json(project, language):
     logger.info("Getting static content from /{}/static-pages-toc/{}".format(project, language))
-    folder_path = safe_join(project_config[project]["file_root"], "md", language)
+    folder_path = safe_join(config[project]["file_root"], "md", language)
 
     if os.path.exists(folder_path):
         data = path_hierarchy(folder_path, language)
@@ -201,7 +202,7 @@ def get_comments(project, collection_id, publication_id, note_id=None):
         logger.info("Getting XML for {} and transforming...".format(request.full_path))
         filename = "{}_{}_com.xml".format(collection_id, publication_id)
         params = {
-            "estDocument": '"file://{}'.format(safe_join(project_config[project]["file_root"], "xml", "est", filename.replace("com", "est")))
+            "estDocument": '"file://{}'.format(safe_join(config[project]["file_root"], "xml", "est", filename.replace("com", "est")))
         }
         if note_id is not None:
             params["noteId"] = '"{}"'.format(note_id)
@@ -469,7 +470,7 @@ def cache_is_recent(source_file, xsl_file, cache_file):
         return False
     if source_file_mtime > cache_file_mtime or xsl_file_mtime > cache_file_mtime:
         return False
-    elif calendar.timegm(time.gmtime()) > (cache_file_mtime + project_config["cache_lifetime_seconds"]):
+    elif calendar.timegm(time.gmtime()) > (cache_file_mtime + config["cache_lifetime_seconds"]):
         return False
     return True
 
@@ -536,8 +537,8 @@ def xml_to_html(xsl_file_path, xml_file_path, replace_namespace=True, params=Non
 
 
 def get_content(project, folder, xml_filename, xsl_filename, parameters):
-    xml_file_path = safe_join(project_config[project]["file_root"], "xml", folder, xml_filename)
-    xsl_file_path = safe_join(project_config[project]["file_root"], "xslt", xsl_filename)
+    xml_file_path = safe_join(config[project]["file_root"], "xml", folder, xml_filename)
+    xsl_file_path = safe_join(config[project]["file_root"], "xslt", xsl_filename)
     cache_file_path = xml_file_path.replace("/xml/", "/cache/").replace(".xml", ".html")
     content = None
 

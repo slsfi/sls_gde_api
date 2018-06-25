@@ -10,7 +10,7 @@ from ruamel.yaml import YAML
 from sys import stdout
 
 app = Flask(__name__)
-yaml = YAML()
+yaml = YAML(typ="safe")
 
 # First, set up logging
 root_logger = logging.getLogger()
@@ -59,8 +59,7 @@ else:
 if os.path.exists(os.path.join("sls_api", "configs", "digital_editions.yml")):
     from sls_api.endpoints.digital_editions import digital_edition
     app.register_blueprint(digital_edition, url_prefix="/digitaledition")
-    from sls_api.endpoints.digital_edition_tools import de_tools
-    app.register_blueprint(de_tools, url_prefix="/digitaledition")
+
 if os.path.exists(os.path.join("sls_api", "configs", "security.yml")):
     from sls_api.endpoints.auth import auth
     from sls_api.models import db, User
@@ -80,5 +79,20 @@ if os.path.exists(os.path.join("sls_api", "configs", "security.yml")):
         db.create_all()
         if not User.find_by_email("test@test.com"):
             User.create_new_user("test@test.com", "test")
+
+if "digital_edition" in app.blueprints and "auth" in app.blueprints:
+    """
+    If we have a digital_edition config, and JWT is configured, load in JWT-protected publication tool endpoints
+    """
+    from sls_api.endpoints.tools_events import event_tools
+    app.register_blueprint(event_tools, url_prefix="/digitaledition")
+    from sls_api.endpoints.tools_publications import publication_tools
+    app.register_blueprint(publication_tools, url_prefix="/digitaledition")
+    from sls_api.endpoints.tools_files import file_tools
+    app.register_blueprint(file_tools, url_prefix="/digitaledition")
+    from sls_api.endpoints.tools_collections import collection_tools
+    app.register_blueprint(collection_tools, url_prefix="/digitaledition")
+    from sls_api.endpoints.tools_groups import group_tools
+    app.register_blueprint(group_tools, url_prefix="/digitaledition")
 
 logger.info(" * Loaded endpoints: {}".format(", ".join(app.blueprints)))
