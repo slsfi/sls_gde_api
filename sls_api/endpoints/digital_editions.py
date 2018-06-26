@@ -722,7 +722,7 @@ def get_person_tooltip(person_id):
 def get_list_of_persons(data_source_id):
     logger.info("Getting list of persons /semantic_data/persons/list/{}".format(data_source_id))
     connection = get_mysql_connection("semantic_data")
-    sql = "SELECT c_webbnamn_1_sort AS title, ed_tooltip AS content, " \
+    sql = "SELECT DISTINCT c_webbnamn_1_sort AS title, ed_tooltip AS content, " \
           "c_webbfornamn1, c_webbefternamn1, ed_tooltip, id_p, c_webbsok " \
           "FROM persons WHERE data_source_id=:ds_id ORDER BY id_p ASC"
     statement = sqlalchemy.sql.text(sql).bindparams(ds_id=data_source_id)
@@ -737,13 +737,40 @@ def get_list_of_persons(data_source_id):
 def get_person_ocurrences(person_id):
     logger.info("Getting list of persons /semantic_data/person/{}/occurences".format(person_id))
     connection = get_mysql_connection("semantic_data")
-    sql = "SELECT person_id, link_id, text_type FROM person_occurences WHERE person_id=:p_id ORDER BY person_id ASC"
+    sql = "SELECT person_id, link_id, text_type FROM person_occurences WHERE person_id=:p_id ORDER BY person_id ASC"    
     # SELECT person_id, link_id, text_type FROM semantic_data.person_occurences WHERE person_occurences.person_id='spe1'
 
     statement = sqlalchemy.sql.text(sql).bindparams(p_id=person_id)
     ms_data = []
     for row in connection.execute(statement).fetchall():
         ms_data.append(dict(row))
+    connection.close()
+
+    print(ms_data)
+
+    if ms_data:
+        return jsonify(ms_data)
+    else:
+        return jsonify("Occurences not found."), 404
+
+# routes/semantic_data/persons.php
+@digital_edition.route("/semantic_data/person/occurences/editions/<edition_ids>")
+def get_person_ocurrences_by_edition(edition_ids):
+    print('Array of edition ids')
+    print(edition_ids)
+
+    logger.info("Getting list of persons /semantic_data/person/occurences/editions/{}".format(edition_ids))
+    connection = get_mysql_connection("semantic_data")
+
+    ms_data = []
+
+    for edition_id in edition_ids:
+        edition_id = edition_id + "_%"
+        sql = "SELECT DISTINCT person_id AS id_p, c_webbnamn_1_sort AS title FROM person_occurences, persons WHERE link_id LIKE :e_id AND digital_edition_key='topelius' AND person_occurences.person_id=persons.id_p ORDER BY id_p ASC"
+        statement = sqlalchemy.sql.text(sql).bindparams(e_id=edition_id)
+        for row in connection.execute(statement).fetchall():
+            ms_data.append(dict(row))
+
     connection.close()
 
     print(ms_data)
