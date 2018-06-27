@@ -115,7 +115,7 @@ def get_manuscripts(project, publication_id):
 def get_publication(project, publication_id):
     logger.info("Getting publication /{}/publication/{}".format(project, publication_id))
     connection = db_engine.connect()
-    sql = sqlalchemy.sql.text("SELECT * FROM publication WHERE id:=p_id ORDER BY name")
+    sql = sqlalchemy.sql.text("SELECT * FROM publication WHERE id=:p_id ORDER BY name")
     statement = sql.bindparams(p_id=publication_id)
     results = []
     for row in connection.execute(statement).fetchall():
