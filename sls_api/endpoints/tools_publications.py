@@ -14,7 +14,6 @@ publication_tools = Blueprint("publication_tools", __name__)
 def get_publications(project):
     """
     List all available publications in the given project
-    # TODO add this to openapi.json
     """
     project_id = get_project_id_from_name(project)
     connection = db_engine.connect()

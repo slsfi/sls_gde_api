@@ -2272,6 +2272,67 @@
         }
       }
     },
+    "/digitaledition/{project}/publications": {
+      "get": {
+        "summary": "Get all available publications in project",
+        "description": "List all publications linked to the given project",
+        "tags": [
+          "publications"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "required": true,
+            "name": "project",
+            "description": "Name for the project in question",
+            "schema": {
+              "type": "string",
+              "example": "topelius"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": [
+                    {
+                      "id": 1,
+                      "publicationCollection_id": 1,
+                      "publicationComment_id": 11,
+                      "published": 1,
+                      "legacyId": 11,
+                      "publishedBy": "TestUser",
+                      "originalFilename": "est/1_1.xml"
+                    },
+                    {
+                      "id": 2,
+                      "publicationCollection_id": 1,
+                      "publicationComment_id": 12,
+                      "published": 1,
+                      "legacyId": 12,
+                      "publishedBy": "TestUser",
+                      "originalFilename": "est/1_2.xml"
+                    },
+                    {
+                      "id": 3,
+                      "publicationCollection_id": 1,
+                      "publicationComment_id": 13,
+                      "published": 1,
+                      "legacyId": 13,
+                      "publishedBy": "TestUser",
+                      "originalFilename": "est/1_3.xml"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/digitaledition/{project}/publication/{id}": {
       "get": {
         "summary": "Get all data for a single publication",
