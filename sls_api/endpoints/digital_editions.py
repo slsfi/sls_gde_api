@@ -341,28 +341,17 @@ def location_tooltips():
     return jsonify(list_tooltips("location"))
 
 
-@digital_edition.route("/tooltips/subject/<ident>")
-def get_subject_tooltip(ident):
+@digital_edition.route("/tooltips/<object_type>/<ident>")
+def get_tooltip_text(object_type, ident):
     """
-    Get a specific subject tooltip by ID
+    Get tooltip text for a specific subject, tag, or location
+    object_type: one of "subject", "tag", "location"
+    ident: legacy or numerical ID for desired object
     """
-    return jsonify(get_tooltip("subject", ident))
-
-
-@digital_edition.route("/tooltips/tag/<ident>")
-def get_tag_tooltip(ident):
-    """
-    Get a specific tag tooltip by ID
-    """
-    return jsonify(get_tooltip("tag", ident))
-
-
-@digital_edition.route("/tooltips/location/<ident>")
-def get_location_tooltip(ident):
-    """
-    Get a specific location tooltip by ID
-    """
-    return jsonify(get_tooltip("location", ident))
+    if object_type not in ["subject", "tag", "location"]:
+        abort(404)
+    else:
+        return jsonify(get_tooltip(object_type, ident))
 
 
 def list_tooltips(table):
@@ -374,9 +363,9 @@ def list_tooltips(table):
         return ""
     connection = db_engine.connect()
     if table == "subject":
-        sql = sqlalchemy.sql.text("SELECT id, fullName, project_id FROM subject")
+        sql = sqlalchemy.sql.text("SELECT id, fullName, project_id, legacyId FROM subject")
     else:
-        sql = sqlalchemy.sql.text("SELECT id, name, project_id FROM {}".format(table))
+        sql = sqlalchemy.sql.text("SELECT id, name, project_id, legacyId FROM {}".format(table))
     results = []
     for row in connection.execute(sql).fetchall():
         results.append(dict(row))
@@ -389,13 +378,23 @@ def get_tooltip(table, row_id):
     table should be 'subject', 'tag', or 'location'
     """
     connection = db_engine.connect()
-    if table == "subject":
-        sql = sqlalchemy.sql.text("SELECT fullName, description FROM subject WHERE id=:id")
-    elif table == "tag":
-        sql = sqlalchemy.sql.text("SELECT name, description FROM tag WHERE id=:id")
+    try:
+        ident = int(row_id)
+        is_legacy_id = False
+    except ValueError:
+        ident = row_id
+        is_legacy_id = True
+    if is_legacy_id:
+        if table == "subject":
+            sql = sqlalchemy.sql.text("SELECT id, legacyId, fullName, description FROM subject WHERE legacyId=:id")
+        else:
+            sql = sqlalchemy.sql.text("SELECT id, legacyId, name, description FROM {} WHERE legacyId=:id".format(table))
     else:
-        sql = sqlalchemy.sql.text("SELECT name, description FROM location WHERE id=:id")
-    statement = sql.bindparams(id=row_id)
+        if table == "subject":
+            sql = sqlalchemy.sql.text("SELECT id, legacyId, fullName, description FROM subject WHERE id=:id")
+        else:
+            sql = sqlalchemy.sql.text("SELECT id, legacyId, name, description FROM {} WHERE id=:id".format(table))
+    statement = sql.bindparams(id=ident)
     result = connection.execute(statement).fetchone()
     connection.close()
     return dict(result)
