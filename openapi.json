@@ -18,7 +18,7 @@
       "description": "Staging version used by some sls.fi projects in development"
     },
     {
-      "url": "http://api.sls.fi",
+      "url": "https://api.sls.fi",
       "description": "Future production version used by sls.fi projects (Not yet live)"
     },
     {

@@ -7,9 +7,11 @@ services:
             # Files for Digital Editions need to be mounted
             # Syntax is host_path:container_path
             # This example mounts the host's /var/files/topelius to /var/topelius-files in the container and so on
-            - /var/files/topelius:/var/topelius-files/
-            - /var/files/parland:/var/parland-files/
-            - /var/files/xslt:/var/xslt-files/
+            #- /var/files/topelius:/var/topelius-files/
+            #- /var/files/parland:/var/parland-files/
+            #- /var/files/xslt:/var/xslt-files/
+            - C:\Users\rasek1\PycharmProjects\sls_api\topelius-files:/var/topelius
+
             # Config files need to be mounted aswell
             - ./sls_api/configs:/app/sls_api/configs
         restart: always

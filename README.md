@@ -21,11 +21,13 @@ limitations under the License.
 - Installation details:
     - Create config files from _example files in `config` folder
     - Ensure volume paths in `docker-compose.yml` point at the correct host and container folders
+    - Add a valid SSL certificate as `ssl/cert.pem` and a matching private key as `ssl/key.pem`
     - run `docker-compose build` in root folder containing `Dockerfile` and `docker-compose.yml`
     
 - Running in Production
     - Start api using `docker-compose up -d`
-    - Please note that the default port is 8080, this can be changed in `docker-compose.yml`
+    - Please note that the default port is 8000, this can be changed in `docker-compose.yml`
+    - API can then be accessed at http://127.0.0.1:8000 OR https://127.0.0.1:8000 if SSL was enabled
     
 - Manually testing the API without Docker, using a python virtualenv
     - `source /path/to/virtualenv/bin/activate` or `/path/to/virtualenv/Scripts/activate_this.bat` on Windows

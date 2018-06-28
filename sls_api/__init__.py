@@ -1,6 +1,5 @@
 from flask import Flask, redirect, url_for
 from flask_jwt_extended import JWTManager
-from flask_sslify import SSLify
 from flasgger import Swagger
 import logging
 import json
@@ -17,9 +16,7 @@ root_logger = logging.getLogger()
 if int(os.environ.get("FLASK_DEBUG", 0)) == 1:
     root_logger.setLevel(logging.DEBUG)
 else:
-    # Only enable SSL redirects if we're not in debugging mode
     root_logger.setLevel(logging.INFO)
-    sslify = SSLify(app)
 stream_handler = logging.StreamHandler(stream=stdout)
 stream_handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s', '%H:%M:%S'))
 root_logger.addHandler(stream_handler)
@@ -61,24 +58,27 @@ if os.path.exists(os.path.join("sls_api", "configs", "digital_editions.yml")):
     app.register_blueprint(digital_edition, url_prefix="/digitaledition")
 
 if os.path.exists(os.path.join("sls_api", "configs", "security.yml")):
-    from sls_api.endpoints.auth import auth
-    from sls_api.models import db, User
-    with open(os.path.join("sls_api", "configs", "security.yml")) as config_file:
-        security_config = yaml.load(config_file.read())
-    app.config["SECRET_KEY"] = security_config["secret_key"]
-    app.config["SQLALCHEMY_DATABASE_URI"] = security_config["user_database"]
-    app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+    if not os.path.exists(os.path.join("ssl", "cert.pem")) and not os.path.exists(os.path.join("ssl", "key.pem")):
+        logger.error("No SSL certificate was found, disabling JWT authorization and protected endpoints.")
+    else:
+        from sls_api.endpoints.auth import auth
+        from sls_api.models import db, User
+        with open(os.path.join("sls_api", "configs", "security.yml")) as config_file:
+            security_config = yaml.load(config_file.read())
+        app.config["SECRET_KEY"] = security_config["secret_key"]
+        app.config["SQLALCHEMY_DATABASE_URI"] = security_config["user_database"]
+        app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
-    jwt = JWTManager(app)
-    db.init_app(app)
+        jwt = JWTManager(app)
+        db.init_app(app)
 
-    app.register_blueprint(auth, url_prefix="/auth")
+        app.register_blueprint(auth, url_prefix="/auth")
 
-    @app.before_first_request
-    def create_tables():
-        db.create_all()
-        if not User.find_by_email("test@test.com"):
-            User.create_new_user("test@test.com", "test")
+        @app.before_first_request
+        def create_tables():
+            db.create_all()
+            if not User.find_by_email("test@test.com"):
+                User.create_new_user("test@test.com", "test")
 
 if "digital_edition" in app.blueprints and "auth" in app.blueprints:
     """

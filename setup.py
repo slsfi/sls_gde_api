@@ -10,7 +10,6 @@ setup(
         'flask',
         'flask-jwt-extended',
         'flask-sqlalchemy',
-        'flask-sslify',
         'flasgger',
         'lxml',
         'mysqlclient',
