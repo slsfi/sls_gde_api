@@ -58,7 +58,7 @@ if os.path.exists(os.path.join("sls_api", "configs", "digital_editions.yml")):
     app.register_blueprint(digital_edition, url_prefix="/digitaledition")
 
 if os.path.exists(os.path.join("sls_api", "configs", "security.yml")):
-    if not os.path.exists(os.path.join("ssl", "cert.pem")) and not os.path.exists(os.path.join("ssl", "key.pem")):
+    if not os.path.exists(os.path.join("ssl", "cert.pem")) and not os.path.exists(os.path.join("ssl", "key.pem")) and not int(os.environ.get("FLASK_DEBUG", 0)) == 1:
         logger.error("No SSL certificate was found, disabling JWT authorization and protected endpoints.")
     else:
         from sls_api.endpoints.auth import auth
