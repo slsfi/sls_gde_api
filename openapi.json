@@ -1303,6 +1303,80 @@
         }
       }
     },
+    "/digitaledition/occurances/{object_type}/{id}": {
+      "get": {
+        "summary": "Get events and occurances for subject/tag/location",
+        "description": "Get events and occrances referencing a given subject, tag, or location",
+        "tags": [
+          "tooltips"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "object_type",
+            "required": true,
+            "description": "subject, location, or tag - which type of object this is",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "subject",
+                "location",
+                "tag"
+              ],
+              "example": "subject"
+            }
+          },
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "description": "Numerical or legacy ID for subject/location/tag",
+            "schema": {
+              "type": "string",
+              "example": "12"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": [
+                    {
+                      "id": 1,
+                      "type": "legacy",
+                      "description": "Legacy event listing all occurances",
+                      "occurances": [
+                        {
+                          "id": 1,
+                          "type": null,
+                          "description": null,
+                          "publication_id": 12,
+                          "publicationVersion_id": 23,
+                          "publicationFascimile_id": null,
+                          "publicationComment_id": null
+                        },
+                        {
+                          "id": 2,
+                          "type": null,
+                          "description": null,
+                          "publication_id": 15,
+                          "publicationVersion_id": null,
+                          "publicationFascimile_id": 5,
+                          "publicationComment_id": 1
+                        }
+                      ]
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/auth/register": {
       "post": {
         "summary": "Register as a new user",
