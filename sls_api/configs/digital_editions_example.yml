@@ -17,6 +17,8 @@ parland:
     git_branch: 'staging'
     # And then the actual local directory where the files are located (should be a local git repository with the above configured as its remote)
     file_root: '/var/www/parland'
+    # Finally, whether or not internally published items should be viewable
+    show_internally_published: False
 
 topelius:
     # First, settings about how the publication tools should communicate towards git
@@ -30,6 +32,8 @@ topelius:
     git_branch: 'master'
     # And then the actual local directory where the files are located (should be a local git repository with the above configured as its remote)
     file_root: '/var/www/topelius'
+    # Finally, whether or not internally published items should be viewable
+    show_internally_published: True
 
 # In addition to STDOUT, messages can also be logged to file
 log_file: '/log/digital_editions/api.log'

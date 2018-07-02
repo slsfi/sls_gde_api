@@ -130,9 +130,11 @@ def get_introduction(project, collection_id, publication_id, lang="swe"):
     """
     Get introduction text for a given publiction
     """
-    if is_published(project, collection_id, publication_id):
+    can_show, message = get_published_status(project, collection_id, publication_id)
+    if can_show:
         logger.info("Getting XML for {} and transforming...".format(request.full_path))
-        filename = "{}_{}_inl_{}.xml".format(collection_id, publication_id, lang)
+        version = "int" if config[project]["show_internally_published"] else "ext"
+        filename = "{}_inl_{}_{}.xml".format(collection_id, lang, version)
         xsl_file = "est.xsl"
         content = get_content(project, "inl", filename, xsl_file, None)
         data = {
@@ -143,7 +145,7 @@ def get_introduction(project, collection_id, publication_id, lang="swe"):
     else:
         return jsonify({
             "id": "{}_{}".format(collection_id, publication_id),
-            "error": "Content not published for external viewing."
+            "error": message
         }), 403
 
 
@@ -153,9 +155,11 @@ def get_title(project, collection_id, publication_id, lang="swe"):
     """
     Get title page for a given publication
     """
-    if is_published(project, collection_id, publication_id):
+    can_show, message = get_published_status(project, collection_id, publication_id)
+    if can_show:
         logger.info("Getting XML for {} and transforming...".format(request.full_path))
-        filename = "{}_{}_tit_{}.xml".format(collection_id, publication_id, lang)
+        version = "int" if config[project]["show_internally_published"] else "ext"
+        filename = "{}_tit_{}_{}.xml".format(collection_id, lang, version)
         xsl_file = "title.xsl"
         content = get_content(project, "tit", filename, xsl_file, None)
         data = {
@@ -166,7 +170,7 @@ def get_title(project, collection_id, publication_id, lang="swe"):
     else:
         return jsonify({
             "id": "{}_{}".format(collection_id, publication_id),
-            "error": "Content not published for external viewing."
+            "error": message
         }), 403
 
 
@@ -175,7 +179,8 @@ def get_reading_text(project, collection_id, publication_id):
     """
     Get reading text for a given publication
     """
-    if is_published(project, collection_id, publication_id):
+    can_show, message = get_published_status(project, collection_id, publication_id)
+    if can_show:
         logger.info("Getting XML for {} and transforming...".format(request.full_path))
         filename = "{}_{}_est.xml".format(collection_id, publication_id)
         xsl_file = "est.xsl"
@@ -188,7 +193,7 @@ def get_reading_text(project, collection_id, publication_id):
     else:
         return jsonify({
             "id": "{}_{}".format(collection_id, publication_id),
-            "error": "Content not published for external viewing."
+            "error": message
         }), 403
 
 
@@ -198,7 +203,8 @@ def get_comments(project, collection_id, publication_id, note_id=None):
     """
     Get comments file text for a given publication
     """
-    if is_published(project, collection_id, publication_id):
+    can_show, message = get_published_status(project, collection_id, publication_id)
+    if can_show:
         logger.info("Getting XML for {} and transforming...".format(request.full_path))
         filename = "{}_{}_com.xml".format(collection_id, publication_id)
         params = {
@@ -219,7 +225,7 @@ def get_comments(project, collection_id, publication_id, note_id=None):
     else:
         return jsonify({
             "id": "{}_{}".format(collection_id, publication_id),
-            "error": "Content not published for external viewing."
+            "error": message
         }), 403
 
 
@@ -229,7 +235,8 @@ def get_manuscript(project, collection_id, publication_id, manuscript_id=None):
     """
     Get one or all manuscripts for a given publication
     """
-    if is_published(project, collection_id, publication_id):
+    can_show, message = get_published_status(project, collection_id, publication_id)
+    if can_show:
         logger.info("Getting XML for {} and transforming...".format(request.full_path))
         connection = db_engine.connect()
         if manuscript_id is None:
@@ -264,7 +271,7 @@ def get_manuscript(project, collection_id, publication_id, manuscript_id=None):
     else:
         return jsonify({
             "id": "{}_{}_ms".format(collection_id, publication_id),
-            "error": "Content not published for external viewing."
+            "error": message
         }), 403
 
 
@@ -274,7 +281,8 @@ def get_variant(project, collection_id, publication_id, section_id=None):
     """
     Get all variants for a given publication, optionally specifying a section (chapter)
     """
-    if is_published(project, collection_id, publication_id):
+    can_show, message = get_published_status(project, collection_id, publication_id)
+    if can_show:
         logger.info("Getting XML for {} and transforming...".format(request.full_path))
         connection = db_engine.connect()
         filename_search = "{}_{}_var_%".format(collection_id, publication_id)
@@ -313,7 +321,7 @@ def get_variant(project, collection_id, publication_id, section_id=None):
     else:
         return jsonify({
             "id": "{}_{}".format(collection_id, publication_id),
-            "error": "Content not published for external viewing."
+            "error": message
         }), 403
 
 
@@ -354,6 +362,25 @@ def get_tooltip_text(object_type, ident):
         return jsonify(get_tooltip(object_type, ident))
 
 
+@digital_edition.route("/occurances/<object_type>/<ident>")
+def get_occurances(object_type, ident):
+    """
+    Get event occurance info and related publication IDs for a given subject, tag, or location
+    Given a numerical or legacy ID for an object, returns a list of events and occurance information for the object
+    """
+    if object_type not in ["subject", "tag", "location"]:
+        abort(404)
+    else:
+        connection = db_engine.connect()
+        try:
+            object_id = int(ident)
+        except ValueError:
+            object_sql = sqlalchemy.sql.text("SELECT id FROM {} WHERE legacyId=:l_id")
+            stmt = object_sql.bindparams(l_id=ident)
+        events_sql = "SELECT id, type, description FROM event WHERE id IN " \
+                     "(SELECT event_id FROM eventConnection WHERE {}_id=:obj_id)".format(object_type)
+
+
 def list_tooltips(table):
     """
     List available tooltips for subjects, tags, or locations
@@ -369,6 +396,7 @@ def list_tooltips(table):
     results = []
     for row in connection.execute(sql).fetchall():
         results.append(dict(row))
+    connection.close()
     return results
 
 
@@ -474,9 +502,17 @@ def cache_is_recent(source_file, xsl_file, cache_file):
     return True
 
 
-def is_published(project, collection_id, publication_id):
+def get_published_status(project, collection_id, publication_id):
     """
-    Returns true only if project, publicationCollection, and publication are all published
+    Returns info on if project, publicationCollection, and publication are all published
+    Returns three values:
+        - a boolean if the publication can be shown
+        - a message text why it can't be shown, if that is the case
+        -
+
+    Publications can be shown if they're externally published (published==2),
+    if they're internally published (published==1) and show_internally_published is True,
+    or if FLASK_DEBUG is set to 1 (all publications are shown in DEBUG mode
     """
     connection = db_engine.connect()
     select = """SELECT project.published AS proj_pub, publicationCollection.published AS col_pub, publication.published as pub 
@@ -487,13 +523,23 @@ def is_published(project, collection_id, publication_id):
     """
     statement = sqlalchemy.sql.text(select).bindparams(project=project, c_id=collection_id, p_id=publication_id)
     result = connection.execute(statement)
-
-    published = True
-    for row in result.fetchall():
-        if row.proj_pub == 0 or row.col_pub == 0 or row.pub == 0:
-            published = False
-
-    return published
+    show_internal = config[project]["show_internally_published"]
+    can_show = False
+    message = ""
+    if len(result) < 1:
+        message = "Content does not exist"
+    else:
+        row = result.fetchone()
+        status = min(row.proj_pub, row.col_pub, row.pub)
+        if int(os.environ.get("FLASK_DEBUG", 0)) == 1:
+            can_show = True
+        elif status < 1:
+            message = "Content is not published"
+        elif status == 1 and not show_internal:
+            message = "Content is not externally published"
+        else:
+            can_show = True
+    return can_show, message
 
 
 class FileResolver(etree.Resolver):
