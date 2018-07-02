@@ -362,10 +362,10 @@ def get_tooltip_text(object_type, ident):
         return jsonify(get_tooltip(object_type, ident))
 
 
-@digital_edition.route("/occurances/<object_type>/<ident>")
-def get_occurances(object_type, ident):
+@digital_edition.route("/occurrences/<object_type>/<ident>")
+def get_occurrences(object_type, ident):
     """
-    Get event occurance info and related publication IDs for a given subject, tag, or location
+    Get event occurrence info and related publication IDs for a given subject, tag, or location
     Given a numerical or legacy ID for an object, returns a list of events and occurance information for the object
     """
     if object_type not in ["subject", "tag", "location"]:
@@ -381,7 +381,7 @@ def get_occurances(object_type, ident):
             object_id = row.id
         events_sql = "SELECT id, type, description FROM event WHERE id IN " \
                      "(SELECT event_id FROM eventConnection WHERE {}_id=:o_id)".format(object_type)
-        occurance_sql = "SELECT id, type, description, publication_id, publicationVersion_id, publicationFascimile_id, publicationComment_id FROM eventOccurrence WHERE event_id=:e_id"
+        occurrence_sql = "SELECT id, type, description, publication_id, publicationVersion_id, publicationFascimile_id, publicationComment_id FROM eventOccurrence WHERE event_id=:e_id"
 
         events_stmnt = sqlalchemy.sql.text(events_sql).bindparams(o_id=object_id)
         results = []
@@ -390,8 +390,8 @@ def get_occurances(object_type, ident):
 
         for event in results:
             event["occurances"] = []
-            occurance_stmnt = sqlalchemy.sql.text(occurance_sql).bindparams(e_id=event["id"])
-            for row in connection.execute(occurance_stmnt).fetchall():
+            occurrence_stmnt = sqlalchemy.sql.text(occurrence_sql).bindparams(e_id=event["id"])
+            for row in connection.execute(occurrence_stmnt).fetchall():
                 event["occurances"].append(dict(row))
 
         return results
