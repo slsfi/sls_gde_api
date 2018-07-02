@@ -375,10 +375,26 @@ def get_occurances(object_type, ident):
         try:
             object_id = int(ident)
         except ValueError:
-            object_sql = sqlalchemy.sql.text("SELECT id FROM {} WHERE legacyId=:l_id")
-            stmt = object_sql.bindparams(l_id=ident)
+            object_sql = "SELECT id FROM {} WHERE legacyId=:l_id"
+            stmt = sqlalchemy.sql.text(object_sql).bindparams(l_id=ident)
+            row = connection.execute(stmt).fetchone()
+            object_id = row.id
         events_sql = "SELECT id, type, description FROM event WHERE id IN " \
-                     "(SELECT event_id FROM eventConnection WHERE {}_id=:obj_id)".format(object_type)
+                     "(SELECT event_id FROM eventConnection WHERE {}_id=:o_id)".format(object_type)
+        occurance_sql = "SELECT id, type, description, publication_id, publicationVersion_id, publicationFascimile_id, publicationComment_id FROM eventOccurrence WHERE event_id=:e_id"
+
+        events_stmnt = sqlalchemy.sql.text(events_sql).bindparams(o_id=object_id)
+        results = []
+        for row in connection.execute(events_stmnt).fetchall():
+            results.append(dict(row))
+
+        for event in results:
+            event["occurances"] = []
+            occurance_stmnt = sqlalchemy.sql.text(occurance_sql).bindparams(e_id=event["id"])
+            for row in connection.execute(occurance_stmnt).fetchall():
+                event["occurances"].append(dict(row))
+
+        return results
 
 
 def list_tooltips(table):
