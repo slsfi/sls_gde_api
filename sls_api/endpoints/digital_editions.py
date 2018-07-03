@@ -537,24 +537,26 @@ def get_published_status(project, collection_id, publication_id):
     AND publication.publicationCollection_id = publicationCollection.id 
     AND project.name = :project AND publicationCollection.id = :c_id AND publication.id = :p_id
     """
-    statement = sqlalchemy.sql.text(select).bindparams(project=project, c_id=collection_id, p_id=publication_id)
-    result = connection.execute(statement)
-    show_internal = config[project]["show_internally_published"]
-    can_show = False
-    message = ""
-    if len(result) < 1:
-        message = "Content does not exist"
+    if int(os.environ.get("FLASK_DEBUG", 0)) == 1:
+        can_show = True
+        message = ""
     else:
+        statement = sqlalchemy.sql.text(select).bindparams(project=project, c_id=collection_id, p_id=publication_id)
+        result = connection.execute(statement)
+        show_internal = config[project]["show_internally_published"]
+        can_show = False
+        message = ""
         row = result.fetchone()
-        status = min(row.proj_pub, row.col_pub, row.pub)
-        if int(os.environ.get("FLASK_DEBUG", 0)) == 1:
-            can_show = True
-        elif status < 1:
-            message = "Content is not published"
-        elif status == 1 and not show_internal:
-            message = "Content is not externally published"
+        if row is None:
+            message = "Content does not exist"
         else:
-            can_show = True
+            status = min(row.proj_pub, row.col_pub, row.pub)
+            if status < 1:
+                message = "Content is not published"
+            elif status == 1 and not show_internal:
+                message = "Content is not externally published"
+            else:
+                can_show = True
     return can_show, message
 
 
