@@ -375,13 +375,13 @@ def get_occurrences(object_type, ident):
         try:
             object_id = int(ident)
         except ValueError:
-            object_sql = "SELECT id FROM {} WHERE legacyId=:l_id"
+            object_sql = "SELECT id FROM {} WHERE legacyId=:l_id".format(object_type)
             stmt = sqlalchemy.sql.text(object_sql).bindparams(l_id=ident)
             row = connection.execute(stmt).fetchone()
             object_id = row.id
         events_sql = "SELECT id, type, description FROM event WHERE id IN " \
                      "(SELECT event_id FROM eventConnection WHERE {}_id=:o_id)".format(object_type)
-        occurrence_sql = "SELECT id, type, description, publication_id, publicationVersion_id, publicationFascimile_id, publicationComment_id FROM eventOccurrence WHERE event_id=:e_id"
+        occurrence_sql = "SELECT id, type, description, publication_id, publicationVersion_id, publicationFascimile_id, publicationComment_id, publicationManuscript_id FROM eventOccurrence WHERE event_id=:e_id"
 
         events_stmnt = sqlalchemy.sql.text(events_sql).bindparams(o_id=object_id)
         results = []
@@ -389,12 +389,12 @@ def get_occurrences(object_type, ident):
             results.append(dict(row))
 
         for event in results:
-            event["occurances"] = []
+            event["occurrences"] = []
             occurrence_stmnt = sqlalchemy.sql.text(occurrence_sql).bindparams(e_id=event["id"])
             for row in connection.execute(occurrence_stmnt).fetchall():
-                event["occurances"].append(dict(row))
+                event["occurrences"].append(dict(row))
 
-        return results
+        return jsonify(results)
 
 
 def list_tooltips(table):
