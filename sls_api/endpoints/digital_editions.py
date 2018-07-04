@@ -110,6 +110,25 @@ def get_manuscripts(project, publication_id):
     connection.close()
     return jsonify(results)
 
+@digital_edition.route("/<project>/text/<text_type>/<text_id>")
+def get_text_by_type(project, text_type, text_id):
+    logger.info("Getting text by type /{}/text/{}/{}".format(project, text_type, text_id))
+    
+    text_table = ''
+    if text_type == 'manuscript':
+        text_table = 'publicationManuscript'
+    elif text_type == 'variation':
+        text_table = 'publicationVersion'
+
+    connection = db_engine.connect()
+    sql = sqlalchemy.sql.text("SELECT * FROM {} WHERE id=:t_id".format(text_table))
+    statement = sql.bindparams(t_id=text_id)
+    results = []
+    for row in connection.execute(statement).fetchall():
+        results.append(dict(row))
+    connection.close()
+    return jsonify(results)
+
 
 @digital_edition.route("/<project>/publication/<publication_id>")
 def get_publication(project, publication_id):
