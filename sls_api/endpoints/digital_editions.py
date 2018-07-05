@@ -129,6 +129,17 @@ def get_text_by_type(project, text_type, text_id):
     connection.close()
     return jsonify(results)
 
+@digital_edition.route("/<project>/collection/<collection_id>")
+def get_collection(project, collection_id):
+    logger.info("Getting collection /{}/collection/{}".format(project, collection_id))
+    connection = db_engine.connect()
+    sql = sqlalchemy.sql.text("SELECT * FROM publicationCollection WHERE id=:c_id ORDER BY name")
+    statement = sql.bindparams(c_id=collection_id)
+    results = []
+    for row in connection.execute(statement).fetchall():
+        results.append(dict(row))
+    connection.close()
+    return jsonify(results)
 
 @digital_edition.route("/<project>/publication/<publication_id>")
 def get_publication(project, publication_id):
