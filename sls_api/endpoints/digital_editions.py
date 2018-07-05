@@ -1,6 +1,6 @@
 import calendar
 from collections import OrderedDict
-from flask import abort, Blueprint, request, Response, safe_join
+from flask import abort, Blueprint, request, safe_join
 from flask.json import jsonify
 import io
 import logging
@@ -104,6 +104,25 @@ def get_manuscripts(project, publication_id):
     connection = db_engine.connect()
     sql = sqlalchemy.sql.text("SELECT * FROM publicationManuscript WHERE publication_id=:pub_id")
     statement = sql.bindparams(pub_id=publication_id)
+    results = []
+    for row in connection.execute(statement).fetchall():
+        results.append(dict(row))
+    connection.close()
+    return jsonify(results)
+
+@digital_edition.route("/<project>/text/<text_type>/<text_id>")
+def get_text_by_type(project, text_type, text_id):
+    logger.info("Getting text by type /{}/text/{}/{}".format(project, text_type, text_id))
+    
+    text_table = ''
+    if text_type == 'manuscript':
+        text_table = 'publicationManuscript'
+    elif text_type == 'variation':
+        text_table = 'publicationVersion'
+
+    connection = db_engine.connect()
+    sql = sqlalchemy.sql.text("SELECT * FROM {} WHERE id=:t_id".format(text_table))
+    statement = sql.bindparams(t_id=text_id)
     results = []
     for row in connection.execute(statement).fetchall():
         results.append(dict(row))
@@ -375,13 +394,13 @@ def get_occurrences(object_type, ident):
         try:
             object_id = int(ident)
         except ValueError:
-            object_sql = "SELECT id FROM {} WHERE legacyId=:l_id"
+            object_sql = "SELECT id FROM {} WHERE legacyId=:l_id".format(object_type)
             stmt = sqlalchemy.sql.text(object_sql).bindparams(l_id=ident)
             row = connection.execute(stmt).fetchone()
             object_id = row.id
         events_sql = "SELECT id, type, description FROM event WHERE id IN " \
                      "(SELECT event_id FROM eventConnection WHERE {}_id=:o_id)".format(object_type)
-        occurrence_sql = "SELECT id, type, description, publication_id, publicationVersion_id, publicationFacsimile_id, publicationComment_id FROM eventOccurrence WHERE event_id=:e_id"
+        occurrence_sql = "SELECT id, type, description, publication_id, publicationVersion_id, publicationFascimile_id, publicationComment_id, publicationManuscript_id FROM eventOccurrence WHERE event_id=:e_id"
 
         events_stmnt = sqlalchemy.sql.text(events_sql).bindparams(o_id=object_id)
         results = []
@@ -389,12 +408,12 @@ def get_occurrences(object_type, ident):
             results.append(dict(row))
 
         for event in results:
-            event["occurances"] = []
+            event["occurrences"] = []
             occurrence_stmnt = sqlalchemy.sql.text(occurrence_sql).bindparams(e_id=event["id"])
             for row in connection.execute(occurrence_stmnt).fetchall():
-                event["occurances"].append(dict(row))
+                event["occurrences"].append(dict(row))
 
-        return results
+        return jsonify(results)
 
 
 def list_tooltips(table):
@@ -473,7 +492,7 @@ def path_hierarchy(path, language):
     hierarchy = {'id': slugify_id(path, language), 'title': filter_title(os.path.basename(path)),
                  'basename': re.sub('.md', '', os.path.basename(path)), 'path': slugify_path(path), 'fullpath': path,
                  'route': slugify_route(split_after(path, "/topelius_required/md/")), 'type': 'folder',
-                 'children': [path_hierarchy(p, language) for p in glob.glob(safe_join(path, '*'))]}
+                 'children': [path_hierarchy(p, language) for p in glob.glob(os.path.join(path, '*'))]}
 
     if not hierarchy['children']:
         del hierarchy['children']
@@ -521,9 +540,10 @@ def cache_is_recent(source_file, xsl_file, cache_file):
 def get_published_status(project, collection_id, publication_id):
     """
     Returns info on if project, publicationCollection, and publication are all published
-    Returns two values:
+    Returns three values:
         - a boolean if the publication can be shown
         - a message text why it can't be shown, if that is the case
+        -
 
     Publications can be shown if they're externally published (published==2),
     if they're internally published (published==1) and show_internally_published is True,
