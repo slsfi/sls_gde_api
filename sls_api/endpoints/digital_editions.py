@@ -416,6 +416,36 @@ def get_occurrences(object_type, ident):
         return jsonify(results)
 
 
+@digital_edition.route("/<project>/facsimiles/<collection_id>/<number>/<zoom_level>")
+def get_facsimile_file(project, collection_id, number, zoom_level):
+    """
+    Retrieve a single facsimile image file from project root
+
+    Facsimile files are stored as follows: root/facsimiles/<collection_id>/<zoom_level>/<page_number>.jpg
+    The collection_id these are sorted by is the publicationFacsimileCollection id, stored as publication_id in the old database structure?
+
+    However, the first page of a publication is not necessarily 1.jpg, as facsimiles often contain title pages and blank pages
+    Thus, calling for facsimiles/1/1/1 may require fetching a file from root/facsimiles/1/1/5.jpg
+    """
+    # TODO published status for facsimile table to check against?
+    # TODO S3 support
+    connection = db_engine.connect()
+    statement = sqlalchemy.sql.text("SELECT * FROM publicationFacsimileCollection WHERE id=:coll_id").bindparams(coll_id=collection_id)
+    row = connection.execute(statement)
+    if row.folderPath != '':
+        file_path = safe_join(row.folderPath, collection_id, zoom_level, "{}.jpg".format(row.startPageNumber + number))
+    else:
+        file_path = safe_join(config[project]["file_root"], "facsimiles", collection_id, zoom_level, "{}.jpg".format(row.startPageNumber + number))
+    connection.close()
+
+    output = io.BytesIO()
+    with open(file_path, mode="rb") as img_file:
+        output.write(img_file.read())
+    content = output.getvalue()
+    output.close()
+    return Response(content, status=200, content_type="image/jpeg")
+
+
 def list_tooltips(table):
     """
     List available tooltips for subjects, tags, or locations
