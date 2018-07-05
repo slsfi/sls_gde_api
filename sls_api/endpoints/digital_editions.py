@@ -1,6 +1,6 @@
 import calendar
 from collections import OrderedDict
-from flask import abort, Blueprint, request, safe_join
+from flask import abort, Blueprint, request, Response, safe_join
 from flask.json import jsonify
 import io
 import logging
@@ -400,7 +400,7 @@ def get_occurrences(object_type, ident):
             object_id = row.id
         events_sql = "SELECT id, type, description FROM event WHERE id IN " \
                      "(SELECT event_id FROM eventConnection WHERE {}_id=:o_id)".format(object_type)
-        occurrence_sql = "SELECT id, type, description, publication_id, publicationVersion_id, publicationFascimile_id, publicationComment_id, publicationManuscript_id FROM eventOccurrence WHERE event_id=:e_id"
+        occurrence_sql = "SELECT id, type, description, publication_id, publicationVersion_id, publicationFacsimile_id, publicationComment_id, publicationManuscript_id FROM eventOccurrence WHERE event_id=:e_id"
 
         events_stmnt = sqlalchemy.sql.text(events_sql).bindparams(o_id=object_id)
         results = []
