@@ -119,6 +119,10 @@ def get_text_by_type(project, text_type, text_id):
         text_table = 'publicationManuscript'
     elif text_type == 'variation':
         text_table = 'publicationVersion'
+    elif text_type == 'commentary':
+        text_table = 'publicationComment'
+    elif text_type == 'facsimile':
+        text_table = 'publicationFacsimile'
 
     connection = db_engine.connect()
     sql = sqlalchemy.sql.text("SELECT * FROM {} WHERE id=:t_id".format(text_table))
