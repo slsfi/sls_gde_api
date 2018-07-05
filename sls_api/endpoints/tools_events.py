@@ -384,7 +384,7 @@ def new_event_occurance(event_id):
     publication_id: ID for publication the event occurs in
     publicationVersion_id: ID for publication version the event occurs in
     publicationManuscript_id: ID for publication manuscript the event occurs in
-    publicationFascimile_id: ID for publication fascimile the event occurs in
+    publicationFacsimile_id: ID for publication facsimile the event occurs in
     publicationComment_id: ID for publication comment the event occurs in
     """
     request_data = request.get_json()
@@ -410,7 +410,7 @@ def new_event_occurance(event_id):
         "publication_id": int(request_data["publication_id"]) if request_data.get("publication_id", None) else None,
         "publicationVersion_id": int(request_data["publicationVersion_id"]) if request_data.get("publicationVersion_id", None) else None,
         "publicationManuscript_id": int(request_data["publicationManuscript_id"]) if request_data.get("publicationManuscript_id", None) else None,
-        "publicationFascimile_id": int(request_data["publicationFascimile_id"]) if request_data.get("publicationFascimile_id", None) else None,
+        "publicationFacsimile_id": int(request_data["publicationFacsimile_id"]) if request_data.get("publicationFacsimile_id", None) else None,
         "publicationComment_id": int(request_data["publicationComment_id"]) if request_data.get("publicationComment_id", None) else None,
     }
     try:

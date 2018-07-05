@@ -80,15 +80,15 @@ def get_publication_manuscripts(project, publication_id):
     return jsonify(result)
 
 
-@publication_tools.route("/<project>/publication/<publication_id>/fascimiles")
+@publication_tools.route("/<project>/publication/<publication_id>/facsimiles")
 @jwt_required
-def get_publication_fascimiles(project, publication_id):
+def get_publication_facsimiles(project, publication_id):
     """
     List all fascimilies for the given publication
     """
     connection = db_engine.connect()
-    publication_fascimiles = Table("publicationFascimile", metadata, autoload=True, autoload_with=db_engine)
-    statement = select([publication_fascimiles]).where(publication_fascimiles.c.publication_id == int(publication_id))
+    publication_facsimiles = Table("publicationFacsimile", metadata, autoload=True, autoload_with=db_engine)
+    statement = select([publication_facsimiles]).where(publication_facsimiles.c.publication_id == int(publication_id))
     rows = connection.execute(statement).fetchall()
     result = []
     for row in rows:

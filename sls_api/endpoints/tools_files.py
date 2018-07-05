@@ -245,7 +245,7 @@ def get_file_from_remote(project, file_path):
     """
     Get latest file from git remote
     """
-    # TODO swift and/or S3 support for large files (images/fascimiles)
+    # TODO swift and/or S3 support for large files (images/facsimiles)
     config_okay = check_project_git_config(project)
     if not config_okay[0]:
         return jsonify({

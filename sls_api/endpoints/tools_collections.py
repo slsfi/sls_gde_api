@@ -9,29 +9,29 @@ from sls_api.endpoints.generics import db_engine, get_project_id_from_name, meta
 collection_tools = Blueprint("collection_tools", __name__)
 
 
-@collection_tools.route("/<project>/fascimile_collection/new", methods=["POST"])
+@collection_tools.route("/<project>/facsimile_collection/new", methods=["POST"])
 @project_permission_required
-def create_fascimile_collection(project):
+def create_facsimile_collection(project):
     """
-    Create a new publicationFascimileCollection
+    Create a new publicationFacsimileCollection
 
     POST data MUST be in JSON format.
 
     POST data SHOULD contain:
     title: collection type
     description: collection description
-    folderPath: path to fascimiles for this collection
+    folderPath: path to facsimiles for this collection
 
     POST data MAY also contain:
     numberOfPages: total number of pages in this collection
     startPageNumber: number for starting page of this collection
     pageComment: Commentary on page numbering
-    externalURL: Externally viewable URL for this fascimile collection
+    externalURL: Externally viewable URL for this facsimile collection
     """
     request_data = request.get_json()
     if not request_data:
         return jsonify({"msg": "No data provided."}), 400
-    collections = Table("publicationFascimileCollection", metadata, autoload=True, autoload_with=db_engine)
+    collections = Table("publicationFacsimileCollection", metadata, autoload=True, autoload_with=db_engine)
     connection = db_engine.connect()
     insert = collections.insert()
 
@@ -47,13 +47,13 @@ def create_fascimile_collection(project):
         new_row = select([collections]).where(collections.c.id == result.inserted_primary_key[0])
         new_row = dict(connection.execute(new_row).fetchone())
         result = {
-            "msg": "Created new publicationFascimileCollection with ID {}".format(result.inserted_primary_key[0]),
+            "msg": "Created new publicationFacsimileCollection with ID {}".format(result.inserted_primary_key[0]),
             "row": new_row
         }
         return jsonify(result), 201
     except Exception as e:
         result = {
-            "msg": "Failed to create new publicationFascimileCollection",
+            "msg": "Failed to create new publicationFacsimileCollection",
             "reason": str(e)
         }
         return jsonify(result), 500
@@ -61,20 +61,20 @@ def create_fascimile_collection(project):
         connection.close()
 
 
-@collection_tools.route("/<project>/fascimile_collection/list")
+@collection_tools.route("/<project>/facsimile_collection/list")
 @project_permission_required
-def list_fascimile_collections(project):
+def list_facsimile_collections(project):
     """
-    List all available publicationFascimileCollections
+    List all available publicationFacsimileCollections
     """
-    return select_all_from_table("publicationFascimileCollections")
+    return select_all_from_table("publicationFacsimileCollections")
 
 
-@collection_tools.route("/<project>/fascimile_collection/<collection_id>/link", methods=["POST"])
+@collection_tools.route("/<project>/facsimile_collection/<collection_id>/link", methods=["POST"])
 @project_permission_required
-def link_fascimile_collection_to_publication(project, collection_id):
+def link_facsimile_collection_to_publication(project, collection_id):
     """
-    Link a publicationFascimileCollection to a publication through publicationFascimile table
+    Link a publicationFacsimileCollection to a publication through publicationFacsimile table
 
     POST data MUST be in JSON format.
 
@@ -84,7 +84,7 @@ def link_fascimile_collection_to_publication(project, collection_id):
     POST data MAY also contain the following:
     publicationManuscript_id: ID for the specific publication manuscript to link to
     publicationVersion_id: ID for the specific publication version to link to
-    sectionId: Section or chapter number for this particular fascimile
+    sectionId: Section or chapter number for this particular facsimile
     pageNr: Page number for link
     priority: Priority number for this link
     """
@@ -98,7 +98,7 @@ def link_fascimile_collection_to_publication(project, collection_id):
     publication_id = int(request_data["publication_id"])
     project_id = get_project_id_from_name(project)
 
-    publication_fascimiles = Table("publicationFascimile", metadata, autoload=True, autoload_with=db_engine)
+    publication_facsimiles = Table("publicationFacsimile", metadata, autoload=True, autoload_with=db_engine)
     publication_collections = Table("publicationCollection", metadata, autoload=True, autoload_with=db_engine)
     publications = Table("publication", metadata, autoload=True, autoload_with=db_engine)
 
@@ -128,25 +128,25 @@ def link_fascimile_collection_to_publication(project, collection_id):
             }
         ), 400
 
-    insert = publication_fascimiles.insert()
-    new_fascimile = {
-        "publicationFascimileCollection_id": collection_id,
+    insert = publication_facsimiles.insert()
+    new_facsimile = {
+        "publicationFacsimileCollection_id": collection_id,
         "publication_id": publication_id,
         "publicationManuscript_id": request_data.get("publicationManuscript_id", None),
         "publicationVersion_id": request_data.get("publicationVersion_id", None)
     }
     try:
-        result = connection.execute(insert, **new_fascimile)
-        new_row = select([publication_fascimiles]).where(publication_fascimiles.c.id == result.inserted_primary_key[0])
+        result = connection.execute(insert, **new_facsimile)
+        new_row = select([publication_facsimiles]).where(publication_facsimiles.c.id == result.inserted_primary_key[0])
         new_row = dict(connection.execute(new_row).fetchone())
         result = {
-            "msg": "Created new publicationFascimile with ID {}".format(result.inserted_primary_key[0]),
+            "msg": "Created new publicationFacsimile with ID {}".format(result.inserted_primary_key[0]),
             "row": new_row
         }
         return jsonify(result), 201
     except Exception as e:
         result = {
-            "msg": "Failed to create new publicationFascimile",
+            "msg": "Failed to create new publicationFacsimile",
             "reason": str(e)
         }
         return jsonify(result), 500
@@ -154,15 +154,15 @@ def link_fascimile_collection_to_publication(project, collection_id):
         connection.close()
 
 
-@collection_tools.route("/<project>/fascimile_collection/<collection_id>/list_links")
+@collection_tools.route("/<project>/facsimile_collection/<collection_id>/list_links")
 @project_permission_required
-def list_fascimile_collection_links(project, collection_id):
+def list_facsimile_collection_links(project, collection_id):
     """
-    List all publicationFascimile objects in the given publicationFascimileCollection
+    List all publicationFacsimile objects in the given publicationFacsimileCollection
     """
     connection = db_engine.connect()
-    fascimiles = Table("publicationFascimile", metadata, autoload=True, autoload_with=db_engine)
-    statement = select([fascimiles]).where(fascimiles.c.publicationFascimileCollection_id == int(collection_id))
+    facsimiles = Table("publicationFacsimile", metadata, autoload=True, autoload_with=db_engine)
+    statement = select([facsimiles]).where(facsimiles.c.publicationFacsimileCollection_id == int(collection_id))
     rows = connection.execute(statement).fetchall()
     result = []
     for row in rows:

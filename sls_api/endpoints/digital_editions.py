@@ -1,6 +1,6 @@
 import calendar
 from collections import OrderedDict
-from flask import abort, Blueprint, request, safe_join
+from flask import abort, Blueprint, request, Response, safe_join
 from flask.json import jsonify
 import io
 import logging
@@ -381,7 +381,7 @@ def get_occurrences(object_type, ident):
             object_id = row.id
         events_sql = "SELECT id, type, description FROM event WHERE id IN " \
                      "(SELECT event_id FROM eventConnection WHERE {}_id=:o_id)".format(object_type)
-        occurrence_sql = "SELECT id, type, description, publication_id, publicationVersion_id, publicationFascimile_id, publicationComment_id FROM eventOccurrence WHERE event_id=:e_id"
+        occurrence_sql = "SELECT id, type, description, publication_id, publicationVersion_id, publicationFacsimile_id, publicationComment_id FROM eventOccurrence WHERE event_id=:e_id"
 
         events_stmnt = sqlalchemy.sql.text(events_sql).bindparams(o_id=object_id)
         results = []
@@ -473,7 +473,7 @@ def path_hierarchy(path, language):
     hierarchy = {'id': slugify_id(path, language), 'title': filter_title(os.path.basename(path)),
                  'basename': re.sub('.md', '', os.path.basename(path)), 'path': slugify_path(path), 'fullpath': path,
                  'route': slugify_route(split_after(path, "/topelius_required/md/")), 'type': 'folder',
-                 'children': [path_hierarchy(p, language) for p in glob.glob(os.path.join(path, '*'))]}
+                 'children': [path_hierarchy(p, language) for p in glob.glob(safe_join(path, '*'))]}
 
     if not hierarchy['children']:
         del hierarchy['children']
@@ -521,10 +521,9 @@ def cache_is_recent(source_file, xsl_file, cache_file):
 def get_published_status(project, collection_id, publication_id):
     """
     Returns info on if project, publicationCollection, and publication are all published
-    Returns three values:
+    Returns two values:
         - a boolean if the publication can be shown
         - a message text why it can't be shown, if that is the case
-        -
 
     Publications can be shown if they're externally published (published==2),
     if they're internally published (published==1) and show_internally_published is True,
