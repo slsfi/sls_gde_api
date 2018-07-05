@@ -1089,6 +1089,68 @@
         }
       }
     },
+    "/digitaledition/{project}/facsimiles/{c_id}/{number}/{zoom_level}": {
+      "get": {
+        "summary": "Retrieve a single facsimile image",
+        "description": "Get a single page from a facsimile in JPEG format, at the desired zoom level (1-4). The image is returned as Content-Type image/jpeg for easy clientside rendering.",
+        "tags": [
+          "text"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project",
+            "description": "The Digital Edition project this request concerns (topelius, parland, etc)",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "example": "topelius"
+            }
+          },
+          {
+            "in": "path",
+            "name": "c_id",
+            "description": "The numerical collection ID for the desired facsimile",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "example": "1"
+            }
+          },
+          {
+            "in": "path",
+            "name": "number",
+            "description": "The page number in the facsimile collection",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "example": "2"
+            }
+          },
+          {
+            "in": "path",
+            "name": "zoom_level",
+            "description": "Desired image resolution, 1 being the smallest and 4 being the largest",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "1",
+                "2",
+                "3",
+                "4"
+              ],
+              "example": "2"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
     "/digitaledition/tooltips/subjects": {
       "get": {
         "summary": "Get available subject tooltips",
