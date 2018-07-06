@@ -447,7 +447,11 @@ def get_facsimile_file(project, collection_id, number, zoom_level):
     connection = db_engine.connect()
     statement = sqlalchemy.sql.text("SELECT * FROM publicationFacsimileCollection WHERE id=:coll_id").bindparams(coll_id=collection_id)
     row = connection.execute(statement).fetchone()
-    if row.folderPath != '':
+    if row is None:
+        return jsonify({
+            "msg": "Desired facsimile collection was not found in database!"
+        }), 404
+    elif row.folderPath != '':
         file_path = safe_join(row.folderPath, collection_id, zoom_level, "{}.jpg".format(row.startPageNumber + number))
     else:
         file_path = safe_join(config[project]["file_root"], "facsimiles", collection_id, zoom_level, "{}.jpg".format(row.startPageNumber + number))
