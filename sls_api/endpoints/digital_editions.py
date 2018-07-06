@@ -446,7 +446,7 @@ def get_facsimile_file(project, collection_id, number, zoom_level):
     # TODO S3 support
     connection = db_engine.connect()
     statement = sqlalchemy.sql.text("SELECT * FROM publicationFacsimileCollection WHERE id=:coll_id").bindparams(coll_id=collection_id)
-    row = connection.execute(statement)
+    row = connection.execute(statement).fetchone()
     if row.folderPath != '':
         file_path = safe_join(row.folderPath, collection_id, zoom_level, "{}.jpg".format(row.startPageNumber + number))
     else:
