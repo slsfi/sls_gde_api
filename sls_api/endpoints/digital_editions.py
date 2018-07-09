@@ -415,7 +415,7 @@ def get_occurrences(object_type, ident):
             object_id = row.id
         events_sql = "SELECT id, type, description FROM event WHERE id IN " \
                      "(SELECT event_id FROM eventConnection WHERE {}_id=:o_id)".format(object_type)
-        occurrence_sql = "SELECT id, type, description, publication_id, publicationVersion_id, publicationFacsimile_id, publicationComment_id, publicationManuscript_id FROM eventOccurrence WHERE event_id=:e_id"
+        occurrence_sql = "SELECT publication.publicationCollection_id AS collection_id, eventOccurrence.id, type, description, eventOccurrence.publication_id, eventOccurrence.publicationVersion_id, eventOccurrence.publicationFacsimile_id, eventOccurrence.publicationComment_id, eventOccurrence.publicationManuscript_id FROM eventOccurrence, publication WHERE eventOccurrence.event_id=:e_id AND eventOccurrence.publication_id=publication.id"
 
         events_stmnt = sqlalchemy.sql.text(events_sql).bindparams(o_id=object_id)
         results = []
@@ -430,6 +430,23 @@ def get_occurrences(object_type, ident):
 
         return jsonify(results)
 
+@digital_edition.route("/<project>/occurrences/collection/<object_type>/<collection_id>")
+def get_person_occurrences_by_collection(project, object_type, collection_id):
+    connection = db_engine.connect()
+    occurrence_sql = "SELECT publication.publicationCollection_id AS collection_id, eventOccurrence.id, eventOccurrence.event_id, type, description, eventOccurrence.publication_id, eventOccurrence.publicationVersion_id, eventOccurrence.publicationFacsimile_id, eventOccurrence.publicationComment_id, eventOccurrence.publicationManuscript_id FROM eventOccurrence, publication WHERE eventOccurrence.publication_id=publication.id AND publication.publicationCollection_id={} AND eventOccurrence.type='{}'".format(collection_id, object_type)
+    
+    occurrences = []
+    for row in connection.execute(occurrence_sql).fetchall():
+        occurrences.append(dict(row))
+
+    subjects = []
+    for occurrence in occurrences:
+        subject_sql = "SELECT DISTINCT eventConnection.subject_id, subject.fullName, subject.legacyId, subject.project_id FROM eventOccurrence, eventConnection, subject WHERE eventOccurrence.event_id={} AND eventOccurrence.event_id = eventConnection.event_id AND eventConnection.subject_id =  subject.id".format(occurrence["event_id"])
+        for row in connection.execute(subject_sql).fetchall():
+            subjects.append(dict(row))
+    connection.close()
+    
+    return jsonify(subjects)
 
 @digital_edition.route("/<project>/facsimiles/<collection_id>/<number>/<zoom_level>")
 def get_facsimile_file(project, collection_id, number, zoom_level):
