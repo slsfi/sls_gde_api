@@ -395,7 +395,6 @@ def get_tooltip_text(object_type, ident):
     else:
         return jsonify(get_tooltip(object_type, ident))
 
-
 @digital_edition.route("/occurrences/<object_type>/<ident>")
 def get_occurrences(object_type, ident):
     """
@@ -429,6 +428,83 @@ def get_occurrences(object_type, ident):
                 event["occurrences"].append(dict(row))
 
         return jsonify(results)
+
+@digital_edition.route("/occurrences/<object_type>")
+def get_all_occurrences_by_type(object_type):
+    """
+    Get occurrences for each person
+    TODO: refactor and divide into multiple functions
+    """
+    if object_type not in ["subject", "tag", "location"]:
+        abort(404)
+    else:
+        connection = db_engine.connect()
+        ob_id = object_type + "_id"
+        if object_type == "subject":
+            name_attr = "fullName"
+        else:
+            name_attr = "name"
+
+        ob_sql = "SELECT DISTINCT eventConnection.{}, {}.{} FROM digitalEdition.eventConnection, digitalEdition.eventOccurrence, digitalEdition.{} WHERE eventConnection.event_id=eventOccurrence.event_id AND eventConnection.{}={}.id"
+        ob_sql = ob_sql.format(ob_id, object_type, name_attr, object_type, ob_id, object_type)
+        ob_statement = sqlalchemy.sql.text(ob_sql)
+        obs = []
+        for row in connection.execute(ob_statement).fetchall():
+            obs.append(dict(row))
+
+        occur = []
+        for o in obs:
+            ident = o[ob_id]
+            try:
+                object_id = int(ident)
+            except ValueError:
+                object_sql = "SELECT id FROM {} WHERE legacyId=:l_id".format(object_type)
+                stmt = sqlalchemy.sql.text(object_sql).bindparams(l_id=ident)
+                row = connection.execute(stmt).fetchone()
+                object_id = row.id
+            events_sql = "SELECT id, type, description FROM event WHERE id IN " \
+                        "(SELECT event_id FROM eventConnection WHERE {}_id=:o_id)".format(object_type)
+            occurrence_sql = "SELECT publicationCollection.name AS collection_name, publication.publicationCollection_id AS collection_id, eventOccurrence.id, type, description, eventOccurrence.publication_id, eventOccurrence.publicationVersion_id, eventOccurrence.publicationFacsimile_id, eventOccurrence.publicationComment_id, eventOccurrence.publicationManuscript_id FROM eventOccurrence, publication, publicationCollection WHERE publication.publicationCollection_id=publicationCollection.id AND eventOccurrence.event_id=:e_id AND eventOccurrence.publication_id=publication.id"
+
+            events_stmnt = sqlalchemy.sql.text(events_sql).bindparams(o_id=object_id)
+            results = []
+            for row in connection.execute(events_stmnt).fetchall():
+                results.append(dict(row))
+
+            # set occurrences for each object
+            for event in results:
+                event["occurrences"] = []
+                occurrence_stmnt = sqlalchemy.sql.text(occurrence_sql).bindparams(e_id=event["id"])
+                for row in connection.execute(occurrence_stmnt).fetchall():
+                    row = dict(row)
+                    
+                    if row["publicationManuscript_id"] is not None:
+                        type_sql = sqlalchemy.sql.text("SELECT publicationManuscript.id AS id, publicationManuscript.originalFilename, publicationManuscript.name FROM publicationManuscript WHERE id={}".format(row["publicationManuscript_id"]))
+                        manu = connection.execute(type_sql).fetchone()
+                        row["publicationManuscript"] = dict(manu)
+                    if row["publicationVersion_id"] is not None:
+                        type_sql = sqlalchemy.sql.text("SELECT publicationVersion.id AS id, publicationVersion.originalFilename, publicationVersion.name FROM publicationVersion WHERE id={}".format(row["publicationVersion_id"]))
+                        variation = connection.execute(type_sql).fetchone()
+                        row["publicationVersion"] = dict(variation)
+                    if row["publicationComment_id"] is not None:
+                        type_sql = ""
+                    if row["publicationFacsimile_id"] is not None:
+                        type_sql = ""
+                    if row["publication_id"] is not None and row["publicationFacsimile_id"] is None and row["publicationFacsimile_id"] is None and row["publicationComment_id"] is None and row["publicationVersion_id"] is None and row["publicationManuscript_id"] is None:
+                        type_sql = sqlalchemy.sql.text("SELECT publication.id AS publication_id, publication.originalFilename, publication.name FROM publication WHERE id={}".format(row["publication_id"]))
+                        publication = connection.execute(type_sql).fetchone()
+                        row["publication"] = dict(publication)
+
+                    event["occurrences"].append(row)
+            
+            for i in results:
+                if object_type == "subject":
+                    i["name"] = o["fullName"]
+                else:
+                    i["name"] = o["name"]
+                occur.append(i)
+
+        return jsonify(occur)
 
 @digital_edition.route("/<project>/occurrences/collection/<object_type>/<collection_id>")
 def get_person_occurrences_by_collection(project, object_type, collection_id):
