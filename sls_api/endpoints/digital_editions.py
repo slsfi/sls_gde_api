@@ -462,14 +462,20 @@ def get_all_occurrences_by_type(object_type):
                 stmt = sqlalchemy.sql.text(object_sql).bindparams(l_id=ident)
                 row = connection.execute(stmt).fetchone()
                 object_id = row.id
-            events_sql = "SELECT id, type, description FROM event WHERE id IN " \
+            events_sql = "SELECT id FROM event WHERE id IN " \
                         "(SELECT event_id FROM eventConnection WHERE {}_id=:o_id)".format(object_type)
             occurrence_sql = "SELECT publicationCollection.name AS collection_name, publication.publicationCollection_id AS collection_id, eventOccurrence.id, type, description, eventOccurrence.publication_id, eventOccurrence.publicationVersion_id, eventOccurrence.publicationFacsimile_id, eventOccurrence.publicationComment_id, eventOccurrence.publicationManuscript_id FROM eventOccurrence, publication, publicationCollection WHERE publication.publicationCollection_id=publicationCollection.id AND eventOccurrence.event_id=:e_id AND eventOccurrence.publication_id=publication.id"
 
             events_stmnt = sqlalchemy.sql.text(events_sql).bindparams(o_id=object_id)
             results = []
             for row in connection.execute(events_stmnt).fetchall():
-                results.append(dict(row))
+                row = dict(row)
+                if object_type == "subject":
+                    type_stmnt = sqlalchemy.sql.text("SELECT type FROM subject WHERE id=:ty_id").bindparams(ty_id=object_id)
+                    type_object = connection.execute(type_stmnt).fetchone()
+                    type_object = dict(type_object)
+                    row["object_type"] = type_object["type"]
+                results.append(row)
 
             # set occurrences for each object
             for event in results:
@@ -489,7 +495,7 @@ def get_all_occurrences_by_type(object_type):
                     if row["publicationComment_id"] is not None:
                         type_sql = ""
                     if row["publicationFacsimile_id"] is not None:
-                        type_sql = ""
+                        type_sql = ""                  
                     if row["publication_id"] is not None and row["publicationFacsimile_id"] is None and row["publicationFacsimile_id"] is None and row["publicationComment_id"] is None and row["publicationVersion_id"] is None and row["publicationManuscript_id"] is None:
                         type_sql = sqlalchemy.sql.text("SELECT publication.id AS publication_id, publication.originalFilename, publication.name FROM publication WHERE id={}".format(row["publication_id"]))
                         publication = connection.execute(type_sql).fetchone()
