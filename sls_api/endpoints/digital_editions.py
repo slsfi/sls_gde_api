@@ -155,6 +155,20 @@ def get_toc(project, collection_id):
 
 
 
+@digital_edition.route("/<project>/collections")
+def get_collections(project):
+    logger.info("Getting collections /{}/collections".format(project))
+    connection = db_engine.connect()
+    status = 1 if config[project]["show_internally_published"] else 2
+
+    sql = sqlalchemy.sql.text("SELECT id, name FROM publicationCollection WHERE published>=:p_status ORDER BY name")
+    statement = sql.bindparams(p_status=status)
+    results = []
+    for row in connection.execute(statement).fetchall():
+        results.append(dict(row))
+    connection.close()
+    return jsonify(results)
+
 @digital_edition.route("/<project>/collection/<collection_id>")
 def get_collection(project, collection_id):
     logger.info("Getting collection /{}/collection/{}".format(project, collection_id))
@@ -184,7 +198,7 @@ def get_publication(project, publication_id):
 @digital_edition.route("/<project>/text/<collection_id>/<publication_id>/inl/<lang>")
 def get_introduction(project, collection_id, publication_id, lang="swe"):
     """
-    Get introduction text for a given publiction
+    Get introduction text for a given publiction @TODO: remove publication_id, it is not needed.
     """
     can_show, message = get_published_status(project, collection_id, publication_id)
     if can_show:
