@@ -133,6 +133,28 @@ def get_text_by_type(project, text_type, text_id):
     connection.close()
     return jsonify(results)
 
+
+@digital_edition.route("/<project>/toc/<collection_id>")
+def get_toc(project, collection_id):
+    logger.info("Getting collection /{}/collection/{}".format(project, collection_id))
+
+    file_path_query = safe_join(config[project]["file_root"], "toc", f'{collection_id}.json')
+
+    try:
+        file_path = [f for f in glob.iglob(file_path_query)][0]
+        print(file_path)
+        if os.path.exists(file_path):
+            with io.open(file_path, encoding="UTF-8") as json_file:
+                contents = json_file.read()
+            return contents, 200
+        else:
+            abort(404)
+    except Exception:
+        print(file_path_query)
+        abort(404)
+
+
+
 @digital_edition.route("/<project>/collection/<collection_id>")
 def get_collection(project, collection_id):
     logger.info("Getting collection /{}/collection/{}".format(project, collection_id))
