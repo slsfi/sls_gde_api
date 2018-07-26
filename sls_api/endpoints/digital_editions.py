@@ -161,7 +161,7 @@ def get_collections(project):
     connection = db_engine.connect()
     status = 1 if config[project]["show_internally_published"] else 2
 
-    sql = sqlalchemy.sql.text("SELECT id, name FROM publicationCollection WHERE published>=:p_status ORDER BY name")
+    sql = sqlalchemy.sql.text("SELECT id, name as title FROM publicationCollection WHERE published>=:p_status ORDER BY name")
     statement = sql.bindparams(p_status=status)
     results = []
     for row in connection.execute(statement).fetchall():
