@@ -507,10 +507,12 @@ def get_all_occurrences_by_type(object_type):
             for row in connection.execute(events_stmnt).fetchall():
                 row = dict(row)
                 if object_type == "subject":
-                    type_stmnt = sqlalchemy.sql.text("SELECT type FROM subject WHERE id=:ty_id").bindparams(ty_id=object_id)
+                    type_stmnt = sqlalchemy.sql.text("SELECT type, subject.dateBorn, subject.dateDeceased FROM subject WHERE id=:ty_id").bindparams(ty_id=object_id)
                     type_object = connection.execute(type_stmnt).fetchone()
                     type_object = dict(type_object)
                     row["object_type"] = type_object["type"]
+                    row["dateBorn"] = type_object["dateBorn"]
+                    row["dateDeceased"] = type_object["dateDeceased"]
                 results.append(row)
 
             # set occurrences for each object
