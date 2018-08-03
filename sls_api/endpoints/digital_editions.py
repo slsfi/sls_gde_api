@@ -193,6 +193,18 @@ def get_publication(project, publication_id):
     connection.close()
     return jsonify(results)
 
+@digital_edition.route("/<project>/collection/<collection_id>/publications")
+def get_collection_publications(project, collection_id):
+    logger.info("Getting publication /{}/collections/{}/publications".format(project, collection_id))
+    connection = db_engine.connect()
+    sql = sqlalchemy.sql.text("SELECT * FROM publication WHERE publicationCollection_id=:c_id ORDER BY id")
+    statement = sql.bindparams(c_id=collection_id)
+    results = []
+    for row in connection.execute(statement).fetchall():
+        results.append(dict(row))
+    connection.close()
+    return jsonify(results)
+
 
 @digital_edition.route("/<project>/text/<collection_id>/<publication_id>/inl")
 @digital_edition.route("/<project>/text/<collection_id>/<publication_id>/inl/<lang>")
