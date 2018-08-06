@@ -582,6 +582,72 @@ def get_person_occurrences_by_collection(project, object_type, collection_id):
     
     return jsonify(subjects)
 
+
+# routes/digitaledition/table-of-contents.php
+@digital_edition.route("/<project>/facsimiles/<publication_id>")
+def get_facsimiles(project, publication_id):
+    logger.info("Getting facsimiles /{}/facsimiles/{}".format(project, publication_id))
+
+    connection = db_engine.connect()
+
+    sql = """select * from publicationFacsimile as f
+    left join publicationFacsimileCollection as fc on fc.id=f.publicationFacsimileCollection_id
+    left join publication p on p.id=f.publication_id
+    where f.publication_id=:p_id
+    """
+
+    if config[project]["show_internally_published"]:
+        sql = " ".join([sql, "and p.published>0"])
+    elif config[project]["show_unpublished"]:
+        sql = " ".join([sql, "and p.published>2"])
+
+    sql = " ".join([sql, "ORDER BY f.priority"])
+
+    statement = sqlalchemy.sql.text(sql).bindparams(p_id=publication_id)
+
+    images = {}
+    result = []
+    for row in connection.execute(statement).fetchall():
+        facsimile = dict(row)
+        if row.folderPath != '' and row.folderPath is not None:
+            facsimile["start_url"] = row.folderPath
+        else:
+            facsimile["start_url"] = safe_join(
+                    "digitaledition",
+                    project,
+                    "facsimile",
+                    str(row["publicationFacsimileCollection_id"]),
+                    "1"
+            )
+        pre_pages = row["startPageNumber"] or 0
+
+        facsimile["first_page"] = pre_pages + row["pageNr"]
+
+        sql2 = "SELECT * FROM publicationFacsimile WHERE id=:publicationFacsimileCollection_id AND pageNr>:page_nr ORDER BY pageNr ASC LIMIT 1"
+        statement2 = sqlalchemy.sql.text(sql2).bindparams(publicationFacsimileCollection_id=row["publicationFacsimileCollection_id"], page_nr=row["pageNr"])
+        for row2 in connection.execute(statement2).fetchall():
+            facsimile["last_page"] = pre_pages + row2["pageNr"] - 1
+
+        if "last_page" not in facsimile.keys():
+            facsimile["last_page"] = row["numberOfPages"]
+
+        result.append(facsimile)
+        '''try:
+            with open(facsimile_image, "rb") as imageFile:
+                facsimile["image_data"] = base64.b64encode(imageFile.read()).decode("utf-8")
+        except:
+            logger.error("Missing facsimile image: {}".format(facsimile_image))
+        '''
+    connection.close()
+
+    return_data = result
+    '''for row in result:
+        if row["ed_id"] not in project_config.get(project).get("disabled_publications"):
+            return_data.append(row)
+    '''
+    return jsonify(return_data), 200, {"Access-Control-Allow-Origin": "*"}
+
+
 @digital_edition.route("/<project>/facsimiles/<collection_id>/<number>/<zoom_level>")
 def get_facsimile_file(project, collection_id, number, zoom_level):
     """
