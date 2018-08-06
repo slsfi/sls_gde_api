@@ -588,7 +588,7 @@ def get_facsimile_file(project, collection_id, number, zoom_level):
         return jsonify({
             "msg": "Desired facsimile collection was not found in database!"
         }), 404
-    elif row.folderPath != '':
+    elif row.folderPath != '' and row.folderPath is not None:
         file_path = safe_join(row.folderPath, collection_id, zoom_level, "{}.jpg".format(row.startPageNumber + int(number)))
     else:
         file_path = safe_join(config[project]["file_root"], "facsimiles", collection_id, zoom_level, "{}.jpg".format(row.startPageNumber + int(number)))
