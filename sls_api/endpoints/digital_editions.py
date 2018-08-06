@@ -113,7 +113,7 @@ def get_manuscripts(project, publication_id):
 @digital_edition.route("/<project>/text/<text_type>/<text_id>")
 def get_text_by_type(project, text_type, text_id):
     logger.info("Getting text by type /{}/text/{}/{}".format(project, text_type, text_id))
-    
+
     text_table = ''
     if text_type == 'manuscript':
         text_table = 'publicationManuscript'
@@ -533,7 +533,7 @@ def get_all_occurrences_by_type(object_type):
                 occurrence_stmnt = sqlalchemy.sql.text(occurrence_sql).bindparams(e_id=event["id"])
                 for row in connection.execute(occurrence_stmnt).fetchall():
                     row = dict(row)
-                    
+
                     if row["publicationManuscript_id"] is not None:
                         type_sql = sqlalchemy.sql.text("SELECT publicationManuscript.id AS id, publicationManuscript.originalFilename, publicationManuscript.name FROM publicationManuscript WHERE id={}".format(row["publicationManuscript_id"]))
                         manu = connection.execute(type_sql).fetchone()
@@ -554,7 +554,7 @@ def get_all_occurrences_by_type(object_type):
                         row["publication"] = dict(publication)
 
                     event["occurrences"].append(row)
-            
+
             for i in results:
                 if object_type == "subject":
                     i["name"] = o["fullName"]
@@ -568,7 +568,7 @@ def get_all_occurrences_by_type(object_type):
 def get_person_occurrences_by_collection(project, object_type, collection_id):
     connection = db_engine.connect()
     occurrence_sql = "SELECT publication.publicationCollection_id AS collection_id, eventOccurrence.id, eventOccurrence.event_id, type, description, eventOccurrence.publication_id, eventOccurrence.publicationVersion_id, eventOccurrence.publicationFacsimile_id, eventOccurrence.publicationComment_id, eventOccurrence.publicationManuscript_id FROM eventOccurrence, publication WHERE eventOccurrence.publication_id=publication.id AND publication.publicationCollection_id={} AND eventOccurrence.type='{}'".format(collection_id, object_type)
-    
+
     occurrences = []
     for row in connection.execute(occurrence_sql).fetchall():
         occurrences.append(dict(row))
@@ -579,7 +579,7 @@ def get_person_occurrences_by_collection(project, object_type, collection_id):
         for row in connection.execute(subject_sql).fetchall():
             subjects.append(dict(row))
     connection.close()
-    
+
     return jsonify(subjects)
 
 
@@ -616,15 +616,14 @@ def get_facsimiles(project, publication_id):
                     "digitaledition",
                     project,
                     "facsimile",
-                    str(row["publicationFacsimileCollection_id"]),
-                    "1"
+                    str(row["publicationFacsimileCollection_id"])
             )
         pre_pages = row["startPageNumber"] or 0
 
         facsimile["first_page"] = pre_pages + row["pageNr"]
 
-        sql2 = "SELECT * FROM publicationFacsimile WHERE id=:publicationFacsimileCollection_id AND pageNr>:page_nr ORDER BY pageNr ASC LIMIT 1"
-        statement2 = sqlalchemy.sql.text(sql2).bindparams(publicationFacsimileCollection_id=row["publicationFacsimileCollection_id"], page_nr=row["pageNr"])
+        sql2 = "SELECT * FROM publicationFacsimile WHERE publicationFacsimileCollection_id=:fc_id AND pageNr>:pageNr ORDER BY pageNr ASC LIMIT 1"
+        statement2 = sqlalchemy.sql.text(sql2).bindparams(fc_id=row["publicationFacsimileCollection_id"], pageNr=row["pageNr"])
         for row2 in connection.execute(statement2).fetchall():
             facsimile["last_page"] = pre_pages + row2["pageNr"] - 1
 
@@ -730,7 +729,7 @@ def get_tooltip(table, row_id):
 
 
 '''
-    HELPER FUNCTIONS  
+    HELPER FUNCTIONS
 '''
 
 
@@ -817,9 +816,9 @@ def get_published_status(project, collection_id, publication_id):
     """
     connection = db_engine.connect()
     select = """SELECT project.published AS proj_pub, publicationCollection.published AS col_pub, publication.published as pub 
-    FROM project JOIN publicationCollection JOIN publication 
-    WHERE project.id = publicationCollection.project_id 
-    AND publication.publicationCollection_id = publicationCollection.id 
+    FROM project JOIN publicationCollection JOIN publication
+    WHERE project.id = publicationCollection.project_id
+    AND publication.publicationCollection_id = publicationCollection.id
     AND project.name = :project AND publicationCollection.id = :c_id AND publication.id = :p_id
     """
     if int(os.environ.get("FLASK_DEBUG", 0)) == 1:
