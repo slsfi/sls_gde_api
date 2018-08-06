@@ -193,6 +193,18 @@ def get_publication(project, publication_id):
     connection.close()
     return jsonify(results)
 
+@digital_edition.route("/<project>/collection/<collection_id>/publications")
+def get_collection_publications(project, collection_id):
+    logger.info("Getting publication /{}/collections/{}/publications".format(project, collection_id))
+    connection = db_engine.connect()
+    sql = sqlalchemy.sql.text("SELECT * FROM publication WHERE publicationCollection_id=:c_id ORDER BY id")
+    statement = sql.bindparams(c_id=collection_id)
+    results = []
+    for row in connection.execute(statement).fetchall():
+        results.append(dict(row))
+    connection.close()
+    return jsonify(results)
+
 
 @digital_edition.route("/<project>/text/<collection_id>/<publication_id>/inl")
 @digital_edition.route("/<project>/text/<collection_id>/<publication_id>/inl/<lang>")
@@ -507,10 +519,12 @@ def get_all_occurrences_by_type(object_type):
             for row in connection.execute(events_stmnt).fetchall():
                 row = dict(row)
                 if object_type == "subject":
-                    type_stmnt = sqlalchemy.sql.text("SELECT type FROM subject WHERE id=:ty_id").bindparams(ty_id=object_id)
+                    type_stmnt = sqlalchemy.sql.text("SELECT type, subject.dateBorn, subject.dateDeceased FROM subject WHERE id=:ty_id").bindparams(ty_id=object_id)
                     type_object = connection.execute(type_stmnt).fetchone()
                     type_object = dict(type_object)
                     row["object_type"] = type_object["type"]
+                    row["dateBorn"] = type_object["dateBorn"]
+                    row["dateDeceased"] = type_object["dateDeceased"]
                 results.append(row)
 
             # set occurrences for each object
