@@ -582,6 +582,19 @@ def get_person_occurrences_by_collection(project, object_type, collection_id):
 
     return jsonify(subjects)
 
+# routes/digitaledition/table-of-contents.php
+@digital_edition.route("/<project>/facsimiles/collections/<facsimile_collection_ids>")
+def get_facsimile_collections(project, facsimile_collection_ids):
+    logger.info("Getting facsimiles /{}/facsimiles/collections/{}".format(project, facsimile_collection_ids))
+    connection = db_engine.connect()
+    sql = """SELECT * FROM publicationFacsimileCollection where id in :ids"""
+    statement = sqlalchemy.sql.text(sql).bindparams(ids=facsimile_collection_ids.split(','))
+    return_data = []
+    for row in connection.execute(statement).fetchall():
+        return_data.append(dict(row))
+
+    return jsonify(return_data), 200, {"Access-Control-Allow-Origin": "*"}
+
 
 # routes/digitaledition/table-of-contents.php
 @digital_edition.route("/<project>/facsimiles/<publication_id>")
