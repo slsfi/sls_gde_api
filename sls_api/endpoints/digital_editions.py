@@ -243,7 +243,7 @@ def get_title(project, collection_id, publication_id, lang="swe"):
         version = "int" if config[project]["show_internally_published"] else "ext"
         filename = "{}_tit_{}_{}.xml".format(collection_id, lang, version)
         xsl_file = "title.xsl"
-        content = get_content(project, "tit", filename, xsl_file, None)
+        content = get_content(project, "tit", filename, xsl_file, None)   
         data = {
             "id": "{}_{}_tit".format(collection_id, publication_id),
             "content": content
@@ -902,6 +902,15 @@ def get_content(project, folder, xml_filename, xsl_filename, parameters):
     cache_file_path = xml_file_path.replace("/xml/", "/cache/").replace(".xml", ".html")
     content = None
 
+    if parameters is not None:
+        if 'noteId' in parameters:
+            note_file_name = xml_filename.split(".xml")[0] + "_" + parameters["noteId"]
+            cache_file_path = cache_file_path.replace(xml_filename.split(".xml")[0], note_file_name)
+            cache_file_path = cache_file_path.replace('"', '')
+            cache_file_note_path_copy = cache_file_path
+            if not os.path.exists(cache_file_path):
+                cache_file_path = ""
+
     if os.path.exists(cache_file_path):
         if cache_is_recent(xml_file_path, xsl_file_path, cache_file_path):
             try:
@@ -919,8 +928,11 @@ def get_content(project, folder, xml_filename, xsl_filename, parameters):
         try:
             content = xml_to_html(xsl_file_path, xml_file_path, params=parameters).replace('\n', '').replace('\r', '')
             try:
-                with io.open(cache_file_path, mode="w", encoding="UTF-8") as cache_file:
-                    cache_file.write(content)
+                if parameters is not None:
+                    if 'noteId' in parameters:
+                        cache_file_path = cache_file_note_path_copy
+                    with io.open(cache_file_path, mode="w", encoding="UTF-8") as cache_file:
+                        cache_file.write(content)
             except Exception:
                 logger.exception("Could not create cachefile")
                 content = "Successfully fetched content but could not generate cache for it."
