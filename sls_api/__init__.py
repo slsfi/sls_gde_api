@@ -1,6 +1,7 @@
 from flask import Flask, redirect, url_for
 from flask_jwt_extended import JWTManager
 from flasgger import Swagger
+from flask_cors import CORS
 import logging
 import json
 import os
@@ -9,6 +10,7 @@ from ruamel.yaml import YAML
 from sys import stdout
 
 app = Flask(__name__)
+CORS(app)
 yaml = YAML(typ="safe")
 
 # First, set up logging
