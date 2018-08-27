@@ -6,24 +6,36 @@ engine: 'mysql://web_user:SecretPassword@mysql_server.example.com:3306?charset=u
 
 # Each digital edition project has its own config section describing how its files are located and handled
 parland:
-    # This engine connects to a MySQL server at mysql_server.com, on port 3306
-    # It uses username 'web_user' with the password 'SecretPassword' and connects to a database named 'parland'
-    engine: 'mysql://web_user:SecretPassword@mysql_server.example.com:3306/parland?charset=utf8mb4'
-    show_internally_published: True
-    show_unpublished: True
-    disabled_publications: []
-    file_root: '/var/parland-files'
+    # First, settings about how the publication tools should communicate towards git
+    git_repository: 'publisher@parland:slsfi/parland.git'
+    git_config: |
+        host parland
+          HostName github.com
+          IdentityFile ~/.ssh/github-id-rsa
+          IdentitiesOnly yes
+          User publisher
+    git_branch: 'staging'
+    # And then the actual local directory where the files are located (should be a local git repository with the above configured as its remote)
+    file_root: '/var/www/parland'
+    # Finally, whether or not internally published items should be viewable
+    show_internally_published: False
+
 topelius:
-    # This engine connects to a PostgreSQL server at postgres_server.example.com, on post 5432
-    # It uses username 'web_user' with the password 'SecretPassword' and connects to a database named 'topelius'
-    engine: 'postgresql://web_user:SecretPassword@postgres_server.example.com:5432/topelius?charset=utf8mb4'
+    # First, settings about how the publication tools should communicate towards git
+    git_repository: 'publisher@topelius:slsfi/topelius.git'
+    git_config: |
+        host topelius
+          HostName bitbucket.org
+          IdentityFile ~/.ssh/bitbucket-id-rsa
+          IdentitiesOnly yes
+          User publisher
+    git_branch: 'master'
+    # And then the actual local directory where the files are located (should be a local git repository with the above configured as its remote)
+    file_root: '/var/www/topelius'
+    # Finally, whether or not internally published items should be viewable
     show_internally_published: True
-    show_unpublished: True
-    disabled_publications: [10,12,13,14,9,20,28]
-    file_root: '/var/topelius-files'
-semantic_data:
-    engine: 'mysql://web_user:SecretPassword@mysql_server.example.com:3306/semantic_data?charset=utf8mb4'
-xslt_root: '/var/xslt-files'
+
+# In addition to STDOUT, messages can also be logged to file
 log_file: '/log/digital_editions/api.log'
 # XML-to-HTML is somewhat computationally expensive, so HTML reading texts are cached for up to this amount of time
 cache_lifetime_seconds: 7200  # 2 hours
