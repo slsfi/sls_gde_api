@@ -865,7 +865,7 @@ class FileResolver(etree.Resolver):
         return self.resolve_filename(system_url, context)
 
 
-def xml_to_html(xsl_file_path, xml_file_path, replace_namespace=True, params=None):
+def xml_to_html(xsl_file_path, xml_file_path, replace_namespace=False, params=None):
     logger.debug("Transforming {} using {}".format(xml_file_path, xsl_file_path))
     if params is not None:
         logger.debug("Parameters are {}".format(params))
