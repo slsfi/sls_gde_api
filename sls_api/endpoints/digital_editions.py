@@ -687,13 +687,15 @@ def get_facsimile_file(project, collection_id, number, zoom_level):
     connection.close()
 
     output = io.BytesIO()
-    with open(file_path, mode="rb") as img_file:
-        output.write(img_file.read())
-    content = output.getvalue()
-    output.close()
-    return Response(content, status=200, content_type="image/jpeg")
-
-
+    try:
+        with open(file_path, mode="rb") as img_file:
+            output.write(img_file.read())
+        content = output.getvalue()
+        output.close()
+        return Response(content, status=200, content_type="image/jpeg")
+    except Exception:
+        return Response("File not found.", status=404, content_type="text/json")
+    
 def list_tooltips(table):
     """
     List available tooltips for subjects, tags, or locations
