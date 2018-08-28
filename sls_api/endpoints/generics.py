@@ -28,14 +28,18 @@ def project_permission_required(fn):
     def wrapper(*args, **kwargs):
         verify_jwt_in_request()
         identity = get_jwt_identity()
-        if len(args) > 0:
-            if args[0] in identity["projects"]:
-                return fn(*args, **kwargs)
-        elif "projects" in kwargs:
-            if kwargs["projects"] in identity["projects"]:
-                return fn(*args, **kwargs)
+        if int(os.environ.get("FLASK_DEBUG", 0)) == 1 and identity["sub"] == "test@test.com":
+            # If in FLASK_DEBUG mode, test@test.com user has access to all projects
+            return fn(*args, **kwargs)
         else:
-            return jsonify({"msg": "No access to this project."}), 403
+            if len(args) > 0:
+                if args[0] in identity["projects"]:
+                    return fn(*args, **kwargs)
+            elif "projects" in kwargs:
+                if kwargs["projects"] in identity["projects"]:
+                    return fn(*args, **kwargs)
+            else:
+                return jsonify({"msg": "No access to this project."}), 403
     return wrapper
 
 

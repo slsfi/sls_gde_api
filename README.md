@@ -34,6 +34,7 @@ limitations under the License.
     - `pip install --upgrade -e .`
     - `export FLASK_APP=/path/to/sls_api` or `set FLASK_APP=/path/to/sls_api` on Windows
     - `export FLASK_DEBUG=1` or `set FLASK_DEBUG=1`on Windows to activate DEBUG mode
+    - By using the user `test@test.com` with the password `test`, access to all projects in granted in DEBUG mode
     - `flask run` - note that this uses port 5000 by default
     - These commands are contained within the `start-standalone.sh` script, so you can start the API by running `./start-standalone.sh` on UNIX-like systems.
 
