@@ -111,6 +111,14 @@ def pull_repository_changes_from_remote(project):
         }), 500
 
 
+def is_a_test(project):
+    """
+    Returns true if running in debug mode and project git_repository not configured, indicating that this is a test
+    """
+    if config[project]["git_repository"] is None and int(os.environ.get("FLASK_DEBUG", 0)) == 1:
+        return True
+
+
 @file_tools.route("/<project>/update_file/by_path/<path:file_path>", methods=["PUT"])
 @project_permission_required
 def update_file_in_remote(project, file_path):
@@ -159,40 +167,41 @@ def update_file_in_remote(project, file_path):
         }), 500
 
     # fetch latest changes from remote
-    try:
-        run_git_command(project, ["fetch"])
-    except subprocess.CalledProcessError as e:
-        return jsonify({
-            "msg": "Git fetch failed to execute properly.",
-            "reason": str(e.output)
-        }), 500
-
-    # check if desired file has changed in remote since last update
-    # if so, fail and return both user file and repo file to user, unless force=True
-    try:
-        output = run_git_command(project, ["show", "--pretty=format:", "--name-only", "..origin/{}".format(config[project]["git_branch"])])
-        new_and_changed_files = [s.strip().decode('utf-8', 'ignore') for s in output.splitlines()]
-    except subprocess.CalledProcessError as e:
-        return jsonify({
-            "msg": "Git show failed to execute properly.",
-            "reason": str(e.output)
-        }), 500
-    if safe_join(config[project]["file_root"], file_path) in new_and_changed_files and not force:
-        with io.open(safe_join(config[project]["file_root"], file_path), mode="rb") as repo_file:
+    if not is_a_test(project):
+        try:
+            run_git_command(project, ["fetch"])
+        except subprocess.CalledProcessError as e:
             return jsonify({
-                "msg": "File {} has been changed in git repository since last update, please manually check file changes.",
-                "your_file": request_data["file"],
-                "repo_file": base64.b64encode(repo_file.read())
-            }), 409
+                "msg": "Git fetch failed to execute properly.",
+                "reason": str(e.output)
+            }), 500
 
-    # merge in latest changes so that the local repository is updated
-    try:
-        run_git_command(project, ["merge",  "origin/{}".format(config[project]["git_branch"])])
-    except subprocess.CalledProcessError as e:
-        return jsonify({
-            "msg": "Git merge failed to execute properly.",
-            "reason": str(e.output)
-        }), 500
+        # check if desired file has changed in remote since last update
+        # if so, fail and return both user file and repo file to user, unless force=True
+        try:
+            output = run_git_command(project, ["show", "--pretty=format:", "--name-only", "..origin/{}".format(config[project]["git_branch"])])
+            new_and_changed_files = [s.strip().decode('utf-8', 'ignore') for s in output.splitlines()]
+        except subprocess.CalledProcessError as e:
+            return jsonify({
+                "msg": "Git show failed to execute properly.",
+                "reason": str(e.output)
+            }), 500
+        if safe_join(config[project]["file_root"], file_path) in new_and_changed_files and not force:
+            with io.open(safe_join(config[project]["file_root"], file_path), mode="rb") as repo_file:
+                return jsonify({
+                    "msg": "File {} has been changed in git repository since last update, please manually check file changes.",
+                    "your_file": request_data["file"],
+                    "repo_file": base64.b64encode(repo_file.read())
+                }), 409
+
+        # merge in latest changes so that the local repository is updated
+        try:
+            run_git_command(project, ["merge",  "origin/{}".format(config[project]["git_branch"])])
+        except subprocess.CalledProcessError as e:
+            return jsonify({
+                "msg": "Git merge failed to execute properly.",
+                "reason": str(e.output)
+            }), 500
 
     # check the status of the git repo, so we know if we need to git add later
     file_exists = file_exists_in_git_root(project, file_path)
@@ -223,16 +232,17 @@ def update_file_in_remote(project, file_path):
         }), 500
 
     # push new commit to remote repository
-    try:
-        if force:
-            run_git_command(project, ["push", "-f"])
-        else:
-            run_git_command(project, ["push"])
-    except subprocess.CalledProcessError as e:
-        return jsonify({
-            "msg": "Git push failed to execute properly.",
-            "reason": str(e.output)
-        }), 500
+    if not is_a_test(project):
+        try:
+            if force:
+                run_git_command(project, ["push", "-f"])
+            else:
+                run_git_command(project, ["push"])
+        except subprocess.CalledProcessError as e:
+            return jsonify({
+                "msg": "Git push failed to execute properly.",
+                "reason": str(e.output)
+            }), 500
 
     return jsonify({
         "msg": "File updated successfully in repository."
@@ -253,13 +263,14 @@ def get_file_from_remote(project, file_path):
             "reason": config_okay[1]
         }), 500
 
-    # Sync the desired file from remote repository to local API repository
-    update_repo = git_update_files_in_repo(project, file_path)
-    if not update_repo[0]:
-        return jsonify({
-            "msg": "Git update failed to execute properly.",
-            "reason": update_repo[1]
-        }), 500
+    if not is_a_test(project):
+        # Sync the desired file from remote repository to local API repository
+        update_repo = git_update_files_in_repo(project, file_path)
+        if not update_repo[0]:
+            return jsonify({
+                "msg": "Git update failed to execute properly.",
+                "reason": update_repo[1]
+            }), 500
 
     if file_exists_in_git_root(project, file_path):
         # read file, encode as base64 string and return to user as JSON data.
