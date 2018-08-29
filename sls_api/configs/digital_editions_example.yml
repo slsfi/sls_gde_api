@@ -5,6 +5,7 @@ engine: 'mysql://web_user:SecretPassword@mysql_server.example.com:3306?charset=u
 # It uses the username 'web_user' with the password 'SecretPassword'
 
 # Each digital edition project has its own config section describing how its files are located and handled
+# It may be wise to change https://git-scm.com/docs/git-config#git-config-corequotePath for the repositories using git config
 parland:
     # First, settings about how the publication tools should communicate towards git
     git_repository: 'publisher@parland:slsfi/parland.git'
