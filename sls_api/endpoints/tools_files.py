@@ -45,8 +45,10 @@ def run_git_command(project, command):
     @type command: list
     """
     git_root = config[project]["file_root"]
-    git_command = ["git", "-C", git_root, [c for c in command]]
-    return subprocess.check_output(["git", "-C", git_root, git_command])
+    git_command = ["git", "-C", git_root]
+    for c in command:
+        git_command.append(c)
+    return subprocess.check_output(git_command)
 
 
 def git_update_files_in_repo(project, specific_file=False):
@@ -293,7 +295,8 @@ def get_file_tree_from_remote(project, file_path=None):
     """
     # Fetch changes (to update index) but don't merge, and then run ls-files to get file listing.
     try:
-        run_git_command(project, ["fetch"])
+        if not is_a_test(project):
+            run_git_command(project, ["fetch"])
         if file_path is None:
             output = run_git_command(project, ["ls-files"])
         else:
