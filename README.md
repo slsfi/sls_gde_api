@@ -1,6 +1,6 @@
 # REST API for SLS Generic Digital Editions project
 - Flask-driven REST API
-- Runs on Python >=3.6 (Python2 may work, but will likely run slower and may have issues with unicode)
+- Runs on Python 3.6 (Python2 may work, but will likely run slower and may have issues with unicode)
 ---
 Copyright 2018 Svenska Litteratursällskapet i Finland, r.f.
 

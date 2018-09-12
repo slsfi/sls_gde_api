@@ -17,6 +17,8 @@ with io.open(os.path.join(config_dir, "digital_editions.yml"), encoding="UTF-8")
     yaml = YAML(typ="safe")
     config = yaml.load(config)
     db_engine = create_engine(config["engine"], pool_pre_ping=True)
+    web_files_config = config["web_files"]
+    master_config = config["master_files"]
 
 
 def project_permission_required(fn):
