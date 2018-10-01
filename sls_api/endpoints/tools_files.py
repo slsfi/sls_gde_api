@@ -294,7 +294,7 @@ def get_file_from_web_repo(project, file_path):
         return jsonify({"msg": "The requested file was not found in the git repository."}), 404
 
 
-@file_tools.route("/<project>/get_tree/web")
+@file_tools.route("/<project>/get_tree/web/")
 @file_tools.route("/<project>/get_tree/web/<path:file_path>")
 @project_permission_required
 def get_file_tree_from_web_repo(project, file_path=None):
