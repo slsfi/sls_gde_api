@@ -19,13 +19,13 @@ def check_project_web_repo_config(project):
     """
     if project not in web_files_config:
         return False, "Project config not found."
-    if not is_a_test(project) and "git_repository" not in web_files_config:
+    if not is_a_test(project) and "git_repository" not in web_files_config[project]:
         return False, "git_repository not in project config."
-    if "git_config" not in web_files_config:
+    if "git_config" not in web_files_config[project]:
         return False, "git_config (SSH config) not in project config."
-    if "git_branch" not in web_files_config:
+    if "git_branch" not in web_files_config[project]:
         return False, "git_branch information not in project config-"
-    if "file_root" not in web_files_config:
+    if "file_root" not in web_files_config[project]:
         return False, "file_root information not in project config."
     return True, "Project config OK."
 
