@@ -285,9 +285,9 @@ def get_file_from_web_repo(project, file_path):
     if file_exists_in_web_repo_root(project, file_path):
         # read file, encode as base64 string and return to user as JSON data.
         with io.open(safe_join(web_files_config[project]["file_root"], file_path), mode="rb") as file:
-            file_string = base64.b64encode(file.read())
+            file_bytestring = base64.b64encode(file.read())
             return jsonify({
-                "file": file_string,
+                "file": file_bytestring.decode("utf-8"),
                 "filepath": file_path
             })
     else:
