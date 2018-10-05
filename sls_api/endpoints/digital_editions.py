@@ -14,12 +14,15 @@ import glob
 from PIL import Image
 from hashlib import md5
 import base64
+from elasticsearch import Elasticsearch
 
 from sls_api.endpoints.generics import web_files_config, db_engine, select_all_from_table
 
 digital_edition = Blueprint('digital_edition', __name__)
 
 logger = logging.getLogger("sls_api.digital_edition")
+
+es = Elasticsearch([{'host': elastic_config['host'], 'port': elastic_config['port']}])
 
 file_handler = TimedRotatingFileHandler(filename=web_files_config["log_file"], when="midnight", backupCount=7)
 file_handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s', '%H:%M:%S'))
@@ -797,6 +800,33 @@ def get_tooltip(table, row_id):
     result = connection.execute(statement).fetchone()
     connection.close()
     return dict(result)
+
+# Freetext seach through ElasticSearch API
+@digital_edition.route("/search/freetext/<search_text>/<fuzziness>")
+def get_freetext_search(search_text, fuzziness=1):
+    logger.info("Getting results from elastic")
+    if len(search_text) > 0:
+        res = es.search(index="topelius", body={
+            "query": 
+            { 
+                "match": 
+                { 
+                    "textData": 
+                    {
+                        "query": search_text,
+                        "fuzziness": fuzziness
+                    }
+                } 
+            },
+            "highlight": {
+                "fields" : {
+                    "textData" : {}
+                }
+            }
+        })
+        return jsonify(res['hits']['hits'])
+    else:
+        return jsonify("")
 
 
 '''

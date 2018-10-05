@@ -47,6 +47,10 @@ web_files:
     # XML-to-HTML is somewhat computationally expensive, so HTML reading texts are cached for up to this amount of time
     cache_lifetime_seconds: 7200  # 2 hours
 
+# Elasticsearch configuration parameters
+elasticsearch_connection: 
+    host: 'dockerhost-ext03'
+    port: 9200
 
 # Each Digital Edition project must also have settings for where its source masters are stored.
 # These are the core XML files from which the est/com/inl XMLs and so on are generated.
