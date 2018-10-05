@@ -1,6 +1,6 @@
 import calendar
 from collections import OrderedDict
-from flask import abort, Blueprint, request, Response, safe_join
+from flask import abort, Blueprint, request, Response, safe_join, send_from_directory
 from flask.json import jsonify
 import io
 import logging
@@ -11,6 +11,9 @@ import sqlalchemy.sql
 import time
 import re
 import glob
+from PIL import Image
+from hashlib import md5
+import base64
 
 from sls_api.endpoints.generics import web_files_config, db_engine, select_all_from_table
 
@@ -95,6 +98,7 @@ def get_static_pages_as_json(project, language):
         data = path_hierarchy(folder_path, language)
         return jsonify(data), 200
     else:
+        logger.info("did not find {}".format(folder_path))
         abort(404)
 
 
@@ -133,6 +137,125 @@ def get_text_by_type(project, text_type, text_id):
     connection.close()
     return jsonify(results)
 
+def getFacsimileImage(project, edition_id, publication_id, size=(300,300)):
+    logger.info("Getting facsimile image from funciton getFacsimileImage({},{},{})".format(project, edition_id, publication_id))
+
+    outfile = md5("{}-{}-{}-{}".format(edition_id, publication_id, size[0], size[1]).encode('utf-8'))
+    cache_file_path = safe_join(web_files_config[project]["file_root"], "cache", "faksimil", "{}.png".format(outfile))
+    image_file_path = safe_join(web_files_config[project]["file_root"], "faksimil", edition_id, "{}.png".format(publication_id))
+    if os.path.exists(cache_file_path):
+        logger.debug("cache_file_path exists: {}".format(cache_file_path))
+        return cache_file_path
+    else:
+        try:
+            logger.debug("cache_file_path does not exist: {}".format(cache_file_path))
+            logger.debug("Will create new image")
+            im = Image.open(image_file_path)
+            im.thumbnail(size, Image.ANTIALIAS)
+            im.save(cache_file_path, "JPEG")
+            logger.debug("I think it was successful")
+            return cache_file_path
+        except Exception:
+            logger.exception("Exception when creating image cache file.")
+            return ""
+
+# routes/digitaledition/table-of-contents.php
+@digital_edition.route("/<project>/facsimiles/<edition_id>/<publication_id>")
+def get_facsimiles(project, edition_id, publication_id):
+    logger.info("Getting facsimiles /{}/facsimiles/{}/{}".format(project, edition_id, publication_id))
+
+    connection = db_engine.connect()
+
+    sql = """SELECT f.*, fp.*, m_title, e.ed_id, fp.publications_id AS fp_publications_id FROM publications_ed AS e
+    LEFT JOIN publications AS p ON p.p_ed_id=e.ed_id
+    LEFT JOIN facsimile_publications AS fp ON p.p_id=fp.publications_id
+    LEFT OUTER JOIN facsimiles AS f ON f.faksimil=fp.facs_id AND f.publication_id=p.p_id
+    LEFT OUTER JOIN manuscripts AS m ON m.m_id=fp.ms_id
+    WHERE p.p_id=:p_id AND e.ed_id=:ed_id
+    ORDER BY fp.priority"""
+
+
+    if web_files_config[project]["show_internally_published"]:
+        sql = " ".join([sql, "and e.ed_lansering>0"])
+    elif not web_files_config[project]["show_unpublished"]:
+        sql = " ".join([sql, "and e.ed_lansering>2"])
+
+    statement = sqlalchemy.sql.text(sql).bindparams(ed_id=edition_id, p_id=publication_id)
+
+    images = {}
+    result = []
+    for row in connection.execute(statement).fetchall():
+        facsimile = dict(row)
+        facsimile["start_url"] = safe_join(
+                "digitaledition",
+                project,
+                "faksimil",
+                str(row["facs_id"]),
+                "1"
+        )
+        pre_pages = row["pre_page_count"] or 0
+
+        facsimile["first_page"] = pre_pages + row["page_nr"]
+
+        sql2 = "SELECT * FROM facsimile_publications WHERE facs_id=:facs_id AND page_nr>:page_nr ORDER BY page_nr ASC LIMIT 1"
+        statement2 = sqlalchemy.sql.text(sql2).bindparams(facs_id=row["facs_id"], page_nr=row["page_nr"])
+        for row2 in connection.execute(statement2).fetchall():
+            facsimile["last_page"] = pre_pages + row2["page_nr"] - 1
+
+        if "last_page" not in facsimile.keys():
+            facsimile["last_page"] = row["pages"]
+
+        result.append(facsimile)
+        '''try:
+            with open(facsimile_image, "rb") as imageFile:
+                facsimile["image_data"] = base64.b64encode(imageFile.read()).decode("utf-8")
+        except:
+            logger.error("Missing facsimile image: {}".format(facsimile_image))
+        '''
+    connection.close()
+
+    return_data = []
+    for row in result:
+        if row["ed_id"] not in web_files_config[project]["disabled_publications"]:
+            return_data.append(row)
+
+    return jsonify(return_data), 200, {"Access-Control-Allow-Origin": "*"}
+
+
+# routes/digitaledition/table-of-contents.php
+@digital_edition.route("/<project>/facsimile/<facs_id>/<size>/<page>")
+def get_facsimile(project, facs_id, size, page):
+    logger.info("Getting facsimile /{}/facsimile/{}/{}/{}".format(project, facs_id, size, page))
+
+    connection = db_engine.connect()
+    sql = """SELECT fp.*, f.title, f.pages, f.description, f.pdf, f.pre_page_count, e.ed_id, p.p_id 
+    FROM publications_ed AS e 
+    LEFT JOIN publications AS p ON p.p_ed_id=e.ed_id 
+    LEFT JOIN facsimiles AS f ON f.publication_id=p.p_id 
+    LEFT JOIN facsimile_publications AS fp ON fp.publications_id=p.p_id 
+    WHERE facs_id=:facs_id"""
+
+    if web_files_config[project]["show_internally_published"]:
+        sql = " ".join([sql, "and e.ed_lansering>0"])
+    elif not web_files_config[project]["show_unpublished"]:
+        sql = " ".join([sql, "and e.ed_lansering>2"])
+
+    statement = sqlalchemy.sql.text(sql).bindparams(facs_id=facs_id)
+    if int(page) < 1:
+        return jsonify("Image not found"), 404
+
+    result = []
+    for row in connection.execute(statement).fetchall():
+        if int(page) > row["pages"]:
+            return jsonify("Image not found"), 404
+
+        folder = safe_join(web_files_config[project]["file_root"],
+                           "faksimil", str(facs_id), str(size)
+                           )
+        return send_from_directory(folder, f"{page}.jpg")
+        connection.close()
+    return jsonify("Image not found"), 404
+
 
 @digital_edition.route("/<project>/toc/<collection_id>")
 def get_toc(project, collection_id):
@@ -152,8 +275,6 @@ def get_toc(project, collection_id):
     except Exception:
         print(file_path_query)
         abort(404)
-
-
 
 @digital_edition.route("/<project>/collections")
 def get_collections(project):
@@ -582,7 +703,6 @@ def get_person_occurrences_by_collection(project, object_type, collection_id):
 
     return jsonify(subjects)
 
-# routes/digitaledition/table-of-contents.php
 @digital_edition.route("/<project>/facsimiles/collections/<facsimile_collection_ids>")
 def get_facsimile_collections(project, facsimile_collection_ids):
     logger.info("Getting facsimiles /{}/facsimiles/collections/{}".format(project, facsimile_collection_ids))
@@ -590,168 +710,9 @@ def get_facsimile_collections(project, facsimile_collection_ids):
     sql = """SELECT * FROM publicationFacsimileCollection where id in :ids"""
     statement = sqlalchemy.sql.text(sql).bindparams(ids=facsimile_collection_ids.split(','))
     return_data = []
-    if ms_data:
-        return jsonify(dict(ms_data))
-    else:
-        return jsonify("Person not found"), 404
-
-
-# routes/semantic_data/persons.php
-@digital_edition.route("/semantic_data/persons/list/<data_source_id>")
-def get_list_of_persons(data_source_id):
-    logger.info("Getting list of persons /semantic_data/persons/list/{}".format(data_source_id))
-    connection = get_mysql_connection("semantic_data")
-    sql = "SELECT DISTINCT c_webbnamn_1_sort AS title, ed_tooltip AS content, " \
-          "c_webbfornamn1, c_webbefternamn1, ed_tooltip, id_p, c_webbsok " \
-          "FROM persons WHERE data_source_id=:ds_id ORDER BY id_p ASC"
-    statement = sqlalchemy.sql.text(sql).bindparams(ds_id=data_source_id)
-    ms_data = []
     for row in connection.execute(statement).fetchall():
         return_data.append(dict(row))
 
-    return jsonify(return_data), 200, {"Access-Control-Allow-Origin": "*"}
-
-
-# routes/digitaledition/table-of-contents.php
-@digital_edition.route("/<project>/facsimiles/<publication_id>")
-def get_facsimiles(project, publication_id):
-    logger.info("Getting facsimiles /{}/facsimiles/{}".format(project, publication_id))
-
-    connection = db_engine.connect()
-
-    sql = """select * from publicationFacsimile as f
-    left join publicationFacsimileCollection as fc on fc.id=f.publicationFacsimileCollection_id
-    left join publication p on p.id=f.publication_id
-    where f.publication_id=:p_id
-    """
-
-    if web_files_config[project]["show_internally_published"]:
-        sql = " ".join([sql, "and p.published>0"])
-    elif web_files_config[project]["show_unpublished"]:
-        sql = " ".join([sql, "and p.published>2"])
-
-# routes/semantic_data/persons.php
-@digital_edition.route("/semantic_data/person/<person_id>/occurences")
-def get_person_ocurrences(person_id):
-    logger.info("Getting list of persons /semantic_data/person/{}/occurences".format(person_id))
-    connection = get_mysql_connection("semantic_data")
-    sql = "SELECT person_id, link_id, text_type FROM person_occurences WHERE person_id=:p_id ORDER BY person_id ASC"    
-    # SELECT person_id, link_id, text_type FROM semantic_data.person_occurences WHERE person_occurences.person_id='spe1'
-
-    statement = sqlalchemy.sql.text(sql).bindparams(p_id=person_id)
-    ms_data = []
-    for row in connection.execute(statement).fetchall():
-        ms_data.append(dict(row))
-    connection.close()
-
-    print(ms_data)
-
-    if ms_data:
-        return jsonify(ms_data)
-    else:
-        return jsonify("Occurences not found."), 404
-
-# routes/semantic_data/persons.php
-@digital_edition.route("/semantic_data/person/occurences/editions/<edition_ids>")
-def get_person_ocurrences_by_edition(edition_ids):
-    print('Array of edition ids')
-    print(edition_ids)
-
-    logger.info("Getting list of persons /semantic_data/person/occurences/editions/{}".format(edition_ids))
-    connection = get_mysql_connection("semantic_data")
-
-    ms_data = []
-
-    for edition_id in edition_ids:
-        edition_id = edition_id + "_%"
-        sql = "SELECT DISTINCT person_id AS id_p, c_webbnamn_1_sort AS title FROM person_occurences, persons WHERE link_id LIKE :e_id AND digital_edition_key='topelius' AND person_occurences.person_id=persons.id_p ORDER BY id_p ASC"
-        statement = sqlalchemy.sql.text(sql).bindparams(e_id=edition_id)
-        for row in connection.execute(statement).fetchall():
-            ms_data.append(dict(row))
-
-    connection.close()
-
-    print(ms_data)
-
-    if ms_data:
-        return jsonify(ms_data)
-    else:
-        return jsonify("Occurences not found."), 404
-
-# routes/semantic_data/persons.php
-@digital_edition.route("/semantic_data/place/<place_id>/occurences")
-def get_place_ocurrences(place_id):
-    logger.info("Getting list of persons /semantic_data/place/{}/occurences".format(place_id))
-    connection = get_mysql_connection("semantic_data")
-    sql = "SELECT place_id, link_id, text_type FROM place_occurences WHERE place_id=:p_id ORDER BY place_id ASC"
-
-    statement = sqlalchemy.sql.text(sql).bindparams(p_id=place_id)
-    ms_data = []
-    for row in connection.execute(statement).fetchall():
-        ms_data.append(dict(row))
-    connection.close()
-
-    print(ms_data)
-
-    if ms_data:
-        return jsonify(ms_data)
-    else:
-        return jsonify("Occurences not found."), 404
-
-# routes/semantic_data/publication.php
-@digital_edition.route("/<project>/publication/<p_identifier>/title")
-def get_publication_title(project, p_identifier):
-    connection = get_mysql_connection(project)
-    sql = sqlalchemy.sql.text("SELECT p_identifier, p_title, p_filename FROM publications WHERE p_identifier=:pub_ident ORDER BY p_title")
-    statement = sql.bindparams(pub_ident=p_identifier)
-    results = []
-    for row in connection.execute(statement).fetchall():
-        results.append(dict(row))
-    connection.close()
-    return jsonify(results)  
-
-
-    statement = sqlalchemy.sql.text(sql).bindparams(p_id=publication_id)
-
-    images = {}
-    result = []
-    for row in connection.execute(statement).fetchall():
-        facsimile = dict(row)
-        if row.folderPath != '' and row.folderPath is not None:
-            facsimile["start_url"] = row.folderPath
-        else:
-            facsimile["start_url"] = safe_join(
-                    "digitaledition",
-                    project,
-                    "facsimile",
-                    str(row["publicationFacsimileCollection_id"])
-            )
-        pre_pages = row["startPageNumber"] or 0
-
-        facsimile["first_page"] = pre_pages + row["pageNr"]
-
-        sql2 = "SELECT * FROM publicationFacsimile WHERE publicationFacsimileCollection_id=:fc_id AND pageNr>:pageNr ORDER BY pageNr ASC LIMIT 1"
-        statement2 = sqlalchemy.sql.text(sql2).bindparams(fc_id=row["publicationFacsimileCollection_id"], pageNr=row["pageNr"])
-        for row2 in connection.execute(statement2).fetchall():
-            facsimile["last_page"] = pre_pages + row2["pageNr"] - 1
-
-        if "last_page" not in facsimile.keys():
-            facsimile["last_page"] = row["numberOfPages"]
-
-        result.append(facsimile)
-        '''try:
-            with open(facsimile_image, "rb") as imageFile:
-                facsimile["image_data"] = base64.b64encode(imageFile.read()).decode("utf-8")
-        except:
-            logger.error("Missing facsimile image: {}".format(facsimile_image))
-        '''
-    connection.close()
-
-    return_data = result
-    '''for row in result:
-        if row["ed_id"] not in project_config.get(project).get("disabled_publications"):
-            return_data.append(row)
-    '''
     return jsonify(return_data), 200, {"Access-Control-Allow-Origin": "*"}
 
 

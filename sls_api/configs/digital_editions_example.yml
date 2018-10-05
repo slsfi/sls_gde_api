@@ -23,7 +23,7 @@ web_files:
         # Finally, whether or not internally published and unpublished items should be viewable
         show_internally_published: False
         show_unpublished: False
-
+        disabled_publications: [10,12,13,14,9,20,28]
 
     topelius:
         # First, settings about how the publication tools should communicate towards git
@@ -40,6 +40,7 @@ web_files:
         # Finally, whether or not internally published and unpublished items should be viewable
         show_internally_published: True
         show_unpublished: True
+        disabled_publications: [10,12,13,14,9,20,28]
 
     # In addition to STDOUT, messages can also be logged to file
     log_file: '/log/digital_editions/api.log'

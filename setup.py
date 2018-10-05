@@ -20,6 +20,10 @@ setup(
         'ruamel.yaml',
         'requests',
         'sqlalchemy',
+<<<<<<< HEAD
         'werkzeug'
+=======
+        'Pillow'
+>>>>>>> remotes/origin/facsimile
     ]
 )
