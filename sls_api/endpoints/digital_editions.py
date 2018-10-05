@@ -590,6 +590,22 @@ def get_facsimile_collections(project, facsimile_collection_ids):
     sql = """SELECT * FROM publicationFacsimileCollection where id in :ids"""
     statement = sqlalchemy.sql.text(sql).bindparams(ids=facsimile_collection_ids.split(','))
     return_data = []
+    if ms_data:
+        return jsonify(dict(ms_data))
+    else:
+        return jsonify("Person not found"), 404
+
+
+# routes/semantic_data/persons.php
+@digital_edition.route("/semantic_data/persons/list/<data_source_id>")
+def get_list_of_persons(data_source_id):
+    logger.info("Getting list of persons /semantic_data/persons/list/{}".format(data_source_id))
+    connection = get_mysql_connection("semantic_data")
+    sql = "SELECT DISTINCT c_webbnamn_1_sort AS title, ed_tooltip AS content, " \
+          "c_webbfornamn1, c_webbefternamn1, ed_tooltip, id_p, c_webbsok " \
+          "FROM persons WHERE data_source_id=:ds_id ORDER BY id_p ASC"
+    statement = sqlalchemy.sql.text(sql).bindparams(ds_id=data_source_id)
+    ms_data = []
     for row in connection.execute(statement).fetchall():
         return_data.append(dict(row))
 
@@ -614,7 +630,86 @@ def get_facsimiles(project, publication_id):
     elif web_files_config[project]["show_unpublished"]:
         sql = " ".join([sql, "and p.published>2"])
 
-    sql = " ".join([sql, "ORDER BY f.priority"])
+# routes/semantic_data/persons.php
+@digital_edition.route("/semantic_data/person/<person_id>/occurences")
+def get_person_ocurrences(person_id):
+    logger.info("Getting list of persons /semantic_data/person/{}/occurences".format(person_id))
+    connection = get_mysql_connection("semantic_data")
+    sql = "SELECT person_id, link_id, text_type FROM person_occurences WHERE person_id=:p_id ORDER BY person_id ASC"    
+    # SELECT person_id, link_id, text_type FROM semantic_data.person_occurences WHERE person_occurences.person_id='spe1'
+
+    statement = sqlalchemy.sql.text(sql).bindparams(p_id=person_id)
+    ms_data = []
+    for row in connection.execute(statement).fetchall():
+        ms_data.append(dict(row))
+    connection.close()
+
+    print(ms_data)
+
+    if ms_data:
+        return jsonify(ms_data)
+    else:
+        return jsonify("Occurences not found."), 404
+
+# routes/semantic_data/persons.php
+@digital_edition.route("/semantic_data/person/occurences/editions/<edition_ids>")
+def get_person_ocurrences_by_edition(edition_ids):
+    print('Array of edition ids')
+    print(edition_ids)
+
+    logger.info("Getting list of persons /semantic_data/person/occurences/editions/{}".format(edition_ids))
+    connection = get_mysql_connection("semantic_data")
+
+    ms_data = []
+
+    for edition_id in edition_ids:
+        edition_id = edition_id + "_%"
+        sql = "SELECT DISTINCT person_id AS id_p, c_webbnamn_1_sort AS title FROM person_occurences, persons WHERE link_id LIKE :e_id AND digital_edition_key='topelius' AND person_occurences.person_id=persons.id_p ORDER BY id_p ASC"
+        statement = sqlalchemy.sql.text(sql).bindparams(e_id=edition_id)
+        for row in connection.execute(statement).fetchall():
+            ms_data.append(dict(row))
+
+    connection.close()
+
+    print(ms_data)
+
+    if ms_data:
+        return jsonify(ms_data)
+    else:
+        return jsonify("Occurences not found."), 404
+
+# routes/semantic_data/persons.php
+@digital_edition.route("/semantic_data/place/<place_id>/occurences")
+def get_place_ocurrences(place_id):
+    logger.info("Getting list of persons /semantic_data/place/{}/occurences".format(place_id))
+    connection = get_mysql_connection("semantic_data")
+    sql = "SELECT place_id, link_id, text_type FROM place_occurences WHERE place_id=:p_id ORDER BY place_id ASC"
+
+    statement = sqlalchemy.sql.text(sql).bindparams(p_id=place_id)
+    ms_data = []
+    for row in connection.execute(statement).fetchall():
+        ms_data.append(dict(row))
+    connection.close()
+
+    print(ms_data)
+
+    if ms_data:
+        return jsonify(ms_data)
+    else:
+        return jsonify("Occurences not found."), 404
+
+# routes/semantic_data/publication.php
+@digital_edition.route("/<project>/publication/<p_identifier>/title")
+def get_publication_title(project, p_identifier):
+    connection = get_mysql_connection(project)
+    sql = sqlalchemy.sql.text("SELECT p_identifier, p_title, p_filename FROM publications WHERE p_identifier=:pub_ident ORDER BY p_title")
+    statement = sql.bindparams(pub_ident=p_identifier)
+    results = []
+    for row in connection.execute(statement).fetchall():
+        results.append(dict(row))
+    connection.close()
+    return jsonify(results)  
+
 
     statement = sqlalchemy.sql.text(sql).bindparams(p_id=publication_id)
 
