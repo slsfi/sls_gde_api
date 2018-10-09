@@ -16,7 +16,7 @@ from hashlib import md5
 import base64
 from elasticsearch import Elasticsearch
 
-from sls_api.endpoints.generics import web_files_config, db_engine, select_all_from_table
+from sls_api.endpoints.generics import web_files_config, db_engine, select_all_from_table, elastic_config
 
 digital_edition = Blueprint('digital_edition', __name__)
 
