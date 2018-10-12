@@ -1,6 +1,6 @@
 FROM python:3.6-slim-stretch
 
-RUN apt update && apt install -y build-essential libmariadbclient-dev
+RUN apt update && apt install -y build-essential libmariadbclient-dev subversion
 
 RUN pip install Twisted[tls]
 
