@@ -4,12 +4,17 @@ from flask_jwt_extended import get_jwt_identity
 import io
 import os
 import subprocess
+import svn.local
+import svn.remote
 from werkzeug.utils import secure_filename
 
 from sls_api.endpoints.generics import web_files_config, master_config, project_permission_required
 
 
 file_tools = Blueprint("file_tools", __name__)
+
+svn_remotes = {}
+svn_locals = {}
 
 
 def check_project_web_repo_config(project):
@@ -21,10 +26,8 @@ def check_project_web_repo_config(project):
         return False, "Project config not found."
     if not is_a_test(project) and "git_repository" not in web_files_config[project]:
         return False, "git_repository not in project config."
-    if "git_config" not in web_files_config[project]:
-        return False, "git_config (SSH config) not in project config."
     if "git_branch" not in web_files_config[project]:
-        return False, "git_branch information not in project config-"
+        return False, "git_branch information not in project config."
     if "file_root" not in web_files_config[project]:
         return False, "file_root information not in project config."
     return True, "Project config OK."
@@ -57,6 +60,19 @@ def run_web_repo_command(project, command):
     for c in command:
         git_command.append(c)
     return subprocess.check_output(git_command)
+
+
+@file_tools.before_app_first_request
+def initialize_master_repos():
+    """
+    Initializes the SVN master repositories by checking out their SVN remotes to the configured file_roots
+    """
+    global svn_remotes
+    global svn_locals
+    for project in master_config:
+        svn_remotes[project] = svn.remote.RemoteClient(master_config[project]["svn_remote"])
+        svn_remotes[project].checkout(master_config[project]["file_root"])
+        svn_locals[project] = svn.local.LocalClient(master_config[project]["file_root"])
 
 
 def update_files_in_web_repo(project, specific_file=False):

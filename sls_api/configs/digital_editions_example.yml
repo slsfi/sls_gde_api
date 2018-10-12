@@ -48,11 +48,16 @@ web_files:
 
 
 # Each Digital Edition project must also have settings for where its source masters are stored.
+# Each project needs an SVN remote, credentials to authenticate with, and a local file_root to store its working copy
 # These are the core XML files from which the est/com/inl XMLs and so on are generated.
 master_files:
     parland:
-        svn_repository: "/opt/svn/repos/parland"
+        svn_remote: "https://svn.local/repos/parland"
+        username: "api_user"
+        password: "secret_password"
         file_root: "/var/files/parland_master"
     topelius:
-        svn_repository: "/opt/svn/repos/topelius"
+        svn_remote: "https://svn.local/repos/topelius"
+        username: "api_user"
+        password: "secret_password"
         file_root: "/var/files/topelius_master"

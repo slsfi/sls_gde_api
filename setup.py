@@ -20,6 +20,7 @@ setup(
         'ruamel.yaml',
         'requests',
         'sqlalchemy',
+        'svn',
         'werkzeug'
     ]
 )
