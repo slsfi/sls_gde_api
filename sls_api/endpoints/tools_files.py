@@ -198,10 +198,11 @@ def update_file_in_web_repo(project, file_path):
             }), 500
         if safe_join(web_files_config[project]["file_root"], file_path) in new_and_changed_files and not force:
             with io.open(safe_join(web_files_config[project]["file_root"], file_path), mode="rb") as repo_file:
+                file_bytestring = base64.b64encode(repo_file.read())
                 return jsonify({
                     "msg": "File {} has been changed in git repository since last update, please manually check file changes.",
                     "your_file": request_data["file"],
-                    "repo_file": base64.b64encode(repo_file.read())
+                    "repo_file": file_bytestring.decode("utf-8")
                 }), 409
 
         # merge in latest changes so that the local repository is updated
