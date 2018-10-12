@@ -54,7 +54,6 @@ def get_project_id_from_name(project):
     connection.close()
     return int(project_id["id"])
 
-
 def select_all_from_table(table_name):
     table = Table(table_name, metadata, autoload=True, autoload_with=db_engine)
     connection = db_engine.connect()

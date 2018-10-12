@@ -16,7 +16,7 @@ from hashlib import md5
 import base64
 from elasticsearch import Elasticsearch
 
-from sls_api.endpoints.generics import web_files_config, db_engine, select_all_from_table, elastic_config
+from sls_api.endpoints.generics import web_files_config, db_engine, select_all_from_table, elastic_config, get_project_id_from_name
 
 digital_edition = Blueprint('digital_edition', __name__)
 
@@ -601,8 +601,9 @@ def get_occurrences(object_type, ident):
 
         return jsonify(results)
 
+@digital_edition.route("/<project>/occurrences/<object_type>")
 @digital_edition.route("/occurrences/<object_type>")
-def get_all_occurrences_by_type(object_type):
+def get_all_occurrences_by_type(object_type, project=None):
     """
     Get occurrences for each person
     TODO: refactor and divide into multiple functions
@@ -617,8 +618,14 @@ def get_all_occurrences_by_type(object_type):
         else:
             name_attr = "name"
 
-        ob_sql = "SELECT DISTINCT eventConnection.{}, {}.{} FROM digitalEdition.eventConnection, digitalEdition.eventOccurrence, digitalEdition.{} WHERE eventConnection.event_id=eventOccurrence.event_id AND eventConnection.{}={}.id"
-        ob_sql = ob_sql.format(ob_id, object_type, name_attr, object_type, ob_id, object_type)
+        if project is None:
+            ob_sql = "SELECT DISTINCT eventConnection.{}, {}.{} FROM digitalEdition.eventConnection, digitalEdition.eventOccurrence, digitalEdition.{} WHERE eventConnection.event_id=eventOccurrence.event_id AND eventConnection.{}={}.id"
+            ob_sql = ob_sql.format(ob_id, object_type, name_attr, object_type, ob_id, object_type)
+        else:
+            project_id = get_project_id_from_name(project)
+            ob_sql = "SELECT DISTINCT eventConnection.{}, {}.{} FROM digitalEdition.eventConnection, digitalEdition.eventOccurrence, digitalEdition.{} WHERE eventConnection.event_id=eventOccurrence.event_id AND eventConnection.{}={}.id AND {}.project_id={}"
+            ob_sql = ob_sql.format(ob_id, object_type, name_attr, object_type, ob_id, object_type, object_type, project_id)
+        
         ob_statement = sqlalchemy.sql.text(ob_sql)
         obs = []
         for row in connection.execute(ob_statement).fetchall():
