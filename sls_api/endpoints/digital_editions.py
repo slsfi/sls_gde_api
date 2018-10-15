@@ -109,7 +109,7 @@ def get_static_pages_as_json(project, language):
 def get_manuscripts(project, publication_id):
     logger.info("Getting manuscript /{}/manuscript/{}".format(project, publication_id))
     connection = db_engine.connect()
-    sql = sqlalchemy.sql.text("SELECT * FROM publicationManuscript WHERE publication_id=:pub_id")
+    sql = sqlalchemy.sql.text('SELECT * FROM publicationManuscript WHERE publication_id=:pub_id')
     statement = sql.bindparams(pub_id=publication_id)
     results = []
     for row in connection.execute(statement).fetchall():
@@ -163,50 +163,51 @@ def getFacsimileImage(project, edition_id, publication_id, size=(300,300)):
             return ""
 
 # routes/digitaledition/table-of-contents.php
-@digital_edition.route("/<project>/facsimiles/<edition_id>/<publication_id>")
-def get_facsimiles(project, edition_id, publication_id):
-    logger.info("Getting facsimiles /{}/facsimiles/{}/{}".format(project, edition_id, publication_id))
+@digital_edition.route("/<project>/facsimiles/<publication_id>")
+def get_facsimiles(project, publication_id):
+    logger.info("Getting facsimiles /{}/facsimiles/{}".format(project, publication_id))
 
     connection = db_engine.connect()
 
-    sql = """SELECT f.*, fp.*, m_title, e.ed_id, fp.publications_id AS fp_publications_id FROM publications_ed AS e
-    LEFT JOIN publications AS p ON p.p_ed_id=e.ed_id
-    LEFT JOIN facsimile_publications AS fp ON p.p_id=fp.publications_id
-    LEFT OUTER JOIN facsimiles AS f ON f.faksimil=fp.facs_id AND f.publication_id=p.p_id
-    LEFT OUTER JOIN manuscripts AS m ON m.m_id=fp.ms_id
-    WHERE p.p_id=:p_id AND e.ed_id=:ed_id
-    ORDER BY fp.priority"""
-
+    sql = """select * from publicationFacsimile as f
+    left join publicationFacsimileCollection as fc on fc.id=f.publicationFacsimileCollection_id
+    left join publication p on p.id=f.publication_id
+    where f.publication_id=:p_id
+    """
 
     if web_files_config[project]["show_internally_published"]:
-        sql = " ".join([sql, "and e.ed_lansering>0"])
-    elif not web_files_config[project]["show_unpublished"]:
-        sql = " ".join([sql, "and e.ed_lansering>2"])
+        sql = " ".join([sql, "and p.published>0"])
+    elif web_files_config[project]["show_unpublished"]:
+        sql = " ".join([sql, "and p.published>2"])
 
-    statement = sqlalchemy.sql.text(sql).bindparams(ed_id=edition_id, p_id=publication_id)
+    sql = " ".join([sql, "ORDER BY f.priority"])
+
+    statement = sqlalchemy.sql.text(sql).bindparams(p_id=publication_id)
 
     images = {}
     result = []
     for row in connection.execute(statement).fetchall():
         facsimile = dict(row)
-        facsimile["start_url"] = safe_join(
-                "digitaledition",
-                project,
-                "faksimil",
-                str(row["facs_id"]),
-                "1"
-        )
-        pre_pages = row["pre_page_count"] or 0
+        if row.folderPath != '' and row.folderPath is not None:
+            facsimile["start_url"] = row.folderPath
+        else:
+            facsimile["start_url"] = safe_join(
+                    "digitaledition",
+                    project,
+                    "facsimile",
+                    str(row["publicationFacsimileCollection_id"])
+            )
+        pre_pages = row["startPageNumber"] or 0
 
-        facsimile["first_page"] = pre_pages + row["page_nr"]
+        facsimile["first_page"] = pre_pages + row["pageNr"]
 
-        sql2 = "SELECT * FROM facsimile_publications WHERE facs_id=:facs_id AND page_nr>:page_nr ORDER BY page_nr ASC LIMIT 1"
-        statement2 = sqlalchemy.sql.text(sql2).bindparams(facs_id=row["facs_id"], page_nr=row["page_nr"])
+        sql2 = "SELECT * FROM publicationFacsimile WHERE publicationFacsimileCollection_id=:fc_id AND pageNr>:pageNr ORDER BY pageNr ASC LIMIT 1"
+        statement2 = sqlalchemy.sql.text(sql2).bindparams(fc_id=row["publicationFacsimileCollection_id"], pageNr=row["pageNr"])
         for row2 in connection.execute(statement2).fetchall():
-            facsimile["last_page"] = pre_pages + row2["page_nr"] - 1
+            facsimile["last_page"] = pre_pages + row2["pageNr"] - 1
 
         if "last_page" not in facsimile.keys():
-            facsimile["last_page"] = row["pages"]
+            facsimile["last_page"] = row["numberOfPages"]
 
         result.append(facsimile)
         '''try:
@@ -217,48 +218,12 @@ def get_facsimiles(project, edition_id, publication_id):
         '''
     connection.close()
 
-    return_data = []
-    for row in result:
-        if row["ed_id"] not in web_files_config[project]["disabled_publications"]:
+    return_data = result
+    '''for row in result:
+        if row["ed_id"] not in project_config.get(project).get("disabled_publications"):
             return_data.append(row)
-
+    '''
     return jsonify(return_data), 200, {"Access-Control-Allow-Origin": "*"}
-
-
-# routes/digitaledition/table-of-contents.php
-@digital_edition.route("/<project>/facsimile/<facs_id>/<size>/<page>")
-def get_facsimile(project, facs_id, size, page):
-    logger.info("Getting facsimile /{}/facsimile/{}/{}/{}".format(project, facs_id, size, page))
-
-    connection = db_engine.connect()
-    sql = """SELECT fp.*, f.title, f.pages, f.description, f.pdf, f.pre_page_count, e.ed_id, p.p_id 
-    FROM publications_ed AS e 
-    LEFT JOIN publications AS p ON p.p_ed_id=e.ed_id 
-    LEFT JOIN facsimiles AS f ON f.publication_id=p.p_id 
-    LEFT JOIN facsimile_publications AS fp ON fp.publications_id=p.p_id 
-    WHERE facs_id=:facs_id"""
-
-    if web_files_config[project]["show_internally_published"]:
-        sql = " ".join([sql, "and e.ed_lansering>0"])
-    elif not web_files_config[project]["show_unpublished"]:
-        sql = " ".join([sql, "and e.ed_lansering>2"])
-
-    statement = sqlalchemy.sql.text(sql).bindparams(facs_id=facs_id)
-    if int(page) < 1:
-        return jsonify("Image not found"), 404
-
-    result = []
-    for row in connection.execute(statement).fetchall():
-        if int(page) > row["pages"]:
-            return jsonify("Image not found"), 404
-
-        folder = safe_join(web_files_config[project]["file_root"],
-                           "faksimil", str(facs_id), str(size)
-                           )
-        return send_from_directory(folder, f"{page}.jpg")
-        connection.close()
-    return jsonify("Image not found"), 404
-
 
 @digital_edition.route("/<project>/toc/<collection_id>")
 def get_toc(project, collection_id):
