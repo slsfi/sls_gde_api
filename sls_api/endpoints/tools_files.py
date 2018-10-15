@@ -2,6 +2,7 @@ import base64
 from flask import Blueprint, jsonify, request, safe_join
 from flask_jwt_extended import get_jwt_identity
 import io
+import logging
 import os
 import subprocess
 import svn.local
@@ -12,6 +13,7 @@ from sls_api.endpoints.generics import web_files_config, master_config, project_
 
 
 file_tools = Blueprint("file_tools", __name__)
+logger = logging.getLogger("tools_files")
 
 svn_remotes = {}
 svn_locals = {}
@@ -75,12 +77,18 @@ def initialize_master_repos():
                 svn_remotes[project] = svn.remote.RemoteClient(master_config[project]["svn_remote"],
                                                                username=master_config[project]["username"],
                                                                password=master_config[project]["password"])
+
                 svn_remotes[project].checkout(master_config[project]["file_root"])
-                svn_locals[project] = svn.local.LocalClient(master_config[project]["file_root"])
+                svn_locals[project] = svn.local.LocalClient(master_config[project]["file_root"],
+                                                            username=master_config[project]["username"],
+                                                            password=master_config[project]["password"])
+                logger.info("Initialized SVN working copy for master_files of project {} at file_root {!r}".format(project, master_config[project]["file_root"]))
             except Exception:
+                logger.exception("Failed to initialize SVN repository for project {}".format(project))
                 svn_remotes[project] = None
                 svn_locals[project] = None
         else:
+            logger.warning("svn_remote missing from master_files config for project {}, skipping SVN initialization...".format(project))
             svn_remotes[project] = None
             svn_locals[project] = None
 
@@ -135,6 +143,8 @@ def pull_web_repo_changes_from_remote(project):
 
     sync_repo = update_files_in_web_repo(project)
 
+    # TODO merge conflict handling
+
     if sync_repo[0]:
         return jsonify({
             "msg": "Git repository successfully synced for project {}".format(project),
@@ -144,6 +154,32 @@ def pull_web_repo_changes_from_remote(project):
         return jsonify({
             "msg": "Git update failed to execute properly.",
             "reason": sync_repo[1]
+        }), 500
+
+
+@file_tools.route("/<project>/sync_files_from_remote/master", methods=["POST"])
+@project_permission_required
+def pull_master_repo_changes_from_remote(project):
+    """
+    Sync API's local working copy with the SVN remote, ensuring that all master_files are updated to their latest versions
+    Returns SVN repo status in addition to msg and status code.
+    """
+    if svn_locals.get(project, None) is not None:
+        try:
+            svn_locals[project].update()
+            return jsonify({
+                "msg": "SVN update successful.",
+                "status": svn_locals[project].status()
+            })
+        except Exception:
+            logging.exception("Failed to fetch updates from SVN master for project {}".format(project))
+            return jsonify({
+                "msg": "SVN update failed.",
+                "status": svn_locals[project].status()
+            }), 500
+    else:
+        return jsonify({
+            "msg": "No SVN remote configured for project {}.".format(project)
         }), 500
 
 
@@ -286,6 +322,17 @@ def update_file_in_web_repo(project, file_path):
     })
 
 
+@file_tools.route("/<project>/update_file/by_path/master/<path:file_path>", methods=["PUT"])
+@project_permission_required
+def update_file_in_master_repo(project, file_path):
+    # TODO
+    # Merge conflicts handled by parameters
+    # parameter "accept" for --accept working
+    # parameter "discard" for --accept theirs-full ? possibly just svn revert?
+    # Only commit if no conflicts
+    pass
+
+
 @file_tools.route("/<project>/get_latest_file/by_path/web/<path:file_path>")
 @project_permission_required
 def get_file_from_web_repo(project, file_path):
@@ -321,6 +368,13 @@ def get_file_from_web_repo(project, file_path):
         return jsonify({"msg": "The requested file was not found in the git repository."}), 404
 
 
+@file_tools.route("/<project>/get_latest_file/by_path/master/<path:file_path>")
+@project_permission_required
+def get_file_from_master_repo(project, file_path):
+    # TODO
+    pass
+
+
 @file_tools.route("/<project>/get_tree/web/")
 @file_tools.route("/<project>/get_tree/web/<path:file_path>")
 @project_permission_required
@@ -344,6 +398,14 @@ def get_file_tree_from_web_repo(project, file_path=None):
         }), 500
     tree = path_list_to_tree(file_listing)
     return jsonify(tree)
+
+
+@file_tools.route("/<project>/get_tree/web/")
+@file_tools.route("/<project>/get_tree/web/<path:file_path>")
+@project_permission_required
+def get_file_tee_from_master_repo(project, file_path=None):
+    # TODO
+    pass
 
 
 def path_list_to_tree(path_list):
