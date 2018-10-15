@@ -643,7 +643,7 @@ def get_all_occurrences_by_type(object_type, project=None):
                     if row["publicationComment_id"] is not None:
                         type_sql = ""
                     if row["publicationFacsimile_id"] is not None:
-                        type_sql = "SELECT publicationFacsimile.id, publicationFacsimile.pageNr, publicationFacsimileCollection.title AS name, publicationFacsimile.sectionId, publicationFacsimileCollection.startPageNumber, publicationFacsimileCollection.folderPath, publicationFacsimileCollection.pageComment FROM publicationFacsimile, publicationFacsimileCollection WHERE publicationFacsimile.id={} AND publicationFacsimileCollection.id=publicationFacsimile.\"publicationFacsimileCollection_id\"".format(row["publicationFacsimile_id"])             
+                        type_sql = "SELECT publicationFacsimile.id, publicationFacsimile.\"pageNr\", publicationFacsimileCollection.title AS name, publicationFacsimile.\"sectionId\", publicationFacsimileCollection.\"startPageNumber\", publicationFacsimileCollection.\"folderPath\", publicationFacsimileCollection.\"pageComment\" FROM publicationFacsimile, publicationFacsimileCollection WHERE publicationFacsimile.id={} AND publicationFacsimileCollection.id=publicationFacsimile.\"publicationFacsimileCollection_id\"".format(row["publicationFacsimile_id"])             
                         facs = connection.execute(type_sql).fetchone()
                         row["publicationFacsimile"] = dict(facs)
                     if row["publication_id"] is not None and row["publicationFacsimile_id"] is None and row["publicationFacsimile_id"] is None and row["publicationComment_id"] is None and row["publicationVersion_id"] is None and row["publicationManuscript_id"] is None:
