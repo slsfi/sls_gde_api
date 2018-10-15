@@ -169,11 +169,11 @@ def get_facsimiles(project, publication_id):
 
     connection = db_engine.connect()
 
-    sql = """select * from publicationFacsimile as f
-    left join publicationFacsimileCollection as fc on fc.id=f.publicationFacsimileCollection_id
-    left join publication p on p.id=f.publication_id
-    where f.publication_id=:p_id
-    """
+    sql = 'select * from publicationFacsimile as f \
+    left join publicationFacsimileCollection as fc on fc.id=f."publicationFacsimileCollection_id" \
+    left join publication p on p.id=f.publication_id \
+    where f.publication_id=:p_id \
+    '
 
     if web_files_config[project]["show_internally_published"]:
         sql = " ".join([sql, "and p.published>0"])
@@ -182,7 +182,9 @@ def get_facsimiles(project, publication_id):
 
     sql = " ".join([sql, "ORDER BY f.priority"])
 
-    statement = sqlalchemy.sql.text(sql).bindparams(p_id=publication_id)
+    pub_id = publication_id.split('_')[0]
+
+    statement = sqlalchemy.sql.text(sql).bindparams(p_id=pub_id)
 
     images = {}
     result = []
