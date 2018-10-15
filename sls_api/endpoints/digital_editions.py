@@ -203,7 +203,7 @@ def get_facsimiles(project, publication_id):
 
         facsimile["first_page"] = pre_pages + row["pageNr"]
 
-        sql2 = "SELECT * FROM publicationFacsimile WHERE \"publicationFacsimileCollection_id\"=:fc_id AND pageNr>:pageNr ORDER BY pageNr ASC LIMIT 1"
+        sql2 = "SELECT * FROM publicationFacsimile WHERE \"publicationFacsimileCollection_id\"=:fc_id AND lower(pageNr)>:pageNr ORDER BY lower(pageNr) ASC LIMIT 1"
         statement2 = sqlalchemy.sql.text(sql2).bindparams(fc_id=row["publicationFacsimileCollection_id"], pageNr=row["pageNr"])
         for row2 in connection.execute(statement2).fetchall():
             facsimile["last_page"] = pre_pages + row2["pageNr"] - 1
