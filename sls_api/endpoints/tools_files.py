@@ -70,9 +70,19 @@ def initialize_master_repos():
     global svn_remotes
     global svn_locals
     for project in master_config:
-        svn_remotes[project] = svn.remote.RemoteClient(master_config[project]["svn_remote"])
-        svn_remotes[project].checkout(master_config[project]["file_root"])
-        svn_locals[project] = svn.local.LocalClient(master_config[project]["file_root"])
+        if "svn_remote" in master_config[project]:
+            try:
+                svn_remotes[project] = svn.remote.RemoteClient(master_config[project]["svn_remote"],
+                                                               username=master_config[project]["username"],
+                                                               password=master_config[project]["password"])
+                svn_remotes[project].checkout(master_config[project]["file_root"])
+                svn_locals[project] = svn.local.LocalClient(master_config[project]["file_root"])
+            except Exception:
+                svn_remotes[project] = None
+                svn_locals[project] = None
+        else:
+            svn_remotes[project] = None
+            svn_locals[project] = None
 
 
 def update_files_in_web_repo(project, specific_file=False):
