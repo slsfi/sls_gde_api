@@ -182,7 +182,7 @@ def get_facsimiles(project, publication_id):
 
     sql = " ".join([sql, "ORDER BY f.priority"])
 
-    pub_id = publication_id.split('_')[0]
+    pub_id = publication_id.split('_')[1]
 
     statement = sqlalchemy.sql.text(sql).bindparams(p_id=pub_id)
 
