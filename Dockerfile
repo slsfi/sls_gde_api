@@ -11,6 +11,7 @@ ADD . /app
 
 # Add SSH configuration to ssh config file for openssh agent
 RUN cat ssh_config >> ~/.ssh/config
+RUN cp /app/ssh/* ~/.ssh/
 
 # Install sls_api package
 RUN pip install -e .
