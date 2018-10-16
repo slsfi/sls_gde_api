@@ -190,8 +190,8 @@ def get_facsimiles(project, publication_id):
     result = []
     for row in connection.execute(statement).fetchall():
         facsimile = dict(row)
-        if row.folderPath != '' and row.folderPath is not None:
-            facsimile["start_url"] = row.folderPath
+        if row.folder_path != '' and row.folder_path is not None:
+            facsimile["start_url"] = row.folder_path
         else:
             facsimile["start_url"] = safe_join(
                     "digitaledition",
@@ -209,7 +209,7 @@ def get_facsimiles(project, publication_id):
             facsimile["last_page"] = pre_pages + row2["page_nr"] - 1
 
         if "last_page" not in facsimile.keys():
-            facsimile["last_page"] = row["numberOfPages"]
+            facsimile["last_page"] = row["number_of_pages"]
 
         result.append(facsimile)
         '''try:
@@ -655,7 +655,7 @@ def get_all_occurrences_by_type(object_type, project=None):
                         type_sql = ""
                     if row["publication_facsimile_id"] is not None:
                         type_sql = "SELECT publication_facsimile.id, publication_facsimile.page_nr, publication_facsimile_collection.title AS name, \
-                        publication_facsimile.section_id, publication_facsimile_collection.start_page_number, publication_facsimile_collection.folderPath, \
+                        publication_facsimile.section_id, publication_facsimile_collection.start_page_number, publication_facsimile_collection.folder_path, \
                         publication_facsimile_collection.page_comment FROM publication_facsimile, publication_facsimile_collection \
                         WHERE publication_facsimile.id={} AND \
                         publication_facsimile_collection.id=publication_facsimile.publication_facsimile_collection_id".format(row["publication_facsimile_id"])             
@@ -736,8 +736,8 @@ def get_facsimile_file(project, collection_id, number, zoom_level):
         return jsonify({
             "msg": "Desired facsimile collection was not found in database!"
         }), 404
-    elif row.folderPath != '' and row.folderPath is not None:
-        file_path = safe_join(row.folderPath, collection_id, zoom_level, "{}.jpg".format(int(number)))
+    elif row.folder_path != '' and row.folder_path is not None:
+        file_path = safe_join(row.folder_path, collection_id, zoom_level, "{}.jpg".format(int(number)))
     else:
         file_path = safe_join(web_files_config[project]["file_root"], "facsimiles", collection_id, zoom_level, "{}.jpg".format(int(number)))
     connection.close()
