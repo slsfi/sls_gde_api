@@ -2671,7 +2671,7 @@
         }
       }
     },
-    "/digitaledition/{project}/sync_files_from_remote/web": {
+    "/digitaledition/{project}/sync_files/": {
       "post": {
         "summary": "Ensure API files are in sync",
         "description": "Syncs local API files with remote git repository",
@@ -2723,7 +2723,7 @@
         }
       }
     },
-    "/digitaledition/{project}/update_file/by_path/web/{file_path}": {
+    "/digitaledition/{project}/update_file/by_path/{file_path}": {
       "put": {
         "summary": "Upload a new file or update an existing one",
         "description": "Accepts file_data encoded as a base64 string, decodes it into a file and pushes the file to the remote git repository for the project in question.",
@@ -2823,7 +2823,7 @@
         }
       }
     },
-    "/digitaledition/{project}/get_latest_file/by_path/web/{file_path}": {
+    "/digitaledition/{project}/get_file/by_path/{file_path}": {
       "get": {
         "summary": "Retrieve a file from the API",
         "description": "Fetch the latest file from the remote git repository for editing or inspection, return file contents to user as base64-encoded string",
@@ -2894,7 +2894,7 @@
         }
       }
     },
-    "/digitaledition/{project}/get_tree/web/": {
+    "/digitaledition/{project}/get_tree/": {
       "get": {
         "summary": "Get a nested JSON tree of all available files for project.",
         "description": "Retrieve a listing of available file paths for the project in question as a nested JSON array. Outermost array represents the root of the repository for the project, folders inside it are mapped as arrays folder_name: array, with files being mapped as file_name: null",
@@ -2958,7 +2958,7 @@
         }
       }
     },
-    "/digitaledition/{project}/get_tree/web/{folder_path}": {
+    "/digitaledition/{project}/get_tree/{folder_path}": {
       "get": {
         "summary": "Get a nested JSON tree of available files in a specific folder.",
         "description": "Retrieve a listing of available file paths for the project in question as a nested JSON array. Outermost array represents the folder_path specified, folders inside it are mapped as arrays folder_name: array, with files being mapped as file_name: null",
@@ -3937,41 +3937,6 @@
                   "example": {
                     "msg": "Failed to create new group",
                     "reason": "Failed to connect to database (connection refused)"
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/auth/test": {
-      "post": {
-        "summary": "Test JWT auth",
-        "description": "Returns your JWT user identity, provided the used JWT access token is valid.",
-        "tags": [
-          "auth"
-        ],
-        "parameters": [
-          {
-            "in": "header",
-            "required": true,
-            "name": "Authorization",
-            "description": "JWT Access Token, as 'Bearer JWT_TOKEN_HERE'",
-            "schema": {
-              "example": "Authorization: Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpZGVudGl0eSI6eyJzdWIiOiJ0ZXN0QHRlc3QuY29tIiwicHJvamVjdHMiOm51bGx9LCJ0eXBlIjoiYWNjZXNzIn0.XtShkUBz6AboojEi07D7S-RCCCezQFbBVHFkFMY1ZWs"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "example": {
-                    "sub": "test@test.com",
-                    "projects": null
                   }
                 }
               }

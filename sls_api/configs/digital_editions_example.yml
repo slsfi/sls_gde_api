@@ -4,60 +4,31 @@ engine: 'mysql://web_user:SecretPassword@mysql_server.example.com:3306?charset=u
 # This engine config tells the system to connect to a MySQL server at mysql_server.example.com on port 3306
 # It uses the username 'web_user' with the password 'SecretPassword'
 
-# Each digital edition project has its own config section describing how its web files are located and handled
+# Each digital edition project has its own config section describing how its files are located and handled
 # These files are XML files for est/com/inl text, and XLST files used to transform them into HTML.
 # It may be wise to change https://git-scm.com/docs/git-config#git-config-corequotePath for the repositories using git config
-web_files:
-    parland:
-        # First, settings about how the publication tools should communicate towards git
-        git_repository: 'publisher@parland:slsfi/parland.git'
-        git_config: |
-            host parland
-              HostName github.com
-              IdentityFile ~/.ssh/github-id-rsa
-              IdentitiesOnly yes
-              User publisher
-        git_branch: 'staging'
-        # And then the actual local directory where the files are located (should be a local git repository with the above configured as its remote)
-        file_root: '/var/www/parland'
-        # Finally, whether or not internally published and unpublished items should be viewable
-        show_internally_published: False
-        show_unpublished: False
+parland:
+    # First, settings about how the publication tools should communicate towards git
+    git_repository: 'publisher@parland-git:slsfi/parland.git'
+    git_branch: 'staging'
+    # And then the actual local directory where the files are located (should be a local git repository with the above configured as its remote)
+    file_root: '/var/www/parland'
+    # Finally, whether or not internally published and unpublished items should be viewable
+    show_internally_published: False
+    show_unpublished: False
 
 
-    topelius:
-        # First, settings about how the publication tools should communicate towards git
-        git_repository: 'publisher@topelius:slsfi/topelius.git'
-        git_config: |
-            host topelius
-              HostName bitbucket.org
-              IdentityFile ~/.ssh/bitbucket-id-rsa
-              IdentitiesOnly yes
-              User publisher
-        git_branch: 'master'
-        # And then the actual local directory where the files are located (should be a local git repository with the above configured as its remote)
-        file_root: '/var/www/topelius'
-        # Finally, whether or not internally published and unpublished items should be viewable
-        show_internally_published: True
-        show_unpublished: True
+topelius:
+    # First, settings about how the publication tools should communicate towards git
+    git_repository: 'publisher@topelius-git:slsfi/topelius.git'
+    git_branch: 'master'
+    # And then the actual local directory where the files are located (should be a local git repository with the above configured as its remote)
+    file_root: '/var/www/topelius'
+    # Finally, whether or not internally published and unpublished items should be viewable
+    show_internally_published: True
+    show_unpublished: True
 
-    # In addition to STDOUT, messages can also be logged to file
-    log_file: '/log/digital_editions/api.log'
-    # XML-to-HTML is somewhat computationally expensive, so HTML reading texts are cached for up to this amount of time
-    cache_lifetime_seconds: 7200  # 2 hours
-
-
-# Each Digital Edition project must also have settings for where its source masters are stored.
-# Each project needs an SVN remote, credentials to authenticate with, and a local file_root to store its working copy
-# These are the core XML files from which the est/com/inl XMLs and so on are generated.
-master_files:
-    parland:
-        svn_remote: "https://svn.local/repos/parland"
-        username: "api_user"
-        password: "secret_password"
-        file_root: "/var/files/parland_master"
-    topelius:
-        svn_remote: "https://svn.local/repos/topelius"
-        username: "api_user"
-        password: "secret_password"
-        file_root: "/var/files/topelius_master"
+# In addition to STDOUT, messages can also be logged to file
+log_file: '/log/digital_editions/api.log'
+# XML-to-HTML is somewhat computationally expensive, so HTML reading texts are cached for up to this amount of time
+cache_lifetime_seconds: 7200  # 2 hours

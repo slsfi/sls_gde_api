@@ -9,6 +9,9 @@ RUN mkdir /app && mkdir /log && mkdir /log/digital_editions
 WORKDIR /app
 ADD . /app
 
+# Add SSH configuration to ssh config file for openssh agent
+RUN cat ssh_config >> ~/.ssh/config
+
 # Install sls_api package
 RUN pip install -e .
 
