@@ -53,7 +53,7 @@ def get_projects():
 @digital_edition.route("/<project>/html/<filename>")
 def get_html_contents_as_json(project, filename):
     logger.info("Getting static content from /{}/html/{}".format(project, filename))
-    file_path = safe_join(web_files_config[project]["file_root"], "html", "{}.html".format(filename))
+    file_path = safe_join(config[project]["file_root"], "html", "{}.html".format(filename))
     if os.path.exists(file_path):
         with io.open(file_path, encoding="UTF-8") as html_file:
             contents = html_file.read()
@@ -72,7 +72,7 @@ def get_md_contents_as_json(project, fileid):
 
     path = "*/".join(fileid.split("-")) + "*"
 
-    file_path_query = safe_join(web_files_config[project]["file_root"], "md", path)
+    file_path_query = safe_join(config[project]["file_root"], "md", path)
 
     try:
         file_path = [f for f in glob.iglob(file_path_query)][0]
@@ -95,7 +95,7 @@ def get_md_contents_as_json(project, fileid):
 @digital_edition.route("/<project>/static-pages-toc/<language>")
 def get_static_pages_as_json(project, language):
     logger.info("Getting static content from /{}/static-pages-toc/{}".format(project, language))
-    folder_path = safe_join(web_files_config[project]["file_root"], "md", language)
+    folder_path = safe_join(config[project]["file_root"], "md", language)
 
     if os.path.exists(folder_path):
         data = path_hierarchy(folder_path, language)
@@ -231,7 +231,7 @@ def get_facsimiles(project, publication_id):
 def get_toc(project, collection_id):
     logger.info("Getting collection /{}/collection/{}".format(project, collection_id))
 
-    file_path_query = safe_join(web_files_config[project]["file_root"], "toc", f'{collection_id}.json')
+    file_path_query = safe_join(config[project]["file_root"], "toc", f'{collection_id}.json')
 
     try:
         file_path = [f for f in glob.iglob(file_path_query)][0]
@@ -250,7 +250,7 @@ def get_toc(project, collection_id):
 def get_collections(project):
     logger.info("Getting collections /{}/collections".format(project))
     connection = db_engine.connect()
-    status = 1 if web_files_config[project]["show_internally_published"] else 2
+    status = 1 if config[project]["show_internally_published"] else 2
 
     sql = sqlalchemy.sql.text("SELECT id, name as title FROM publication_collection WHERE published>=:p_status ORDER BY name")
     statement = sql.bindparams(p_status=status)
@@ -306,7 +306,7 @@ def get_introduction(project, collection_id, publication_id, lang="swe"):
     can_show, message = get_published_status(project, collection_id, publication_id)
     if can_show:
         logger.info("Getting XML for {} and transforming...".format(request.full_path))
-        version = "int" if web_files_config[project]["show_internally_published"] else "ext"
+        version = "int" if config[project]["show_internally_published"] else "ext"
         filename = "{}_inl_{}_{}.xml".format(collection_id, lang, version)
         xsl_file = "est.xsl"
         content = get_content(project, "inl", filename, xsl_file, None)
@@ -331,7 +331,7 @@ def get_title(project, collection_id, publication_id, lang="swe"):
     can_show, message = get_published_status(project, collection_id, publication_id)
     if can_show:
         logger.info("Getting XML for {} and transforming...".format(request.full_path))
-        version = "int" if web_files_config[project]["show_internally_published"] else "ext"
+        version = "int" if config[project]["show_internally_published"] else "ext"
         filename = "{}_tit_{}_{}.xml".format(collection_id, lang, version)
         xsl_file = "title.xsl"
         content = get_content(project, "tit", filename, xsl_file, None)   
@@ -381,7 +381,7 @@ def get_comments(project, collection_id, publication_id, note_id=None):
         logger.info("Getting XML for {} and transforming...".format(request.full_path))
         filename = "{}_{}_com.xml".format(collection_id, publication_id)
         params = {
-            "estDocument": '"file://{}"'.format(safe_join(web_files_config[project]["file_root"], "xml", "est", filename.replace("com", "est")))
+            "estDocument": '"file://{}"'.format(safe_join(config[project]["file_root"], "xml", "est", filename.replace("com", "est")))
         }
         if note_id is not None:
             params["noteId"] = '"{}"'.format(note_id)
@@ -739,7 +739,7 @@ def get_facsimile_file(project, collection_id, number, zoom_level):
     elif row.folder_path != '' and row.folder_path is not None:
         file_path = safe_join(row.folder_path, collection_id, zoom_level, "{}.jpg".format(int(number)))
     else:
-        file_path = safe_join(web_files_config[project]["file_root"], "facsimiles", collection_id, zoom_level, "{}.jpg".format(int(number)))
+        file_path = safe_join(config[project]["file_root"], "facsimiles", collection_id, zoom_level, "{}.jpg".format(int(number)))
     connection.close()
 
     output = io.BytesIO()
@@ -895,7 +895,7 @@ def cache_is_recent(source_file, xsl_file, cache_file):
         return False
     if source_file_mtime > cache_file_mtime or xsl_file_mtime > cache_file_mtime:
         return False
-    elif calendar.timegm(time.gmtime()) > (cache_file_mtime + web_files_config["cache_lifetime_seconds"]):
+    elif calendar.timegm(time.gmtime()) > (cache_file_mtime + config["cache_lifetime_seconds"]):
         return False
     return True
 
@@ -925,7 +925,7 @@ def get_published_status(project, collection_id, publication_id):
     else:
         statement = sqlalchemy.sql.text(select).bindparams(project=project, c_id=collection_id, p_id=publication_id)
         result = connection.execute(statement)
-        show_internal = web_files_config[project]["show_internally_published"]
+        show_internal = config[project]["show_internally_published"]
         can_show = False
         message = ""
         row = result.fetchone()
@@ -982,8 +982,8 @@ def xml_to_html(xsl_file_path, xml_file_path, replace_namespace=False, params=No
 
 
 def get_content(project, folder, xml_filename, xsl_filename, parameters):
-    xml_file_path = safe_join(web_files_config[project]["file_root"], "xml", folder, xml_filename)
-    xsl_file_path = safe_join(web_files_config[project]["file_root"], "xslt", xsl_filename)
+    xml_file_path = safe_join(config[project]["file_root"], "xml", folder, xml_filename)
+    xsl_file_path = safe_join(config[project]["file_root"], "xslt", xsl_filename)
     cache_file_path = xml_file_path.replace("/xml/", "/cache/").replace(".xml", ".html")
     content = None
 

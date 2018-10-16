@@ -1,0 +1,12 @@
+# git SSH configuration for Digital Editions API
+host parland-git
+    HostName github.com
+    IdentityFile ~/.ssh/github-id-rsa
+    IdentitiesOnly yes
+    User publisher
+
+host topelius-git
+    HostName bitbucket.org
+    IdentityFile ~/.ssh/bitbucket-id-rsa
+    IdentitiesOnly yes
+    User publisher

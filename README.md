@@ -21,7 +21,9 @@ limitations under the License.
 - Installation details:
     - Create config files from _example files in `config` folder
     - Ensure volume paths in `docker-compose.yml` point at the correct host and container folders
-    - Add a valid SSL certificate as `ssl/cert.pem` and a matching private key as `ssl/key.pem`
+    - Production-ready steps:
+        - Add a valid SSL certificate as `ssl/cert.pem` and a matching private key as `ssl/key.pem`
+        - Configure SSH for Git repositories in `ssh_config` and add identity files matching it into `ssh` folder.
     - run `docker-compose build` in root folder containing `Dockerfile` and `docker-compose.yml`
     
 - Running in Production
