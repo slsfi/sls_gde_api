@@ -109,7 +109,7 @@ def get_static_pages_as_json(project, language):
 def get_manuscripts(project, publication_id):
     logger.info("Getting manuscript /{}/manuscript/{}".format(project, publication_id))
     connection = db_engine.connect()
-    sql = sqlalchemy.sql.text('SELECT * FROM publicationManuscript WHERE publication_id=:pub_id')
+    sql = sqlalchemy.sql.text('SELECT * FROM publication_manuscript WHERE publication_id=:pub_id')
     statement = sql.bindparams(pub_id=publication_id)
     results = []
     for row in connection.execute(statement).fetchall():
@@ -123,13 +123,13 @@ def get_text_by_type(project, text_type, text_id):
 
     text_table = ''
     if text_type == 'manuscript':
-        text_table = 'publicationManuscript'
+        text_table = 'publication_manuscript'
     elif text_type == 'variation':
-        text_table = 'publicationVersion'
+        text_table = 'publication_version'
     elif text_type == 'commentary':
-        text_table = 'publicationComment'
+        text_table = 'publication_comment'
     elif text_type == 'facsimile':
-        text_table = 'publicationFacsimile'
+        text_table = 'publication_facsimile'
 
     connection = db_engine.connect()
     sql = sqlalchemy.sql.text("SELECT * FROM {} WHERE id=:t_id".format(text_table))
@@ -169,8 +169,8 @@ def get_facsimiles(project, publication_id):
 
     connection = db_engine.connect()
 
-    sql = 'select * from publicationFacsimile as f \
-    left join publicationFacsimileCollection as fc on fc.id=f."publicationFacsimileCollection_id" \
+    sql = 'select * from publication_facsimile as f \
+    left join publication_facsimile_collection as fc on fc.id=f.publication_facsimile_collection_id \
     left join publication p on p.id=f.publication_id \
     where f.publication_id=:p_id \
     '
@@ -197,16 +197,16 @@ def get_facsimiles(project, publication_id):
                     "digitaledition",
                     project,
                     "facsimile",
-                    str(row["publicationFacsimileCollection_id"])
+                    str(row["publication_facsimile_collection_id"])
             )
-        pre_pages = row["startPageNumber"] or 0
+        pre_pages = row["start_page_number"] or 0
 
-        facsimile["first_page"] = pre_pages + row["pageNr"]
+        facsimile["first_page"] = pre_pages + row["page_nr"]
 
-        sql2 = "SELECT * FROM publicationFacsimile WHERE \"publicationFacsimileCollection_id\"=:fc_id AND lower(pageNr)>:pageNr ORDER BY lower(pageNr) ASC LIMIT 1"
-        statement2 = sqlalchemy.sql.text(sql2).bindparams(fc_id=row["publicationFacsimileCollection_id"], pageNr=row["pageNr"])
+        sql2 = "SELECT * FROM publication_facsimile WHERE publication_facsimile_collection_id=:fc_id AND page_nr>:page_nr ORDER BY page_nr ASC LIMIT 1"
+        statement2 = sqlalchemy.sql.text(sql2).bindparams(fc_id=row["publication_facsimile_collection_id"], page_nr=row["page_nr"])
         for row2 in connection.execute(statement2).fetchall():
-            facsimile["last_page"] = pre_pages + row2["pageNr"] - 1
+            facsimile["last_page"] = pre_pages + row2["page_nr"] - 1
 
         if "last_page" not in facsimile.keys():
             facsimile["last_page"] = row["numberOfPages"]
@@ -252,7 +252,7 @@ def get_collections(project):
     connection = db_engine.connect()
     status = 1 if web_files_config[project]["show_internally_published"] else 2
 
-    sql = sqlalchemy.sql.text("SELECT id, name as title FROM publicationCollection WHERE published>=:p_status ORDER BY name")
+    sql = sqlalchemy.sql.text("SELECT id, name as title FROM publication_collection WHERE published>=:p_status ORDER BY name")
     statement = sql.bindparams(p_status=status)
     results = []
     for row in connection.execute(statement).fetchall():
@@ -264,7 +264,7 @@ def get_collections(project):
 def get_collection(project, collection_id):
     logger.info("Getting collection /{}/collection/{}".format(project, collection_id))
     connection = db_engine.connect()
-    sql = sqlalchemy.sql.text("SELECT * FROM publicationCollection WHERE id=:c_id ORDER BY name")
+    sql = sqlalchemy.sql.text("SELECT * FROM publication_collection WHERE id=:c_id ORDER BY name")
     statement = sql.bindparams(c_id=collection_id)
     results = []
     for row in connection.execute(statement).fetchall():
@@ -288,7 +288,7 @@ def get_publication(project, publication_id):
 def get_collection_publications(project, collection_id):
     logger.info("Getting publication /{}/collections/{}/publications".format(project, collection_id))
     connection = db_engine.connect()
-    sql = sqlalchemy.sql.text("SELECT * FROM publication WHERE publicationCollection_id=:c_id ORDER BY id")
+    sql = sqlalchemy.sql.text("SELECT * FROM publication WHERE publication_collection_id=:c_id ORDER BY id")
     statement = sql.bindparams(c_id=collection_id)
     results = []
     for row in connection.execute(statement).fetchall():
@@ -414,14 +414,14 @@ def get_manuscript(project, collection_id, publication_id, manuscript_id=None):
         connection = db_engine.connect()
         if manuscript_id is None:
             filename_search = "{}_{}_ms_%".format(collection_id, publication_id)
-            select = "SELECT name, originalFilename, id FROM publicationManuscript WHERE originalFilename LIKE :query"
+            select = "SELECT name, original_filename, id FROM publication_manuscript WHERE original_filename LIKE :query"
             statement = sqlalchemy.sql.text(select).bindparams(query=filename_search)
             manuscript_info = []
             for row in connection.execute(statement).fetchall():
                 manuscript_info.append(dict(row))
             connection.close()
         else:
-            select = "SELECT name, originalFilename, id FROM publicationManuscript WHERE id = :m_id"
+            select = "SELECT name, original_filename, id FROM publication_manuscript WHERE id = :m_id"
             statement = sqlalchemy.sql.text(select).bindparams(m_id=manuscript_id)
             manuscript_info = []
             for row in connection.execute(statement).fetchall():
@@ -433,8 +433,8 @@ def get_manuscript(project, collection_id, publication_id, manuscript_id=None):
             params = {
                 "bookId": collection_id
             }
-            manuscript_info[index]["manuscript_changes"] = get_content(project, "ms", manuscript["originalFilename"], "ms_changes.xsl", params)
-            manuscript_info[index]["manuscript_normalized"] = get_content(project, "ms", manuscript["originalFilename"], "ms_normalized.xsl", params)
+            manuscript_info[index]["manuscript_changes"] = get_content(project, "ms", manuscript["original_filename"], "ms_changes.xsl", params)
+            manuscript_info[index]["manuscript_normalized"] = get_content(project, "ms", manuscript["original_filename"], "ms_normalized.xsl", params)
 
         data = {
             "id": "{}_{}".format(collection_id, publication_id),
@@ -460,10 +460,10 @@ def get_variant(project, collection_id, publication_id, section_id=None):
         connection = db_engine.connect()
         filename_search = "{}_{}_var_%".format(collection_id, publication_id)
         if section_id is not None:
-            select = "SELECT name, type, originalFilename, id FROM publicationVersion WHERE originalFilename LIKE :f_name AND section_id = :s_id"
+            select = "SELECT name, type, original_filename, id FROM publication_version WHERE original_filename LIKE :f_name AND section_id = :s_id"
             statement = sqlalchemy.sql.text(select).bindparams(f_name=filename_search, s_id=section_id)
         else:
-            select = "SELECT name, type, originalFilename, id FROM publicationVersion WHERE originalFilename LIKE :f_name"
+            select = "SELECT name, type, original_filename, id FROM publication_version WHERE original_filename LIKE :f_name"
             statement = sqlalchemy.sql.text(select).bindparams(f_name=filename_search)
         variation_info = []
         for row in connection.execute(statement).fetchall():
@@ -482,9 +482,9 @@ def get_variant(project, collection_id, publication_id, section_id=None):
                 xsl_file = "poem_variants_other.xsl"
 
             if section_id is not None:
-                params["sectionId"] = section_id
+                params["section_id"] = section_id
 
-            variation_info[index]["content"] = get_content(project, "var", variation["originalFilename"], xsl_file, params)
+            variation_info[index]["content"] = get_content(project, "var", variation["original_filename"], xsl_file, params)
 
         data = {
             "id": "{}_{}_var".format(collection_id, publication_id),
@@ -547,13 +547,16 @@ def get_occurrences(object_type, ident):
         try:
             object_id = int(ident)
         except ValueError:
-            object_sql = "SELECT id FROM {} WHERE legacyId=:l_id".format(object_type)
+            object_sql = "SELECT id FROM {} WHERE legacy_id=:l_id".format(object_type)
             stmt = sqlalchemy.sql.text(object_sql).bindparams(l_id=ident)
             row = connection.execute(stmt).fetchone()
             object_id = row.id
         events_sql = "SELECT id, type, description FROM event WHERE id IN " \
-                     "(SELECT event_id FROM eventConnection WHERE {}_id=:o_id)".format(object_type)
-        occurrence_sql = "SELECT publication.publicationCollection_id AS collection_id, eventOccurrence.id, type, description, eventOccurrence.publication_id, eventOccurrence.publicationVersion_id, eventOccurrence.publicationFacsimile_id, eventOccurrence.publicationComment_id, eventOccurrence.publicationManuscript_id FROM eventOccurrence, publication WHERE eventOccurrence.event_id=:e_id AND eventOccurrence.publication_id=publication.id"
+                     "(SELECT event_id FROM event_connection WHERE {}_id=:o_id)".format(object_type)
+        occurrence_sql = "SELECT publication.publication_collection_id AS collection_id, event_occurrence.id, type, description, \
+        event_occurrence.publication_id, event_occurrence.publication_version_id, event_occurrence.publication_facsimile_id, \
+        event_occurrence.publication_comment_id, event_occurrence.publication_manuscript_id FROM event_occurrence, publication \
+        WHERE event_occurrence.event_id=:e_id AND event_occurrence.publication_id=publication.id"
 
         events_stmnt = sqlalchemy.sql.text(events_sql).bindparams(o_id=object_id)
         results = []
@@ -581,16 +584,18 @@ def get_all_occurrences_by_type(object_type, project=None):
         connection = db_engine.connect()
         ob_id = object_type + "_id"
         if object_type == "subject":
-            name_attr = "fullName"
+            name_attr = "full_name"
         else:
             name_attr = "name"
 
         if project is None:
-            ob_sql = "SELECT DISTINCT eventConnection.{}, {}.{} FROM digitalEdition.eventConnection, digitalEdition.eventOccurrence, digitalEdition.{} WHERE eventConnection.event_id=eventOccurrence.event_id AND eventConnection.{}={}.id"
+            ob_sql = "SELECT DISTINCT event_connection.{}, {}.{} FROM digitaledition.event_connection, digitaledition.event_occurrence, digitaledition.{} \
+            WHERE event_connection.event_id=event_occurrence.event_id AND event_connection.{}={}.id"
             ob_sql = ob_sql.format(ob_id, object_type, name_attr, object_type, ob_id, object_type)
         else:
             project_id = get_project_id_from_name(project)
-            ob_sql = "SELECT DISTINCT eventConnection.{}, {}.{} FROM digitalEdition.eventConnection, digitalEdition.eventOccurrence, digitalEdition.{} WHERE eventConnection.event_id=eventOccurrence.event_id AND eventConnection.{}={}.id AND {}.project_id={}"
+            ob_sql = "SELECT DISTINCT event_connection.{}, {}.{} FROM digitaledition.event_connection, digitaledition.event_occurrence, digitaledition.{} \
+            WHERE event_connection.event_id=event_occurrence.event_id AND event_connection.{}={}.id AND {}.project_id={}"
             ob_sql = ob_sql.format(ob_id, object_type, name_attr, object_type, ob_id, object_type, object_type, project_id)
         
         ob_statement = sqlalchemy.sql.text(ob_sql)
@@ -604,25 +609,29 @@ def get_all_occurrences_by_type(object_type, project=None):
             try:
                 object_id = int(ident)
             except ValueError:
-                object_sql = "SELECT id FROM {} WHERE legacyId=:l_id".format(object_type)
+                object_sql = "SELECT id FROM {} WHERE legacy_id=:l_id".format(object_type)
                 stmt = sqlalchemy.sql.text(object_sql).bindparams(l_id=ident)
                 row = connection.execute(stmt).fetchone()
                 object_id = row.id
             events_sql = "SELECT id FROM event WHERE id IN " \
-                        "(SELECT event_id FROM eventConnection WHERE {}_id=:o_id)".format(object_type)
-            occurrence_sql = "SELECT publicationCollection.name AS collection_name, publication.publicationCollection_id AS collection_id, eventOccurrence.id, type, description, eventOccurrence.publication_id, eventOccurrence.publicationVersion_id, eventOccurrence.publicationFacsimile_id, eventOccurrence.publicationComment_id, eventOccurrence.publicationManuscript_id FROM eventOccurrence, publication, publicationCollection WHERE publication.publicationCollection_id=publicationCollection.id AND eventOccurrence.event_id=:e_id AND eventOccurrence.publication_id=publication.id"
+                        "(SELECT event_id FROM event_connection WHERE {}_id=:o_id)".format(object_type)
+            occurrence_sql = "SELECT publication_collection.name AS collection_name, publication.publication_collection_id AS collection_id,\
+             event_occurrence.id, type, description, event_occurrence.publication_id, event_occurrence.publication_version_id,\
+             event_occurrence.publication_facsimile_id, event_occurrence.publication_comment_id, \
+             event_occurrence.publication_manuscript_id FROM event_occurrence, publication, publication_collection \
+             WHERE publication.publication_collection_id=publication_collection.id AND event_occurrence.event_id=:e_id AND event_occurrence.publication_id=publication.id"
 
             events_stmnt = sqlalchemy.sql.text(events_sql).bindparams(o_id=object_id)
             results = []
             for row in connection.execute(events_stmnt).fetchall():
                 row = dict(row)
                 if object_type == "subject":
-                    type_stmnt = sqlalchemy.sql.text("SELECT type, subject.dateBorn, subject.dateDeceased FROM subject WHERE id=:ty_id").bindparams(ty_id=object_id)
+                    type_stmnt = sqlalchemy.sql.text("SELECT type, subject.date_born, subject.date_deceased FROM subject WHERE id=:ty_id").bindparams(ty_id=object_id)
                     type_object = connection.execute(type_stmnt).fetchone()
                     type_object = dict(type_object)
                     row["object_type"] = type_object["type"]
-                    row["dateBorn"] = type_object["dateBorn"]
-                    row["dateDeceased"] = type_object["dateDeceased"]
+                    row["date_born"] = type_object["date_born"]
+                    row["date_deceased"] = type_object["date_deceased"]
                 results.append(row)
 
             # set occurrences for each object
@@ -632,22 +641,28 @@ def get_all_occurrences_by_type(object_type, project=None):
                 for row in connection.execute(occurrence_stmnt).fetchall():
                     row = dict(row)
 
-                    if row["publicationManuscript_id"] is not None:
-                        type_sql = sqlalchemy.sql.text("SELECT publicationManuscript.id AS id, publicationManuscript.originalFilename, publicationManuscript.name FROM publicationManuscript WHERE id={}".format(row["publicationManuscript_id"]))
+                    if row["publication_manuscript_id"] is not None:
+                        type_sql = sqlalchemy.sql.text("SELECT publication_manuscript.id AS id, publication_manuscript.original_filename, publication_manuscript.name \
+                        FROM publication_manuscript WHERE id={}".format(row["publication_manuscript_id"]))
                         manu = connection.execute(type_sql).fetchone()
-                        row["publicationManuscript"] = dict(manu)
-                    if row["publicationVersion_id"] is not None:
-                        type_sql = sqlalchemy.sql.text("SELECT publicationVersion.id AS id, publicationVersion.originalFilename, publicationVersion.name FROM publicationVersion WHERE id={}".format(row["publicationVersion_id"]))
+                        row["publication_manuscript"] = dict(manu)
+                    if row["publication_version_id"] is not None:
+                        type_sql = sqlalchemy.sql.text("SELECT publication_version.id AS id, publication_version.original_filename, publication_version.name \
+                        FROM publication_version WHERE id={}".format(row["publication_version_id"]))
                         variation = connection.execute(type_sql).fetchone()
-                        row["publicationVersion"] = dict(variation)
-                    if row["publicationComment_id"] is not None:
+                        row["publication_version"] = dict(variation)
+                    if row["publication_comment_id"] is not None:
                         type_sql = ""
-                    if row["publicationFacsimile_id"] is not None:
-                        type_sql = "SELECT publicationFacsimile.id, lower(publicationFacsimile.pageNr), publicationFacsimileCollection.title AS name, lower(publicationFacsimile.sectionId), lower(publicationFacsimileCollection.startPageNumber), lower(publicationFacsimileCollection.folderPath), lower(publicationFacsimileCollection.pageComment) FROM publicationFacsimile, publicationFacsimileCollection WHERE publicationFacsimile.id={} AND publicationFacsimileCollection.id=lower(publicationFacsimile.publicationFacsimileCollection_id)".format(row["publicationFacsimile_id"])             
+                    if row["publication_facsimile_id"] is not None:
+                        type_sql = "SELECT publication_facsimile.id, publication_facsimile.page_nr, publication_facsimile_collection.title AS name, \
+                        publication_facsimile.section_id, publication_facsimile_collection.start_page_number, publication_facsimile_collection.folderPath, \
+                        publication_facsimile_collection.page_comment FROM publication_facsimile, publication_facsimile_collection \
+                        WHERE publication_facsimile.id={} AND \
+                        publication_facsimile_collection.id=publication_facsimile.publication_facsimile_collection_id".format(row["publication_facsimile_id"])             
                         facs = connection.execute(type_sql).fetchone()
-                        row["publicationFacsimile"] = dict(facs)
-                    if row["publication_id"] is not None and row["publicationFacsimile_id"] is None and row["publicationFacsimile_id"] is None and row["publicationComment_id"] is None and row["publicationVersion_id"] is None and row["publicationManuscript_id"] is None:
-                        type_sql = sqlalchemy.sql.text("SELECT publication.id AS publication_id, publication.originalFilename, publication.name FROM publication WHERE id={}".format(row["publication_id"]))
+                        row["publication_facsimile"] = dict(facs)
+                    if row["publication_id"] is not None and row["publication_facsimile_id"] is None and row["publication_facsimile_id"] is None and row["publication_comment_id"] is None and row["publication_version_id"] is None and row["publication_manuscript_id"] is None:
+                        type_sql = sqlalchemy.sql.text("SELECT publication.id AS publication_id, publication.original_filename, publication.name FROM publication WHERE id={}".format(row["publication_id"]))
                         publication = connection.execute(type_sql).fetchone()
                         row["publication"] = dict(publication)
 
@@ -655,7 +670,7 @@ def get_all_occurrences_by_type(object_type, project=None):
 
             for i in results:
                 if object_type == "subject":
-                    i["name"] = o["fullName"]
+                    i["name"] = o["full_name"]
                 else:
                     i["name"] = o["name"]
                 occur.append(i)
@@ -665,7 +680,11 @@ def get_all_occurrences_by_type(object_type, project=None):
 @digital_edition.route("/<project>/occurrences/collection/<object_type>/<collection_id>")
 def get_person_occurrences_by_collection(project, object_type, collection_id):
     connection = db_engine.connect()
-    occurrence_sql = "SELECT publication.publicationCollection_id AS collection_id, eventOccurrence.id, eventOccurrence.event_id, type, description, eventOccurrence.publication_id, eventOccurrence.publicationVersion_id, eventOccurrence.publicationFacsimile_id, eventOccurrence.publicationComment_id, eventOccurrence.publicationManuscript_id FROM eventOccurrence, publication WHERE eventOccurrence.publication_id=publication.id AND publication.publicationCollection_id={} AND eventOccurrence.type='{}'".format(collection_id, object_type)
+    occurrence_sql = "SELECT publication.publication_collection_id AS collection_id, event_occurrence.id, event_occurrence.event_id, \
+    type, description, event_occurrence.publication_id, event_occurrence.publication_version_id, event_occurrence.publication_facsimile_id, \
+    event_occurrence.publication_comment_id, event_occurrence.publication_manuscript_id FROM event_occurrence, publication \
+    WHERE event_occurrence.publication_id=publication.id AND publication.publication_collection_id={} AND \
+    event_occurrence.type='{}'".format(collection_id, object_type)
 
     occurrences = []
     for row in connection.execute(occurrence_sql).fetchall():
@@ -673,7 +692,11 @@ def get_person_occurrences_by_collection(project, object_type, collection_id):
 
     subjects = []
     for occurrence in occurrences:
-        subject_sql = "SELECT DISTINCT eventConnection.subject_id, subject.fullName, subject.legacyId, subject.project_id FROM eventOccurrence, eventConnection, subject WHERE eventOccurrence.event_id={} AND eventOccurrence.event_id = eventConnection.event_id AND eventConnection.subject_id =  subject.id".format(occurrence["event_id"])
+        subject_sql = "SELECT DISTINCT event_connection.subject_id, subject.full_name, subject.legacy_id, subject.project_id \
+        FROM event_occurrence, event_connection, subject \
+        WHERE event_occurrence.event_id={} AND event_occurrence.event_id = event_connection.event_id AND \
+        event_connection.subject_id =  subject.id".format(occurrence["event_id"])
+
         for row in connection.execute(subject_sql).fetchall():
             subjects.append(dict(row))
     connection.close()
@@ -684,7 +707,7 @@ def get_person_occurrences_by_collection(project, object_type, collection_id):
 def get_facsimile_collections(project, facsimile_collection_ids):
     logger.info("Getting facsimiles /{}/facsimiles/collections/{}".format(project, facsimile_collection_ids))
     connection = db_engine.connect()
-    sql = """SELECT * FROM publicationFacsimileCollection where id in :ids"""
+    sql = """SELECT * FROM publication_facsimile_collection where id in :ids"""
     statement = sqlalchemy.sql.text(sql).bindparams(ids=facsimile_collection_ids.split(','))
     return_data = []
     for row in connection.execute(statement).fetchall():
@@ -699,7 +722,7 @@ def get_facsimile_file(project, collection_id, number, zoom_level):
     Retrieve a single facsimile image file from project root
 
     Facsimile files are stored as follows: root/facsimiles/<collection_id>/<zoom_level>/<page_number>.jpg
-    The collection_id these are sorted by is the publicationFacsimileCollection id, stored as publication_id in the old database structure?
+    The collection_id these are sorted by is the publication_facsimile_collection id, stored as publication_id in the old database structure?
 
     However, the first page of a publication is not necessarily 1.jpg, as facsimiles often contain title pages and blank pages
     Thus, calling for facsimiles/1/1/1 may require fetching a file from root/facsimiles/1/1/5.jpg
@@ -707,7 +730,7 @@ def get_facsimile_file(project, collection_id, number, zoom_level):
     # TODO published status for facsimile table to check against?
     # TODO S3 support
     connection = db_engine.connect()
-    statement = sqlalchemy.sql.text("SELECT * FROM publicationFacsimileCollection WHERE id=:coll_id").bindparams(coll_id=collection_id)
+    statement = sqlalchemy.sql.text("SELECT * FROM publication_facsimile_collection WHERE id=:coll_id").bindparams(coll_id=collection_id)
     row = connection.execute(statement).fetchone()
     if row is None:
         return jsonify({
@@ -738,9 +761,9 @@ def list_tooltips(table):
         return ""
     connection = db_engine.connect()
     if table == "subject":
-        sql = sqlalchemy.sql.text("SELECT id, fullName, project_id, legacyId FROM subject")
+        sql = sqlalchemy.sql.text("SELECT id, full_name, project_id, legacy_id FROM subject")
     else:
-        sql = sqlalchemy.sql.text("SELECT id, name, project_id, legacyId FROM {}".format(table))
+        sql = sqlalchemy.sql.text("SELECT id, name, project_id, legacy_id FROM {}".format(table))
     results = []
     for row in connection.execute(sql).fetchall():
         results.append(dict(row))
@@ -762,14 +785,14 @@ def get_tooltip(table, row_id):
         is_legacy_id = True
     if is_legacy_id:
         if table == "subject":
-            sql = sqlalchemy.sql.text("SELECT id, legacyId, fullName, description FROM subject WHERE legacyId=:id")
+            sql = sqlalchemy.sql.text("SELECT id, legacy_id, full_name, description FROM subject WHERE legacy_id=:id")
         else:
-            sql = sqlalchemy.sql.text("SELECT id, legacyId, name, description FROM {} WHERE legacyId=:id".format(table))
+            sql = sqlalchemy.sql.text("SELECT id, legacy_id, name, description FROM {} WHERE legacy_id=:id".format(table))
     else:
         if table == "subject":
-            sql = sqlalchemy.sql.text("SELECT id, legacyId, fullName, description FROM subject WHERE id=:id")
+            sql = sqlalchemy.sql.text("SELECT id, legacy_id, full_name, description FROM subject WHERE id=:id")
         else:
-            sql = sqlalchemy.sql.text("SELECT id, legacyId, name, description FROM {} WHERE id=:id".format(table))
+            sql = sqlalchemy.sql.text("SELECT id, legacy_id, name, description FROM {} WHERE id=:id".format(table))
     statement = sql.bindparams(id=ident)
     result = connection.execute(statement).fetchone()
     connection.close()
@@ -879,7 +902,7 @@ def cache_is_recent(source_file, xsl_file, cache_file):
 
 def get_published_status(project, collection_id, publication_id):
     """
-    Returns info on if project, publicationCollection, and publication are all published
+    Returns info on if project, publication_collection, and publication are all published
     Returns three values:
         - a boolean if the publication can be shown
         - a message text why it can't be shown, if that is the case
@@ -890,11 +913,11 @@ def get_published_status(project, collection_id, publication_id):
     or if FLASK_DEBUG is set to 1 (all publications are shown in DEBUG mode
     """
     connection = db_engine.connect()
-    select = """SELECT project.published AS proj_pub, publicationCollection.published AS col_pub, publication.published as pub 
-    FROM project JOIN publicationCollection JOIN publication
-    WHERE project.id = publicationCollection.project_id
-    AND publication.publicationCollection_id = publicationCollection.id
-    AND project.name = :project AND publicationCollection.id = :c_id AND publication.id = :p_id
+    select = """SELECT project.published AS proj_pub, publication_collection.published AS col_pub, publication.published as pub 
+    FROM project JOIN publication_collection JOIN publication
+    WHERE project.id = publication_collection.project_id
+    AND publication.publication_collection_id = publication_collection.id
+    AND project.name = :project AND publication_collection.id = :c_id AND publication.id = :p_id
     """
     if int(os.environ.get("FLASK_DEBUG", 0)) == 1:
         can_show = True
