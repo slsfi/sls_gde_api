@@ -356,7 +356,7 @@ def get_reading_text(project, collection_id, publication_id):
         logger.info("Getting XML for {} and transforming...".format(request.full_path))
         filename = "{}_{}_est.xml".format(collection_id, publication_id)
         xsl_file = "est.xsl"
-        content = get_content(project, "est", filename, xsl_file, None)
+        content = get_content(project, "est", filename, xsl_file, {"bookId":collection_id})
         data = {
             "id": "{}_{}_est".format(collection_id, publication_id),
             "content": content.replace("id=", "data-id=")
