@@ -588,12 +588,12 @@ def get_all_occurrences_by_type(object_type, project=None):
             name_attr = "name"
 
         if project is None:
-            ob_sql = "SELECT DISTINCT event_connection.{}, {}.{} FROM digitaledition.event_connection, digitaledition.event_occurrence, digitaledition.{} \
+            ob_sql = "SELECT DISTINCT event_connection.{}, {}.{} FROM event_connection, event_occurrence, {} \
             WHERE event_connection.event_id=event_occurrence.event_id AND event_connection.{}={}.id"
             ob_sql = ob_sql.format(ob_id, object_type, name_attr, object_type, ob_id, object_type)
         else:
             project_id = get_project_id_from_name(project)
-            ob_sql = "SELECT DISTINCT event_connection.{}, {}.{} FROM digitaledition.event_connection, digitaledition.event_occurrence, digitaledition.{} \
+            ob_sql = "SELECT DISTINCT event_connection.{}, {}.{} FROM event_connection, event_occurrence, {} \
             WHERE event_connection.event_id=event_occurrence.event_id AND event_connection.{}={}.id AND {}.project_id={}"
             ob_sql = ob_sql.format(ob_id, object_type, name_attr, object_type, ob_id, object_type, object_type, project_id)
         
