@@ -380,7 +380,8 @@ def get_comments(project, collection_id, publication_id, note_id=None):
         logger.info("Getting XML for {} and transforming...".format(request.full_path))
         filename = "{}_{}_com.xml".format(collection_id, publication_id)
         params = {
-            "estDocument": '"file://{}"'.format(safe_join(config[project]["file_root"], "xml", "est", filename.replace("com", "est")))
+            "estDocument": '"file://{}"'.format(safe_join(config[project]["file_root"], "xml", "est", filename.replace("com", "est"))),
+            "bookId": collection_id
         }
         if note_id is not None:
             params["noteId"] = '"{}"'.format(note_id)
