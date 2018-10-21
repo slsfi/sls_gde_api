@@ -990,29 +990,21 @@ def get_content(project, folder, xml_filename, xsl_filename, parameters):
     xsl_file_path = safe_join(config[project]["file_root"], "xslt", xsl_filename)
     cache_file_path = xml_file_path.replace("/xml/", "/cache/").replace(".xml", ".html")
     content = None
-
+    param_ext = ''
     if parameters is not None:
         if 'noteId' in parameters:
-            note_file_name = xml_filename.split(".xml")[0] + "_" + parameters["noteId"]
-            cache_file_path = cache_file_path.replace(xml_filename.split(".xml")[0], note_file_name)
-            cache_file_path = cache_file_path.replace('"', '')
-            cache_file_note_path_copy = cache_file_path
-            if not os.path.exists(cache_file_path):
-                cache_file_path = ""
+            param_ext += "_" + parameters["noteId"]
         if 'sectionId' in parameters:
-            section_file_name = xml_filename.split(".xml")[0] + "_" + parameters["sectionId"]
-            cache_file_path = cache_file_path.replace(xml_filename.split(".xml")[0], section_file_name)
-            cache_file_path = cache_file_path.replace('"', '')
-            cache_file_section_path_copy = cache_file_path
-            if not os.path.exists(cache_file_path):
-                cache_file_path = ""
+            param_ext += "_" + parameters["sectionId"]
         if 'bookId' in parameters:
-            book_file_name = xml_filename.split(".xml")[0] + "_" + parameters["bookId"]
-            cache_file_path = cache_file_path.replace(xml_filename.split(".xml")[0], book_file_name)
-            cache_file_path = cache_file_path.replace('"', '')
-            cache_file_book_path_copy = cache_file_path
-            if not os.path.exists(cache_file_path):
-                cache_file_path = ""
+            param_ext += "_" + parameters["bookId"]
+        
+        param_file_name = xml_filename.split(".xml")[0] + param_ext
+        cache_file_path = cache_file_path.replace(xml_filename.split(".xml")[0], param_file_name)
+        cache_file_path = cache_file_path.replace('"', '')
+        cache_file_param_path_copy = cache_file_path
+        if not os.path.exists(cache_file_path):
+            cache_file_path = ""
 
     if os.path.exists(cache_file_path):
         if cache_is_recent(xml_file_path, xsl_file_path, cache_file_path):
@@ -1032,17 +1024,12 @@ def get_content(project, folder, xml_filename, xsl_filename, parameters):
             content = xml_to_html(xsl_file_path, xml_file_path, params=parameters).replace('\n', '').replace('\r', '')
             try:
                 if parameters is not None:
-                    if 'noteId' in parameters:
-                        cache_file_path = cache_file_note_path_copy
-                    if 'sectionId' in parameters:
-                        cache_file_path = cache_file_section_path_copy
-                    if 'bookId' in parameters:
-                        cache_file_path = cache_file_book_path_copy
+                    cache_file_path = cache_file_param_path_copy
                     with io.open(cache_file_path, mode="w", encoding="UTF-8") as cache_file:
                         cache_file.write(content)
             except Exception:
                 logger.exception("Could not create cachefile")
-                content = "Successfully fetched content but could not generate cache for it."
+                #content = "Successfully fetched content but could not generate cache for it."
         except Exception as e:
             logger.exception("Error when parsing XML file")
             content = "Error parsing document"
