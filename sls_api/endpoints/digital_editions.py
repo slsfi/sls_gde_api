@@ -358,6 +358,7 @@ def get_reading_text(project, collection_id, publication_id, section_id=None):
         filename = "{}_{}_est.xml".format(collection_id, publication_id)
         xsl_file = "est.xsl"
         if section_id is not None:
+            section_id = '"{}"'.format(section_id)
             content = get_content(project, "est", filename, xsl_file, {"bookId":collection_id, "sectionId":section_id})
         else:
             content = get_content(project, "est", filename, xsl_file, {"bookId":collection_id})
