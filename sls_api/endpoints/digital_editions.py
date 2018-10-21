@@ -1003,14 +1003,14 @@ def get_content(project, folder, xml_filename, xsl_filename, parameters):
             section_file_name = xml_filename.split(".xml")[0] + "_" + parameters["sectionId"]
             cache_file_path = cache_file_path.replace(xml_filename.split(".xml")[0], section_file_name)
             cache_file_path = cache_file_path.replace('"', '')
-            cache_file_note_path_copy = cache_file_path
+            cache_file_section_path_copy = cache_file_path
             if not os.path.exists(cache_file_path):
                 cache_file_path = ""
         if 'bookId' in parameters:
             book_file_name = xml_filename.split(".xml")[0] + "_" + parameters["bookId"]
             cache_file_path = cache_file_path.replace(xml_filename.split(".xml")[0], book_file_name)
             cache_file_path = cache_file_path.replace('"', '')
-            cache_file_note_path_copy = cache_file_path
+            cache_file_book_path_copy = cache_file_path
             if not os.path.exists(cache_file_path):
                 cache_file_path = ""
 
@@ -1034,6 +1034,10 @@ def get_content(project, folder, xml_filename, xsl_filename, parameters):
                 if parameters is not None:
                     if 'noteId' in parameters:
                         cache_file_path = cache_file_note_path_copy
+                    if 'sectionId' in parameters:
+                        cache_file_path = cache_file_section_path_copy
+                    if 'bookId' in parameters:
+                        cache_file_path = cache_file_book_path_copy
                     with io.open(cache_file_path, mode="w", encoding="UTF-8") as cache_file:
                         cache_file.write(content)
             except Exception:
