@@ -999,6 +999,20 @@ def get_content(project, folder, xml_filename, xsl_filename, parameters):
             cache_file_note_path_copy = cache_file_path
             if not os.path.exists(cache_file_path):
                 cache_file_path = ""
+        if 'sectionId' in parameters:
+            section_file_name = xml_filename.split(".xml")[0] + "_" + parameters["sectionId"]
+            cache_file_path = cache_file_path.replace(xml_filename.split(".xml")[0], section_file_name)
+            cache_file_path = cache_file_path.replace('"', '')
+            cache_file_note_path_copy = cache_file_path
+            if not os.path.exists(cache_file_path):
+                cache_file_path = ""
+        if 'bookId' in parameters:
+            book_file_name = xml_filename.split(".xml")[0] + "_" + parameters["bookId"]
+            cache_file_path = cache_file_path.replace(xml_filename.split(".xml")[0], book_file_name)
+            cache_file_path = cache_file_path.replace('"', '')
+            cache_file_note_path_copy = cache_file_path
+            if not os.path.exists(cache_file_path):
+                cache_file_path = ""
 
     if os.path.exists(cache_file_path):
         if cache_is_recent(xml_file_path, xsl_file_path, cache_file_path):
