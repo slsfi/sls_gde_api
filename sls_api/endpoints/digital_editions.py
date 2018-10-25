@@ -987,9 +987,13 @@ def xml_to_html(xsl_file_path, xml_file_path, replace_namespace=False, params=No
 
 
 def get_content(project, folder, xml_filename, xsl_filename, parameters):
-    xml_file_path = safe_join(config[project]["file_root"], "xml", folder, xml_filename)
-    xsl_file_path = safe_join(config[project]["file_root"], "xslt", xsl_filename)
-    cache_file_path = xml_file_path.replace("/xml/", "/cache/").replace(".xml", ".html")
+    try:
+        xml_file_path = safe_join(config[project]["file_root"], "xml", folder, xml_filename)
+        xsl_file_path = safe_join(config[project]["file_root"], "xslt", xsl_filename)
+        cache_file_path = xml_file_path.replace("/xml/", "/cache/").replace(".xml", ".html")
+    except Exception as e:
+        return "Error reading content from cache." + str(e)
+
     content = None
     param_ext = ''
     if parameters is not None:
@@ -1030,7 +1034,7 @@ def get_content(project, folder, xml_filename, xsl_filename, parameters):
                         cache_file.write(content)
             except Exception:
                 logger.exception("Could not create cachefile")
-                #content = "Successfully fetched content but could not generate cache for it."
+                content = "Successfully fetched content but could not generate cache for it."
         except Exception as e:
             logger.exception("Error when parsing XML file")
             content = "Error parsing document"
