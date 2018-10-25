@@ -1916,9 +1916,9 @@
         }
       }
     },
-    "/digitaledition/event/{event_id}/occurances": {
+    "/digitaledition/event/{event_id}/occurrences": {
       "get": {
-        "summary": "Get a list of occurances for an event",
+        "summary": "Get a list of occurrences for an event",
         "description": "Return eventOccurances for an event, describing the publications in which this event is mentioned.",
         "tags": [
           "events"
@@ -2314,9 +2314,9 @@
         }
       }
     },
-    "/digitaledition/event/{event_id}/occurances/new": {
+    "/digitaledition/event/{event_id}/occurrences/new": {
       "post": {
-        "summary": "Create a new occurance for an event",
+        "summary": "Create a new occurrence for an event",
         "description": "Create a new eventOccurance for an event, describing a publication in which this event is mentioned.",
         "tags": [
           "events"

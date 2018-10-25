@@ -13,7 +13,7 @@ collection_tools = Blueprint("collection_tools", __name__)
 @project_permission_required
 def create_facsimile_collection(project):
     """
-    Create a new publicationFacsimileCollection
+    Create a new publication_facsimile_collection
 
     POST data MUST be in JSON format.
 
@@ -31,29 +31,29 @@ def create_facsimile_collection(project):
     request_data = request.get_json()
     if not request_data:
         return jsonify({"msg": "No data provided."}), 400
-    collections = Table("publicationFacsimileCollection", metadata, autoload=True, autoload_with=db_engine)
+    collections = Table("publication_facsimile_collection", metadata, autoload=True, autoload_with=db_engine)
     connection = db_engine.connect()
     insert = collections.insert()
 
     new_collection = {
         "title": request_data.get("title", None),
         "description": request_data.get("description", None),
-        "folderPath": request_data.get("folderPath", None),
-        "numberOfPages": request_data.get("numberOfPages", None),
-        "startPageNumber": request_data.get("startPageNumber", None)
+        "folder_path": request_data.get("folderPath", None),
+        "number_of_pages": request_data.get("numberOfPages", None),
+        "start_page_number": request_data.get("startPageNumber", None)
     }
     try:
         result = connection.execute(insert, **new_collection)
         new_row = select([collections]).where(collections.c.id == result.inserted_primary_key[0])
         new_row = dict(connection.execute(new_row).fetchone())
         result = {
-            "msg": "Created new publicationFacsimileCollection with ID {}".format(result.inserted_primary_key[0]),
+            "msg": "Created new publication_facsimile_collection with ID {}".format(result.inserted_primary_key[0]),
             "row": new_row
         }
         return jsonify(result), 201
     except Exception as e:
         result = {
-            "msg": "Failed to create new publicationFacsimileCollection",
+            "msg": "Failed to create new publication_facsimile_collection",
             "reason": str(e)
         }
         return jsonify(result), 500
@@ -65,16 +65,16 @@ def create_facsimile_collection(project):
 @project_permission_required
 def list_facsimile_collections(project):
     """
-    List all available publicationFacsimileCollections
+    List all available publication_facsimile_collections
     """
-    return select_all_from_table("publicationFacsimileCollections")
+    return select_all_from_table("publication_facsimile_collections")
 
 
 @collection_tools.route("/<project>/facsimile_collection/<collection_id>/link", methods=["POST"])
 @project_permission_required
 def link_facsimile_collection_to_publication(project, collection_id):
     """
-    Link a publicationFacsimileCollection to a publication through publicationFacsimile table
+    Link a publication_facsimile_collection to a publication through publication_facsimile table
 
     POST data MUST be in JSON format.
 
@@ -98,11 +98,11 @@ def link_facsimile_collection_to_publication(project, collection_id):
     publication_id = int(request_data["publication_id"])
     project_id = get_project_id_from_name(project)
 
-    publication_facsimiles = Table("publicationFacsimile", metadata, autoload=True, autoload_with=db_engine)
-    publication_collections = Table("publicationCollection", metadata, autoload=True, autoload_with=db_engine)
+    publication_facsimiles = Table("publication_facsimile", metadata, autoload=True, autoload_with=db_engine)
+    publication_collections = Table("publication_collection", metadata, autoload=True, autoload_with=db_engine)
     publications = Table("publication", metadata, autoload=True, autoload_with=db_engine)
 
-    statement = select([publications.c.publicationCollection_id]).where(publications.c.id == publication_id)
+    statement = select([publications.c.publication_collection_id]).where(publications.c.id == publication_id)
     result = connection.execute(statement).fetchall()
     if len(result) != 1:
         return jsonify(
@@ -110,7 +110,7 @@ def link_facsimile_collection_to_publication(project, collection_id):
                 "msg": "Could not find publication collection for publication, unable to verify that publication belongs to {!r}".format(project)
             }
         ), 404
-    publication_collection_id = int(result[0]["publicationCollection_id"])
+    publication_collection_id = int(result[0]["publication_collection_id"])
 
     statement = select([publication_collections.c.project_id]).where(publication_collections.c.id == publication_collection_id)
     result = connection.execute(statement).fetchall()
@@ -130,23 +130,23 @@ def link_facsimile_collection_to_publication(project, collection_id):
 
     insert = publication_facsimiles.insert()
     new_facsimile = {
-        "publicationFacsimileCollection_id": collection_id,
+        "publication_facsimile_collection_id": collection_id,
         "publication_id": publication_id,
-        "publicationManuscript_id": request_data.get("publicationManuscript_id", None),
-        "publicationVersion_id": request_data.get("publicationVersion_id", None)
+        "publication_manuscript_id": request_data.get("publication_manuscript_id", None),
+        "publication_version_id": request_data.get("publication_version_id", None)
     }
     try:
         result = connection.execute(insert, **new_facsimile)
         new_row = select([publication_facsimiles]).where(publication_facsimiles.c.id == result.inserted_primary_key[0])
         new_row = dict(connection.execute(new_row).fetchone())
         result = {
-            "msg": "Created new publicationFacsimile with ID {}".format(result.inserted_primary_key[0]),
+            "msg": "Created new publication_facsimile with ID {}".format(result.inserted_primary_key[0]),
             "row": new_row
         }
         return jsonify(result), 201
     except Exception as e:
         result = {
-            "msg": "Failed to create new publicationFacsimile",
+            "msg": "Failed to create new publication_facsimile",
             "reason": str(e)
         }
         return jsonify(result), 500
@@ -158,11 +158,11 @@ def link_facsimile_collection_to_publication(project, collection_id):
 @project_permission_required
 def list_facsimile_collection_links(project, collection_id):
     """
-    List all publicationFacsimile objects in the given publicationFacsimileCollection
+    List all publication_facsimile objects in the given publication_facsimile_collection
     """
     connection = db_engine.connect()
-    facsimiles = Table("publicationFacsimile", metadata, autoload=True, autoload_with=db_engine)
-    statement = select([facsimiles]).where(facsimiles.c.publicationFacsimileCollection_id == int(collection_id))
+    facsimiles = Table("publication_facsimile", metadata, autoload=True, autoload_with=db_engine)
+    statement = select([facsimiles]).where(facsimiles.c.publication_facsimile_collection_id == int(collection_id))
     rows = connection.execute(statement).fetchall()
     result = []
     for row in rows:
@@ -175,11 +175,11 @@ def list_facsimile_collection_links(project, collection_id):
 @project_permission_required
 def list_publication_collections(project):
     """
-    List all publicationCollection objects for a given project
+    List all publication_collection objects for a given project
     """
     project_id = get_project_id_from_name(project)
     connection = db_engine.connect()
-    collections = Table("publicationCollection", metadata, autoload=True, autoload_with=db_engine)
+    collections = Table("publication_collection", metadata, autoload=True, autoload_with=db_engine)
     statement = select([collections]).where(collections.c.project_id == int(project_id))
     rows = connection.execute(statement).fetchall()
     result = []
@@ -193,7 +193,7 @@ def list_publication_collections(project):
 @project_permission_required
 def new_publication_collection(project):
     """
-    Create a new publicationCollection object and associated Introduction and Title objects.
+    Create a new publication_collection object and associated Introduction and Title objects.
 
     POST data MUST be in JSON format
 
@@ -203,30 +203,30 @@ def new_publication_collection(project):
     published: 0 or 1, is collection published or not
 
     POST data MAY also contain the following
-    intro_legacyID: legacy ID for publicationCollectionIntroduction
-    title_legacyID: legacy ID for publicationCollectionTitle
+    intro_legacyID: legacy ID for publication_collection_introduction
+    title_legacyID: legacy ID for publication_collection_title
     """
     request_data = request.get_json()
     if not request_data:
         return jsonify({"msg": "No data provided."}), 400
 
-    collections = Table("publicationCollection", metadata, autoload=True, autoload_with=db_engine)
-    introductions = Table("publicationCollectionIntroduction", metadata, autoload=True, autoload_with=db_engine)
-    titles = Table("publicationCollectionTitle", metadata, autoload=True, autoload_with=db_engine)
+    collections = Table("publication_collection", metadata, autoload=True, autoload_with=db_engine)
+    introductions = Table("publication_collection_introduction", metadata, autoload=True, autoload_with=db_engine)
+    titles = Table("publication_collection_introduction", metadata, autoload=True, autoload_with=db_engine)
 
     connection = db_engine.connect()
     transaction = connection.begin()
     try:
         new_intro = {
-            "datePublishedExternally": request_data.get("datePublishedExternally", None),
+            "date_published_externally": request_data.get("datePublishedExternally", None),
             "published": request_data.get("published", None),
-            "legacyId": request_data.get("intro_legacyID", None)
+            "legacy_id": request_data.get("intro_legacyID", None)
         }
 
         new_title = {
-            "datePublishedExternally": request_data.get("datePublishedExternally", None),
+            "date_published_externally": request_data.get("datePublishedExternally", None),
             "published": request_data.get("published", None),
-            "legacyId": request_data.get("title_legacyID", None)
+            "legacy_id": request_data.get("title_legacyID", None)
         }
 
         ins = introductions.insert()
@@ -242,10 +242,10 @@ def new_publication_collection(project):
         new_collection = {
             "project_id": get_project_id_from_name(project),
             "name": request_data.get("name", None),
-            "datePublishedExternally": request_data.get("datePublishedExternally", None),
+            "date_published_externally": request_data.get("datePublishedExternally", None),
             "published": request_data.get("published", None),
-            "publicationCollectionIntroduction_id": new_intro_row["id"],
-            "publicationCollectionTitle_id": new_title_row["id"]
+            "publication_collection_introduction_id": new_intro_row["id"],
+            "publication_collection_title_id": new_title_row["id"]
         }
 
         ins = collections.insert()
@@ -255,7 +255,7 @@ def new_publication_collection(project):
         transaction.commit()
 
         return jsonify({
-            "msg": "New publicationCollection created.",
+            "msg": "New publication_collection created.",
             "new_collection": new_collection_row,
             "new_collection_intro": new_intro_row,
             "new_collection_title": new_title_row
@@ -263,7 +263,7 @@ def new_publication_collection(project):
     except Exception as e:
         transaction.rollback()
         result = {
-            "msg": "Failed to create new publicationCollection object",
+            "msg": "Failed to create new publication_collection object",
             "reason": str(e)
         }
         return jsonify(result), 500
@@ -279,7 +279,7 @@ def list_publications(project, collection_id):
     """
     project_id = get_project_id_from_name(project)
     connection = db_engine.connect()
-    collections = Table("publicationCollection", metadata, autoload=True, autoload_with=db_engine)
+    collections = Table("publication_collection", metadata, autoload=True, autoload_with=db_engine)
     publications = Table("publication", metadata, autoload=True, autoload_with=db_engine)
     statement = select([collections]).where(collections.c.id == int(collection_id))
     rows = connection.execute(statement).fetchall()
@@ -295,7 +295,7 @@ def list_publications(project, collection_id):
                 "msg": "Found collection not part of project {!r} with ID {}.".format(project, project_id)
             }
         ), 400
-    statement = select([publications]).where(publications.c.publicationCollection_id == int(collection_id))
+    statement = select([publications]).where(publications.c.publication_collection_id == int(collection_id))
     rows = connection.execute(statement).fetchall()
     result = []
     for row in rows:
@@ -308,7 +308,7 @@ def list_publications(project, collection_id):
 @project_permission_required
 def new_publication(project, collection_id):
     """
-    Create a new publication object as part of the given publicationCollection
+    Create a new publication object as part of the given publication_collection
 
     POST data MUST be in JSON format.
 
@@ -333,7 +333,7 @@ def new_publication(project, collection_id):
     project_id = get_project_id_from_name(project)
 
     connection = db_engine.connect()
-    collections = Table("publicationCollection", metadata, autoload=True, autoload_with=db_engine)
+    collections = Table("publication_collection", metadata, autoload=True, autoload_with=db_engine)
     publications = Table("publication", metadata, autoload=True, autoload_with=db_engine)
 
     statement = select([collections.c.project_id]).where(collections.c.id == int(collection_id))
@@ -341,14 +341,14 @@ def new_publication(project, collection_id):
     if len(result) != 1:
         return jsonify(
             {
-                "msg": "publicationCollection not found."
+                "msg": "publication_collection not found."
             }
         ), 404
 
     if result[0]["project_id"] != project_id:
         return jsonify(
             {
-                "msg": "publicationCollection {} does not belong to project {!r}".format(collection_id, project)
+                "msg": "publication_collection {} does not belong to project {!r}".format(collection_id, project)
             }
         ), 400
 
@@ -356,15 +356,15 @@ def new_publication(project, collection_id):
 
     publication = {
         "name": request_data.get("name", None),
-        "publicationComment_id": request_data.get("publicationComment_id", None),
-        "datePublishedExternally": request_data.get("datePublishedExternally", None),
+        "publication_comment_id": request_data.get("publicationComment_id", None),
+        "date_published_externally": request_data.get("datePublishedExternally", None),
         "published": request_data.get("published", None),
-        "legacyId": request_data.get("legacyId", None),
-        "publishedBy": request_data.get("publishedBy", None),
-        "originalFilename": request_data.get("originalFileName", None),
+        "legacy_id": request_data.get("legacyId", None),
+        "published_by": request_data.get("publishedBy", None),
+        "original_filename": request_data.get("originalFileName", None),
         "genre": request_data.get("genre", None),
-        "publicationGroup_id": request_data.get("publicationGroup_id", None),
-        "originalPublicationDate": request_data.get("originalPublicationDate", None)
+        "publication_group_id": request_data.get("publicationGroup_id", None),
+        "original_publication_date": request_data.get("originalPublicationDate", None)
     }
     try:
         result = connection.execute(insert, **publication)
