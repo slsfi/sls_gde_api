@@ -573,7 +573,7 @@ def get_occurrences(object_type, ident):
             occurrence_stmnt = sqlalchemy.sql.text(occurrence_sql).bindparams(e_id=event["id"])
             for row in connection.execute(occurrence_stmnt).fetchall():
                 event["occurrences"].append(dict(row))
-
+        connection.close()
         return jsonify(results)
 
 @digital_edition.route("/<project>/occurrences/<object_type>")
@@ -679,7 +679,7 @@ def get_all_occurrences_by_type(object_type, project=None):
                 else:
                     i["name"] = o["name"]
                 occur.append(i)
-
+        connection.close()
         return jsonify(occur)
 
 @digital_edition.route("/<project>/occurrences/collection/<object_type>/<collection_id>")
@@ -717,7 +717,7 @@ def get_facsimile_collections(project, facsimile_collection_ids):
     return_data = []
     for row in connection.execute(statement).fetchall():
         return_data.append(dict(row))
-
+    connection.close()
     return jsonify(return_data), 200, {"Access-Control-Allow-Origin": "*"}
 
 
@@ -944,6 +944,7 @@ def get_published_status(project, collection_id, publication_id):
                 message = "Content is not externally published"
             else:
                 can_show = True
+    connection.close()
     return can_show, message
 
 
