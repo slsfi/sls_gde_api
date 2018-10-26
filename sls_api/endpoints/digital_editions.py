@@ -1002,9 +1002,7 @@ def get_content(project, folder, xml_filename, xsl_filename, parameters):
             param_ext += "_" + parameters["noteId"]
         if 'sectionId' in parameters:
             param_ext += "_" + parameters["sectionId"]
-        if 'bookId' in parameters:
-            param_ext += "_" + parameters["bookId"]
-        
+        # not neended for bookId
         param_file_name = xml_filename.split(".xml")[0] + param_ext
         cache_file_path = cache_file_path.replace(xml_filename.split(".xml")[0], param_file_name)
         cache_file_path = cache_file_path.replace('"', '')
