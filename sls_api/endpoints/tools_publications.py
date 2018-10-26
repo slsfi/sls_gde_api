@@ -17,7 +17,7 @@ def get_publications(project):
     """
     project_id = get_project_id_from_name(project)
     connection = db_engine.connect()
-    publication_collections = Table("publicationCollection", metadata, autoload=True, autoload_with=db_engine)
+    publication_collections = Table("publication_collection", metadata, autoload=True, autoload_with=db_engine)
     publications = Table("publication", metadata, autoload=True, autoload_with=db_engine)
     statement = select([publication_collections.c.id]).where(publication_collections.c.project_id == project_id)
     collection_ids = connection.execute(statement).fetchall()
@@ -53,7 +53,7 @@ def get_publication_versions(project, publication_id):
     List all versions of the given publication
     """
     connection = db_engine.connect()
-    publication_versions = Table("publicationVersion", metadata, autoload=True, autoload_with=db_engine)
+    publication_versions = Table("publication_version", metadata, autoload=True, autoload_with=db_engine)
     statement = select([publication_versions]).where(publication_versions.c.publication_id == int(publication_id))
     rows = connection.execute(statement).fetchall()
     result = []
@@ -70,7 +70,7 @@ def get_publication_manuscripts(project, publication_id):
     List all manuscripts for the given publication
     """
     connection = db_engine.connect()
-    publication_manuscripts = Table("publicationManuscript", metadata, autoload=True, autoload_with=db_engine)
+    publication_manuscripts = Table("publication_manuscript", metadata, autoload=True, autoload_with=db_engine)
     statement = select([publication_manuscripts]).where(publication_manuscripts.c.publication_id == int(publication_id))
     rows = connection.execute(statement).fetchall()
     result = []
@@ -87,7 +87,7 @@ def get_publication_facsimiles(project, publication_id):
     List all fascimilies for the given publication
     """
     connection = db_engine.connect()
-    publication_facsimiles = Table("publicationFacsimile", metadata, autoload=True, autoload_with=db_engine)
+    publication_facsimiles = Table("publication_facsimile", metadata, autoload=True, autoload_with=db_engine)
     statement = select([publication_facsimiles]).where(publication_facsimiles.c.publication_id == int(publication_id))
     rows = connection.execute(statement).fetchall()
     result = []
@@ -105,10 +105,10 @@ def get_publication_comments(project, publication_id):
     """
     connection = db_engine.connect()
     publications = Table("publication", metadata, autoload=True, autoload_with=db_engine)
-    publication_comments = Table("publicationComment", metadata, autoload=True, autoload_with=db_engine)
-    statement = select([publications.c.publictionComment_id]).where(publications.c.id == int(publication_id))
+    publication_comments = Table("publication_comment", metadata, autoload=True, autoload_with=db_engine)
+    statement = select([publications.c.publication_comment_id]).where(publications.c.id == int(publication_id))
     comment_ids = connection.execute(statement).fetchall()
-    comment_ids = [int(row["id"]) for row in comment_ids]
+    comment_ids = [int(row[0]) for row in comment_ids]
     statement = select([publication_comments]).where(publication_comments.c.id.in_(comment_ids))
     rows = connection.execute(statement).fetchall()
     result = []
@@ -123,7 +123,7 @@ def get_publication_comments(project, publication_id):
 def link_file_to_publication(project, publication_id):
     """
     Link an XML file to a publication,
-    creating the appropriate publicationComment, publicationManuscript, or publicationVersion object.
+    creating the appropriate publication_comment, publication_manuscript, or publication_version object.
 
     POST data MUST be in JSON format
 
@@ -152,15 +152,15 @@ def link_file_to_publication(project, publication_id):
     connection = db_engine.connect()
 
     if file_type == "comment":
-        comments = Table("publicationComment", metadata, autoload=True, autoload_with=db_engine)
+        comments = Table("publication_comment", metadata, autoload=True, autoload_with=db_engine)
         publications = Table("publication", metadata, autoload=True, autoload_with=db_engine)
         transaction = connection.begin()
         new_comment = {
-            "originalFileName": request_data.get("file_path"),
-            "datePublishedExternally": request_data.get("datePublishedExternally", None),
+            "original_file_name": request_data.get("file_path"),
+            "date_published_externally": request_data.get("datePublishedExternally", None),
             "published": request_data.get("published", None),
-            "publishedBy": request_data.get("publishedBy", None),
-            "legacyId": request_data.get("legacyId", None)
+            "published_by": request_data.get("publishedBy", None),
+            "legacy_id": request_data.get("legacyId", None)
         }
         ins = comments.insert()
         try:
@@ -168,21 +168,21 @@ def link_file_to_publication(project, publication_id):
             new_row = select([comments]).where(comments.c.id == result.inserted_primary_key[0])
             new_row = dict(connection.execute(new_row).fetchone())
 
-            # update publication object in database with new publicationComment ID
+            # update publication object in database with new publication_comment ID
             update_stmt = publications.update().where(publications.c.id == int(publication_id)). \
-                values(publications.c.publicationComment_id == result.inserted_primary_key[0])
+                values(publications.c.publication_comment_id == result.inserted_primary_key[0])
             connection.execute(update_stmt)
 
             transaction.commit()
             result = {
-                "msg": "Created new publicationComment with ID {}".format(result.inserted_primary_key[0]),
+                "msg": "Created new publication_comment with ID {}".format(result.inserted_primary_key[0]),
                 "row": new_row
             }
             return jsonify(result), 201
         except Exception as e:
             transaction.rollback()
             result = {
-                "msg": "Failed to create new publicationComment object",
+                "msg": "Failed to create new publication_comment object",
                 "reason": str(e)
             }
             return jsonify(result), 500
@@ -190,19 +190,19 @@ def link_file_to_publication(project, publication_id):
             connection.close()
     else:
         new_object = {
-            "originalFileName": request_data.get("file_path"),
+            "original_file_name": request_data.get("file_path"),
             "publication_id": int(publication_id),
-            "datePublishedExternally": request_data.get("datePublishedExternally", None),
+            "date_published_externally": request_data.get("datePublishedExternally", None),
             "published": request_data.get("published", None),
-            "publishedBy": request_data.get("publishedBy", None),
-            "legacyId": request_data.get("legacyId", None),
+            "published_by": request_data.get("publishedBy", None),
+            "legacy_id": request_data.get("legacyId", None),
             "type": request_data.get("type", None),
-            "sectionId": request_data.get("sectionId", None)
+            "section_id": request_data.get("sectionId", None)
         }
         if file_type == "manuscript":
-            table = Table("publicationManuscript", metadata, autoload=True, autoload_with=False)
+            table = Table("publication_manuscript", metadata, autoload=True, autoload_with=False)
         else:
-            table = Table("publicationVersion", metadata, autoload=True, autoload_with=False)
+            table = Table("publication_version", metadata, autoload=True, autoload_with=False)
         ins = table.insert()
         try:
             result = connection.execute(ins, **new_object)

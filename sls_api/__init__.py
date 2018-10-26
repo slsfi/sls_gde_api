@@ -96,5 +96,7 @@ if "digital_edition" in app.blueprints and "auth" in app.blueprints:
     app.register_blueprint(collection_tools, url_prefix="/digitaledition")
     from sls_api.endpoints.tools_groups import group_tools
     app.register_blueprint(group_tools, url_prefix="/digitaledition")
+    from sls_api.endpoints.tools_publishing import publishing_tools
+    app.register_blueprint(publishing_tools, url_prefix="/digitaledition")
 
 logger.info(" * Loaded endpoints: {}".format(", ".join(app.blueprints)))
