@@ -7,7 +7,7 @@ from sls_api.endpoints.generics import db_engine, metadata, project_permission_r
 group_tools = Blueprint("group_tools", __name__)
 
 
-@group_tools.route("/<project>/publication_groups")
+@group_tools.route("/<project>/publication_groups/")
 @project_permission_required
 def list_publication_groups(project):
     """
@@ -22,7 +22,7 @@ def list_publication_groups(project):
     return jsonify(result)
 
 
-@group_tools.route("/<project>/publication_group/<group_id>")
+@group_tools.route("/<project>/publication_group/<group_id>/")
 @project_permission_required
 def get_publication_group(project, group_id):
     """
@@ -37,7 +37,7 @@ def get_publication_group(project, group_id):
     return jsonify(result)
 
 
-@group_tools.route("/<project>/publication_group/<group_id>/publications")
+@group_tools.route("/<project>/publication_group/<group_id>/publications/")
 @project_permission_required
 def get_publications_in_group(project, group_id):
     """
@@ -53,7 +53,7 @@ def get_publications_in_group(project, group_id):
     return jsonify(result)
 
 
-@group_tools.route("/<project>/publication/<publication_id>/add_group", methods=["POST"])
+@group_tools.route("/<project>/publication/<publication_id>/add_group/", methods=["POST"])
 @project_permission_required
 def add_publication_to_group(project, publication_id):
     """
@@ -97,7 +97,7 @@ def add_publication_to_group(project, publication_id):
         connection.close()
 
 
-@group_tools.route("/<project>/publication_group/new", methods=["POST"])
+@group_tools.route("/<project>/publication_group/new/", methods=["POST"])
 @project_permission_required
 def add_new_publication_group(project):
     """

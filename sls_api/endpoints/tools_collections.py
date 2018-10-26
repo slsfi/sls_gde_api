@@ -9,7 +9,7 @@ from sls_api.endpoints.generics import db_engine, get_project_id_from_name, meta
 collection_tools = Blueprint("collection_tools", __name__)
 
 
-@collection_tools.route("/<project>/facsimile_collection/new", methods=["POST"])
+@collection_tools.route("/<project>/facsimile_collection/new/", methods=["POST"])
 @project_permission_required
 def create_facsimile_collection(project):
     """
@@ -61,7 +61,7 @@ def create_facsimile_collection(project):
         connection.close()
 
 
-@collection_tools.route("/<project>/facsimile_collection/list")
+@collection_tools.route("/<project>/facsimile_collection/list/")
 @project_permission_required
 def list_facsimile_collections(project):
     """
@@ -70,7 +70,7 @@ def list_facsimile_collections(project):
     return select_all_from_table("publication_facsimile_collections")
 
 
-@collection_tools.route("/<project>/facsimile_collection/<collection_id>/link", methods=["POST"])
+@collection_tools.route("/<project>/facsimile_collection/<collection_id>/link/", methods=["POST"])
 @project_permission_required
 def link_facsimile_collection_to_publication(project, collection_id):
     """
@@ -154,7 +154,7 @@ def link_facsimile_collection_to_publication(project, collection_id):
         connection.close()
 
 
-@collection_tools.route("/<project>/facsimile_collection/<collection_id>/list_links")
+@collection_tools.route("/<project>/facsimile_collection/<collection_id>/list_links/")
 @project_permission_required
 def list_facsimile_collection_links(project, collection_id):
     """
@@ -171,7 +171,7 @@ def list_facsimile_collection_links(project, collection_id):
     return jsonify(result)
 
 
-@collection_tools.route("/<project>/publication_collection/list")
+@collection_tools.route("/<project>/publication_collection/list/")
 @project_permission_required
 def list_publication_collections(project):
     """
@@ -189,7 +189,7 @@ def list_publication_collections(project):
     return jsonify(result)
 
 
-@collection_tools.route("/<project>/publication_collection/new", methods=["POST"])
+@collection_tools.route("/<project>/publication_collection/new/", methods=["POST"])
 @project_permission_required
 def new_publication_collection(project):
     """
@@ -271,7 +271,7 @@ def new_publication_collection(project):
         connection.close()
 
 
-@collection_tools.route("/<project>/publication_collection/<collection_id>/publications")
+@collection_tools.route("/<project>/publication_collection/<collection_id>/publications/")
 @project_permission_required
 def list_publications(project, collection_id):
     """
@@ -304,7 +304,7 @@ def list_publications(project, collection_id):
     return jsonify(result)
 
 
-@collection_tools.route("/<project>/publication_collection/<collection_id>/publications/new", methods=["POST"])
+@collection_tools.route("/<project>/publication_collection/<collection_id>/publications/new/", methods=["POST"])
 @project_permission_required
 def new_publication(project, collection_id):
     """

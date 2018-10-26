@@ -9,7 +9,7 @@ from sls_api.endpoints.generics import db_engine, get_project_id_from_name, meta
 event_tools = Blueprint("event_tools", __name__)
 
 
-@event_tools.route("/<project>/locations/new", methods=["POST"])
+@event_tools.route("/<project>/locations/new/", methods=["POST"])
 @project_permission_required
 def add_new_location(project):
     """
@@ -65,7 +65,7 @@ def add_new_location(project):
         connection.close()
 
 
-@event_tools.route("/<project>/subjects/new", methods=["POST"])
+@event_tools.route("/<project>/subjects/new/", methods=["POST"])
 @project_permission_required
 def add_new_subject(project):
     """
@@ -124,7 +124,7 @@ def add_new_subject(project):
         connection.close()
 
 
-@event_tools.route("/<project>/tags/new", methods=["POST"])
+@event_tools.route("/<project>/tags/new/", methods=["POST"])
 @project_permission_required
 def add_new_tag(project):
     """
@@ -209,7 +209,7 @@ def get_events():
     return select_all_from_table("event")
 
 
-@event_tools.route("/events/search", methods=["POST"])
+@event_tools.route("/events/search/", methods=["POST"])
 @jwt_required
 def find_event_by_description():
     """
@@ -239,7 +239,7 @@ def find_event_by_description():
     return jsonify(result)
 
 
-@event_tools.route("/events/new", methods=["POST"])
+@event_tools.route("/events/new/", methods=["POST"])
 @jwt_required
 def add_new_event():
     """
@@ -281,7 +281,7 @@ def add_new_event():
         connection.close()
 
 
-@event_tools.route("/event/<event_id>/connections/new", methods=["POST"])
+@event_tools.route("/event/<event_id>/connections/new/", methods=["POST"])
 @jwt_required
 def connect_event(event_id):
     """
@@ -334,7 +334,7 @@ def connect_event(event_id):
         connection.close()
 
 
-@event_tools.route("/event/<event_id>/connections")
+@event_tools.route("/event/<event_id>/connections/")
 @jwt_required
 def get_event_connections(event_id):
     """
@@ -351,7 +351,7 @@ def get_event_connections(event_id):
     return jsonify(result)
 
 
-@event_tools.route("/event/<event_id>/occurrences")
+@event_tools.route("/event/<event_id>/occurrences/")
 @jwt_required
 def get_event_occurrences(event_id):
     """
@@ -368,7 +368,7 @@ def get_event_occurrences(event_id):
     return jsonify(result)
 
 
-@event_tools.route("/event/<event_id>/occurrences/new", methods=["POST"])
+@event_tools.route("/event/<event_id>/occurrences/new/", methods=["POST"])
 @jwt_required
 def new_event_occurrence(event_id):
     """
