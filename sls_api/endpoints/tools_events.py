@@ -41,7 +41,7 @@ def add_new_location(project):
         "name": request_data["name"],
         "description": request_data.get("desription", None),
         "project_id": get_project_id_from_name(project),
-        "legacyId": request_data.get("legacyId", None),
+        "legacy_id": request_data.get("legacyId", None),
         "latitude": request_data.get("latitude", None),
         "longitude": request_data.get("longitude", None)
     }
@@ -96,13 +96,13 @@ def add_new_subject(project):
         "type": request_data.get("type", None),
         "description": request_data.get("description", None),
         "project_id": get_project_id_from_name(project),
-        "firstName": request_data.get("firstName", None),
-        "lastName": request_data.get("lastName", None),
+        "first_name": request_data.get("firstName", None),
+        "last_name": request_data.get("lastName", None),
         "preposition": request_data.get("preposition", None),
-        "fullName": request_data.get("fullName", None),
-        "legacyId": request_data.get("legacyId", None),
-        "dateBorn": request_data.get("dateBorn", None),
-        "dateDeceased": request_data.get("dateDeceased", None)
+        "full_name": request_data.get("fullName", None),
+        "legacy_id": request_data.get("legacyId", None),
+        "date_born": request_data.get("dateBorn", None),
+        "date_deceased": request_data.get("dateDeceased", None)
     }
     try:
         insert = subjects.insert()
@@ -151,7 +151,7 @@ def add_new_tag(project):
         "name": request_data.get("name", None),
         "project_id": get_project_id_from_name(project),
         "description": request_data.get("description", None),
-        "legacyId": request_data.get("legacyId", None)
+        "legacy_id": request_data.get("legacyId", None)
     }
     try:
         insert = tags.insert()
@@ -285,7 +285,7 @@ def add_new_event():
 @jwt_required
 def connect_event(event_id):
     """
-    Link an event to a location, subject, or tag through eventConnection
+    Link an event to a location, subject, or tag through event_connection
 
     POST data MUST be in JSON format.
 
@@ -307,7 +307,7 @@ def connect_event(event_id):
                 "msg": "Event ID not found in database"
             }
         ), 404
-    event_connections = Table("eventConnection", metadata, autoload=True, autoload_with=db_engine)
+    event_connections = Table("event_connection", metadata, autoload=True, autoload_with=db_engine)
     insert = event_connections.insert()
     new_event_connection = {
         "event_id": int(event_id),
@@ -320,13 +320,13 @@ def connect_event(event_id):
         new_row = select([event_connections]).where(event_connections.c.id == result.inserted_primary_key[0])
         new_row = dict(connection.execute(new_row).fetchone())
         result = {
-            "msg": "Created new eventConnection with ID {}".format(result.inserted_primary_key[0]),
+            "msg": "Created new event_connection with ID {}".format(result.inserted_primary_key[0]),
             "row": new_row
         }
         return jsonify(result), 201
     except Exception as e:
         result = {
-            "msg": "Failed to create new eventConnection",
+            "msg": "Failed to create new event_connection",
             "reason": str(e)
         }
         return jsonify(result), 500
@@ -338,9 +338,9 @@ def connect_event(event_id):
 @jwt_required
 def get_event_connections(event_id):
     """
-    List all eventConnections for a given event, to find related locations, subjects, and tags
+    List all event_connections for a given event, to find related locations, subjects, and tags
     """
-    event_connections = Table("eventConnection", metadata, autoload=True, autoload_with=db_engine)
+    event_connections = Table("event_connection", metadata, autoload=True, autoload_with=db_engine)
     connection = db_engine.connect()
     statement = select([event_connections]).where(event_connections.c.event_id == int(event_id))
     rows = connection.execute(statement).fetchall()
@@ -351,15 +351,15 @@ def get_event_connections(event_id):
     return jsonify(result)
 
 
-@event_tools.route("/event/<event_id>/occurances")
+@event_tools.route("/event/<event_id>/occurrences")
 @jwt_required
-def get_event_occurances(event_id):
+def get_event_occurrences(event_id):
     """
-    Get a list of all eventOccurances in the database, optionally limiting to a given event
+    Get a list of all event_occurrence in the database, optionally limiting to a given event
     """
-    event_occurances = Table("eventOccurance", metadata, autoload=True, autoload_with=db_engine)
+    event_occurrences = Table("event_occurrence", metadata, autoload=True, autoload_with=db_engine)
     connection = db_engine.connect()
-    statement = select([event_occurances]).where(event_occurances.c.event_id == int(event_id))
+    statement = select([event_occurrences]).where(event_occurrences.c.event_id == int(event_id))
     rows = connection.execute(statement).fetchall()
     result = []
     for row in rows:
@@ -368,11 +368,11 @@ def get_event_occurances(event_id):
     return jsonify(result)
 
 
-@event_tools.route("/event/<event_id>/occurances/new", methods=["POST"])
+@event_tools.route("/event/<event_id>/occurrences/new", methods=["POST"])
 @jwt_required
-def new_event_occurance(event_id):
+def new_event_occurrence(event_id):
     """
-    Add a new eventOccurance to the database
+    Add a new event_occurrence to the database
 
     POST data MUST be in JSON format.
 
@@ -401,30 +401,30 @@ def new_event_occurance(event_id):
             }
         ), 404
 
-    event_occurances = Table("eventOccurance", metadata, autoload=True, autoload_with=db_engine)
-    insert = event_occurances.insert()
-    new_occurance = {
+    event_occurrences = Table("event_occurrence", metadata, autoload=True, autoload_with=db_engine)
+    insert = event_occurrences.insert()
+    new_occurrence = {
         "event_id": int(event_id),
         "type": request_data.get("type", None),
         "description": request_data.get("description", None),
         "publication_id": int(request_data["publication_id"]) if request_data.get("publication_id", None) else None,
-        "publicationVersion_id": int(request_data["publicationVersion_id"]) if request_data.get("publicationVersion_id", None) else None,
-        "publicationManuscript_id": int(request_data["publicationManuscript_id"]) if request_data.get("publicationManuscript_id", None) else None,
-        "publicationFacsimile_id": int(request_data["publicationFacsimile_id"]) if request_data.get("publicationFacsimile_id", None) else None,
-        "publicationComment_id": int(request_data["publicationComment_id"]) if request_data.get("publicationComment_id", None) else None,
+        "publication_version_id": int(request_data["publicationVersion_id"]) if request_data.get("publicationVersion_id", None) else None,
+        "publication_manuscript_id": int(request_data["publicationManuscript_id"]) if request_data.get("publicationManuscript_id", None) else None,
+        "publication_facsimile_id": int(request_data["publicationFacsimile_id"]) if request_data.get("publicationFacsimile_id", None) else None,
+        "publication_comment_id": int(request_data["publicationComment_id"]) if request_data.get("publicationComment_id", None) else None,
     }
     try:
-        result = connection.execute(insert, **new_occurance)
-        new_row = select([event_occurances]).where(event_occurances.c.id == result.inserted_primary_key[0])
+        result = connection.execute(insert, **new_occurrence)
+        new_row = select([event_occurrences]).where(event_occurrences.c.id == result.inserted_primary_key[0])
         new_row = dict(connection.execute(new_row).fetchone())
         result = {
-            "msg": "Created new eventOccurance with ID {}".format(result.inserted_primary_key[0]),
+            "msg": "Created new event_occurrence with ID {}".format(result.inserted_primary_key[0]),
             "row": new_row
         }
         return jsonify(result), 201
     except Exception as e:
         result = {
-            "msg": "Failed to create new eventOccurance",
+            "msg": "Failed to create new event_occurrence",
             "reason": str(e)
         }
         return jsonify(result), 500

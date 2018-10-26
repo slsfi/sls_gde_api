@@ -14,7 +14,7 @@ def list_publication_groups(project):
     List all available publication groups
     """
     connection = db_engine.connect()
-    groups = Table("publicationGroup", metadata, autoload=True, autoload_with=db_engine)
+    groups = Table("publication_group", metadata, autoload=True, autoload_with=db_engine)
     statement = select([groups.c.id, groups.c.published, groups.c.name])
     rows = connection.execute(statement).fetchall()
     result = dict(rows[0])
@@ -29,7 +29,7 @@ def get_publication_group(project, group_id):
     Get all data for a single publication group
     """
     connection = db_engine.connect()
-    groups = Table("publicationGroup", metadata, autoload=True, autoload_with=db_engine)
+    groups = Table("publication_group", metadata, autoload=True, autoload_with=db_engine)
     statement = select([groups]).where(groups.c.id == int(group_id))
     rows = connection.execute(statement).fetchall()
     result = dict(rows[0])
@@ -41,11 +41,11 @@ def get_publication_group(project, group_id):
 @project_permission_required
 def get_publications_in_group(project, group_id):
     """
-    List all publications in a given publicationGroup
+    List all publications in a given publication_group
     """
     connection = db_engine.connect()
     publications = Table("publication", metadata, autoload=True, autoload_with=db_engine)
-    statement = select([publications.c.id, publications.c.name]).where(publications.c.publicationGroup_id == int(group_id))
+    statement = select([publications.c.id, publications.c.name]).where(publications.c.publication_group_id == int(group_id))
     result = []
     for row in connection.execute(statement).fetchall():
         result.append(dict(row))
@@ -57,12 +57,12 @@ def get_publications_in_group(project, group_id):
 @project_permission_required
 def add_publication_to_group(project, publication_id):
     """
-    Add a publication to a publicationGroup
+    Add a publication to a publication_group
 
     POST data MUST be in JSON format
 
     POST data MUST contain the following:
-    group_id: numerical ID for the publicationGroup
+    group_id: numerical ID for the publication_group
     """
     request_data = request.get_json()
     if not request_data:
@@ -74,7 +74,7 @@ def add_publication_to_group(project, publication_id):
 
     connection = db_engine.connect()
     publications = Table("publication", metadata, autoload=True, autoload_with=db_engine)
-    statement = publications.update().where(publications.c.id == int(publication_id)).values(publicationGroup_id=group_id)
+    statement = publications.update().where(publications.c.id == int(publication_id)).values(publication_group_id=group_id)
     transaction = connection.begin()
     try:
         connection.execute(statement)
@@ -101,7 +101,7 @@ def add_publication_to_group(project, publication_id):
 @project_permission_required
 def add_new_publication_group(project):
     """
-    Create a new publicationGroup
+    Create a new publication_group
 
     POST data MUST be in JSON format
 
@@ -112,7 +112,7 @@ def add_new_publication_group(project):
     request_data = request.get_json()
     if not request_data:
         return jsonify({"msg": "No data provided."}), 400
-    groups = Table("publicationGroup", metadata, autoload=True, autoload_with=db_engine)
+    groups = Table("publication_group", metadata, autoload=True, autoload_with=db_engine)
     connection = db_engine.connect()
     insert = groups.insert()
     new_group = {
