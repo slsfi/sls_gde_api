@@ -250,9 +250,9 @@ def get_collections(project):
     logger.info("Getting collections /{}/collections".format(project))
     connection = db_engine.connect()
     status = 1 if config[project]["show_internally_published"] else 2
-
-    sql = sqlalchemy.sql.text("SELECT id, name as title FROM publication_collection WHERE published>=:p_status ORDER BY name")
-    statement = sql.bindparams(p_status=status)
+    project_id = get_project_id_from_name(project)
+    sql = sqlalchemy.sql.text("SELECT id, name as title FROM publication_collection WHERE project_id = :p_id AND published>=:p_status ORDER BY name")
+    statement = sql.bindparams(p_status=status, p_id=project_id)
     results = []
     for row in connection.execute(statement).fetchall():
         results.append(dict(row))
