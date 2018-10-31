@@ -1,6 +1,4 @@
-<<<<<<< HEAD
 .vscode/
-=======
 *.pyc
 *.log.*
 *.log
@@ -8,4 +6,5 @@
 *.egg-info
 __pycache__
 .DS_Store
->>>>>>> remotes/origin/facsimile
+.vs
+configs/digital_editions.yml
