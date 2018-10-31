@@ -622,7 +622,7 @@ def get_all_occurrences_by_type(object_type, project=None):
                         "(SELECT event_id FROM event_connection WHERE {}_id=:o_id)".format(object_type)
             occurrence_sql = "SELECT publication_collection.name AS collection_name, publication.publication_collection_id AS collection_id,\
              event_occurrence.id, type, description, event_occurrence.publication_id, event_occurrence.publication_version_id,\
-             event_occurrence.publication_facsimile_id, event_occurrence.publication_comment_id, \
+             event_occurrence.publication_facsimile_id, event_occurrence.publication_comment_id, event_occurrence.publication_facsimile_page, \
              event_occurrence.publication_manuscript_id FROM event_occurrence, publication, publication_collection \
              WHERE publication.publication_collection_id=publication_collection.id AND event_occurrence.event_id=:e_id AND event_occurrence.publication_id=publication.id"
 
