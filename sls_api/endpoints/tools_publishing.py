@@ -50,7 +50,7 @@ def edit_project(project_id):
     published = request_data.get("published", None)
 
     projects = Table("project", metadata, autoload=True, autoload_with=db_engine)
-    query = select[projects.c.id].where(projects.c.id == int(project_id))
+    query = select([projects.c.id]).where(projects.c.id == int(project_id))
     connection = db_engine.connect()
 
     result = connection.execute(query)
@@ -99,7 +99,7 @@ def edit_publication_collection(project, collection_id):
     published = request_data.get("published", None)
 
     collections = Table("publication_collection", metadata, autoload=True, autoload_with=db_engine)
-    query = select[collections.c.id].where(collections.c.id == int(collection_id))
+    query = select([collections.c.id]).where(collections.c.id == int(collection_id))
     connection = db_engine.connect()
 
     result = connection.execute(query)
@@ -139,14 +139,14 @@ def delete_publication_collection(project, collection_id):
 def get_intro(project, collection_id):
     collections = Table("publication_collection", metadata, autoload=True, autoload_with=db_engine)
     introductions = Table("publication_collection_introduction", metadata, autoload=True, autoload_with=db_engine)
-    query = select[collections.c.publication_collection_introduction_id].where(collections.c.id == int(collection_id))
+    query = select([collections.c.publication_collection_introduction_id]).where(collections.c.id == int(collection_id))
     connection = db_engine.connect()
     result = connection.execute(query)
     if result.fetchone() is None:
         result.close()
         return jsonify("No such publication collection exists."), 404
 
-    query = select[introductions]\
+    query = select([introductions])\
         .where(introductions.c.id == int(result[collections.c.publication_collection_introduction_id]))
 
     row = dict(connection.execute(query).fetchone())
@@ -169,7 +169,7 @@ def edit_intro(project, collection_id):
 
     collections = Table("publication_collection", metadata, autoload=True, autoload_with=db_engine)
     introductions = Table("publication_collection_introduction", metadata, autoload=True, autoload_with=db_engine)
-    query = select[collections.c.publication_collection_introduction_id].where(collections.c.id == int(collection_id))
+    query = select([collections.c.publication_collection_introduction_id]).where(collections.c.id == int(collection_id))
     connection = db_engine.connect()
     result = connection.execute(query)
     if result.fetchone() is None:
@@ -209,14 +209,14 @@ def delete_intro(project, collection_id):
 def get_title(project, collection_id):
     collections = Table("publication_collection", metadata, autoload=True, autoload_with=db_engine)
     titles = Table("publication_collection_title", metadata, autoload=True, autoload_with=db_engine)
-    query = select[collections.c.publication_collection_title_id].where(collections.c.id == int(collection_id))
+    query = select([collections.c.publication_collection_title_id]).where(collections.c.id == int(collection_id))
     connection = db_engine.connect()
     result = connection.execute(query)
     if result.fetchone() is None:
         result.close()
         return jsonify("No such publication collection exists."), 404
 
-    query = select[titles]\
+    query = select([titles])\
         .where(titles.c.id == int(result[collections.c.publication_collection_title_id]))
 
     row = dict(connection.execute(query).fetchone())
@@ -239,7 +239,7 @@ def edit_title(project, collection_id):
 
     collections = Table("publication_collection", metadata, autoload=True, autoload_with=db_engine)
     titles = Table("publication_collection_introduction", metadata, autoload=True, autoload_with=db_engine)
-    query = select[collections.c.publication_collection_title_id].where(collections.c.id == int(collection_id))
+    query = select([collections.c.publication_collection_title_id]).where(collections.c.id == int(collection_id))
     connection = db_engine.connect()
     result = connection.execute(query)
     if result.fetchone() is None:
@@ -290,7 +290,7 @@ def edit_publication(project, publication_id):
     published = request_data.get("published", None)
 
     publications = Table("publication", metadata, autoload=True, autoload_with=db_engine)
-    query = select[publications.c.id].where(publications.c.id == int(publication_id))
+    query = select([publications.c.id]).where(publications.c.id == int(publication_id))
     connection = db_engine.connect()
 
     result = connection.execute(query)
@@ -344,7 +344,7 @@ def edit_comment(project, publication_id):
 
     publications = Table("publication", metadata, autoload=True, autoload_with=db_engine)
     comments = Table("publication_comment", metadata, autoload=True, autoload_with=db_engine)
-    query = select[publications.c.publication_comment_id].where(publications.c.id == int(publication_id))
+    query = select([publications.c.publication_comment_id]).where(publications.c.id == int(publication_id))
     connection = db_engine.connect()
 
     result = connection.execute(query).fetchone()
@@ -397,7 +397,7 @@ def add_manuscript(project, publication_id):
 
     publications = Table("publication", metadata, autoload=True, autoload_with=db_engine)
     manuscripts = Table("publication_manuscript", metadata, autoload=True, autoload_with=db_engine)
-    query = select[publications].where(publications.c.id == int(publication_id))
+    query = select([publications]).where(publications.c.id == int(publication_id))
     connection = db_engine.connect()
 
     result = connection.execute(query).fetchone()
@@ -436,7 +436,7 @@ def edit_manuscript(project, manuscript_id):
     published = request_data.get("published", None)
 
     manuscripts = Table("publication_manuscript", metadata, autoload=True, autoload_with=db_engine)
-    query = select[manuscripts].where(manuscripts.c.id == int(manuscript_id))
+    query = select([manuscripts]).where(manuscripts.c.id == int(manuscript_id))
     connection = db_engine.connect()
 
     result = connection.execute(query).fetchone()
@@ -489,7 +489,7 @@ def add_version(project, publication_id):
 
     publications = Table("publication", metadata, autoload=True, autoload_with=db_engine)
     versions = Table("publication_version", metadata, autoload=True, autoload_with=db_engine)
-    query = select[publications].where(publications.c.id == int(publication_id))
+    query = select([publications]).where(publications.c.id == int(publication_id))
     connection = db_engine.connect()
 
     result = connection.execute(query).fetchone()
@@ -528,7 +528,7 @@ def edit_version(project, version_id):
     published = request_data.get("published", None)
 
     versions = Table("publication_version", metadata, autoload=True, autoload_with=db_engine)
-    query = select[versions].where(versions.c.id == int(version_id))
+    query = select([versions]).where(versions.c.id == int(version_id))
     connection = db_engine.connect()
 
     result = connection.execute(query).fetchone()
@@ -581,7 +581,7 @@ def edit_facsimile_collection(project, collection_id):
     description = request_data.get("description", None)
 
     collections = Table("publication_facsimile_collection", metadata, autoload=True, autoload_with=db_engine)
-    query = select[collections].where(collections.c.id == int(collection_id))
+    query = select([collections]).where(collections.c.id == int(collection_id))
     connection = db_engine.connect()
 
     result = connection.execute(query).fetchone()
