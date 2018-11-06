@@ -97,7 +97,7 @@ def get_static_pages_as_json(project, language):
     folder_path = safe_join(config[project]["file_root"], "md", language)
 
     if os.path.exists(folder_path):
-        data = path_hierarchy(folder_path, language)
+        data = path_hierarchy(project, folder_path, language)
         return jsonify(data), 200
     else:
         logger.info("did not find {}".format(folder_path))
@@ -851,16 +851,16 @@ def slugify_id(path, language):
     return path
 
 
-def slugify_path(path):
-    path = split_after(path, "/topelius_required/md/")
+def slugify_path(project, path):
+    path = split_after(path, "/" + config[project]["file_root"] + "/md/")
     return re.sub('.md', '', path)
 
 
-def path_hierarchy(path, language):
+def path_hierarchy(project, path, language):
     hierarchy = {'id': slugify_id(path, language), 'title': filter_title(os.path.basename(path)),
-                 'basename': re.sub('.md', '', os.path.basename(path)), 'path': slugify_path(path), 'fullpath': path,
-                 'route': slugify_route(split_after(path, "/topelius_required/md/")), 'type': 'folder',
-                 'children': [path_hierarchy(p, language) for p in glob.glob(os.path.join(path, '*'))]}
+                 'basename': re.sub('.md', '', os.path.basename(path)), 'path': slugify_path(project, path), 'fullpath': path,
+                 'route': slugify_route(split_after(path, "/" + config[project]["file_root"] + "/md/")), 'type': 'folder',
+                 'children': [path_hierarchy(project, p, language) for p in glob.glob(os.path.join(path, '*'))]}
 
     if not hierarchy['children']:
         del hierarchy['children']
