@@ -1,6 +1,6 @@
 import calendar
 from collections import OrderedDict
-from flask import abort, Blueprint, request, Response, safe_join
+from flask import abort, Blueprint, request, Response, safe_join, send_file
 from flask.json import jsonify
 import io
 import logging
@@ -757,8 +757,8 @@ def get_facsimile_file(project, collection_id, number, zoom_level):
     except Exception:
         return Response("File not found.", status=404, content_type="text/json")
 
-@digital_edition.route("/<project>/files/<collection_id>/<file_type>/")
-def get_pdf_file(project, collection_id, file_type):
+@digital_edition.route("/<project>/files/<collection_id>/<file_type>/<download_name>/")
+def get_pdf_file(project, collection_id, file_type, download_name):
     """
     Retrieve a single file from project root
     Currently only PDF or ePub
@@ -779,16 +779,8 @@ def get_pdf_file(project, collection_id, file_type):
         file_path = safe_join(config[project]["file_root"], "downloads", collection_id, "{}.epub".format(int(collection_id)))
     connection.close()
 
-    output = io.BytesIO()
     try:
-        with open(file_path, mode="rb") as img_file:
-            output.write(img_file.read())
-        content = output.getvalue()
-        output.close()
-        if file_type is 'pdf':
-            return Response(content, status=200, content_type="application/pdf")
-        else:
-            return Response(content, status=200, content_type="application/epub+zip")
+        send_file(file_path, as_attachment=True, mimetype='application/octet-stream', attachment_filename=download_name)
     except Exception:
         return Response("File not found.", status=404, content_type="text/json")
 
