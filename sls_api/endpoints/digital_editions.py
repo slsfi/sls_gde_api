@@ -766,16 +766,17 @@ def get_pdf_file(project, collection_id, file_type, download_name):
     # TODO published status for facsimile table to check against?
     # TODO S3 support
     connection = db_engine.connect()
-    ## Check that the collection exists
+    # Check that the collection exists
     statement = sqlalchemy.sql.text("SELECT * FROM publication_collection WHERE id=:coll_id").bindparams(coll_id=collection_id)
     row = connection.execute(statement).fetchone()
     if row is None:
         return jsonify({
             "msg": "Desired facsimile collection was not found in database!"
         }), 404
-    elif file_type is 'pdf':
+    file_path = ""
+    if 'pdf' in str(file_type):
         file_path = safe_join(config[project]["file_root"], "downloads", collection_id, "{}.pdf".format(int(collection_id)))
-    elif file_type is 'epub':
+    elif 'epub' in str(file_type):
         file_path = safe_join(config[project]["file_root"], "downloads", collection_id, "{}.epub".format(int(collection_id)))
     connection.close()
 
