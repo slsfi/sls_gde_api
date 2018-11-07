@@ -10,7 +10,7 @@ services:
             #- /var/files/topelius:/var/topelius-files/
             #- /var/files/parland:/var/parland-files/
             #- /var/files/xslt:/var/xslt-files/
-            - D:\Development\generic\topelius_files\required-files:/var/topelius
+            - D:\Development\generic\granqvist_files\required_files:/var/topelius
 
             # Config files need to be mounted aswell
             - ./sls_api/configs:/app/sls_api/configs

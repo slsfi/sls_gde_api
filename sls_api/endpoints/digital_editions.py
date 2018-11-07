@@ -781,7 +781,7 @@ def get_pdf_file(project, collection_id, file_type, download_name):
     connection.close()
 
     try:
-        send_file(file_path, as_attachment=True, mimetype='application/octet-stream', attachment_filename=download_name)
+        return send_file(file_path, as_attachment=True, mimetype='application/octet-stream', attachment_filename=download_name)
     except Exception:
         return Response("File not found.", status=404, content_type="text/json")
 
