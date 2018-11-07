@@ -65,8 +65,7 @@ def edit_project(project_id):
         values["published"] = published
 
     if len(values) > 0:
-        update = projects.update().where(projects.c.id == int(project_id))
-        update.values(**values)
+        update = projects.update().where(projects.c.id == int(project_id)).values(**values)
         connection.execute(update)
         connection.close()
         return jsonify({
@@ -114,8 +113,7 @@ def edit_publication_collection(project, collection_id):
         values["published"] = published
 
     if len(values) > 0:
-        update = collections.update().where(collections.c.id == int(collection_id))
-        update.values(**values)
+        update = collections.update().where(collections.c.id == int(collection_id)).values(**values)
         connection.execute(update)
         connection.close()
         return jsonify({
@@ -184,8 +182,7 @@ def edit_intro(project, collection_id):
 
     if len(values) > 0:
         intro_id = int(result[0])
-        update = introductions.update().where(introductions.c.id == intro_id)
-        update.values(**values)
+        update = introductions.update().where(introductions.c.id == intro_id).values(**values)
         connection.execute(update)
         connection.close()
         return jsonify({
@@ -254,8 +251,7 @@ def edit_title(project, collection_id):
 
     if len(values) > 0:
         title_id = int(result[0])
-        update = titles.update().where(titles.c.id == title_id)
-        update.values(**values)
+        update = titles.update().where(titles.c.id == title_id).values(**values)
         connection.execute(update)
         connection.close()
         return jsonify({
@@ -309,8 +305,7 @@ def edit_publication(project, publication_id):
         values["published"] = published
 
     if len(values) > 0:
-        update = publications.update().where(publications.c.id == int(publication_id))
-        update.values(**values)
+        update = publications.update().where(publications.c.id == int(publication_id)).values(**values)
         connection.execute(update)
         connection.close()
         return jsonify({
@@ -361,8 +356,7 @@ def edit_comment(project, publication_id):
         values["published"] = published
 
     if len(values) > 0:
-        update = comments.update().where(comments.c.id == int(comment_id))
-        update.values(**values)
+        update = comments.update().where(comments.c.id == int(comment_id)).values(**values)
         connection.execute(update)
         connection.close()
         return jsonify({
@@ -453,8 +447,7 @@ def edit_manuscript(project, manuscript_id):
         values["published"] = published
 
     if len(values) > 0:
-        update = manuscripts.update().where(manuscripts.c.id == int(manuscript_id))
-        update.values(**values)
+        update = manuscripts.update().where(manuscripts.c.id == int(manuscript_id)).values(**values)
         connection.execute(update)
         connection.close()
         return jsonify({
@@ -545,8 +538,7 @@ def edit_version(project, version_id):
         values["published"] = published
 
     if len(values) > 0:
-        update = versions.update().where(versions.c.id == int(version_id))
-        update.values(**values)
+        update = versions.update().where(versions.c.id == int(version_id)).values(**values)
         connection.execute(update)
         connection.close()
         return jsonify({
@@ -600,8 +592,7 @@ def edit_facsimile_collection(project, collection_id):
         values["description"] = description
 
     if len(values) > 0:
-        update = collections.update().where(collections.c.id == int(collection_id))
-        update.values(**values)
+        update = collections.update().where(collections.c.id == int(collection_id)).values(**values)
         connection.execute(update)
         connection.close()
         return jsonify({
