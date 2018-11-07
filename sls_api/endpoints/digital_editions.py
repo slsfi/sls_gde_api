@@ -756,7 +756,42 @@ def get_facsimile_file(project, collection_id, number, zoom_level):
         return Response(content, status=200, content_type="image/jpeg")
     except Exception:
         return Response("File not found.", status=404, content_type="text/json")
-    
+
+@digital_edition.route("/<project>/files/<collection_id>/<file_type>/")
+def get_pdf_file(project, collection_id, file_type):
+    """
+    Retrieve a single file from project root
+    Currently only PDF or ePub
+    """
+    # TODO published status for facsimile table to check against?
+    # TODO S3 support
+    connection = db_engine.connect()
+    ## Check that the collection exists
+    statement = sqlalchemy.sql.text("SELECT * FROM publication_collection WHERE id=:coll_id").bindparams(coll_id=collection_id)
+    row = connection.execute(statement).fetchone()
+    if row is None:
+        return jsonify({
+            "msg": "Desired facsimile collection was not found in database!"
+        }), 404
+    elif file_type is 'pdf':
+        file_path = safe_join(config[project]["file_root"], "downloads", collection_id, "{}.pdf".format(int(collection_id)))
+    elif file_type is 'epub':
+        file_path = safe_join(config[project]["file_root"], "downloads", collection_id, "{}.epub".format(int(collection_id)))
+    connection.close()
+
+    output = io.BytesIO()
+    try:
+        with open(file_path, mode="rb") as img_file:
+            output.write(img_file.read())
+        content = output.getvalue()
+        output.close()
+        if file_type is 'pdf':
+            return Response(content, status=200, content_type="application/pdf")
+        else:
+            return Response(content, status=200, content_type="application/epub+zip")
+    except Exception:
+        return Response("File not found.", status=404, content_type="text/json")
+
 def list_tooltips(table):
     """
     List available tooltips for subjects, tags, or locations
@@ -804,11 +839,11 @@ def get_tooltip(table, row_id):
     return dict(result)
 
 # Freetext seach through ElasticSearch API
-@digital_edition.route("/search/freetext/<search_text>/<fuzziness>")
-def get_freetext_search(search_text, fuzziness=1):
+@digital_edition.route("<project>/search/freetext/<search_text>/<fuzziness>")
+def get_freetext_search(project, search_text, fuzziness=1):
     logger.info("Getting results from elastic")
     if len(search_text) > 0:
-        res = es.search(index="topelius", body={
+        res = es.search(index=str(project), body={
             "query": 
             { 
                 "match": 
