@@ -868,9 +868,9 @@ def get_location_search(project, search_text):
             "query": {
                 "bool": {
                     "should": [
-                        { "match": { "name":{"query":str(search_text), "fuzziness": 1} }},
-                        { "match": { "city":{"query":str(search_text), "fuzziness": 1} }},
-                        { "match": { "country":{"query":str(search_text), "fuzziness": 1} }}
+                        { "match": { "name":{"query":str(search_text), "fuzziness": 2} }},
+                        { "match": { "city":{"query":str(search_text), "fuzziness": 2} }},
+                        { "match": { "country":{"query":str(search_text), "fuzziness": 2} }}
                     ],
                     "filter": {
                         "term": {
@@ -895,8 +895,8 @@ def get_subject_search(project, search_text):
             "query": {
                 "bool": {
                     "should": [
-                            { "match": { "first_name":{"query":str(search_text), "fuzziness": 1} }},
-                            { "match": { "last_name":{"query":str(search_text), "fuzziness": 1} }}
+                            { "match": { "first_name":{"query":str(search_text), "fuzziness": 2} }},
+                            { "match": { "last_name":{"query":str(search_text), "fuzziness": 2} }}
                     ],
                     "filter": {
                         "term": {
@@ -921,7 +921,7 @@ def get_tag_search(project, search_text):
             "query": {
                 "bool": {
                     "should": [
-                            { "match": { "name":{"query":str(search_text), "fuzziness": 1} }}
+                            { "match": { "name":{"query":str(search_text), "fuzziness": 2} }}
                     ],
                     "filter": {
                         "term": {
@@ -946,7 +946,7 @@ def get_user_defined_search(project, index, field, search_text):
             "query": {
                 "bool": {
                     "should": [
-                            { "match": { str(field):{"query":str(search_text), "fuzziness": 1} }}
+                            { "match": { str(field):{"query":str(search_text), "fuzziness": 2} }}
                     ],
                     "filter": {
                         "term": {
