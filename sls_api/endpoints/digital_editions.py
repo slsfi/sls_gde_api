@@ -934,12 +934,12 @@ def get_tag_search(project, search_text):
         return jsonify("")
 
 # Tag seach through ElasticSearch API
-@digital_edition.route("<project>/search/user_defined/<field>/<search_text>/")
-def get_user_defined_search(project, field, search_text):
+@digital_edition.route("<project>/search/user_defined/<index>/<field>/<search_text>/")
+def get_user_defined_search(project, index, field, search_text):
     logger.info("Getting results from elastic")
     project_id = get_project_id_from_name(project)
     if len(search_text) > 0:
-        res = es.search(index=str(project), body={
+        res = es.search(index=str(index), body={
             "query": {
                 "bool": {
                     "should": [
