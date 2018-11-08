@@ -858,6 +858,105 @@ def get_freetext_search(project, search_text, fuzziness=1):
     else:
         return jsonify("")
 
+# Location seach through ElasticSearch API
+@digital_edition.route("<project>/search/location/<search_text>/")
+def get_location_search(project, search_text):
+    logger.info("Getting results from elastic")
+    project_id = get_project_id_from_name(project)
+    if len(search_text) > 0:
+        res = es.search(index=str(project), body={
+            "query": {
+                "bool": {
+                    "should": [
+                            { "match": { "name": search_text }},
+                            { "match": { "city": search_text }},
+                            { "match": { "country": search_text }}
+                    ],
+                    "filter": {
+                        "term": {
+                        "project_id": project_id
+                        }
+                    }
+                }
+            }
+        })
+        return jsonify(res['hits']['hits'])
+    else:
+        return jsonify("")
+
+# Subject seach through ElasticSearch API
+@digital_edition.route("<project>/search/subject/<search_text>/")
+def get_subject_search(project, search_text):
+    logger.info("Getting results from elastic")
+    project_id = get_project_id_from_name(project)
+    if len(search_text) > 0:
+        res = es.search(index=str(project), body={
+            "query": {
+                "bool": {
+                    "should": [
+                            { "match": { "first_name": search_text }},
+                            { "match": { "last_name": search_text }}
+                    ],
+                    "filter": {
+                        "term": {
+                        "project_id": project_id
+                        }
+                    }
+                }
+            }
+        })
+        return jsonify(res['hits']['hits'])
+    else:
+        return jsonify("")
+
+# Tag seach through ElasticSearch API
+@digital_edition.route("<project>/search/tag/<search_text>/")
+def get_tag_search(project, search_text):
+    logger.info("Getting results from elastic")
+    project_id = get_project_id_from_name(project)
+    if len(search_text) > 0:
+        res = es.search(index=str(project), body={
+            "query": {
+                "bool": {
+                    "should": [
+                            { "match": { "name": search_text }}
+                    ],
+                    "filter": {
+                        "term": {
+                        "project_id": project_id
+                        }
+                    }
+                }
+            }
+        })
+        return jsonify(res['hits']['hits'])
+    else:
+        return jsonify("")
+
+# Tag seach through ElasticSearch API
+@digital_edition.route("<project>/search/user_defined/<field>/<search_text>/")
+def get_user_defined_search(project, field, search_text):
+    logger.info("Getting results from elastic")
+    project_id = get_project_id_from_name(project)
+    if len(search_text) > 0:
+        res = es.search(index=str(project), body={
+            "query": {
+                "bool": {
+                    "should": [
+                            { "match": { field: search_text }}
+                    ],
+                    "filter": {
+                        "term": {
+                        "project_id": project_id
+                        }
+                    }
+                }
+            }
+        })
+        return jsonify(res['hits']['hits'])
+    else:
+        return jsonify("")
+
 
 '''
     HELPER FUNCTIONS
