@@ -837,7 +837,6 @@ def get_freetext_search(project, search_text, fuzziness=1):
     logger.info("Getting results from elastic")
     if len(search_text) > 0:
         res = es.search(index=str(project), body={
-            "size":1000,
             "query": 
             { 
                 "match": 
