@@ -868,9 +868,9 @@ def get_location_search(project, search_text):
             "query": {
                 "bool": {
                     "should": [
-                            { "match": { "name": search_text }},
-                            { "match": { "city": search_text }},
-                            { "match": { "country": search_text }}
+                        { "match": { "name":{"query":search_text, "fuzziness": 1} }},
+                        { "match": { "city":{"query":search_text, "fuzziness": 1} }},
+                        { "match": { "country":{"query":search_text, "fuzziness": 1} }}
                     ],
                     "filter": {
                         "term": {
@@ -894,8 +894,8 @@ def get_subject_search(project, search_text):
             "query": {
                 "bool": {
                     "should": [
-                            { "match": { "first_name": search_text }},
-                            { "match": { "last_name": search_text }}
+                            { "match": { "first_name":{"query":search_text, "fuzziness": 1} }},
+                            { "match": { "last_name":{"query":search_text, "fuzziness": 1} }}
                     ],
                     "filter": {
                         "term": {
@@ -919,7 +919,7 @@ def get_tag_search(project, search_text):
             "query": {
                 "bool": {
                     "should": [
-                            { "match": { "name": search_text }}
+                            { "match": { "name":{"query":search_text, "fuzziness": 1} }}
                     ],
                     "filter": {
                         "term": {
@@ -943,7 +943,7 @@ def get_user_defined_search(project, index, field, search_text):
             "query": {
                 "bool": {
                     "should": [
-                            { "match": { field: search_text }}
+                            { "match": { field:{"query":search_text, "fuzziness": 1} }}
                     ],
                     "filter": {
                         "term": {
