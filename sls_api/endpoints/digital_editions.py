@@ -864,7 +864,7 @@ def get_location_search(project, search_text):
     logger.info("Getting results from elastic")
     project_id = get_project_id_from_name(project)
     if len(search_text) > 0:
-        res = es.search(index=str(project), body={
+        res = es.search(index='location', body={
             "query": {
                 "bool": {
                     "should": [
@@ -890,7 +890,7 @@ def get_subject_search(project, search_text):
     logger.info("Getting results from elastic")
     project_id = get_project_id_from_name(project)
     if len(search_text) > 0:
-        res = es.search(index=str(project), body={
+        res = es.search(index='subject', body={
             "query": {
                 "bool": {
                     "should": [
@@ -915,7 +915,7 @@ def get_tag_search(project, search_text):
     logger.info("Getting results from elastic")
     project_id = get_project_id_from_name(project)
     if len(search_text) > 0:
-        res = es.search(index=str(project), body={
+        res = es.search(index='tag', body={
             "query": {
                 "bool": {
                     "should": [
