@@ -880,6 +880,13 @@ def get_location_search(project, search_text):
                     },
                     "minimum_should_match": 1
                 }
+            },
+            "highlight" : {
+                "fields" : {
+                    "name" : {},
+                    "city": {},
+                    "country": {}
+                }
             }
         })
         return jsonify(res['hits']['hits'])
@@ -907,6 +914,12 @@ def get_subject_search(project, search_text):
                     },
                     "minimum_should_match": 1
                 }
+            },
+            "highlight" : {
+                "fields" : {
+                    "first_name" : {},
+                    "last_name": {}
+                }
             }
         })
         return jsonify(res['hits']['hits'])
@@ -933,6 +946,11 @@ def get_tag_search(project, search_text):
                     },
                     "minimum_should_match": 1
                 }
+            },
+            "highlight" : {
+                "fields" : {
+                    "name" : {}
+                }
             }
         })
         return jsonify(res['hits']['hits'])
@@ -958,6 +976,11 @@ def get_user_defined_search(project, index, field, search_text):
                         }
                     },
                     "minimum_should_match": 1
+                }
+            },
+            "highlight" : {
+                "fields" : {
+                    str(field) : {}
                 }
             }
         })
