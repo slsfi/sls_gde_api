@@ -631,12 +631,37 @@ def get_all_occurrences_by_type(object_type, project=None):
             for row in connection.execute(events_stmnt).fetchall():
                 row = dict(row)
                 if object_type == "subject":
-                    type_stmnt = sqlalchemy.sql.text("SELECT type, subject.date_born::text, subject.date_deceased::text FROM subject WHERE id=:ty_id").bindparams(ty_id=object_id)
+                    type_stmnt = sqlalchemy.sql.text("SELECT type, subject.source::text, subject.description::text, subject.occupation::text, subject.place_of_birth::text, subject.date_born::text, subject.date_deceased::text FROM subject WHERE id=:ty_id").bindparams(ty_id=object_id)
                     type_object = connection.execute(type_stmnt).fetchone()
                     type_object = dict(type_object)
                     row["object_type"] = type_object["type"]
                     row["date_born"] = type_object["date_born"]
                     row["date_deceased"] = type_object["date_deceased"]
+                    row["source"] = type_object["source"]
+                    row["description"] = type_object["description"]
+                    row["occupation"] = type_object["occupation"]
+                    row["place_of_birth"] = type_object["place_of_birth"]
+                if object_type == "tag":
+                    type_stmnt = sqlalchemy.sql.text("SELECT tag.type::text, tag.description::text, tag.source::text, tag.name::text FROM tag WHERE id=:ty_id").bindparams(ty_id=object_id)
+                    type_object = connection.execute(type_stmnt).fetchone()
+                    type_object = dict(type_object)
+                    row["description"] = type_object["description"]
+                    row["source"] = type_object["source"]
+                    row["name"] = type_object["name"]
+                    row["type"] = type_object["type"]
+                if object_type == "location":
+                    type_stmnt = sqlalchemy.sql.text("SELECT location.description::text, location.source::text, location.name::text, location.country::text, location.city::text, \
+                                                        location.latitude::text, location.longitude::text, location.region::text FROM location WHERE id=:ty_id").bindparams(ty_id=object_id)
+                    type_object = connection.execute(type_stmnt).fetchone()
+                    type_object = dict(type_object)
+                    row["description"] = type_object["description"]
+                    row["source"] = type_object["source"]
+                    row["name"] = type_object["name"]
+                    row["country"] = type_object["country"]
+                    row["city"] = type_object["city"]
+                    row["latitude"] = type_object["latitude"]
+                    row["longitude"] = type_object["longitude"]
+                    row["region"] = type_object["region"]
                 results.append(row)
 
             # set occurrences for each object
