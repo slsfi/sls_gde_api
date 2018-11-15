@@ -212,7 +212,7 @@ def new_publication_collection(project):
 
     collections = Table("publication_collection", metadata, autoload=True, autoload_with=db_engine)
     introductions = Table("publication_collection_introduction", metadata, autoload=True, autoload_with=db_engine)
-    titles = Table("publication_collection_introduction", metadata, autoload=True, autoload_with=db_engine)
+    titles = Table("publication_collection_title", metadata, autoload=True, autoload_with=db_engine)
 
     connection = db_engine.connect()
     transaction = connection.begin()
