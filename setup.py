@@ -19,6 +19,7 @@ setup(
         'raven[flask]',
         'ruamel.yaml',
         'requests',
+        'simplejson',
         'sqlalchemy',
         'Pillow',
         'werkzeug',
