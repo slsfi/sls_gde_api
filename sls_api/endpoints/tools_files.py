@@ -119,7 +119,9 @@ def is_a_test(project):
     """
     Returns true if running in debug mode and project git_repository not configured, indicating that this is a test
     """
-    if config[project]["git_repository"] is None and int(os.environ.get("FLASK_DEBUG", 0)) == 1:
+    if project not in config and int(os.environ.get("FLASK_DEBUG", 0)) == 1:
+        return True
+    elif project in config and config[project]["git_repository"] is None and int(os.environ.get("FLASK_DEBUG", 0)) == 1:
         return True
 
 
