@@ -1,7 +1,7 @@
 from flask import Blueprint, jsonify, request
 from flask_jwt_extended import jwt_required
 from sqlalchemy import Table
-from sqlalchemy.sql import select
+from sqlalchemy.sql import select, text
 
 from sls_api.endpoints.generics import db_engine, get_project_id_from_name, metadata, \
     project_permission_required, select_all_from_table
@@ -188,7 +188,17 @@ def get_subjects():
     """
     Get all subjects from the database
     """
-    return select_all_from_table("subject")
+    # TODO better workaround because subject.date_born and subject.date_death may contain BC dates
+    connection = db_engine.connect()
+    stmt = text("SELECT id, date_created::text, date_modified::text, deleted, type, first_name, last_name, "
+                "place_of_birth, occupation, preposition, full_name, description, legacy_id, "
+                "date_born::text, date_deceased::text, project_id, source FROM subject")
+    rows = connection.execute(stmt).fetchall()
+    result = []
+    for row in rows:
+        result.append(dict(row))
+    connection.close()
+    return jsonify(result)
 
 
 @event_tools.route("/tags/")
