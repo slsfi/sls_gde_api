@@ -67,7 +67,7 @@ def list_facsimile_collections(project):
     """
     List all available publication_facsimile_collections
     """
-    return select_all_from_table("publication_facsimile_collections")
+    return select_all_from_table("publication_facsimile_collection")
 
 
 @collection_tools.route("/<project>/facsimile_collection/<collection_id>/link/", methods=["POST"])
