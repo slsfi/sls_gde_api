@@ -364,7 +364,8 @@ def new_publication(project, collection_id):
         "original_filename": request_data.get("originalFileName", None),
         "genre": request_data.get("genre", None),
         "publication_group_id": request_data.get("publicationGroup_id", None),
-        "original_publication_date": request_data.get("originalPublicationDate", None)
+        "original_publication_date": request_data.get("originalPublicationDate", None),
+        "publication_collection_id": int(collection_id)
     }
     try:
         result = connection.execute(insert, **publication)
