@@ -1,7 +1,7 @@
 from flask import Blueprint, jsonify, request
 from flask_jwt_extended import jwt_required
 from sqlalchemy import Table
-from sqlalchemy.sql import select
+from sqlalchemy.sql import join, select
 
 from sls_api.endpoints.generics import db_engine, get_project_id_from_name, metadata, project_permission_required
 
@@ -88,7 +88,15 @@ def get_publication_facsimiles(project, publication_id):
     """
     connection = db_engine.connect()
     publication_facsimiles = Table("publication_facsimile", metadata, autoload=True, autoload_with=db_engine)
-    statement = select([publication_facsimiles]).where(publication_facsimiles.c.publication_id == int(publication_id))
+    facsimile_collections = Table("publication_facsimile_collection", metadata, autoload=True, autoload_with=db_engine)
+
+    # join in facsimile_collections to we can get the collection title as well
+    tables = join(publication_facsimiles, facsimile_collections, publication_facsimiles.c.publication_facsimile_collection_id == facsimile_collections.c.id)
+
+    statement = select([publication_facsimiles, facsimile_collections.c.title])\
+        .where(publication_facsimiles.c.publication_id == int(publication_id))\
+        .select_from(tables)
+
     rows = connection.execute(statement).fetchall()
     result = []
     for row in rows:
