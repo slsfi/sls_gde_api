@@ -235,7 +235,7 @@ def edit_title(project, collection_id):
     published = request_data.get("published", None)
 
     collections = Table("publication_collection", metadata, autoload=True, autoload_with=db_engine)
-    titles = Table("publication_collection_introduction", metadata, autoload=True, autoload_with=db_engine)
+    titles = Table("publication_collection_title", metadata, autoload=True, autoload_with=db_engine)
     query = select([collections.c.publication_collection_title_id]).where(collections.c.id == int(collection_id))
     connection = db_engine.connect()
     result = connection.execute(query)
@@ -296,7 +296,7 @@ def edit_publication(project, publication_id):
 
     values = {}
     if title is not None:
-        values["title"] = title
+        values["name"] = title
     if genre is not None:
         values["genre"] = genre
     if filename is not None:
@@ -583,7 +583,7 @@ def edit_facsimile_collection(project, collection_id):
 
     values = {}
     if title is not None:
-        values["name"] = title
+        values["title"] = title
     if page_count is not None:
         values["number_of_pages"] = page_count
     if start_page is not None:
