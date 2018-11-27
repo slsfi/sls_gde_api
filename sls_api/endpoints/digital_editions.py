@@ -820,14 +820,15 @@ def get_pdf_file(project, collection_id, file_type, download_name):
 @digital_edition.route("/<project>/urn/<url>/")
 @digital_edition.route("/<project>/urn/<url>/<legacy_id>/")
 def get_urn(project, url, legacy_id=None):
-    url = urllib.parse.unquote(urllib.parse.unquote(url));
+    url = urllib.parse.unquote(urllib.parse.unquote(url))
     logger.info("Getting urn /{}/urn/{}/{}/".format(project, url, legacy_id))
     project_id = get_project_id_from_name(project)
     connection = db_engine.connect()
     if legacy_id is not None:
-        sql = sqlalchemy.sql.text("SELECT * FROM urn_lookup where legacy_id = '{}' AND project_id={}".format(str(legacy_id), project_id))
+        sql = sqlalchemy.sql.text("SELECT * FROM urn_lookup where legacy_id=:l_id  AND project_id=:p_id").bindparams(l_id=str(legacy_id), p_id=project_id)
     else:
-        sql = sqlalchemy.sql.text("SELECT * FROM urn_lookup where url LIKE '%#{}' AND project_id={}".format(url, project_id))
+        url_like_str = "%#{}".format(url)
+        sql = sqlalchemy.sql.text("SELECT * FROM urn_lookup where url LIKE :url AND project_id=:p_id").bindparams(url=url_like_str, p_id=project_id)
     return_data = []
     for row in connection.execute(sql).fetchall():
         return_data.append(dict(row))
