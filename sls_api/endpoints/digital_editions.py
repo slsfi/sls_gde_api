@@ -793,6 +793,10 @@ def get_pdf_file(project, collection_id, file_type, download_name):
     """
     # TODO published status for facsimile table to check against?
     # TODO S3 support
+    if project not in config:
+        return jsonify({
+            "msg": "Project {} not found.".format(project)
+        }), 404
     connection = db_engine.connect()
     # Check that the collection exists
     statement = sqlalchemy.sql.text("SELECT * FROM publication_collection WHERE id=:coll_id").bindparams(coll_id=collection_id)
