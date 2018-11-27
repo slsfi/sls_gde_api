@@ -695,7 +695,7 @@ def get_all_occurrences_by_type(object_type, project=None):
                         facs = connection.execute(type_sql).fetchone()
                         row["publication_facsimile"] = dict(facs)
                     if row["publication_id"] is not None and row["publication_facsimile_id"] is None and row["publication_facsimile_id"] is None and row["publication_comment_id"] is None and row["publication_version_id"] is None and row["publication_manuscript_id"] is None:
-                        type_sql = sqlalchemy.sql.text("SELECT publication.id AS publication_id, publication.original_filename, publication.name FROM publication WHERE id={}".format(row["publication_id"]))
+                        type_sql = sqlalchemy.sql.text("SELECT publication.id AS publication_id, publication.original_filename, publication.name FROM publication WHERE id=:pub_id").bindparams(pub_id=row["publication_id"])
                         publication = connection.execute(type_sql).fetchone()
                         row["publication"] = dict(publication)
 
