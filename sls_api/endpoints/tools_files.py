@@ -298,6 +298,10 @@ def get_file_tree(project, file_path=None):
     """
     Get a file listing from the git remote
     """
+    if project not in config:
+        return jsonify({
+            "msg": "Project {} not found in configuration files.".format(project)
+        }), 404
     # Fetch changes (to update index) but don't merge, and then run ls-files to get file listing.
     try:
         if not is_a_test(project):
