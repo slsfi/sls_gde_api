@@ -169,8 +169,8 @@ def edit_intro(project, collection_id):
     introductions = Table("publication_collection_introduction", metadata, autoload=True, autoload_with=db_engine)
     query = select([collections.c.publication_collection_introduction_id]).where(collections.c.id == int(collection_id))
     connection = db_engine.connect()
-    result = connection.execute(query)
-    if result.fetchone() is None:
+    result = connection.execute(query).fetchone()
+    if result is None:
         result.close()
         return jsonify("No such publication collection exists."), 404
 
@@ -208,13 +208,12 @@ def get_title(project, collection_id):
     titles = Table("publication_collection_title", metadata, autoload=True, autoload_with=db_engine)
     query = select([collections.c.publication_collection_title_id]).where(collections.c.id == int(collection_id))
     connection = db_engine.connect()
-    result = connection.execute(query)
-    if result.fetchone() is None:
+    result = connection.execute(query).fetchone()
+    if result is None:
         result.close()
         return jsonify("No such publication collection exists."), 404
 
-    query = select([titles])\
-        .where(titles.c.id == int(result[collections.c.publication_collection_title_id]))
+    query = select([titles]).where(titles.c.id == int(result[collections.c.publication_collection_title_id]))
 
     row = dict(connection.execute(query).fetchone())
     connection.close()
@@ -238,8 +237,8 @@ def edit_title(project, collection_id):
     titles = Table("publication_collection_title", metadata, autoload=True, autoload_with=db_engine)
     query = select([collections.c.publication_collection_title_id]).where(collections.c.id == int(collection_id))
     connection = db_engine.connect()
-    result = connection.execute(query)
-    if result.fetchone() is None:
+    result = connection.execute(query).fetchone()
+    if result is None:
         result.close()
         return jsonify("No such publication collection exists."), 404
 
