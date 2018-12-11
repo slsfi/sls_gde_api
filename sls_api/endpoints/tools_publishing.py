@@ -398,7 +398,7 @@ def add_manuscript(project, publication_id):
         connection.close()
         return jsonify("No such publication exists."), 404
 
-    values = {}
+    values = {"publication_id": int(publication_id)}
     if title is not None:
         values["name"] = title
     if filename is not None:
@@ -489,7 +489,7 @@ def add_version(project, publication_id):
         connection.close()
         return jsonify("No such publication exists."), 404
 
-    values = {}
+    values = {"publication_id": int(publication_id)}
     if title is not None:
         values["name"] = title
     if filename is not None:
