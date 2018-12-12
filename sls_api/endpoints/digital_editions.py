@@ -741,7 +741,7 @@ def get_facsimile_collections(project, facsimile_collection_ids):
     logger.info("Getting facsimiles /{}/facsimiles/collections/{}".format(project, facsimile_collection_ids))
     connection = db_engine.connect()
     sql = """SELECT * FROM publication_facsimile_collection where id in :ids"""
-    statement = sqlalchemy.sql.text(sql).bindparams(ids=facsimile_collection_ids.split(','))
+    statement = sqlalchemy.sql.text(sql).bindparams(ids=tuple(facsimile_collection_ids.split(',')))
     return_data = []
     for row in connection.execute(statement).fetchall():
         return_data.append(dict(row))
