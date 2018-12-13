@@ -39,7 +39,7 @@ def add_new_location(project):
 
     new_location = {
         "name": request_data["name"],
-        "description": request_data.get("desription", None),
+        "description": request_data.get("description", None),
         "project_id": get_project_id_from_name(project),
         "legacy_id": request_data.get("legacyId", None),
         "latitude": request_data.get("latitude", None),
@@ -75,7 +75,7 @@ def add_new_subject(project):
 
     POST data SHOULD contain:
     type: subject type
-    description: subject descrtiption
+    description: subject description
 
     POST data CAN also contain:
     firstName: Subject first or given name

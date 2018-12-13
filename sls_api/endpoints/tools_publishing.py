@@ -608,3 +608,175 @@ def edit_facsimile_collection(project, collection_id):
 def delete_facsimile_collection(project, collection_id):
     # TODO facsimile collection delete (logical?)
     pass
+
+
+@publishing_tools.route("/<project>/publication_collection/<collection_id>/info")
+@project_permission_required
+def get_publication_collection_info(project, collection_id):
+    """
+    Returns published status for publication_collection and associated introduction and title objects
+    Also returns the original_filename for the introduction and title objects
+    """
+    collections = Table("publication_collection", metadata, autoload=True, autoload_with=db_engine)
+    intros = Table("publication_collection_introduction", metadata, autoload=True, autoload_with=db_engine)
+    titles = Table("publication_collection_title", metadata, autoload=True, autoload_with=db_engine)
+
+    query = select([collections]).where(collections.c.id == int(collection_id))
+    connection = db_engine.connect()
+    collection_result = connection.execute(query).fetchone()
+    if collection_result is None:
+        connection.close()
+        return jsonify("No such publication collection exists"), 404
+
+    intro_id = int(collection_result["publication_collection_introduction_id"])
+    title_id = int(collection_result["publication_collection_title_id"])
+    intro_query = select([intros.c.published, intros.c.original_filename]).where(intros.c.id == intro_id)
+    title_query = select([titles.c.published, titles.c.original_filename]).where(titles.c.id == title_id)
+
+    intro_result = connection.execute(intro_query).fetchone()
+    title_result = connection.execute(title_query).fetchone()
+
+    connection.close()
+    result = {
+        "collection_id": int(collection_id),
+        "collection_published": collection_result["published"],
+        "intro_id": intro_id,
+        "intro_published": None if intro_result is None else intro_result["published"],
+        "intro_original_filename": None if intro_result is None else intro_result["original_filename"],
+        "title_id": title_id,
+        "title_published": None if title_result is None else title_result["published"],
+        "title_original_filename": None if title_result is None else title_result["original_filename"]
+    }
+    return jsonify(result)
+
+
+@publishing_tools.route("/<project>/locations/<location_id>/edit", methods=["POST"])
+@project_permission_required
+def edit_location(project, location_id):
+    """
+    Edit a location object in the database
+
+    POST data MUST be in JSON format.
+
+    POST data CAN contain:
+    name: location name
+    description: location description
+    legacyId: legacy id for location
+    latitude: latitude coordinate for location
+    longitude: longitude coordinate for location
+    """
+    request_data = request.get_json()
+    if not request_data:
+        return jsonify({"msg": "No data provided."}), 400
+
+    locations = Table("location", metadata, autoload=True, autoload_with=db_engine)
+
+    connection = db_engine.connect()
+    location_query = select([locations.c.id]).where(locations.c.id == int(location_id))
+    location_row = connection.execute(location_query).fetchone()
+    if location_row is None:
+        return jsonify({"msg": "No location with an ID of {} exists.".format(location_id)}), 404
+
+    name = request_data.get("name", None)
+    description = request_data.get("description", None)
+    legacy_id = request_data.get("legacyId", None)
+    latitude = request_data.get("latitude", None)
+    longitude = request_data.get("longitude", None)
+
+    values = {}
+    if name is not None:
+        values["name"] = name
+    if description is not None:
+        values["description"] = description
+    if legacy_id is not None:
+        values["legacy_id"] = legacy_id
+    if latitude is not None:
+        values["latitude"] = latitude
+    if longitude is not None:
+        values["longitude"] = longitude
+
+    if len(values) > 0:
+        update = locations.update().where(locations.c.id == int(location_id)).values(**values)
+        connection.execute(update)
+        connection.close()
+        return jsonify({
+            "msg": "Updated location {} with values {}".format(int(location_id), str(values)),
+            "location_id": int(location_id)
+        })
+    else:
+        connection.close()
+        return jsonify("No valid update values given."), 400
+
+
+@publishing_tools.route("/<project>/subjects/<subject_id>/edit", methods=["POST"])
+@project_permission_required
+def edit_subject(project, subject_id):
+    """
+    Edit a subject object in the database
+
+    POST data MUST be in JSON format
+
+    POST data CAN contain:
+    type: subject type
+    description: subject description
+    firstName: Subject first or given name
+    lastName Subject surname
+    preposition: preposition for subject
+    fullName: Subject full name
+    legacyId: Legacy id for subject
+    dateBorn: Subject date of birth
+    dateDeceased: Subject date of death
+    """
+    request_data = request.get_json()
+    if not request_data:
+        return jsonify({"msg": "No data provided."}), 400
+
+    subjects = Table("subject", metadata, autoload=True, autoload_with=db_engine)
+
+    connection = db_engine.connect()
+    subject_query = select([subjects.c.id]).where(subjects.c.id == int(subject_id))
+    subject_row = connection.execute(subject_query).fetchone()
+    if subject_row is None:
+        return jsonify({"msg": "No subject with an ID of {} exists.".format(subject_id)}), 404
+
+    subject_type = request_data.get("type", None)
+    description = request_data.get("description", None)
+    first_name = request_data.get("firstName", None)
+    last_name = request_data.get("lastName", None)
+    preposition = request_data.get("preposition", None)
+    full_name = request_data.get("fullName", None)
+    legacy_id = request_data.get("legacyId", None)
+    date_born = request_data.get("dateBorn", None)
+    date_deceased = request_data.get("dateDeceased", None)
+
+    values = {}
+    if subject_type is not None:
+        values["type"] = subject_type
+    if description is not None:
+        values["description"] = description
+    if first_name is not None:
+        values["first_name"] = first_name
+    if last_name is not None:
+        values["last_name"] = last_name
+    if preposition is not None:
+        values["preposition"] = preposition
+    if full_name is not None:
+        values["full_name"] = full_name
+    if legacy_id is not None:
+        values["legacy_id"] = legacy_id
+    if date_born is not None:
+        values["date_born"] = date_born
+    if date_deceased is not None:
+        values["date_deceased"] = date_deceased
+
+    if len(values) > 0:
+        update = subjects.update().where(subjects.c.id == int(subject_id)).values(**values)
+        connection.execute(update)
+        connection.close()
+        return jsonify({
+            "msg": "Updated subject {} with values {}".format(int(subject_id), str(values)),
+            "subject_id": int(subject_id)
+        })
+    else:
+        connection.close()
+        return jsonify("No valid update values given."), 400
