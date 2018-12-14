@@ -336,7 +336,7 @@ def edit_comment(project, publication_id):
 @project_permission_required
 def add_manuscript(project, publication_id):
     """
-    Takes "title", "filename", "published" as JSON data
+    Takes "title", "filename", "published", "sort_order" as JSON data
     Returns "msg" and "manuscript_id" on success, otherwise 40x
     """
     request_data = request.get_json()
@@ -345,6 +345,7 @@ def add_manuscript(project, publication_id):
     title = request_data.get("title", None)
     filename = request_data.get("filename", None)
     published = request_data.get("published", None)
+    sort_order = request_data.get("sort_order", None)
 
     publications = Table("publication", metadata, autoload=True, autoload_with=db_engine)
     manuscripts = Table("publication_manuscript", metadata, autoload=True, autoload_with=db_engine)
@@ -363,6 +364,8 @@ def add_manuscript(project, publication_id):
         values["original_filename"] = filename
     if published is not None:
         values["published"] = published
+    if sort_order is not None:
+        values["sort_order"] = sort_order
 
     insert = manuscripts.insert().values(**values)
     result = connection.execute(insert)
@@ -376,7 +379,7 @@ def add_manuscript(project, publication_id):
 @project_permission_required
 def edit_manuscript(project, manuscript_id):
     """
-    Takes "title", "filename", "published" as JSON data
+    Takes "title", "filename", "published", "sort_order" as JSON data
     Returns "msg" and "manuscript_id" on success, otherwise 40x
     """
     request_data = request.get_json()
@@ -385,6 +388,7 @@ def edit_manuscript(project, manuscript_id):
     title = request_data.get("title", None)
     filename = request_data.get("filename", None)
     published = request_data.get("published", None)
+    sort_order = request_data.get("sort_order", None)
 
     manuscripts = Table("publication_manuscript", metadata, autoload=True, autoload_with=db_engine)
     query = select([manuscripts]).where(manuscripts.c.id == int(manuscript_id))
@@ -402,6 +406,8 @@ def edit_manuscript(project, manuscript_id):
         values["original_filename"] = filename
     if published is not None:
         values["published"] = published
+    if sort_order is not None:
+        values["sort_order"] = sort_order
 
     if len(values) > 0:
         update = manuscripts.update().where(manuscripts.c.id == int(manuscript_id)).values(**values)
@@ -420,7 +426,7 @@ def edit_manuscript(project, manuscript_id):
 @project_permission_required
 def add_version(project, publication_id):
     """
-    Takes "title", "filename", "published" as JSON data
+    Takes "title", "filename", "published", "sort_order" as JSON data
     Returns "msg" and "version_id" on success, otherwise 40x
     """
     request_data = request.get_json()
@@ -429,6 +435,7 @@ def add_version(project, publication_id):
     title = request_data.get("title", None)
     filename = request_data.get("filename", None)
     published = request_data.get("published", None)
+    sort_order = request_data.get("sort_order", None)
 
     publications = Table("publication", metadata, autoload=True, autoload_with=db_engine)
     versions = Table("publication_version", metadata, autoload=True, autoload_with=db_engine)
@@ -447,6 +454,8 @@ def add_version(project, publication_id):
         values["original_filename"] = filename
     if published is not None:
         values["published"] = published
+    if sort_order is not None:
+        values["sort_order"] = sort_order
 
     insert = versions.insert().values(**values)
     result = connection.execute(insert)
@@ -460,7 +469,7 @@ def add_version(project, publication_id):
 @project_permission_required
 def edit_version(project, version_id):
     """
-    Takes "title", "filename", "published" as JSON data
+    Takes "title", "filename", "published", "sort_order" as JSON data
     Returns "msg" and "manuscript_id" on success, otherwise 40x
     """
     request_data = request.get_json()
@@ -469,6 +478,7 @@ def edit_version(project, version_id):
     title = request_data.get("title", None)
     filename = request_data.get("filename", None)
     published = request_data.get("published", None)
+    sort_order = request_data.get("sort_order", None)
 
     versions = Table("publication_version", metadata, autoload=True, autoload_with=db_engine)
     query = select([versions]).where(versions.c.id == int(version_id))
@@ -486,6 +496,8 @@ def edit_version(project, version_id):
         values["original_filename"] = filename
     if published is not None:
         values["published"] = published
+    if sort_order is not None:
+        values["sort_order"] = sort_order
 
     if len(values) > 0:
         update = versions.update().where(versions.c.id == int(version_id)).values(**values)

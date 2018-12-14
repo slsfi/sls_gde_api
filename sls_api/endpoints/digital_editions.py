@@ -2,6 +2,7 @@ import calendar
 from collections import OrderedDict
 from flask import abort, Blueprint, request, Response, safe_join, send_file
 from flask.json import jsonify
+from flask_jwt_extended import jwt_optional, get_jwt_identity
 import io
 import logging
 from logging.handlers import TimedRotatingFileHandler
@@ -43,11 +44,16 @@ def set_access_control_headers(response):
 
 
 @digital_edition.route("/projects/")
+@jwt_optional
 def get_projects():
     """
     List all GDE projects
     """
-    return select_all_from_table("project")
+    jwt = get_jwt_identity()
+    if jwt is None:
+        return select_all_from_table("project")
+    else:
+        return jwt["projects"]
 
 
 @digital_edition.route("/<project>/html/<filename>")
@@ -357,17 +363,15 @@ def get_reading_text(project, collection_id, publication_id, section_id=None):
     if can_show:
         logger.info("Getting XML for {} and transforming...".format(request.full_path))
         connection = db_engine.connect()
-        select = "SELECT original_filename FROM publication WHERE id = :p_id"
+        select = "SELECT legacy_id FROM publication WHERE id = :p_id"
         statement = sqlalchemy.sql.text(select).bindparams(p_id=publication_id)
         result = connection.execute(statement).fetchone()
         if result is None:
+            filename = "{}_{}_est.xml".format(collection_id, publication_id)
             connection.close()
-            return jsonify({
-                "id": "{}_{}".format(collection_id, publication_id),
-                "error": "No filename found in database"
-            }), 404
-        filename = result["original_filename"]
-        connection.close()
+        else:
+            filename = "{}_est.xml".format(result["legacy_id"])
+            connection.close()
 
         xsl_file = "est.xsl"
         if section_id is not None:
@@ -397,16 +401,15 @@ def get_comments(project, collection_id, publication_id, note_id=None):
     if can_show:
         logger.info("Getting XML for {} and transforming...".format(request.full_path))
         connection = db_engine.connect()
-        select = "SELECT original_filename FROM publication_comment WHERE id IN (SELECT publication_comment_id FROM publication WHERE id = :p_id)"
+        select = "SELECT legacy_id FROM publication_comment WHERE id IN (SELECT publication_comment_id FROM publication WHERE id = :p_id)"
         statement = sqlalchemy.sql.text(select).bindparams(p_id=publication_id)
         result = connection.execute(statement).fetchone()
         if result is None:
+            filename = "{}_{}_com.xml".format(collection_id, publication_id)
             connection.close()
-            return jsonify({
-                "id": "{}_{}_com".format(collection_id, publication_id),
-                "error": "No filename found in database"
-            }), 404
-        filename = result["original_filename"]
+        else:
+            filename = "{}_com.xml".format(result["legacy_id"])
+            connection.close()
         params = {
             "estDocument": '"file://{}"'.format(safe_join(config[project]["file_root"], "xml", "est", filename.replace("com", "est"))),
             "bookId": collection_id
@@ -442,14 +445,14 @@ def get_manuscript(project, collection_id, publication_id, manuscript_id=None):
         logger.info("Getting XML for {} and transforming...".format(request.full_path))
         connection = db_engine.connect()
         if manuscript_id is None:
-            select = "SELECT name, original_filename, id FROM publication_manuscript WHERE publication_id = :p_id"
+            select = "SELECT sort_order, name, legacy_id, id FROM publication_manuscript WHERE publication_id = :p_id ORDER BY sort_order ASC"
             statement = sqlalchemy.sql.text(select).bindparams(p_id=publication_id)
             manuscript_info = []
             for row in connection.execute(statement).fetchall():
                 manuscript_info.append(dict(row))
             connection.close()
         else:
-            select = "SELECT name, original_filename, id FROM publication_manuscript WHERE id = :m_id"
+            select = "SELECT sort_order, name, legacy_id, id FROM publication_manuscript WHERE id = :m_id ORDER BY sort_order ASC"
             statement = sqlalchemy.sql.text(select).bindparams(m_id=manuscript_id)
             manuscript_info = []
             for row in connection.execute(statement).fetchall():
@@ -461,8 +464,12 @@ def get_manuscript(project, collection_id, publication_id, manuscript_id=None):
             params = {
                 "bookId": collection_id
             }
-            manuscript_info[index]["manuscript_changes"] = get_content(project, "ms", manuscript["original_filename"], "ms_changes.xsl", params)
-            manuscript_info[index]["manuscript_normalized"] = get_content(project, "ms", manuscript["original_filename"], "ms_normalized.xsl", params)
+            if manuscript["legacy_id"] is not None:
+                filename = "{}.xml".format(manuscript["legacy_id"])
+            else:
+                filename = "{}_{}_ms_{}.xml".format(collection_id, publication_id, manuscript["sort_order"])
+            manuscript_info[index]["manuscript_changes"] = get_content(project, "ms", filename, "ms_changes.xsl", params)
+            manuscript_info[index]["manuscript_normalized"] = get_content(project, "ms", filename, "ms_normalized.xsl", params)
 
         data = {
             "id": "{}_{}".format(collection_id, publication_id),
@@ -487,10 +494,10 @@ def get_variant(project, collection_id, publication_id, section_id=None):
         logger.info("Getting XML for {} and transforming...".format(request.full_path))
         connection = db_engine.connect()
         if section_id is not None:
-            select = "SELECT name, type, original_filename, id FROM publication_version WHERE publication_id = :p_id AND section_id = :s_id"
+            select = "SELECT sort_order, name, type, legacy_id, id FROM publication_version WHERE publication_id = :p_id AND section_id = :s_id ORDER BY sort_order ASC"
             statement = sqlalchemy.sql.text(select).bindparams(p_id=publication_id, s_id=section_id)
         else:
-            select = "SELECT name, type, original_filename, id FROM publication_version WHERE publication_id = :p_id"
+            select = "SELECT sort_order, name, type, legacy_id, id FROM publication_version WHERE publication_id = :p_id ORDER BY sort_order ASC"
             statement = sqlalchemy.sql.text(select).bindparams(p_id=publication_id)
         variation_info = []
         for row in connection.execute(statement).fetchall():
@@ -511,7 +518,12 @@ def get_variant(project, collection_id, publication_id, section_id=None):
             if section_id is not None:
                 params["section_id"] = section_id
 
-            variation_info[index]["content"] = get_content(project, "var", variation["original_filename"], xsl_file, params)
+            if variation["legacy_id"] is not None:
+                filename = "{}.xml".format(variation["legacy_id"])
+            else:
+                filename = "{}_{}_var_{}.xml".format(collection_id, publication_id, variation["sort_order"])
+
+            variation_info[index]["content"] = get_content(project, "var", filename, xsl_file, params)
 
         data = {
             "id": "{}_{}_var".format(collection_id, publication_id),
