@@ -467,7 +467,7 @@ def get_manuscript(project, collection_id, publication_id, manuscript_id=None):
             if manuscript["legacy_id"] is not None:
                 filename = "{}.xml".format(manuscript["legacy_id"])
             else:
-                filename = "{}_{}_ms_{}.xml".format(collection_id, publication_id, manuscript["sort_order"])
+                filename = "{}_{}_ms_{}.xml".format(collection_id, publication_id, manuscript["id"])
             manuscript_info[index]["manuscript_changes"] = get_content(project, "ms", filename, "ms_changes.xsl", params)
             manuscript_info[index]["manuscript_normalized"] = get_content(project, "ms", filename, "ms_normalized.xsl", params)
 
@@ -521,7 +521,7 @@ def get_variant(project, collection_id, publication_id, section_id=None):
             if variation["legacy_id"] is not None:
                 filename = "{}.xml".format(variation["legacy_id"])
             else:
-                filename = "{}_{}_var_{}.xml".format(collection_id, publication_id, variation["sort_order"])
+                filename = "{}_{}_var_{}.xml".format(collection_id, publication_id, variation["id"])
 
             variation_info[index]["content"] = get_content(project, "var", filename, xsl_file, params)
 
