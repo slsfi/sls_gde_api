@@ -53,7 +53,7 @@ def get_projects():
     if jwt is None:
         return select_all_from_table("project")
     else:
-        return jwt["projects"]
+        return jsonify(jwt["projects"])
 
 
 @digital_edition.route("/<project>/html/<filename>")
