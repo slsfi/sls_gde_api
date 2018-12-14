@@ -101,7 +101,7 @@ def pull_changes_from_git_remote(project):
 
     sync_repo = update_files_in_git_repo(project)
 
-    # TODO merge conflict handling
+    # TODO merge conflict handling, if necessary. wait and see how things pan out - may not be an issue.
 
     if sync_repo[0]:
         return jsonify({

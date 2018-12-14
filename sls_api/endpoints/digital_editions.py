@@ -68,15 +68,13 @@ def get_html_contents_as_json(project, filename):
 
 @digital_edition.route("/<project>/md/<fileid>")
 def get_md_contents_as_json(project, fileid):
-    # TODO safer handling of paths, glob.iglob is not secure with arbitrary user input to fileid
-
     path = "*/".join(fileid.split("-")) + "*"
 
     file_path_query = safe_join(config[project]["file_root"], "md", path)
 
     try:
         file_path = [f for f in glob.iglob(file_path_query)][0]
-        print(file_path)
+        logger.info("Finding {} (md_contents fetch)".format(file_path))
         if os.path.exists(file_path):
             with io.open(file_path, encoding="UTF-8") as md_file:
                 contents = md_file.read()
@@ -88,7 +86,7 @@ def get_md_contents_as_json(project, fileid):
         else:
             abort(404)
     except Exception:
-        print(file_path_query)
+        logger.exception("Error fetching: {}".format(file_path_query))
         abort(404)
 
 
@@ -235,7 +233,7 @@ def get_toc(project, collection_id):
 
     try:
         file_path = [f for f in glob.iglob(file_path_query)][0]
-        print(file_path)
+        logger.info("Finding {} (toc collection fetch)".format(file_path))
         if os.path.exists(file_path):
             with io.open(file_path, encoding="UTF-8") as json_file:
                 contents = json_file.read()
@@ -243,7 +241,7 @@ def get_toc(project, collection_id):
         else:
             abort(404)
     except Exception:
-        print(file_path_query)
+        logger.exception("Error fetching {}".format(file_path_query))
         abort(404)
 
 @digital_edition.route("/<project>/collections")
@@ -301,12 +299,13 @@ def get_collection_publications(project, collection_id):
 @digital_edition.route("/<project>/text/<collection_id>/<publication_id>/inl/<lang>")
 def get_introduction(project, collection_id, publication_id, lang="swe"):
     """
-    Get introduction text for a given publiction @TODO: remove publication_id, it is not needed.
+    Get introduction text for a given publication @TODO: remove publication_id, it is not needed.
     """
     can_show, message = get_published_status(project, collection_id, publication_id)
     if can_show:
         logger.info("Getting XML for {} and transforming...".format(request.full_path))
         version = "int" if config[project]["show_internally_published"] else "ext"
+        # TODO get original_filename from publication_collection_introduction table? how handle language/version
         filename = "{}_inl_{}_{}.xml".format(collection_id, lang, version)
         xsl_file = "est.xsl"
         content = get_content(project, "inl", filename, xsl_file, None)
@@ -326,12 +325,13 @@ def get_introduction(project, collection_id, publication_id, lang="swe"):
 @digital_edition.route("/<project>/text/<collection_id>/<publication_id>/tit/<lang>")
 def get_title(project, collection_id, publication_id, lang="swe"):
     """
-    Get title page for a given publication
+    Get title page for a given publication @TODO: remove publication_id, it is not needed?
     """
     can_show, message = get_published_status(project, collection_id, publication_id)
     if can_show:
         logger.info("Getting XML for {} and transforming...".format(request.full_path))
         version = "int" if config[project]["show_internally_published"] else "ext"
+        # TODO get original_filename from publication_collection_title table? how handle language/version
         filename = "{}_tit_{}_{}.xml".format(collection_id, lang, version)
         xsl_file = "title.xsl"
         content = get_content(project, "tit", filename, xsl_file, None)   
@@ -356,13 +356,25 @@ def get_reading_text(project, collection_id, publication_id, section_id=None):
     can_show, message = get_published_status(project, collection_id, publication_id)
     if can_show:
         logger.info("Getting XML for {} and transforming...".format(request.full_path))
-        filename = "{}_{}_est.xml".format(collection_id, publication_id)
+        connection = db_engine.connect()
+        select = "SELECT original_filename FROM publication WHERE id = :p_id"
+        statement = sqlalchemy.sql.text(select).bindparams(p_id=publication_id)
+        result = connection.execute(statement).fetchone()
+        if result is None:
+            connection.close()
+            return jsonify({
+                "id": "{}_{}".format(collection_id, publication_id),
+                "error": "No filename found in database"
+            }), 404
+        filename = result["original_filename"]
+        connection.close()
+
         xsl_file = "est.xsl"
         if section_id is not None:
             section_id = '"{}"'.format(section_id)
-            content = get_content(project, "est", filename, xsl_file, {"bookId":collection_id, "sectionId":section_id})
+            content = get_content(project, "est", filename, xsl_file, {"bookId": collection_id, "sectionId": section_id})
         else:
-            content = get_content(project, "est", filename, xsl_file, {"bookId":collection_id})
+            content = get_content(project, "est", filename, xsl_file, {"bookId": collection_id})
         data = {
             "id": "{}_{}_est".format(collection_id, publication_id),
             "content": content.replace("id=", "data-id=")
@@ -384,7 +396,17 @@ def get_comments(project, collection_id, publication_id, note_id=None):
     can_show, message = get_published_status(project, collection_id, publication_id)
     if can_show:
         logger.info("Getting XML for {} and transforming...".format(request.full_path))
-        filename = "{}_{}_com.xml".format(collection_id, publication_id)
+        connection = db_engine.connect()
+        select = "SELECT original_filename FROM publication_comment WHERE id IN (SELECT publication_comment_id FROM publication WHERE id = :p_id)"
+        statement = sqlalchemy.sql.text(select).bindparams(p_id=publication_id)
+        result = connection.execute(statement).fetchone()
+        if result is None:
+            connection.close()
+            return jsonify({
+                "id": "{}_{}_com".format(collection_id, publication_id),
+                "error": "No filename found in database"
+            }), 404
+        filename = result["original_filename"]
         params = {
             "estDocument": '"file://{}"'.format(safe_join(config[project]["file_root"], "xml", "est", filename.replace("com", "est"))),
             "bookId": collection_id
@@ -400,6 +422,7 @@ def get_comments(project, collection_id, publication_id, note_id=None):
             "id": "{}_{}_com".format(collection_id, publication_id),
             "content": content
         }
+        connection.close()
         return jsonify(data), 200
     else:
         return jsonify({
@@ -419,9 +442,8 @@ def get_manuscript(project, collection_id, publication_id, manuscript_id=None):
         logger.info("Getting XML for {} and transforming...".format(request.full_path))
         connection = db_engine.connect()
         if manuscript_id is None:
-            filename_search = "{}_{}_ms_%".format(collection_id, publication_id)
-            select = "SELECT name, original_filename, id FROM publication_manuscript WHERE original_filename LIKE :query"
-            statement = sqlalchemy.sql.text(select).bindparams(query=filename_search)
+            select = "SELECT name, original_filename, id FROM publication_manuscript WHERE publication_id = :p_id"
+            statement = sqlalchemy.sql.text(select).bindparams(p_id=publication_id)
             manuscript_info = []
             for row in connection.execute(statement).fetchall():
                 manuscript_info.append(dict(row))
@@ -464,13 +486,12 @@ def get_variant(project, collection_id, publication_id, section_id=None):
     if can_show:
         logger.info("Getting XML for {} and transforming...".format(request.full_path))
         connection = db_engine.connect()
-        filename_search = "{}_{}_var_%".format(collection_id, publication_id)
         if section_id is not None:
-            select = "SELECT name, type, original_filename, id FROM publication_version WHERE original_filename LIKE :f_name AND section_id = :s_id"
-            statement = sqlalchemy.sql.text(select).bindparams(f_name=filename_search, s_id=section_id)
+            select = "SELECT name, type, original_filename, id FROM publication_version WHERE publication_id = :p_id AND section_id = :s_id"
+            statement = sqlalchemy.sql.text(select).bindparams(p_id=publication_id, s_id=section_id)
         else:
-            select = "SELECT name, type, original_filename, id FROM publication_version WHERE original_filename LIKE :f_name"
-            statement = sqlalchemy.sql.text(select).bindparams(f_name=filename_search)
+            select = "SELECT name, type, original_filename, id FROM publication_version WHERE publication_id = :p_id"
+            statement = sqlalchemy.sql.text(select).bindparams(p_id=publication_id)
         variation_info = []
         for row in connection.execute(statement).fetchall():
             variation_info.append(dict(row))

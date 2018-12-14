@@ -77,13 +77,6 @@ def edit_project(project_id):
         return jsonify("No valid update values given."), 400
 
 
-@publishing_tools.route("/projects/<project_id>/", methods=["DELETE"])
-@jwt_required
-def delete_project(project_id):
-    # TODO project delete (logical?)
-    pass
-
-
 @publishing_tools.route("/<project>/publication_collection/<collection_id>/edit/", methods=["POST"])
 @project_permission_required
 def edit_publication_collection(project, collection_id):
@@ -123,13 +116,6 @@ def edit_publication_collection(project, collection_id):
     else:
         connection.close()
         return jsonify("No valid update values given."), 400
-
-
-@publishing_tools.route("/<project>/publication_collection/<collection_id>/", methods=["DELETE"])
-@project_permission_required
-def delete_publication_collection(project, collection_id):
-    # TODO publication collection delete (logical?)
-    pass
 
 
 @publishing_tools.route("<project>/publication_collection/<collection_id>/intro/")
@@ -194,13 +180,6 @@ def edit_intro(project, collection_id):
         return jsonify("No valid update values given."), 400
 
 
-@publishing_tools.route("<project>/publication_collection/<collection_id>/intro/", methods=["DELETE"])
-@project_permission_required
-def delete_intro(project, collection_id):
-    # TODO collection introduction delete (logical?)
-    pass
-
-
 @publishing_tools.route("<project>/publication_collection/<collection_id>/title/")
 @project_permission_required
 def get_title(project, collection_id):
@@ -262,13 +241,6 @@ def edit_title(project, collection_id):
         return jsonify("No valid update values given."), 400
 
 
-@publishing_tools.route("<project>/publication_collection/<collection_id>/title/", methods=["DELETE"])
-@project_permission_required
-def delete_title(project, collection_id):
-    # TODO collection title delete (logical?)
-    pass
-
-
 @publishing_tools.route("/<project>/publication/<publication_id>/edit/", methods=["POST"])
 @project_permission_required
 def edit_publication(project, publication_id):
@@ -316,13 +288,6 @@ def edit_publication(project, publication_id):
         return jsonify("No valid update values given."), 400
 
 
-@publishing_tools.route("/<project>/publication/<publication_id>/", methods=["DELETE"])
-@project_permission_required
-def delete_publication(project, publication_id):
-    # TODO publication delete (logical?)
-    pass
-
-
 @publishing_tools.route("/<project>/publication/<publication_id>/comment/edit/", methods=["POST"])
 @project_permission_required
 def edit_comment(project, publication_id):
@@ -365,13 +330,6 @@ def edit_comment(project, publication_id):
     else:
         connection.close()
         return jsonify("No valid update values given."), 400
-
-
-@publishing_tools.route("/<project>/publication/<publication_id>/comment/", methods=["DELETE"])
-@project_permission_required
-def delete_comment(project, publication_id):
-    # TODO comment delete (logical?)
-    pass
 
 
 @publishing_tools.route("/<project>/publication/<publication_id>/manuscripts/new/", methods=["POST"])
@@ -458,13 +416,6 @@ def edit_manuscript(project, manuscript_id):
         return jsonify("No valid update values given."), 400
 
 
-@publishing_tools.route("/<project>/manuscripts/<manuscript_id>/", methods=["DELETE"])
-@project_permission_required
-def delete_manuscript(project, manuscript_id):
-    # TODO manuscript delete (logical?)
-    pass
-
-
 @publishing_tools.route("/<project>/publication/<publication_id>/versions/new/", methods=["POST"])
 @project_permission_required
 def add_version(project, publication_id):
@@ -549,13 +500,6 @@ def edit_version(project, version_id):
         return jsonify("No valid update values given."), 400
 
 
-@publishing_tools.route("/<project>/versions/<version_id>/", methods=["DELETE"])
-@project_permission_required
-def delete_version(project, version_id):
-    # TODO version delete (logical?)
-    pass
-
-
 @publishing_tools.route("/<project>/facsimile_collection/<collection_id>/edit/", methods=["POST"])
 @project_permission_required
 def edit_facsimile_collection(project, collection_id):
@@ -601,13 +545,6 @@ def edit_facsimile_collection(project, collection_id):
     else:
         connection.close()
         return jsonify("No valid update values given."), 400
-
-
-@publishing_tools.route("/<project>/facsimile_collection/<collection_id>/", methods=["DELETE"])
-@project_permission_required
-def delete_facsimile_collection(project, collection_id):
-    # TODO facsimile collection delete (logical?)
-    pass
 
 
 @publishing_tools.route("/<project>/publication_collection/<collection_id>/info")
