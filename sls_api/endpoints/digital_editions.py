@@ -53,7 +53,11 @@ def get_projects():
     if jwt is None:
         return select_all_from_table("project")
     else:
-        return jsonify(jwt["projects"])
+        if int(os.environ.get("FLASK_DEBUG", 0)) == 1 and jwt["sub"] == "test@test.com":
+            # test user in DEBUG mode has access to all projects
+            return select_all_from_table("project")
+        else:
+            return jsonify(jwt["projects"])
 
 
 @digital_edition.route("/<project>/html/<filename>")
