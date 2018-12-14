@@ -1236,8 +1236,9 @@ def get_content(project, folder, xml_filename, xsl_filename, parameters):
         xml_file_path = safe_join(config[project]["file_root"], "xml", folder, xml_filename)
         xsl_file_path = safe_join(config[project]["file_root"], "xslt", xsl_filename)
         cache_file_path = xml_file_path.replace("/xml/", "/cache/").replace(".xml", ".html")
-    except Exception as e:
-        return "Error reading content from cache." + str(e)
+    except Exception:
+        logger.exception("Failed to find file {} in cache".format(xml_filename))
+        return "Could not find content to read"
 
     content = None
     param_ext = ''
@@ -1260,6 +1261,7 @@ def get_content(project, folder, xml_filename, xsl_filename, parameters):
                 with io.open(cache_file_path, encoding="UTF-8") as cache_file:
                     content = cache_file.read()
             except Exception:
+                logger.exception("Error reading content from cache for {}".format(cache_file_path))
                 content = "Error reading content from cache."
             else:
                 logger.info("Content fetched from cache.")
