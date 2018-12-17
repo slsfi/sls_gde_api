@@ -1,0 +1,12 @@
+1. Go through publication
+2. For each, check mtime for file given by original_filename
+3. Check mtime against web reading versions
+4. If original_filename mtime newer, recreate reading version
+    1: masterfile -> est file
+    2: masterfile + comments file + comments db -> com file
+
+5. Go through [publication_manuscript, publication_version]
+2. For each, check mtime for file given by original_filename
+3. Check mtime against web reading version
+4. If original_filename mtime newer, recreate reading version
+
