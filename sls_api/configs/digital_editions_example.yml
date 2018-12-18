@@ -1,6 +1,6 @@
 # For more information on database engine configurations, see http://docs.sqlalchemy.org/en/latest/core/engines.html
 
-engine: 'mysql://web_user:SecretPassword@mysql_server.example.com:3306?charset=utf8mb4'
+engine: 'mysql://web_user:SecretPassword@mysql_server.example.com:3306?charset=utf8mb4/digitaleditions'
 # This engine config tells the system to connect to a MySQL server at mysql_server.example.com on port 3306
 # It uses the username 'web_user' with the password 'SecretPassword'
 
@@ -17,6 +17,8 @@ parland:
     show_internally_published: False
     show_unpublished: False
     disabled_publications: [10,12,13,14,9,20,28]
+    # SQLAlchemy engine string for comments (edith) database
+    comments_database: 'mysql://web_user:SecretPassword@mysql_server.example.com:3306?charset=utf8mb4/parland_comments'
 
 topelius:
     # First, settings about how the publication tools should communicate towards git
@@ -28,6 +30,8 @@ topelius:
     show_internally_published: True
     show_unpublished: True
     disabled_publications: [10,12,13,14,9,20,28]
+    # SQLAlchemy engine string for comments (edith) database
+    comments_database: 'mysql://web_user:SecretPassword@mysql_server.example.com:3306?charset=utf8mb4/topelius_comments'
 
 # In addition to STDOUT, messages can also be logged to file
 log_file: '/log/digital_editions/api.log'
