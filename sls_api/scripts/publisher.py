@@ -1,12 +1,30 @@
 from lxml import etree
 import os
 from shutil import copy2 as copy_file
+from sqlalchemy import create_engine
 from sqlalchemy.sql import text
 from subprocess import CalledProcessError
 import traceback
 
 from sls_api.endpoints.generics import config, db_engine, get_project_id_from_name
 from sls_api.endpoints.tools_files import run_git_command
+
+comment_db_engines = {project: create_engine(config[project]["comment_database"], pool_pre_ping=True) for project in config.keys()}
+
+
+def get_comment_from_database(project, document_note_id):
+    """
+    Given the name of a project and the ID of a comment in a comment master file, returns data from the comments database with a matching documentnote.id
+    Returns data as a dict-like object, can be accessed with integer index or column name (comment[0] or comment["id"])
+    """
+    connection = comment_db_engines[project].connect()
+
+    comment_query = text("SELECT documentnote.id, documentnote.shortenedSelection, note.description "
+                         "FROM documentnote INNER JOIN note ON documentnote.note_id = note.id "
+                         "WHERE documentnote.deleted = 0 AND note.deleted = 0 AND documentnote.id = :docnote_id")
+    comment_query = comment_query.bindparams(docnote_id=document_note_id)
+    comment = connection.execute(comment_query).fetchone()  # should only be one, as documentnote.id should be unique
+    return comment
 
 
 def generate_est_and_com_files(project, est_master_file_path, com_master_file_path, est_target_path, com_target_path):
