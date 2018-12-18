@@ -75,8 +75,8 @@ def check_publication_mtimes_and_publish(project):
                 com_target_filename = est_target_filename.replace("_est.xml", "_com.xml")
                 est_target_file_path = os.path.join(file_root, "xml", "est", est_target_filename)
                 com_target_file_path = os.path.join(file_root, "xml", "com", com_target_filename)
-                est_source_file_path = os.path.join(file_root, "master", row["publication.original_filename"])
-                com_source_file_path = os.path.join(file_root, "master", row["publication_comment.original_filename"])
+                est_source_file_path = os.path.join(file_root, row["publication.original_filename"])
+                com_source_file_path = os.path.join(file_root, row["publication_comment.original_filename"])
 
                 est_target_mtime = os.path.getmtime(est_target_file_path)
                 com_target_mtime = os.path.getmtime(com_target_file_path)
@@ -97,7 +97,7 @@ def check_publication_mtimes_and_publish(project):
                                                             row["publication_version.id"])
                 source_filename = row["publication_version.original_filename"]
                 target_file_path = os.path.join(file_root, "xml", "var", target_filename)
-                source_file_path = os.path.join(file_root, "master", source_filename)
+                source_file_path = os.path.join(file_root, source_filename)
 
                 target_mtime = os.path.getmtime(target_file_path)
                 source_mtime = os.path.getmtime(source_file_path)
@@ -114,7 +114,7 @@ def check_publication_mtimes_and_publish(project):
                                                            row["publication_manuscript.id"])
                 source_filename = row["publication_manuscript.original_filename"]
                 target_file_path = os.path.join(file_root, "xml", "ms", target_filename)
-                source_file_path = os.path.join(file_root, "master", source_filename)
+                source_file_path = os.path.join(file_root, source_filename)
 
                 target_mtime = os.path.getmtime(target_file_path)
                 source_mtime = os.path.getmtime(source_file_path)
