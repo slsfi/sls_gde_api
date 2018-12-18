@@ -9,7 +9,7 @@ from sls_api.endpoints.generics import config, db_engine, get_project_id_from_na
 from sls_api.endpoints.tools_files import run_git_command
 
 
-def publish_publication(project, est_master_file_path, com_master_file_path, est_target_path, com_target_path):
+def generate_est_and_com_files(project, est_master_file_path, com_master_file_path, est_target_path, com_target_path):
     """
     Given a project name, and paths to valid EST/COM masters and targets, regenerates target files based on source files
     """
@@ -20,7 +20,7 @@ def publish_publication(project, est_master_file_path, com_master_file_path, est
     copy_file(com_master_file_path, com_target_path)
 
 
-def publish_publication_variant(project, master_file_path, target_file_path):
+def generate_var_file(project, master_file_path, target_file_path):
     """
     Given a project name, and valid master and target file paths for a publication version, regenerates target file based on source file
     """
@@ -28,7 +28,7 @@ def publish_publication_variant(project, master_file_path, target_file_path):
     copy_file(master_file_path, target_file_path)  # TODO actual masterfile processing to webfile using XSLT
 
 
-def publish_publication_manuscript(project, master_file_path, target_file_path):
+def generate_ms_file(project, master_file_path, target_file_path):
     """
     Given a project name, and valid master and target file paths for a publication manuscript, regenerates target file based on source file
     """
@@ -36,7 +36,7 @@ def publish_publication_manuscript(project, master_file_path, target_file_path):
     copy_file(master_file_path, target_file_path)  # TODO actual masterfile processing to webfile using XSLT
 
 
-def check_publication_mtimes_and_publish(project):
+def check_publication_mtimes_and_publish_files(project):
     project_id = get_project_id_from_name(project)
     project_settings = config.get(project, None)
     if project_id is not None and project_settings is not None:
@@ -85,20 +85,20 @@ def check_publication_mtimes_and_publish(project):
                     com_source_mtime = os.path.getmtime(com_source_file_path)
                 except OSError:
                     print("Error getting time_modified for target or source files for publication {}".format(row["publication.id"]))
-                    print("Publishing new est/com files...")
+                    print("Generating new est/com files...")
                     changes.append(est_target_file_path)
                     changes.append(com_target_file_path)
-                    publish_publication(project_name, est_source_file_path, com_source_file_path,
-                                        est_target_file_path, com_target_file_path)
+                    generate_est_and_com_files(project_name, est_source_file_path, com_source_file_path,
+                                               est_target_file_path, com_target_file_path)
                 else:
                     if est_target_mtime >= est_source_mtime and com_target_mtime >= com_source_mtime:
                         continue
                     else:
                         changes.append(est_target_file_path)
                         changes.append(com_target_file_path)
-                        print("Reading files for publication {} are outdated, publishing new est/com files...".format(row["publication.id"]))
-                        publish_publication(project_name, est_source_file_path, com_source_file_path,
-                                            est_target_file_path, com_target_file_path)
+                        print("Reading files for publication {} are outdated, generating new est/com files...".format(row["publication.id"]))
+                        generate_est_and_com_files(project_name, est_source_file_path, com_source_file_path,
+                                                   est_target_file_path, com_target_file_path)
 
             for row in variant_info:
                 target_filename = "{}_{}_var_{}.xml".format(row["publication.publication_collection_id"],
@@ -113,16 +113,16 @@ def check_publication_mtimes_and_publish(project):
                     source_mtime = os.path.getmtime(source_file_path)
                 except OSError:
                     print("Error getting time_modified for target or source files for publication_version {}".format(row["publication_version.id"]))
-                    print("Publishing new file...")
+                    print("Generating new file...")
                     changes.append(target_file_path)
-                    publish_publication_variant(project_name, source_file_path, target_file_path)
+                    generate_var_file(project_name, source_file_path, target_file_path)
                 else:
                     if target_mtime >= source_mtime:
                         continue
                     else:
                         changes.append(target_file_path)
-                        print("File {} is newer than source file {}, publishing new file...".format(target_file_path, source_file_path))
-                        publish_publication_variant(project_name, source_file_path, target_file_path)
+                        print("File {} is newer than source file {}, generating new file...".format(target_file_path, source_file_path))
+                        generate_var_file(project_name, source_file_path, target_file_path)
 
             for row in manuscript_info:
                 target_filename = "{}_{}_ms_{}.xml".format(row["publication.publication_collection_id"],
@@ -137,16 +137,16 @@ def check_publication_mtimes_and_publish(project):
                     source_mtime = os.path.getmtime(source_file_path)
                 except OSError:
                     print("Error getting time_modified for target or source file for publication_manuscript {}".format(row["publication_manuscript.id"]))
-                    print("Publishing new file...")
+                    print("Generating new file...")
                     changes.append(target_file_path)
-                    publish_publication_manuscript(project_name, source_file_path, target_file_path)
+                    generate_ms_file(project_name, source_file_path, target_file_path)
                 else:
                     if target_mtime >= source_mtime:
                         continue
                     else:
                         changes.append(target_file_path)
-                        print("File {} is newer than source file {}, publishing new file...".format(target_file_path, source_file_path))
-                        publish_publication_manuscript(project_name, source_file_path, target_file_path)
+                        print("File {} is newer than source file {}, generating new file...".format(target_file_path, source_file_path))
+                        generate_ms_file(project_name, source_file_path, target_file_path)
 
             if len(changes) > 0:
                 try:
@@ -162,4 +162,4 @@ def check_publication_mtimes_and_publish(project):
 if __name__ == "__main__":
     # For each project with a valid entry in the config file, check modification times for publications and publish
     for project_name in config.keys():
-        check_publication_mtimes_and_publish(project_name)
+        check_publication_mtimes_and_publish_files(project_name)
