@@ -78,18 +78,27 @@ def check_publication_mtimes_and_publish(project):
                 est_source_file_path = os.path.join(file_root, row["publication.original_filename"])
                 com_source_file_path = os.path.join(file_root, row["publication_comment.original_filename"])
 
-                est_target_mtime = os.path.getmtime(est_target_file_path)
-                com_target_mtime = os.path.getmtime(com_target_file_path)
-                est_source_mtime = os.path.getmtime(est_source_file_path)
-                com_source_mtime = os.path.getmtime(com_source_file_path)
-
-                if est_target_mtime >= est_source_mtime and com_target_mtime >= com_source_mtime:
-                    continue
-                else:
+                try:
+                    est_target_mtime = os.path.getmtime(est_target_file_path)
+                    com_target_mtime = os.path.getmtime(com_target_file_path)
+                    est_source_mtime = os.path.getmtime(est_source_file_path)
+                    com_source_mtime = os.path.getmtime(com_source_file_path)
+                except OSError:
+                    print("Error getting time_modified for target or source files for publication {}".format(row["publication.id"]))
+                    print("Publishing new est/com files...")
                     changes.append(est_target_file_path)
                     changes.append(com_target_file_path)
-                    print("Reading files for publication {} are outdated, publishing new est/com files...".format(row["publication.id"]))
-                    publish_publication(project_name, est_source_file_path, com_source_file_path, est_target_file_path, com_target_file_path)
+                    publish_publication(project_name, est_source_file_path, com_source_file_path,
+                                        est_target_file_path, com_target_file_path)
+                else:
+                    if est_target_mtime >= est_source_mtime and com_target_mtime >= com_source_mtime:
+                        continue
+                    else:
+                        changes.append(est_target_file_path)
+                        changes.append(com_target_file_path)
+                        print("Reading files for publication {} are outdated, publishing new est/com files...".format(row["publication.id"]))
+                        publish_publication(project_name, est_source_file_path, com_source_file_path,
+                                            est_target_file_path, com_target_file_path)
 
             for row in variant_info:
                 target_filename = "{}_{}_var_{}.xml".format(row["publication.publication_collection_id"],
@@ -99,14 +108,21 @@ def check_publication_mtimes_and_publish(project):
                 target_file_path = os.path.join(file_root, "xml", "var", target_filename)
                 source_file_path = os.path.join(file_root, source_filename)
 
-                target_mtime = os.path.getmtime(target_file_path)
-                source_mtime = os.path.getmtime(source_file_path)
-                if target_mtime >= source_mtime:
-                    continue
-                else:
+                try:
+                    target_mtime = os.path.getmtime(target_file_path)
+                    source_mtime = os.path.getmtime(source_file_path)
+                except OSError:
+                    print("Error getting time_modified for target or source files for publication_version {}".format(row["publication_version.id"]))
+                    print("Publishing new file...")
                     changes.append(target_file_path)
-                    print("File {} is newer than source file {}, publishing new file...".format(target_file_path, source_file_path))
                     publish_publication_variant(project_name, source_file_path, target_file_path)
+                else:
+                    if target_mtime >= source_mtime:
+                        continue
+                    else:
+                        changes.append(target_file_path)
+                        print("File {} is newer than source file {}, publishing new file...".format(target_file_path, source_file_path))
+                        publish_publication_variant(project_name, source_file_path, target_file_path)
 
             for row in manuscript_info:
                 target_filename = "{}_{}_ms_{}.xml".format(row["publication.publication_collection_id"],
@@ -116,14 +132,21 @@ def check_publication_mtimes_and_publish(project):
                 target_file_path = os.path.join(file_root, "xml", "ms", target_filename)
                 source_file_path = os.path.join(file_root, source_filename)
 
-                target_mtime = os.path.getmtime(target_file_path)
-                source_mtime = os.path.getmtime(source_file_path)
-                if target_mtime >= source_mtime:
-                    continue
-                else:
+                try:
+                    target_mtime = os.path.getmtime(target_file_path)
+                    source_mtime = os.path.getmtime(source_file_path)
+                except OSError:
+                    print("Error getting time_modified for target or source file for publication_manuscript {}".format(row["publication_manuscript.id"]))
+                    print("Publishing new file...")
                     changes.append(target_file_path)
-                    print("File {} is newer than source file {}, publishing new file...".format(target_file_path, source_file_path))
                     publish_publication_manuscript(project_name, source_file_path, target_file_path)
+                else:
+                    if target_mtime >= source_mtime:
+                        continue
+                    else:
+                        changes.append(target_file_path)
+                        print("File {} is newer than source file {}, publishing new file...".format(target_file_path, source_file_path))
+                        publish_publication_manuscript(project_name, source_file_path, target_file_path)
 
             if len(changes) > 0:
                 try:
