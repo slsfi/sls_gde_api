@@ -50,7 +50,11 @@ def get_project_id_from_name(project):
     statement = select([projects.c.id]).where(projects.c.name == project)
     project_id = connection.execute(statement).fetchone()
     connection.close()
-    return int(project_id["id"])
+    try:
+        return int(project_id["id"])
+    except Exception:
+        return None
+
 
 def select_all_from_table(table_name):
     table = Table(table_name, metadata, autoload=True, autoload_with=db_engine)
