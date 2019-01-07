@@ -13,6 +13,7 @@ import time
 import re
 import urllib 
 import glob
+import json
 from PIL import Image
 from hashlib import md5
 from elasticsearch import Elasticsearch
@@ -821,6 +822,65 @@ def get_facsimile_file(project, collection_id, number, zoom_level):
         return Response(content, status=200, content_type="image/jpeg")
     except Exception:
         return Response("File not found.", status=404, content_type="text/json")
+
+@digital_edition.route("/<project>/facsimile/page/<legacy_id>/")
+def get_facsimile_pages(project, legacy_id):
+    logger.info("Getting facsimile page")
+    try:
+        connection = db_engine.connect()
+        sql = sqlalchemy.sql.text("SELECT * FROM facsimile_pages WHERE id=:l_id")
+        statement = sql.bindparams(l_id=legacy_id)
+        result = connection.execute(statement).fetchone()
+        facs = dict(result) 
+        connection.close()
+
+        return jsonify(facs), 200, {"Access-Control-Allow-Origin": "*"}
+    except Exception:
+        return Response("Couldn't get facsimile page.", status=404, content_type="text/json")
+
+@digital_edition.route("/<project>/facsimile/page/image/<collection_id>/<number>")
+def get_facsimile_page_image(project, collection_id, number):
+    logger.info("Getting facsimile page")
+    try:
+        zoom_level = "4"
+        file_path = safe_join(config[project]["file_root"], "facsimiles", collection_id, zoom_level, "{}.jpg".format(int(number)))
+        output = io.BytesIO()
+        try:
+            with open(file_path, mode="rb") as img_file:
+                output.write(img_file.read())
+            content = output.getvalue()
+            output.close()
+            return Response(content, status=200, content_type="image/jpeg")
+        except Exception:
+            return Response("File not found: " + file_path , status=404, content_type="text/json")
+    except Exception:
+        return Response("Couldn't get facsimile page.", status=404, content_type="text/json")
+
+
+@digital_edition.route("/<project>/files/<folder>/<file_name>/")
+def get_json_file(project, folder, file_name):
+    file_path = ""
+    file_path = safe_join(config[project]["file_root"], folder, "{}.json".format(str(file_name)))
+    
+    try:
+        with open(file_path) as f:
+            data = json.load(f)
+        return jsonify(data), 200, {"Access-Control-Allow-Origin": "*"}
+    except Exception:
+        return Response("File not found.", status=404, content_type="text/json")
+
+@digital_edition.route("/<project>/song/id/<song_id>/")
+def get_song_by_id(project, song_id):
+    logger.info("Getting song by id")
+    try:
+        connection = db_engine.connect()
+        sql = sqlalchemy.sql.text("SELECT * FROM song WHERE id=:s_id")
+        statement = sql.bindparams(s_id=song_id)
+        result = connection.execute(statement).fetchone()
+        connection.close()
+        return jsonify(dict(result)), 200, {"Access-Control-Allow-Origin": "*"}
+    except Exception:
+        return Response("Couldn't get song by id.", status=404, content_type="text/json")
 
 @digital_edition.route("/<project>/files/<collection_id>/<file_type>/<download_name>/")
 def get_pdf_file(project, collection_id, file_type, download_name):
