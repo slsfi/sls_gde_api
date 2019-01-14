@@ -11,7 +11,7 @@ import os
 import sqlalchemy.sql
 import time
 import re
-import urllib 
+import urllib
 import glob
 from PIL import Image
 from hashlib import md5
@@ -797,9 +797,32 @@ def get_facsimile_file(project, collection_id, number, zoom_level):
     However, the first page of a publication is not necessarily 1.jpg, as facsimiles often contain title pages and blank pages
     Thus, calling for facsimiles/1/1/1 may require fetching a file from root/facsimiles/1/1/5.jpg
     """
-    # TODO published status for facsimile table to check against?
     # TODO S3 support
     connection = db_engine.connect()
+    check_statement = sqlalchemy.sql.text("SELECT published FROM publication WHERE id = "
+                                          "(SELECT publication_id FROM publication_facsimile WHERE publication_facsimile_collection_id=:coll_id)").bindparams(coll_id=collection_id)
+    row = connection.execute(check_statement).fetchone()
+    if row is None:
+        return jsonify({
+            "msg": "Desired facsimile file not found in database."
+        }), 404
+    else:
+        try:
+            status = int(row[0])
+        except Exception:
+            return jsonify({
+                "msg": "Desired facsimile file not found in database."
+            }), 404
+        if status == 0:
+            return jsonify({
+                "msg": "Desired facsimile file not found in database."
+            }), 404
+        elif status == 1:
+            if not config[project]["show_internally_published"]:
+                return jsonify({
+                    "msg": "Desired facsimile file not found in database."
+                }), 404
+
     statement = sqlalchemy.sql.text("SELECT * FROM publication_facsimile_collection WHERE id=:coll_id").bindparams(coll_id=collection_id)
     row = connection.execute(statement).fetchone()
     if row is None:
@@ -820,7 +843,10 @@ def get_facsimile_file(project, collection_id, number, zoom_level):
         output.close()
         return Response(content, status=200, content_type="image/jpeg")
     except Exception:
-        return Response("File not found.", status=404, content_type="text/json")
+        return jsonify({
+            "msg": "Desired facsimile file not found."
+        }), 404
+
 
 @digital_edition.route("/<project>/files/<collection_id>/<file_type>/<download_name>/")
 def get_pdf_file(project, collection_id, file_type, download_name):
@@ -1168,14 +1194,12 @@ def cache_is_recent(source_file, xsl_file, cache_file):
 def get_published_status(project, collection_id, publication_id):
     """
     Returns info on if project, publication_collection, and publication are all published
-    Returns three values:
+    Returns two values:
         - a boolean if the publication can be shown
         - a message text why it can't be shown, if that is the case
-        -
 
     Publications can be shown if they're externally published (published==2),
-    if they're internally published (published==1) and show_internally_published is True,
-    or if FLASK_DEBUG is set to 1 (all publications are shown in DEBUG mode
+    or if they're internally published (published==1) and show_internally_published is True
     """
     connection = db_engine.connect()
     select = """SELECT project.published AS proj_pub, publication_collection.published AS col_pub, publication.published as pub 
@@ -1184,26 +1208,22 @@ def get_published_status(project, collection_id, publication_id):
     AND publication.publication_collection_id = publication_collection.id
     AND project.name = :project AND publication_collection.id = :c_id AND publication.id = :p_id
     """
-    if int(os.environ.get("FLASK_DEBUG", 0)) == 1:
-        can_show = True
-        message = ""
+    statement = sqlalchemy.sql.text(select).bindparams(project=project, c_id=collection_id, p_id=publication_id)
+    result = connection.execute(statement)
+    show_internal = config[project]["show_internally_published"]
+    can_show = False
+    message = ""
+    row = result.fetchone()
+    if row is None:
+        message = "Content does not exist"
     else:
-        statement = sqlalchemy.sql.text(select).bindparams(project=project, c_id=collection_id, p_id=publication_id)
-        result = connection.execute(statement)
-        show_internal = config[project]["show_internally_published"]
-        can_show = False
-        message = ""
-        row = result.fetchone()
-        if row is None:
-            message = "Content does not exist"
+        status = min(row.proj_pub, row.col_pub, row.pub)
+        if status < 1:
+            message = "Content is not published"
+        elif status == 1 and not show_internal:
+            message = "Content is not externally published"
         else:
-            status = min(row.proj_pub, row.col_pub, row.pub)
-            if status < 1:
-                message = "Content is not published"
-            elif status == 1 and not show_internal:
-                message = "Content is not externally published"
-            else:
-                can_show = True
+            can_show = True
     connection.close()
     return can_show, message
 
