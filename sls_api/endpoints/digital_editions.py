@@ -797,7 +797,7 @@ def get_facsimile_file(project, collection_id, number, zoom_level):
     However, the first page of a publication is not necessarily 1.jpg, as facsimiles often contain title pages and blank pages
     Thus, calling for facsimiles/1/1/1 may require fetching a file from root/facsimiles/1/1/5.jpg
     """
-    # TODO S3 support
+    # TODO OpenStack Swift support for ISILON file storage - config param for root 'facsimiiles' path
     connection = db_engine.connect()
     check_statement = sqlalchemy.sql.text("SELECT published FROM publication WHERE id = "
                                           "(SELECT publication_id FROM publication_facsimile WHERE publication_facsimile_collection_id=:coll_id)").bindparams(coll_id=collection_id)
