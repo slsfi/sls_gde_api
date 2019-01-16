@@ -1203,7 +1203,9 @@ def get_published_status(project, collection_id, publication_id):
     """
     connection = db_engine.connect()
     select = """SELECT project.published AS proj_pub, publication_collection.published AS col_pub, publication.published as pub 
-    FROM project JOIN publication_collection JOIN publication
+    FROM project 
+    JOIN publication_collection ON publication_collection.project_id = project.id
+	JOIN publication ON publication.publication_collection_id = publication_collection.id
     WHERE project.id = publication_collection.project_id
     AND publication.publication_collection_id = publication_collection.id
     AND project.name = :project AND publication_collection.id = :c_id AND publication.id = :p_id
