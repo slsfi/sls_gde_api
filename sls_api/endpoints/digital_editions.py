@@ -1208,9 +1208,9 @@ def get_published_status(project, collection_id, publication_id):
 	JOIN publication ON publication.publication_collection_id = publication_collection.id
     WHERE project.id = publication_collection.project_id
     AND publication.publication_collection_id = publication_collection.id
-    AND project.name = :project AND publication_collection.id = :c_id AND publication.id = :p_id
+    AND project.name = :project AND publication_collection.id = :c_id AND (publication.id = :p_id OR split_part(publication.legacy_id, '_', 2) = :str_p_id) 
     """
-    statement = sqlalchemy.sql.text(select).bindparams(project=project, c_id=collection_id, p_id=publication_id)
+    statement = sqlalchemy.sql.text(select).bindparams(project=project, c_id=collection_id, p_id=publication_id, str_p_id=str(publication_id))
     result = connection.execute(statement)
     show_internal = config[project]["show_internally_published"]
     can_show = False
