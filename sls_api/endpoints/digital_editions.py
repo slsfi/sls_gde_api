@@ -1083,23 +1083,17 @@ def get_tag_search(project, search_text):
         return jsonify("")
 
 # Tag seach through ElasticSearch API
-@digital_edition.route("<project>/search/user_defined/<index>/<field>/<search_text>/")
-def get_user_defined_search(project, index, field, search_text):
+@digital_edition.route("<project>/search/user_defined/<index>/<field>/<search_text>/<fuzziness>/")
+def get_user_defined_search(project, index, field, search_text, fuzziness):
     logger.info("Getting results from elastic")
-    project_id = get_project_id_from_name(project)
     if len(search_text) > 0:
         res = es.search(index=str(index), body={
             "size":1000,
             "query": {
                 "bool": {
                     "should": [
-                            { "match": { str(field):{"query":str(search_text), "fuzziness": 2} }}
+                            { "match": { str(field):{"query":str(search_text), "fuzziness": int(fuzziness)} }}
                     ],
-                    "filter": {
-                        "term": {
-                        "project_id": project_id
-                        }
-                    },
                     "minimum_should_match": 1
                 }
             },
