@@ -838,12 +838,12 @@ def get_facsimile_pages(project, legacy_id):
     except Exception:
         return Response("Couldn't get facsimile page.", status=404, content_type="text/json")
 
-@digital_edition.route("/<project>/facsimile/page/image/<collection_id>/<number>")
-def get_facsimile_page_image(project, collection_id, number):
-    logger.info("Getting facsimile page")
+@digital_edition.route("/<project>/facsimile/page/image/<facs_id>/<facs_nr>")
+def get_facsimile_page_image(project, facs_id, facs_nr):
+    logger.info("Getting facsimile page image")
     try:
         zoom_level = "4"
-        file_path = safe_join(config[project]["file_root"], "facsimiles", collection_id, zoom_level, "{}.jpg".format(int(number)))
+        file_path = safe_join(config[project]["file_root"], "facsimiles", facs_id, zoom_level, "{}.jpg".format(int(facs_nr)))
         output = io.BytesIO()
         try:
             with open(file_path, mode="rb") as img_file:
