@@ -7,6 +7,7 @@ setup(
     include_package_data=True,
     install_requires=[
         'argon2_cffi',
+        'beautifulsoup4',
         'flask',
         'flask-jwt-extended',
         'flask-sqlalchemy',
