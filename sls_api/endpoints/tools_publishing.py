@@ -426,7 +426,8 @@ def edit_manuscript(project, manuscript_id):
 @project_permission_required
 def add_version(project, publication_id):
     """
-    Takes "title", "filename", "published", "sort_order" as JSON data
+    Takes "title", "filename", "published", "sort_order", "type" as JSON data
+    "type" denotes version type, 1=base text, 2=other variant
     Returns "msg" and "version_id" on success, otherwise 40x
     """
     request_data = request.get_json()
@@ -436,6 +437,7 @@ def add_version(project, publication_id):
     filename = request_data.get("filename", None)
     published = request_data.get("published", None)
     sort_order = request_data.get("sort_order", None)
+    version_type = request_data.get("type", None)
 
     publications = Table("publication", metadata, autoload=True, autoload_with=db_engine)
     versions = Table("publication_version", metadata, autoload=True, autoload_with=db_engine)
@@ -456,6 +458,8 @@ def add_version(project, publication_id):
         values["published"] = published
     if sort_order is not None:
         values["sort_order"] = sort_order
+    if version_type is not None:
+        values["type"] = version_type
 
     insert = versions.insert().values(**values)
     result = connection.execute(insert)
@@ -469,8 +473,9 @@ def add_version(project, publication_id):
 @project_permission_required
 def edit_version(project, version_id):
     """
-    Takes "title", "filename", "published", "sort_order" as JSON data
-    Returns "msg" and "manuscript_id" on success, otherwise 40x
+    Takes "title", "filename", "published", "sort_order", "type" as JSON data
+    "type" denotes version type, 1=base text, 2=other variant
+    Returns "msg" and "version_id" on success, otherwise 40x
     """
     request_data = request.get_json()
     if not request_data:
@@ -479,6 +484,7 @@ def edit_version(project, version_id):
     filename = request_data.get("filename", None)
     published = request_data.get("published", None)
     sort_order = request_data.get("sort_order", None)
+    version_type = request_data.get("type", None)
 
     versions = Table("publication_version", metadata, autoload=True, autoload_with=db_engine)
     query = select([versions]).where(versions.c.id == int(version_id))
@@ -498,6 +504,8 @@ def edit_version(project, version_id):
         values["published"] = published
     if sort_order is not None:
         values["sort_order"] = sort_order
+    if version_type is not None:
+        values["type"] = version_type
 
     if len(values) > 0:
         update = versions.update().where(versions.c.id == int(version_id)).values(**values)
