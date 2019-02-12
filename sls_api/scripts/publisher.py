@@ -1,7 +1,9 @@
+import argparse
 import os
 from sqlalchemy import create_engine
 from sqlalchemy.sql import text
 from subprocess import CalledProcessError
+import sys
 import traceback
 
 from sls_api.endpoints.generics import config, db_engine, get_project_id_from_name
@@ -9,6 +11,8 @@ from sls_api.endpoints.tools_files import run_git_command
 from sls_api.scripts.CTeiDocument import CTeiDocument
 
 comment_db_engines = {project: create_engine(config[project]["comment_database"], pool_pre_ping=True) for project in config.keys()}
+
+# comment_db_engines = {"topelius": create_engine("mysql://web_user:SecretPassword@mysql.example.com:3306/topelius_notes", pool_pre_ping=True)}
 
 COMMENTS_XSL_PATH_IN_FILE_ROOT = "xslt/comment_html_to_tei.xsl"
 COMMENTS_TEMPLATE_PATH_IN_FILE_ROOT = "templates/comment.xml"
@@ -242,7 +246,18 @@ def check_publication_mtimes_and_publish_files(project):
 
 
 if __name__ == "__main__":
-    # TODO argparse to let you publish a single project if needed - for testing and debugging
-    # For each project with a valid entry in the config file, check modification times for publications and publish
-    for project_name in config.keys():
-        check_publication_mtimes_and_publish_files(project_name)
+    parser = argparse.ArgumentParser(description="Publishing script to publish changes to EST/COM/VAR/MS files for GDE project.")
+    parser.add_argument("-p", "--project", help="Optional project name specification to only process the named project, rather than all projects.")
+
+    args = parser.parse_args()
+
+    if args.project is None:
+        # For each project with a valid entry in the config file, check modification times for publications and publish
+        for project_name in config.keys():
+            check_publication_mtimes_and_publish_files(project_name)
+    else:
+        if args.project in config:
+            check_publication_mtimes_and_publish_files(args.project)
+        else:
+            print("{} is not in the API configuration, aborting...".format(args.project))
+            sys.exit(1)
