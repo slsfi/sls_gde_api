@@ -84,15 +84,17 @@ def generate_est_and_com_files(project, est_master_file_path, com_master_file_pa
     com_document.Save(com_target_path)
 
 
-def generate_var_file(master_file_path, target_file_path):
+def process_var_documents_and_generate_files(main_var_doc, main_var_path, var_docs, var_paths):
     """
-    Given a project name, and valid master and target file paths for a publication version, regenerates target file based on source file
+    Process generated CTeiDocument objects - comparing each var_doc in var_docs to the main_var_doc and saving target files
     """
-    var_document = CTeiDocument()
-    var_document.Load(master_file_path)
-    # TODO var files, check how ProcessVariants works
-    # var_document.ProcessVariants()
-    # var_document.Save(target_file_path)
+    # First, compare the main variant against all other variants
+    main_var_doc.ProcessVariants(var_docs)
+    # Then save main variant web XML file
+    main_var_doc.Save(main_var_path)
+    # lastly, save all other variant web XML files
+    for var_doc, var_path in zip(var_docs, var_paths):
+        var_doc.Save(var_path)
 
 
 def generate_ms_file(master_file_path, target_file_path):
@@ -119,12 +121,6 @@ def check_publication_mtimes_and_publish_files(project):
                                      "JOIN publication_comment ON publication.publication_comment_id=publication_comment.id "
                                      "WHERE publication_collection.project_id = :proj").bindparams(proj=project_id)
 
-            # publication_version info
-            variant_query = text("SELECT publication_version.id, publication.id, publication.publication_collection_id, publication_version.original_filename "
-                                 "FROM publication_version JOIN publication ON publication_version.publication_id=publication.id "
-                                 "JOIN publication_collection ON publication.publication_collection_id=publication_collection.id "
-                                 "WHERE publication_collection.project_id = :proj").bindparams(proj=project_id)
-
             # publication_manuscript info
             manuscript_query = text("SELECT publication_manuscript.id, publication.id, publication.publication_collection_id, publication_manuscript.original_filename "
                                     "FROM publication_manuscript JOIN publication ON publication_manuscript.publication_id=publication.id "
@@ -132,7 +128,6 @@ def check_publication_mtimes_and_publish_files(project):
                                     "WHERE publication_collection.project_id = :proj").bindparams(proj=project_id)
 
             publication_info = connection.execute(publication_query).fetchall()
-            variant_info = connection.execute(variant_query).fetchall()
             manuscript_info = connection.execute(manuscript_query).fetchall()
 
             connection.close()
@@ -175,33 +170,70 @@ def check_publication_mtimes_and_publish_files(project):
                         generate_est_and_com_files(project_name, est_source_file_path, com_source_file_path,
                                                    est_target_file_path, com_target_file_path)
 
-            # For each publication_version belonging to this project, check the modification timestamp of its master file and compare it to the generated web XML file
-            for row in variant_info:
+                # Process all variants belonging to this publication
+                # publication_version with type=1 is the "main" variant, the others should have type=2 and be versions of that main variant
+                publication_id = row["publication.id"]
+                variant_query = text("SELECT publication_version.id, publication.id, publication.publication_collection_id, publication_version.original_filename "
+                                     "FROM publication_version JOIN publication ON publication_version.publication_id=publication.id "
+                                     "JOIN publication_collection ON publication.publication_collection_id=publication_collection.id "
+                                     "WHERE publication_collection.project_id = :proj AND publication.id = :pub_id AND publication_version.type = :vers_type")
+
+                # fetch info for "main" variant
+                main_variant_query = variant_query.bindparams(proj=project_id, pub_id=publication_id, vers_type=1)
+                main_variant_info = connection.execute(main_variant_query).fetchone()   # should only be one main variant per publication?
+
+                # fetch info for all "other" variants
+                variants_query = variant_query.bindparams(proj=project_id, pub_id=publication_id, vers_type=2)
+                variants_info = connection.execute(variants_query).fetchall()
+
+                # compile info and generate files if needed
+                main_variant_source = os.path.join(file_root, main_variant_info["publication_version.original_filename"])
                 target_filename = "{}_{}_var_{}.xml".format(row["publication.publication_collection_id"],
                                                             row["publication.id"],
                                                             row["publication_version.id"])
-                source_filename = row["publication_version.original_filename"]
-                target_file_path = os.path.join(file_root, "xml", "var", target_filename)
-                source_file_path = os.path.join(file_root, source_filename)  # original_filename should be relative to the project root
 
-                try:
-                    target_mtime = os.path.getmtime(target_file_path)
-                    source_mtime = os.path.getmtime(source_file_path)
-                except OSError:
-                    # If there is an error, the web XML file likely doesn't exist or is otherwise corrupt
-                    # It is then easiest to just generate a new one
-                    print("Error getting time_modified for target or source files for publication_version {}".format(row["publication_version.id"]))
-                    print("Generating new file...")
-                    changes.append(target_file_path)
-                    generate_var_file(source_file_path, target_file_path)
-                else:
-                    if target_mtime >= source_mtime:
-                        # If the target var file is newer than the source, continue to the next publication_version
-                        continue
-                    else:
+                # If any variants have changed, we need a CTeiDocument for the main variant to ProcessVariants() with
+                main_variant_target = os.path.join(file_root, "xml", "var", target_filename)
+                main_variant_doc = CTeiDocument()
+                main_variant_doc.Load(main_variant_source)
+
+                # For each "other" variant, create a new CTeiDocument if needed, but if main_variant_updated is True, just make a new for all
+                variant_docs = []
+                variant_paths = []
+                for variant in variants_info:
+                    target_filename = "{}_{}_var_{}.xml".format(variant["publication.publication_collection_id"],
+                                                                variant["publication.id"],
+                                                                row["publication_version.id"])
+                    source_filename = variant["publication_version.original_filename"]
+                    target_file_path = os.path.join(file_root, "xml", "var", target_filename)
+                    source_file_path = os.path.join(file_root, source_filename)  # original_filename should be relative to the project root
+
+                    try:
+                        target_mtime = os.path.getmtime(target_file_path)
+                        source_mtime = os.path.getmtime(source_file_path)
+                    except OSError:
+                        # If there is an error, the web XML file likely doesn't exist or is otherwise corrupt
+                        # It is then easiest to just generate a new one
+                        print("Error getting time_modified for target or source files for publication_version {}".format(variant["publication_version.id"]))
+                        print("Generating new file...")
                         changes.append(target_file_path)
-                        print("File {} is newer than source file {}, generating new file...".format(target_file_path, source_file_path))
-                        generate_var_file(source_file_path, target_file_path)
+                        variant_doc = CTeiDocument()
+                        variant_doc.Load(source_file_path)
+                        variant_docs.append(variant_doc)
+                        variant_paths.append(target_file_path)
+                    else:
+                        if target_mtime < source_mtime:
+                            print("File {} is older than source file {}, generating new file...".format(target_file_path, source_file_path))
+                            changes.append(target_file_path)
+                            variant_doc = CTeiDocument()
+                            variant_doc.Load(source_file_path)
+                            variant_docs.append(variant_doc)
+                            variant_paths.append(target_file_path)
+                        else:
+                            # If no changes, don't generate CTeiDocument and don't make a new web XML file
+                            continue
+                # lastly, actually process all generated CTeiDocument objects and create web XML files
+                process_var_documents_and_generate_files(main_variant_doc, main_variant_target, variant_docs, variant_paths)
 
             # For each publication_manuscript belonging to this project, check the modification timestamp of its master file and compare it to the generated web XML file
             for row in manuscript_info:
@@ -228,7 +260,7 @@ def check_publication_mtimes_and_publish_files(project):
                         continue
                     else:
                         changes.append(target_file_path)
-                        print("File {} is newer than source file {}, generating new file...".format(target_file_path, source_file_path))
+                        print("File {} is older than source file {}, generating new file...".format(target_file_path, source_file_path))
                         generate_ms_file(source_file_path, target_file_path)
 
             if len(changes) > 0:
