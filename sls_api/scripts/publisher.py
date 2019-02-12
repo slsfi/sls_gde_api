@@ -23,7 +23,24 @@ def get_comment_from_database(project, document_note_id):
                          "WHERE documentnote.deleted = 0 AND note.deleted = 0 AND documentnote.id = :docnote_id")
     comment_query = comment_query.bindparams(docnote_id=document_note_id)
     comment = connection.execute(comment_query).fetchone()  # should only be one, as documentnote.id should be unique
+    connection.close()
     return comment
+
+
+def get_all_comments_by_document_id(project, document_id):
+    """
+    Given the name of a project and the ID of a comments document, gets all comments from the comments database belonging to that document.
+    Returns a list of dicts, each dict representing one comment.
+    """
+    connection = comment_db_engines[project].connect()
+
+    comment_query = text("SELECT documentnote.id, documentnote.shortenedSelection, note.description "
+                         "FROM documentnote INNER JOIN note ON documentnote.note_id = note.id "
+                         "WHERE documentnote.deleted = 0 AND note.deleted = 0 AND documentnote.document_id = :doc_id")
+    comment_query = comment_query.bindparams(doc_id=document_id)
+    comments = connection.execute(comment_query).fetchall()
+    connection.close()
+    return [dict(comment) for comment in comments]
 
 
 def generate_est_and_com_files(est_master_file_path, com_master_file_path, est_target_path, com_target_path):
