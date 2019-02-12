@@ -1,5 +1,4 @@
 import os
-from shutil import copy2 as copy_file
 from sqlalchemy import create_engine
 from sqlalchemy.sql import text
 from subprocess import CalledProcessError
@@ -7,6 +6,7 @@ import traceback
 
 from sls_api.endpoints.generics import config, db_engine, get_project_id_from_name
 from sls_api.endpoints.tools_files import run_git_command
+from sls_api.scripts.CTeiDocument import CTeiDocument
 
 comment_db_engines = {project: create_engine(config[project]["comment_database"], pool_pre_ping=True) for project in config.keys()}
 
@@ -26,31 +26,42 @@ def get_comment_from_database(project, document_note_id):
     return comment
 
 
-def generate_est_and_com_files(project, est_master_file_path, com_master_file_path, est_target_path, com_target_path):
+def generate_est_and_com_files(est_master_file_path, com_master_file_path, est_target_path, com_target_path):
     """
     Given a project name, and paths to valid EST/COM masters and targets, regenerates target files based on source files
     """
-    file_root = config[project]["file_root"]
-    # TODO actual masterfile processing to webfiles using XSLT
-    # TODO com file generation with both masterfiles and comments database
-    copy_file(est_master_file_path, est_target_path)
-    copy_file(com_master_file_path, com_target_path)
+    est_document = CTeiDocument()
+    est_document.Load(est_master_file_path, bRemoveDelSpans=True)
+    est_document.PostProcessMainText()
+    est_document.Save(est_target_path)
+
+    # TODO com files, check how ProcessComments works
+    com_document = CTeiDocument()
+    com_document.Load(com_master_file_path)
+    # com_document.ProcessCommments()
+    # com_document.PostProcessOtherText()
+    # com_document.Save(com_target_path)
 
 
-def generate_var_file(project, master_file_path, target_file_path):
+def generate_var_file(master_file_path, target_file_path):
     """
     Given a project name, and valid master and target file paths for a publication version, regenerates target file based on source file
     """
-    file_root = config[project]["file_root"]
-    copy_file(master_file_path, target_file_path)  # TODO actual masterfile processing to webfile using XSLT
+    var_document = CTeiDocument()
+    var_document.Load(master_file_path)
+    # TODO var files, check how ProcessVariants works
+    # var_document.ProcessVariants()
+    # var_document.Save(target_file_path)
 
 
-def generate_ms_file(project, master_file_path, target_file_path):
+def generate_ms_file(master_file_path, target_file_path):
     """
     Given a project name, and valid master and target file paths for a publication manuscript, regenerates target file based on source file
     """
-    file_root = config[project]["file_root"]
-    copy_file(master_file_path, target_file_path)  # TODO actual masterfile processing to webfile using XSLT
+    ms_document = CTeiDocument()
+    ms_document.Load(master_file_path)
+    ms_document.PostProcessOtherText()
+    ms_document.Save(target_file_path)
 
 
 def check_publication_mtimes_and_publish_files(project):
@@ -109,7 +120,7 @@ def check_publication_mtimes_and_publish_files(project):
                     print("Generating new est/com files...")
                     changes.append(est_target_file_path)
                     changes.append(com_target_file_path)
-                    generate_est_and_com_files(project_name, est_source_file_path, com_source_file_path,
+                    generate_est_and_com_files(est_source_file_path, com_source_file_path,
                                                est_target_file_path, com_target_file_path)
                 else:
                     if est_target_mtime >= est_source_mtime and com_target_mtime >= com_source_mtime:
@@ -120,7 +131,7 @@ def check_publication_mtimes_and_publish_files(project):
                         changes.append(est_target_file_path)
                         changes.append(com_target_file_path)
                         print("Reading files for publication {} are outdated, generating new est/com files...".format(row["publication.id"]))
-                        generate_est_and_com_files(project_name, est_source_file_path, com_source_file_path,
+                        generate_est_and_com_files(est_source_file_path, com_source_file_path,
                                                    est_target_file_path, com_target_file_path)
 
             # For each publication_version belonging to this project, check the modification timestamp of its master file and compare it to the generated web XML file
@@ -141,7 +152,7 @@ def check_publication_mtimes_and_publish_files(project):
                     print("Error getting time_modified for target or source files for publication_version {}".format(row["publication_version.id"]))
                     print("Generating new file...")
                     changes.append(target_file_path)
-                    generate_var_file(project_name, source_file_path, target_file_path)
+                    generate_var_file(source_file_path, target_file_path)
                 else:
                     if target_mtime >= source_mtime:
                         # If the target var file is newer than the source, continue to the next publication_version
@@ -149,7 +160,7 @@ def check_publication_mtimes_and_publish_files(project):
                     else:
                         changes.append(target_file_path)
                         print("File {} is newer than source file {}, generating new file...".format(target_file_path, source_file_path))
-                        generate_var_file(project_name, source_file_path, target_file_path)
+                        generate_var_file(source_file_path, target_file_path)
 
             # For each publication_manuscript belonging to this project, check the modification timestamp of its master file and compare it to the generated web XML file
             for row in manuscript_info:
@@ -169,7 +180,7 @@ def check_publication_mtimes_and_publish_files(project):
                     print("Error getting time_modified for target or source file for publication_manuscript {}".format(row["publication_manuscript.id"]))
                     print("Generating new file...")
                     changes.append(target_file_path)
-                    generate_ms_file(project_name, source_file_path, target_file_path)
+                    generate_ms_file(source_file_path, target_file_path)
                 else:
                     if target_mtime >= source_mtime:
                         # If the target ms file is newer than the source, continue to the next publication_manuscript
@@ -177,7 +188,7 @@ def check_publication_mtimes_and_publish_files(project):
                     else:
                         changes.append(target_file_path)
                         print("File {} is newer than source file {}, generating new file...".format(target_file_path, source_file_path))
-                        generate_ms_file(project_name, source_file_path, target_file_path)
+                        generate_ms_file(source_file_path, target_file_path)
 
             if len(changes) > 0:
                 # If there are changes, try to commit them to git
