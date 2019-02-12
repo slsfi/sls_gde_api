@@ -10,6 +10,9 @@ from sls_api.scripts.CTeiDocument import CTeiDocument
 
 comment_db_engines = {project: create_engine(config[project]["comment_database"], pool_pre_ping=True) for project in config.keys()}
 
+COMMENTS_XSL_PATH_IN_FILE_ROOT = "xslt/comment_html_to_tei.xsl"
+COMMENTS_TEMPLATE_PATH_IN_FILE_ROOT = "templates/comment.xml"
+
 
 def get_comment_from_database(project, document_note_id):
     """
@@ -43,21 +46,38 @@ def get_all_comments_by_document_id(project, document_id):
     return [dict(comment) for comment in comments]
 
 
-def generate_est_and_com_files(est_master_file_path, com_master_file_path, est_target_path, com_target_path):
+def generate_est_and_com_files(project, est_master_file_path, com_master_file_path, est_target_path, com_target_path, com_xsl_path=None):
     """
     Given a project name, and paths to valid EST/COM masters and targets, regenerates target files based on source files
     """
+    # Generate est file for this document
     est_document = CTeiDocument()
     est_document.Load(est_master_file_path, bRemoveDelSpans=True)
     est_document.PostProcessMainText()
     est_document.Save(est_target_path)
 
-    # TODO com files, check how ProcessComments works
+    # Get the document ID from the main master file and use it to get all the comments for this document
+    document_id = est_document.GetFirstNoteId()
+    comments = get_all_comments_by_document_id(project, document_id)
+
+    # generate comments file for this document
     com_document = CTeiDocument()
+
+    # if com_master_file_path doesn't exist, use COMMENTS_TEMPLATE_PATH_IN_FILE_ROOT
+    if not os.path.exists(com_master_file_path):
+        com_master_file_path = os.path.join(config[project]["file_root"], COMMENTS_TEMPLATE_PATH_IN_FILE_ROOT)
+
+    # load in com_master file
     com_document.Load(com_master_file_path)
-    # com_document.ProcessCommments()
-    # com_document.PostProcessOtherText()
-    # com_document.Save(com_target_path)
+
+    # if com_xsl_path is invalid or not given, try using COMMENTS_XSL_PATH_IN_FILE_ROOT
+    if com_xsl_path is None or not os.path.exists(com_xsl_path):
+        com_xsl_path = os.path.join(config[project]["file_root"], COMMENTS_XSL_PATH_IN_FILE_ROOT)
+
+    # process comments and save
+    com_document.ProcessCommments(comments, est_document, com_xsl_path)
+    com_document.PostProcessOtherText()
+    com_document.Save(com_target_path)
 
 
 def generate_var_file(master_file_path, target_file_path):
@@ -137,7 +157,7 @@ def check_publication_mtimes_and_publish_files(project):
                     print("Generating new est/com files...")
                     changes.append(est_target_file_path)
                     changes.append(com_target_file_path)
-                    generate_est_and_com_files(est_source_file_path, com_source_file_path,
+                    generate_est_and_com_files(project_name, est_source_file_path, com_source_file_path,
                                                est_target_file_path, com_target_file_path)
                 else:
                     if est_target_mtime >= est_source_mtime and com_target_mtime >= com_source_mtime:
@@ -148,7 +168,7 @@ def check_publication_mtimes_and_publish_files(project):
                         changes.append(est_target_file_path)
                         changes.append(com_target_file_path)
                         print("Reading files for publication {} are outdated, generating new est/com files...".format(row["publication.id"]))
-                        generate_est_and_com_files(est_source_file_path, com_source_file_path,
+                        generate_est_and_com_files(project_name, est_source_file_path, com_source_file_path,
                                                    est_target_file_path, com_target_file_path)
 
             # For each publication_version belonging to this project, check the modification timestamp of its master file and compare it to the generated web XML file
