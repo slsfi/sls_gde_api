@@ -120,8 +120,8 @@ def check_publication_mtimes_and_publish_files(project):
             changes = []
             # For each publication belonging to this project, check the modification timestamp of its master files and compare them to the generated web XML files
             for row in publication_info:
-                est_target_filename = "{}_{}_est.xml".format(row["publication.id"],
-                                                             row["publication.publication_collection_id"])
+                est_target_filename = "{}_{}_est.xml".format(row["publication.publication_collection_id"],
+                                                             row["publication.id"])
                 com_target_filename = est_target_filename.replace("_est.xml", "_com.xml")
                 est_target_file_path = os.path.join(file_root, "xml", "est", est_target_filename)
                 com_target_file_path = os.path.join(file_root, "xml", "com", com_target_filename)
