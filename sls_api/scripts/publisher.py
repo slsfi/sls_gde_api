@@ -18,34 +18,17 @@ COMMENTS_XSL_PATH_IN_FILE_ROOT = "xslt/comment_html_to_tei.xsl"
 COMMENTS_TEMPLATE_PATH_IN_FILE_ROOT = "templates/comment.xml"
 
 
-def get_comment_from_database(project, document_note_id):
+def get_comments_from_database(project, document_note_ids):
     """
-    Given the name of a project and the ID of a comment in a comment master file, returns data from the comments database with a matching documentnote.id
-    Returns data as a dict-like object, can be accessed with integer index or column name (comment[0] or comment["id"])
-    """
-    connection = comment_db_engines[project].connect()
-
-    comment_query = text("SELECT documentnote.id, documentnote.shortenedSelection, note.description "
-                         "FROM documentnote INNER JOIN note ON documentnote.note_id = note.id "
-                         "WHERE documentnote.deleted = 0 AND note.deleted = 0 AND documentnote.id = :docnote_id")
-    comment_query = comment_query.bindparams(docnote_id=document_note_id)
-    comment = connection.execute(comment_query).fetchone()  # should only be one, as documentnote.id should be unique
-    connection.close()
-    return comment
-
-
-def get_all_comments_by_document_id(project, document_id):
-    """
-    Given the name of a project and the ID of a comments document, gets all comments from the comments database belonging to that document.
+    Given the name of a project and a list of IDs of comments in a master file, returns data from the comments database with matching documentnote.id
     Returns a list of dicts, each dict representing one comment.
     """
     connection = comment_db_engines[project].connect()
 
     comment_query = text("SELECT documentnote.id, documentnote.shortenedSelection, note.description "
                          "FROM documentnote INNER JOIN note ON documentnote.note_id = note.id "
-                         "WHERE documentnote.deleted = 0 AND note.deleted = 0 AND documentnote.document_id = :doc_id")
-    comment_query = comment_query.bindparams(doc_id=document_id)
-    comments = connection.execute(comment_query).fetchall()
+                         "WHERE documentnote.deleted = 0 AND note.deleted = 0 AND documentnote.id IN :docnote_ids")
+    comments = connection.execute(comment_query, docnote_ids=tuple(document_note_ids)).fetchall()
     connection.close()
     return [dict(comment) for comment in comments]
 
@@ -60,9 +43,10 @@ def generate_est_and_com_files(project, est_master_file_path, com_master_file_pa
     est_document.PostProcessMainText()
     est_document.Save(est_target_path)
 
-    # Get the document ID from the main master file and use it to get all the comments for this document
-    document_id = est_document.GetFirstNoteId()
-    comments = get_all_comments_by_document_id(project, document_id)
+    # Get all documentnote IDs from the main master file (these are the IDs of the comments for this document)
+    note_ids = est_document.GetAllNoteIDs()
+    # Use these note_ids to get all comments for this publication from the notes database
+    comments = get_comments_from_database(project, note_ids)
 
     # generate comments file for this document
     com_document = CTeiDocument()

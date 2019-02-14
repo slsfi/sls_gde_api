@@ -26,7 +26,7 @@ config_genres = dict()
 config_genres['lyrik'] = 'cg_poem'
 config_genres['drama'] = 'cg_drama'
 config_genres['historia och geografi'] = 'cg_nonfiction'
-config_genres['dagbÃ¶cker'] = 'cg_diary'
+config_genres['dagböcker'] = 'cg_diary'
 config_genres['prosa'] = 'cg_prose'
 config_genres['brev'] = 'cg_letter'
 config_genres['barnlitteratur'] = 'cg_childrensliterature'
@@ -343,8 +343,8 @@ class CTeiDocument:
                         oNode.text = 'ch' + sNewDiv
 
                 # Create the lemma node
-                xml_content = ET.fromstring('<seg type="noteLemma">' + comment['shortenedSelection'].replace('[...]',
-                                                                                                             '<seg type="lemmaBreak">[...]</seg>') + '</seg>')
+                soup = BeautifulSoup(comment['shortenedSelection'].replace('[...]', '<seg type="lemmaBreak">[...]</seg>'), "html.parser")
+                xml_content = ET.fromstring('<seg type="noteLemma">' + str(soup) + '</seg>')
                 oNoteNode.append(xml_content)
 
                 # Create the text node (<seg type="noteText"> is created in the xslt file)
@@ -461,7 +461,7 @@ class CTeiDocument:
             # Build and return the note position text
             if len(sStart) > 0:
                 if len(sEnd) > 0 and sStart != sEnd:
-                    return sStart + 'â€“' + sEnd
+                    return sStart + 'Ã¢â‚¬â€œ' + sEnd
                 else:
                     return sStart
             else:
@@ -479,6 +479,18 @@ class CTeiDocument:
         if len(oAnchorNode) > 0:
             sAtt = oAnchorNode[0].attrib['{http://www.w3.org/XML/1998/namespace}id']
             return sAtt[5:]
+        else:
+            return None
+
+    def GetAllNoteIDs(self):
+        oAnchorNode = self.xmlRoot.xpath('//' + self.sPrefix + ':anchor[starts-with(@xml:id,"start")]',
+                                         namespaces={self.sPrefix: self.sNamespaceUrl})
+        if len(oAnchorNode) > 0:
+            note_ids = []
+            for elem in oAnchorNode:
+                id_text = elem.attrib['{http://www.w3.org/XML/1998/namespace}id']
+                note_ids.append(id_text[5:])
+            return note_ids
         else:
             return None
 
