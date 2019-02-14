@@ -747,6 +747,122 @@ def get_all_occurrences_by_type(object_type, project=None):
         connection.close()
         return jsonify(occur)
 
+@digital_edition.route("/<project>/subject/occurrences/")
+def get_subject_occurrences(project=None):
+    if project == 'all':
+        subject_sql = " SELECT id, date_born::text, date_deceased::text, description, first_name, last_name, full_name as name, \
+                        type as object_type, occupation, place_of_birth, source \
+                        FROM subject WHERE deleted != 1"
+        statement_subj = sqlalchemy.sql.text(subject_sql)
+    else:
+        subject_sql = " SELECT id, date_born::text, date_deceased::text, description, first_name, last_name, full_name as name, \
+                        type as object_type, occupation, place_of_birth, source \
+                        FROM subject WHERE deleted != 1 AND project_id = :project_id"
+        project_id = get_project_id_from_name(project)
+        statement_subj = sqlalchemy.sql.text(subject_sql).bindparams(project_id=project_id)
+
+    connection = db_engine.connect()    
+    subjects = []
+    for subject in connection.execute(statement_subj).fetchall():
+        subject = dict(subject)
+        occurrence_sql = "SELECT \
+                            pub_c.name as collection_name, pub_c.id as collection_id, ev.description, ev.id, ev_o.publication_comment_id, \
+                            publication_facsimile_id, publication_facsimile_page, \
+                            publication_manuscript_id, publication_version_id, ev.type, \
+                            pub.id as publication_id, pub.name as publication_name, pub.original_filename as original_filename \
+                            FROM event_connection ev_c \
+                            JOIN event ev ON ev.id = ev_c.event_id \
+                            JOIN event_occurrence ev_o ON ev_o.event_id = ev_c.event_id \
+                            JOIN publication pub ON pub.id = ev_o.publication_id \
+                            JOIN publication_collection pub_c ON pub_c.id = pub.publication_collection_id \
+                            JOIN subject sub ON ev_c.subject_id = sub.id \
+                            WHERE ev.deleted != 1 AND ev_o.deleted != 1 AND ev_c.deleted != 1 AND sub.id = :sub_id"
+        statement_occ = sqlalchemy.sql.text(occurrence_sql).bindparams(sub_id=subject['id'])
+        subject['occurrences'] = []
+        for occurrence in connection.execute(statement_occ).fetchall():
+            subject['occurrences'].append(dict(occurrence))
+        subjects.append(subject)
+
+    connection.close()
+
+    return jsonify(subjects)
+
+@digital_edition.route("/<project>/location/occurrences/")
+def get_location_occurrences(project=None):
+    if project == 'all':
+        location_sql = " SELECT id, city, country, description, latitude, longitude, name, region, source \
+                        FROM location WHERE deleted != 1"
+        statement_loc = sqlalchemy.sql.text(location_sql)
+    else:
+        location_sql = " SELECT id, city, country, description, latitude, longitude, name, region, source \
+                        FROM location WHERE deleted != 1 AND project_id = :project_id"
+        project_id = get_project_id_from_name(project)
+        statement_loc = sqlalchemy.sql.text(location_sql).bindparams(project_id=project_id)
+
+    connection = db_engine.connect()    
+    locations = []
+    for location in connection.execute(statement_loc).fetchall():
+        location = dict(location)
+        occurrence_sql = "SELECT \
+                            pub_c.name as collection_name, pub_c.id as collection_id, ev.description, ev.id, ev_o.publication_comment_id, \
+                            publication_facsimile_id, publication_facsimile_page, \
+                            publication_manuscript_id, publication_version_id, ev.type, \
+                            pub.id as publication_id, pub.name as publication_name, pub.original_filename as original_filename \
+                            FROM event_connection ev_c \
+                            JOIN event ev ON ev.id = ev_c.event_id \
+                            JOIN event_occurrence ev_o ON ev_o.event_id = ev_c.event_id \
+                            JOIN publication pub ON pub.id = ev_o.publication_id \
+                            JOIN publication_collection pub_c ON pub_c.id = pub.publication_collection_id \
+                            JOIN location loc ON ev_c.location_id = loc.id \
+                            WHERE ev.deleted != 1 AND ev_o.deleted != 1 AND ev_c.deleted != 1 AND loc.id = :loc_id"
+        statement_occ = sqlalchemy.sql.text(occurrence_sql).bindparams(loc_id=location['id'])
+        location['occurrences'] = []
+        for occurrence in connection.execute(statement_occ).fetchall():
+            location['occurrences'].append(dict(occurrence))
+        locations.append(location)
+
+    connection.close()
+
+    return jsonify(locations)
+
+@digital_edition.route("/<project>/tag/occurrences/")
+def get_tag_occurrences(project=None):
+    if project == 'all':
+        tag_sql = " SELECT id, type, name, description, source \
+                        FROM tag WHERE deleted != 1"
+        statement_tag = sqlalchemy.sql.text(tag_sql)
+    else:
+        tag_sql = " SELECT id, type, name, description, source \
+                        FROM tag WHERE deleted != 1 AND project_id = :project_id"
+        project_id = get_project_id_from_name(project)
+        statement_tag = sqlalchemy.sql.text(tag_sql).bindparams(project_id=project_id)
+
+    connection = db_engine.connect()    
+    tags = []
+    for tag in connection.execute(statement_tag).fetchall():
+        tag = dict(tag)
+        occurrence_sql = "SELECT \
+                            pub_c.name as collection_name, pub_c.id as collection_id, ev.description, ev.id, ev_o.publication_comment_id, \
+                            publication_facsimile_id, publication_facsimile_page, \
+                            publication_manuscript_id, publication_version_id, ev.type, \
+                            pub.id as publication_id, pub.name as publication_name, pub.original_filename as original_filename \
+                            FROM event_connection ev_c \
+                            JOIN event ev ON ev.id = ev_c.event_id \
+                            JOIN event_occurrence ev_o ON ev_o.event_id = ev_c.event_id \
+                            JOIN publication pub ON pub.id = ev_o.publication_id \
+                            JOIN publication_collection pub_c ON pub_c.id = pub.publication_collection_id \
+                            JOIN tag ON ev_c.tag_id = tag.id \
+                            WHERE ev.deleted != 1 AND ev_o.deleted != 1 AND ev_c.deleted != 1 AND tag.id = :tag_id"
+        statement_occ = sqlalchemy.sql.text(occurrence_sql).bindparams(tag_id=tag['id'])
+        tag['occurrences'] = []
+        for occurrence in connection.execute(statement_occ).fetchall():
+            tag['occurrences'].append(dict(occurrence))
+        tags.append(tag)
+
+    connection.close()
+
+    return jsonify(tags)
+
 @digital_edition.route("/<project>/occurrences/collection/<object_type>/<collection_id>")
 def get_person_occurrences_by_collection(project, object_type, collection_id):
     connection = db_engine.connect()
