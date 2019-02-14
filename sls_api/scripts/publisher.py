@@ -132,6 +132,9 @@ def check_publication_mtimes_and_publish_files(project):
                 est_source_file_path = os.path.join(file_root, row["publication.original_filename"])          # original_filename should be relative to the project root
                 com_source_file_path = os.path.join(file_root, row["publication_comment.original_filename"])  # original_filename should be relative to the project root
 
+                if not os.path.exists(est_source_file_path) or not os.path.exists(com_source_file_path):
+                    print("Source file for est or com file for publication {} does not exist!".format(row["publication.id"]))
+                    continue
                 try:
                     est_target_mtime = os.path.getmtime(est_target_file_path)
                     com_target_mtime = os.path.getmtime(com_target_file_path)
@@ -176,6 +179,11 @@ def check_publication_mtimes_and_publish_files(project):
 
                 # compile info and generate files if needed
                 main_variant_source = os.path.join(file_root, main_variant_info["publication_version.original_filename"])
+
+                if not os.path.exists(main_variant_source):
+                    print("Source file for main variant {} (type=1) does not exist!".format(main_variant_info["publication_version.id"]))
+                    continue
+
                 target_filename = "{}_{}_var_{}.xml".format(row["publication.publication_collection_id"],
                                                             row["publication.id"],
                                                             row["publication_version.id"])
@@ -195,6 +203,10 @@ def check_publication_mtimes_and_publish_files(project):
                     source_filename = variant["publication_version.original_filename"]
                     target_file_path = os.path.join(file_root, "xml", "var", target_filename)
                     source_file_path = os.path.join(file_root, source_filename)  # original_filename should be relative to the project root
+
+                    if not os.path.exists(source_file_path):
+                        print("Source file for variant {} does not exist!".format(variant["publication_version.id"]))
+                        continue
 
                     try:
                         target_mtime = os.path.getmtime(target_file_path)
@@ -231,6 +243,10 @@ def check_publication_mtimes_and_publish_files(project):
                 source_filename = row["publication_manuscript.original_filename"]
                 target_file_path = os.path.join(file_root, "xml", "ms", target_filename)
                 source_file_path = os.path.join(file_root, source_filename)  # original_filename should be relative to the project root
+
+                if not os.path.exists(source_file_path):
+                    print("Source file for manuscript {} does not exist!".format(row["publication_manuscript.id"]))
+                    continue
 
                 try:
                     target_mtime = os.path.getmtime(target_file_path)
