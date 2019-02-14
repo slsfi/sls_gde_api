@@ -7,7 +7,7 @@ import sys
 import traceback
 
 from sls_api.endpoints.generics import config, db_engine, get_project_id_from_name
-from sls_api.endpoints.tools_files import run_git_command
+from sls_api.endpoints.tools_files import run_git_command, update_files_in_git_repo
 from sls_api.scripts.CTeiDocument import CTeiDocument
 
 comment_db_engines = {project: create_engine(config[project]["comment_database"], pool_pre_ping=True) for project in config.keys()}
@@ -92,6 +92,10 @@ def generate_ms_file(master_file_path, target_file_path):
 
 
 def check_publication_mtimes_and_publish_files(project):
+    update_success, _ = update_files_in_git_repo(project)
+    if not update_success:
+        print("Git update failed!")
+        return False
     project_id = get_project_id_from_name(project)
     project_settings = config.get(project, None)
     if project_id is not None and project_settings is not None:
