@@ -461,7 +461,7 @@ class CTeiDocument:
             # Build and return the note position text
             if len(sStart) > 0:
                 if len(sEnd) > 0 and sStart != sEnd:
-                    return sStart + 'Ã¢â‚¬â€œ' + sEnd
+                    return sStart + '-' + sEnd
                 else:
                     return sStart
             else:
