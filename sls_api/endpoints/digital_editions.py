@@ -781,7 +781,8 @@ def get_subject_occurrences(project=None):
         subject['occurrences'] = []
         for occurrence in connection.execute(statement_occ).fetchall():
             subject['occurrences'].append(dict(occurrence))
-        subjects.append(subject)
+        if len(subject['occurrences']) > 0:
+            subjects.append(subject)
 
     connection.close()
 
@@ -819,7 +820,8 @@ def get_location_occurrences(project=None):
         location['occurrences'] = []
         for occurrence in connection.execute(statement_occ).fetchall():
             location['occurrences'].append(dict(occurrence))
-        locations.append(location)
+        if len(location['occurrences']) > 0:
+            locations.append(location)
 
     connection.close()
 
@@ -857,7 +859,8 @@ def get_tag_occurrences(project=None):
         tag['occurrences'] = []
         for occurrence in connection.execute(statement_occ).fetchall():
             tag['occurrences'].append(dict(occurrence))
-        tags.append(tag)
+        if len(tag['occurrences']) > 0:
+            tags.append(tag)
 
     connection.close()
 
