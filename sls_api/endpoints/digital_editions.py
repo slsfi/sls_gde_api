@@ -577,6 +577,18 @@ def get_tooltip_text(object_type, ident):
     else:
         return jsonify(get_tooltip(object_type, ident))
 
+@digital_edition.route("/<project>/tooltips/<object_type>/<ident>/<use_legacy>/")
+def get_project_tooltip_text(project, object_type, ident, use_legacy=True):
+    """
+    Get tooltip text for a specific subject, tag, or location
+    object_type: one of "subject", "tag", "location"
+    ident: legacy or numerical ID for desired object
+    """
+    if object_type not in ["subject", "tag", "location"]:
+        abort(404)
+    else:
+        return jsonify(get_tooltip(object_type, ident, project, use_legacy))
+
 @digital_edition.route("/occurrences/<object_type>/<ident>")
 def get_occurrences(object_type, ident):
     """
@@ -1036,7 +1048,7 @@ def list_tooltips(table):
     return results
 
 
-def get_tooltip(table, row_id):
+def get_tooltip(table, row_id, project=None, use_legacy=False):
     """
     Get 'tooltip' style info for a single subject, tag, or location by its ID
     table should be 'subject', 'tag', or 'location'
@@ -1046,22 +1058,42 @@ def get_tooltip(table, row_id):
         ident = int(row_id)
         is_legacy_id = False
     except ValueError:
-        ident = row_id
+        ident = str(row_id)
         is_legacy_id = True
+    
+    if use_legacy:
+        ident = str(row_id)
+        is_legacy_id = True
+
+    project_sql = " AND project_id = :project_id "
+    if project == None:
+        project_sql = ""
+    
     if is_legacy_id:
         if table == "subject":
-            sql = sqlalchemy.sql.text("SELECT id, legacy_id, full_name, description FROM subject WHERE legacy_id=:id")
+            sql = sqlalchemy.sql.text("SELECT id, legacy_id, full_name, description FROM subject WHERE legacy_id=:id" + project_sql)
         else:
-            sql = sqlalchemy.sql.text("SELECT id, legacy_id, name, description FROM {} WHERE legacy_id=:id".format(table))
+            sql_query = "SELECT id, legacy_id, name, description FROM {} WHERE legacy_id=:id " + project_sql
+            sql = sqlalchemy.sql.text(sql.format(table))
     else:
         if table == "subject":
-            sql = sqlalchemy.sql.text("SELECT id, legacy_id, full_name, description FROM subject WHERE id=:id")
+            sql = sqlalchemy.sql.text("SELECT id, legacy_id, full_name, description FROM subject WHERE id=:id" + project_sql)
         else:
-            sql = sqlalchemy.sql.text("SELECT id, legacy_id, name, description FROM {} WHERE id=:id".format(table))
-    statement = sql.bindparams(id=ident)
+            sql_query = "SELECT id, legacy_id, name, description FROM {} WHERE id=:id" + project_sql
+            sql = sqlalchemy.sql.text(sql_query.format(table))
+
+    if project == None:
+        statement = sql.bindparams(id=ident)
+    else:
+        project_id = get_project_id_from_name(project)
+        statement = sql.bindparams(id=ident, project_id=project_id)        
+
     result = connection.execute(statement).fetchone()
     connection.close()
-    return dict(result)
+    if result == None:
+        return dict()
+    else:
+        return dict(result)
 
 # Freetext seach through ElasticSearch API
 @digital_edition.route("<project>/search/freetext/<search_text>/<fuzziness>")
