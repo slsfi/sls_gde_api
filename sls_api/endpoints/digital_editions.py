@@ -577,8 +577,9 @@ def get_tooltip_text(object_type, ident):
     else:
         return jsonify(get_tooltip(object_type, ident))
 
+@digital_edition.route("/<project>/tooltips/<object_type>/<ident>/")
 @digital_edition.route("/<project>/tooltips/<object_type>/<ident>/<use_legacy>/")
-def get_project_tooltip_text(project, object_type, ident, use_legacy=True):
+def get_project_tooltip_text(project, object_type, ident, use_legacy=False):
     """
     Get tooltip text for a specific subject, tag, or location
     object_type: one of "subject", "tag", "location"
