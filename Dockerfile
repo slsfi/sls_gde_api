@@ -1,19 +1,34 @@
 FROM python:3.6-slim-stretch
 
-RUN apt update && apt install -y build-essential libmariadbclient-dev subversion
+RUN apt update && apt install -y build-essential libmariadbclient-dev
 
-RUN pip install Twisted[tls]
+RUN useradd -ms /bin/bash uwsgi
+RUN mkdir /app
+RUN chown -R uwsgi /app
+USER uwsgi
 
-# Make folders and copy in all code
-RUN mkdir /app && mkdir /log && mkdir /log/digital_editions
 WORKDIR /app
-ADD . /app
+COPY . /app/
 
+USER root
+RUN pip install uwsgi
+RUN pip install -e .
+
+USER uwsgi
 # Add SSH configuration to ssh config file for openssh agent
+RUN mkdir ~/.ssh
 RUN cat ssh_config >> ~/.ssh/config
 RUN cp /app/ssh/* ~/.ssh/
 
-# Install sls_api package
-RUN pip install -e .
-
-CMD ["./start-container.sh"]
+CMD ["uwsgi", \
+     "--socket", "0.0.0.0:3031", \
+     "--uid", "uwsgi", \
+     "--plugins", "python3", \
+     "--protocol", "uwsgi", \
+     "--wsgi", "sls_api:app", \
+     "--master", \
+     "--enable-threads", \
+     "--processes", "1", \
+     "--workers", "4", \
+     "--reload-on-rss", "500" \
+]
