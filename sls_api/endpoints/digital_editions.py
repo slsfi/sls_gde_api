@@ -25,6 +25,8 @@ digital_edition = Blueprint('digital_edition', __name__)
 logger = logging.getLogger("sls_api.digital_edition")
 
 es = Elasticsearch([{'host': elastic_config['host'], 'port': elastic_config['port']}])
+es_logger = logging.getLogger("elasticsearch")
+es_logger.setLevel(logging.INFO)
 
 file_handler = TimedRotatingFileHandler(filename=config["log_file"], when="midnight", backupCount=7)
 file_handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s', '%H:%M:%S'))
