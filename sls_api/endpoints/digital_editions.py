@@ -1505,7 +1505,7 @@ def get_published_status(project, collection_id, publication_id):
         message = "Content does not exist"
     else:
         status = min(row.proj_pub, row.col_pub, row.pub)
-        if status < 1:
+        if status is None or status < 1:
             message = "Content is not published"
         elif status == 1 and not show_internal:
             message = "Content is not externally published"
