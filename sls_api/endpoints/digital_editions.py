@@ -795,8 +795,8 @@ def get_subject_occurrences(project=None):
 
     connection = db_engine.connect()
     subjects = []
-    connection.execute(statement_subj)
-    subject = connection.fetchone()
+    result = connection.execute(statement_subj)
+    subject = result.fetchone()
     while subject is not None:
         subject = dict(subject)
         occurrence_sql = "SELECT \
@@ -814,15 +814,15 @@ def get_subject_occurrences(project=None):
         statement_occ = sqlalchemy.sql.text(occurrence_sql).bindparams(sub_id=subject['id'])
         subject['occurrences'] = []
         connection_2 = db_engine.connect()
-        connection_2.execute(statement_occ)
-        occurrence = connection_2.fetchone()
+        result_2 = connection_2.execute(statement_occ)
+        occurrence = result_2.fetchone()
         while occurrence is not None:
             subject['occurrences'].append(dict(occurrence))
-            occurrence = connection_2.fetchone()
+            occurrence = result_2.fetchone()
         if len(subject['occurrences']) > 0:
             subjects.append(subject)
         connection_2.close()
-        subject = connection.fetchone()
+        subject = result.fetchone()
     connection.close()
 
     return jsonify(subjects)
@@ -842,8 +842,8 @@ def get_location_occurrences(project=None):
 
     connection = db_engine.connect()
     locations = []
-    connection.execute(statement_loc)
-    location = connection.fetchone()
+    result = connection.execute(statement_loc)
+    location = result.fetchone()
     while location is not None:
         location = dict(location)
         occurrence_sql = "SELECT \
@@ -861,15 +861,15 @@ def get_location_occurrences(project=None):
         statement_occ = sqlalchemy.sql.text(occurrence_sql).bindparams(loc_id=location['id'])
         location['occurrences'] = []
         connection_2 = db_engine.connect()
-        connection_2.execute(statement_occ)
-        occurrence = connection_2.fetchone()
+        result_2 = connection_2.execute(statement_occ)
+        occurrence = result_2.fetchone()
         while occurrence is not None:
             location['occurrences'].append(dict(occurrence))
-            occurrence = connection_2.fetchone()
+            occurrence = result_2.fetchone()
         if len(location['occurrences']) > 0:
             locations.append(location)
         connection_2.close()
-        location = connection.fetchone()
+        location = result.fetchone()
     connection.close()
 
     return jsonify(locations)
@@ -889,8 +889,8 @@ def get_tag_occurrences(project=None):
 
     connection = db_engine.connect()
     tags = []
-    connection.execute(statement_tag)
-    tag = connection.fetchone()
+    result = connection.execute(statement_tag)
+    tag = result.fetchone()
     while tag is not None:
         tag = dict(tag)
         occurrence_sql = "SELECT \
@@ -908,15 +908,15 @@ def get_tag_occurrences(project=None):
         statement_occ = sqlalchemy.sql.text(occurrence_sql).bindparams(tag_id=tag['id'])
         tag['occurrences'] = []
         connection_2 = db_engine.connect()
-        connection_2.execute(statement_occ)
-        occurrence = connection_2.fetchone()
+        result_2 = connection_2.execute(statement_occ)
+        occurrence = result_2.fetchone()
         while occurrence is not None:
             tag['occurrences'].append(dict(occurrence))
-            occurrence = connection_2.fetchone()
+            occurrence = result_2.fetchone()
         if len(tag['occurrences']) > 0:
             tags.append(tag)
         connection_2.close()
-        tag = connection.fetchone()
+        tag = result.fetchone()
 
     connection.close()
 
@@ -933,11 +933,11 @@ def get_person_occurrences_by_collection(project, object_type, collection_id):
     event_occurrence.type='{}'".format(collection_id, object_type)
 
     occurrences = []
-    connection.execute(occurrence_sql)
-    row = connection.fetchone()
+    result = connection.execute(occurrence_sql)
+    row = result.fetchone()
     while row is not None:
         occurrences.append(dict(row))
-        row = connection.fetchone()
+        row = result.fetchone()
 
     subjects = []
     for occurrence in occurrences:
@@ -946,11 +946,11 @@ def get_person_occurrences_by_collection(project, object_type, collection_id):
         WHERE event_occurrence.event_id={} AND event_occurrence.event_id = event_connection.event_id AND \
         event_connection.subject_id =  subject.id".format(occurrence["event_id"])
 
-        connection.execute(subject_sql)
-        row = connection.fetchone()
+        result = connection.execute(subject_sql)
+        row = result.fetchone()
         while row is not None:
             subjects.append(dict(row))
-            row = connection.fetchone()
+            row = result.fetchone()
     connection.close()
 
     return jsonify(subjects)
