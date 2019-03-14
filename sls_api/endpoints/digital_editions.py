@@ -86,18 +86,22 @@ def get_md_contents_as_json(project, fileid):
     file_path_query = safe_join(config[project]["file_root"], "md", path)
 
     try:
-        file_path = [f for f in glob.iglob(file_path_query)][0]
-        logger.info("Finding {} (md_contents fetch)".format(file_path))
-        if os.path.exists(file_path):
-            with io.open(file_path, encoding="UTF-8") as md_file:
-                contents = md_file.read()
-            data = {
-                "fileid": fileid,
-                "content": contents
-            }
-            return jsonify(data), 200
-        else:
+        file_path_full = [f for f in glob.iglob(file_path_query)]
+        if len(file_path_full) <= 0:
             abort(404)
+        else:
+            file_path = file_path_full[0]
+            logger.info("Finding {} (md_contents fetch)".format(file_path))
+            if os.path.exists(file_path):
+                with io.open(file_path, encoding="UTF-8") as md_file:
+                    contents = md_file.read()
+                data = {
+                    "fileid": fileid,
+                    "content": contents
+                }
+                return jsonify(data), 200
+            else:
+                abort(404)
     except Exception:
         logger.exception("Error fetching: {}".format(file_path_query))
         abort(404)
