@@ -606,12 +606,20 @@ def get_occurrences(object_type, ident):
             object_sql = "SELECT id FROM {} WHERE legacy_id=:l_id".format(object_type)
             stmt = sqlalchemy.sql.text(object_sql).bindparams(l_id=ident)
             row = connection.execute(stmt).fetchone()
-            object_id = row.id
+            if row is not None:
+                object_id = row.id
+            else:
+                connection.close()
+                jsonify([])
+
         events_sql = "SELECT id, type, description FROM event WHERE id IN " \
                      "(SELECT event_id FROM event_connection WHERE {}_id=:o_id)".format(object_type)
         occurrence_sql = "SELECT publication.publication_collection_id AS collection_id, event_occurrence.id, type, description, \
         event_occurrence.publication_id, event_occurrence.publication_version_id, event_occurrence.publication_facsimile_id, \
-        event_occurrence.publication_comment_id, event_occurrence.publication_manuscript_id FROM event_occurrence, publication \
+        event_occurrence.publication_comment_id, event_occurrence.publication_manuscript_id, \
+        pc.name as publication_collection_name, publication.name as publication_name \
+        FROM event_occurrence, publication \
+        JOIN publication_collection pc ON pc.id = publication.publication_collection_id \
         WHERE event_occurrence.event_id=:e_id AND event_occurrence.publication_id=publication.id"
 
         events_stmnt = sqlalchemy.sql.text(events_sql).bindparams(o_id=object_id)
