@@ -626,7 +626,7 @@ def get_occurrences(object_type, ident):
                 object_id = row.id
             else:
                 connection.close()
-                jsonify([])
+                return jsonify([])
 
         events_sql = "SELECT id, type, description FROM event WHERE id IN " \
                      "(SELECT event_id FROM event_connection WHERE {}_id=:o_id)".format(object_type)
