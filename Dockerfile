@@ -26,16 +26,5 @@ RUN mkdir ~/.ssh
 RUN cat ssh_config >> ~/.ssh/config
 RUN cp /app/ssh/* ~/.ssh/
 
-# run using 4 workers with 1 process each, gracefully reload idle workers if they've reserved >500MB RAM
-CMD ["uwsgi", \
-     "--socket", "0.0.0.0:3031", \
-     "--uid", "uwsgi", \
-     "--plugins", "python3", \
-     "--protocol", "uwsgi", \
-     "--wsgi", "sls_api:app", \
-     "--master", \
-     "--enable-threads", \
-     "--processes", "1", \
-     "--workers", "4", \
-     "--reload-on-rss", "500" \
-]
+# Run using uwsgi.ini configuration file
+CMD ["uwsgi", "--ini", "/app/uwsgi.ini"]
