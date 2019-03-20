@@ -995,7 +995,7 @@ def get_facsimile_file(project, collection_id, number, zoom_level):
     # TODO OpenStack Swift support for ISILON file storage - config param for root 'facsimiiles' path
     connection = db_engine.connect()
     check_statement = sqlalchemy.sql.text("SELECT published FROM publication WHERE id = "
-                                          "(SELECT publication_id FROM publication_facsimile WHERE publication_facsimile_collection_id=:coll_id)").bindparams(coll_id=collection_id)
+                                          "(SELECT publication_id FROM publication_facsimile WHERE publication_facsimile_collection_id=:coll_id LIMIT 1)").bindparams(coll_id=collection_id)
     row = connection.execute(check_statement).fetchone()
     if row is None:
         return jsonify({
