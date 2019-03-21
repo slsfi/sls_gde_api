@@ -260,6 +260,9 @@ def get_toc(project, collection_id):
             return contents, 200
         else:
             abort(404)
+    except IndexError:
+        logger.warning("File {} not found on disk.".format(file_path_query))
+        abort(404)
     except Exception:
         logger.exception("Error fetching {}".format(file_path_query))
         abort(404)
