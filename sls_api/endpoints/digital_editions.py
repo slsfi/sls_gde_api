@@ -1617,7 +1617,15 @@ def get_content(project, folder, xml_filename, xsl_filename, parameters):
     try:
         xml_file_path = safe_join(config[project]["file_root"], "xml", folder, xml_filename)
         xsl_file_path = safe_join(config[project]["file_root"], "xslt", xsl_filename)
-        cache_file_path = xml_file_path.replace("/xml/", "/cache/").replace(".xml", ".html")
+        cache_folder = os.path.join("/tmp", "api_cache", folder)
+        os.makedirs(cache_folder, exist_ok=True)
+        if "ms" in xsl_filename:
+            # xsl_filename is 'ms_changes.xsl' or 'ms_normalized.xsl'
+            # ensure that '_changes' or '_normalized' is appended to the cache filename accordingly
+            cache_extension = "{}.html".format(xsl_filename.split("ms")[1].replace(".xsl", ""))
+        else:
+            cache_extension = ".html"
+        cache_file_path = os.path.join(cache_folder, xml_file_path.replace(".xml", cache_extension))
     except Exception:
         logger.exception("Failed to find file {} in cache".format(xml_filename))
         return "Could not find content to read"
