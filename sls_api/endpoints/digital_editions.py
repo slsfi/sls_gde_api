@@ -1063,16 +1063,23 @@ def get_facsimile_pages(project, legacy_id):
         return Response("Couldn't get facsimile page.", status=404, content_type="text/json")
 
 
-@digital_edition.route("/<project>/facsimile/page/image/<facs_id>/<facs_nr>")
-def get_facsimile_page_image(project, facs_id, facs_nr):
+@digital_edition.route("/<project>/<facsimile_type>/page/image/<facs_id>/<facs_nr>")
+def get_facsimile_page_image(project, facsimile_type, facs_id, facs_nr):
     logger.info("Getting facsimile page image")
     try:
         zoom_level = "4"
-        file_path = safe_join(config[project]["file_root"],
-                              "facsimiles",
-                              facs_id,
-                              zoom_level,
-                              "{}.jpg".format(int(facs_nr)))
+        if facsimile_type == 'facsimile':
+            file_path = safe_join(config[project]["file_root"],
+                                "facsimiles",
+                                facs_id,
+                                zoom_level,
+                                "{}.jpg".format(int(facs_nr)))
+        elif facsimile_type == 'song-example':
+            file_path = safe_join(config[project]["file_root"],
+                                "song-example-images",
+                                facs_id,
+                                "{}.jpg".format(int(facs_nr)))
+
         output = io.BytesIO()
         try:
             with open(file_path, mode="rb") as img_file:
@@ -1151,6 +1158,32 @@ def get_pdf_file(project, collection_id, file_type, download_name):
     except Exception:
         return Response("File not found.", status=404, content_type="text/json")
 
+@digital_edition.route("/<project>/song-files/<file_type>/<file_name>/")
+def get_song_file(project, file_type, file_name):
+    """
+    Retrieve a single file from project root that belongs to a song
+    It can be musicxml, midi
+    """
+    if project not in config:
+        return jsonify({
+            "msg": "Project {} not found.".format(project)
+        }), 404
+    file_path = ""
+    if 'musicxml' in str(file_type):
+        file_path = safe_join(config[project]["file_root"],
+                              "musicxml",
+                              "{}.xml".format(str(file_name)))
+        file_name = "{}.xml".format(str(file_name))
+    elif 'midi' in str(file_type):
+        file_path = safe_join(config[project]["file_root"],
+                              "midi-files",
+                              "{}.mid".format(str(file_name)))
+
+    try:
+        return send_file(file_path, as_attachment=True, mimetype='application/octet-stream',
+                         attachment_filename=file_name)
+    except Exception:
+        return Response("File not found.", status=404, content_type="text/json")
 
 @digital_edition.route("/<project>/urn/<url>/")
 @digital_edition.route("/<project>/urn/<url>/<legacy_id>/")
