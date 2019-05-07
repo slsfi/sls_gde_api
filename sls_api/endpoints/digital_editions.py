@@ -18,7 +18,7 @@ from PIL import Image
 from hashlib import md5
 from elasticsearch import Elasticsearch
 
-from sls_api.endpoints.generics import config, db_engine, select_all_from_table, elastic_config, get_project_id_from_name
+from sls_api.endpoints.generics import config, db_engine, select_all_from_table, elastic_config, get_project_id_from_name, project_permission_required
 
 digital_edition = Blueprint('digital_edition', __name__)
 
@@ -180,7 +180,6 @@ def getFacsimileImage(project, edition_id, publication_id, size=(300, 300)):
             return ""
 
 
-# routes/digitaledition/table-of-contents.php
 @digital_edition.route("/<project>/facsimiles/<publication_id>")
 def get_facsimiles(project, publication_id):
     logger.info("Getting facsimiles /{}/facsimiles/{}".format(project, publication_id))
@@ -253,7 +252,7 @@ def get_toc(project, collection_id):
 
     try:
         file_path = [f for f in glob.iglob(file_path_query)][0]
-        logger.info("Finding {} (toc collection fetch)".format(file_path))
+        logger.info(f"Finding {file_path} (toc collection fetch)")
         if os.path.exists(file_path):
             with io.open(file_path, encoding="UTF-8") as json_file:
                 contents = json_file.read()
@@ -261,11 +260,37 @@ def get_toc(project, collection_id):
         else:
             abort(404)
     except IndexError:
-        logger.warning("File {} not found on disk.".format(file_path_query))
+        logger.warning(f"File {file_path_query} not found on disk.")
         abort(404)
     except Exception:
-        logger.exception("Error fetching {}".format(file_path_query))
+        logger.exception(f"Error fetching {file_path_query}")
         abort(404)
+
+
+@digital_edition.route("/<project>/toc/<collection_id>", methods=["PUT"])
+@project_permission_required
+def put_toc(project, collection_id):
+    data = request.json()
+    if not data:
+        return jsonify({"msg": "No JSON in payload."}), 400
+    file_path = safe_join(config[project]["file_root"], "toc", f"{collection_id}.json")
+    try:
+        # save new toc as file_path.new
+        with open(f"{file_path}.new", "w", encoding="utf-8") as outfile:
+            json.dump(data, outfile)
+    except Exception as ex:
+        # if we fail to save the file, make sure it doesn't exist before returning an error
+        try:
+            os.remove(f"{file_path}.new")
+        except FileNotFoundError:
+            pass
+        return jsonify({"msg": "Failed to save JSON data to disk.", "reason": ex}), 500
+    else:
+        # if we succeed, remove the old file and rename file_path.new to file_path
+        # (could be combined into just os.rename, but some OSes don't like that)
+        os.remove(file_path)
+        os.rename(f"{file_path}.new", file_path)
+        return jsonify({"msg": f"Saved new toc as {file_path}"})
 
 
 @digital_edition.route("/<project>/collections")
