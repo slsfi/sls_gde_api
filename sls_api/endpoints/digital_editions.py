@@ -18,7 +18,7 @@ from PIL import Image
 from hashlib import md5
 from elasticsearch import Elasticsearch
 
-from sls_api.endpoints.generics import config, db_engine, select_all_from_table, elastic_config, get_project_id_from_name
+from sls_api.endpoints.generics import config, get_project_config, db_engine, select_all_from_table, elastic_config, get_project_id_from_name
 
 digital_edition = Blueprint('digital_edition', __name__)
 
@@ -65,59 +65,71 @@ def get_projects():
 
 @digital_edition.route("/<project>/html/<filename>")
 def get_html_contents_as_json(project, filename):
-    logger.info("Getting static content from /{}/html/{}".format(project, filename))
-    file_path = safe_join(config[project]["file_root"], "html", "{}.html".format(filename))
-    if os.path.exists(file_path):
-        with io.open(file_path, encoding="UTF-8") as html_file:
-            contents = html_file.read()
-        data = {
-            "filename": filename,
-            "content": contents
-        }
-        return jsonify(data), 200
+    config = get_project_config(project)
+    if config is None:
+        return jsonify({"msg": "No such project."}), 400
     else:
-        abort(404)
+        logger.info("Getting static content from /{}/html/{}".format(project, filename))
+        file_path = safe_join(config["file_root"], "html", "{}.html".format(filename))
+        if os.path.exists(file_path):
+            with io.open(file_path, encoding="UTF-8") as html_file:
+                contents = html_file.read()
+            data = {
+                "filename": filename,
+                "content": contents
+            }
+            return jsonify(data), 200
+        else:
+            abort(404)
 
 
 @digital_edition.route("/<project>/md/<fileid>")
 def get_md_contents_as_json(project, fileid):
-    path = "*/".join(fileid.split("-")) + "*"
+    config = get_project_config(project)
+    if config is None:
+        return jsonify({"msg": "No such project."}), 400
+    else:
+        path = "*/".join(fileid.split("-")) + "*"
 
-    file_path_query = safe_join(config[project]["file_root"], "md", path)
+        file_path_query = safe_join(config["file_root"], "md", path)
 
-    try:
-        file_path_full = [f for f in glob.iglob(file_path_query)]
-        if len(file_path_full) <= 0:
-            abort(404)
-        else:
-            file_path = file_path_full[0]
-            logger.info("Finding {} (md_contents fetch)".format(file_path))
-            if os.path.exists(file_path):
-                with io.open(file_path, encoding="UTF-8") as md_file:
-                    contents = md_file.read()
-                data = {
-                    "fileid": fileid,
-                    "content": contents
-                }
-                return jsonify(data), 200
-            else:
+        try:
+            file_path_full = [f for f in glob.iglob(file_path_query)]
+            if len(file_path_full) <= 0:
                 abort(404)
-    except Exception:
-        logger.exception("Error fetching: {}".format(file_path_query))
-        abort(404)
+            else:
+                file_path = file_path_full[0]
+                logger.info("Finding {} (md_contents fetch)".format(file_path))
+                if os.path.exists(file_path):
+                    with io.open(file_path, encoding="UTF-8") as md_file:
+                        contents = md_file.read()
+                    data = {
+                        "fileid": fileid,
+                        "content": contents
+                    }
+                    return jsonify(data), 200
+                else:
+                    abort(404)
+        except Exception:
+            logger.exception("Error fetching: {}".format(file_path_query))
+            abort(404)
 
 
 @digital_edition.route("/<project>/static-pages-toc/<language>")
 def get_static_pages_as_json(project, language):
-    logger.info("Getting static content from /{}/static-pages-toc/{}".format(project, language))
-    folder_path = safe_join(config[project]["file_root"], "md", language)
-
-    if os.path.exists(folder_path):
-        data = path_hierarchy(project, folder_path, language)
-        return jsonify(data), 200
+    config = get_project_config(project)
+    if config is None:
+        return jsonify({"msg": "No such project."}), 400
     else:
-        logger.info("did not find {}".format(folder_path))
-        abort(404)
+        logger.info("Getting static content from /{}/static-pages-toc/{}".format(project, language))
+        folder_path = safe_join(config["file_root"], "md", language)
+
+        if os.path.exists(folder_path):
+            data = path_hierarchy(project, folder_path, language)
+            return jsonify(data), 200
+        else:
+            logger.info("did not find {}".format(folder_path))
+            abort(404)
 
 
 @digital_edition.route("/<project>/manuscript/<publication_id>")
@@ -158,167 +170,183 @@ def get_text_by_type(project, text_type, text_id):
 
 
 def getFacsimileImage(project, edition_id, publication_id, size=(300, 300)):
-    logger.info("Getting facsimile image from funciton getFacsimileImage({},{},{})".format(project, edition_id, publication_id))
-
-    outfile = md5("{}-{}-{}-{}".format(edition_id, publication_id, size[0], size[1]).encode('utf-8'))
-    cache_file_path = safe_join(config[project]["file_root"], "cache", "faksimil", "{}.png".format(outfile))
-    image_file_path = safe_join(config[project]["file_root"], "faksimil", edition_id, "{}.png".format(publication_id))
-    if os.path.exists(cache_file_path):
-        logger.debug("cache_file_path exists: {}".format(cache_file_path))
-        return cache_file_path
+    config = get_project_config(project)
+    if config is None:
+        return jsonify({"msg": "No such project."}), 400
     else:
-        try:
-            logger.debug("cache_file_path does not exist: {}".format(cache_file_path))
-            logger.debug("Will create new image")
-            im = Image.open(image_file_path)
-            im.thumbnail(size, Image.ANTIALIAS)
-            im.save(cache_file_path, "JPEG")
-            logger.debug("I think it was successful")
+        logger.info("Getting facsimile image from funciton getFacsimileImage({},{},{})".format(project, edition_id, publication_id))
+
+        outfile = md5("{}-{}-{}-{}".format(edition_id, publication_id, size[0], size[1]).encode('utf-8'))
+        cache_file_path = safe_join(config["file_root"], "cache", "faksimil", "{}.png".format(outfile))
+        image_file_path = safe_join(config["file_root"], "faksimil", edition_id, "{}.png".format(publication_id))
+        if os.path.exists(cache_file_path):
+            logger.debug("cache_file_path exists: {}".format(cache_file_path))
             return cache_file_path
-        except Exception:
-            logger.exception("Exception when creating image cache file.")
-            return ""
+        else:
+            try:
+                logger.debug("cache_file_path does not exist: {}".format(cache_file_path))
+                logger.debug("Will create new image")
+                im = Image.open(image_file_path)
+                im.thumbnail(size, Image.ANTIALIAS)
+                im.save(cache_file_path, "JPEG")
+                logger.debug("I think it was successful")
+                return cache_file_path
+            except Exception:
+                logger.exception("Exception when creating image cache file.")
+                return ""
 
 
 @digital_edition.route("/<project>/facsimiles/<publication_id>")
 def get_facsimiles(project, publication_id):
-    logger.info("Getting facsimiles /{}/facsimiles/{}".format(project, publication_id))
+    config = get_project_config(project)
+    if config is None:
+        return jsonify({"msg": "No such project."}), 400
+    else:
+        logger.info("Getting facsimiles /{}/facsimiles/{}".format(project, publication_id))
 
-    connection = db_engine.connect()
+        connection = db_engine.connect()
 
-    sql = 'select * from publication_facsimile as f \
-    left join publication_facsimile_collection as fc on fc.id=f.publication_facsimile_collection_id \
-    left join publication p on p.id=f.publication_id \
-    where f.publication_id=:p_id \
-    '
+        sql = 'select * from publication_facsimile as f \
+        left join publication_facsimile_collection as fc on fc.id=f.publication_facsimile_collection_id \
+        left join publication p on p.id=f.publication_id \
+        where f.publication_id=:p_id \
+        '
 
-    if config[project]["show_internally_published"]:
-        sql = " ".join([sql, "and p.published>0"])
-    elif config[project]["show_unpublished"]:
-        sql = " ".join([sql, "and p.published>2"])
+        if config["show_internally_published"]:
+            sql = " ".join([sql, "and p.published>0"])
+        elif config["show_unpublished"]:
+            sql = " ".join([sql, "and p.published>2"])
 
-    sql = " ".join([sql, "ORDER BY f.priority"])
+        sql = " ".join([sql, "ORDER BY f.priority"])
 
-    pub_id = publication_id.split('_')[1]
+        pub_id = publication_id.split('_')[1]
 
-    statement = sqlalchemy.sql.text(sql).bindparams(p_id=pub_id)
+        statement = sqlalchemy.sql.text(sql).bindparams(p_id=pub_id)
 
-    result = []
-    for row in connection.execute(statement).fetchall():
-        facsimile = dict(row)
-        if row.folder_path != '' and row.folder_path is not None:
-            facsimile["start_url"] = row.folder_path
-        else:
-            facsimile["start_url"] = safe_join(
-                "digitaledition",
-                project,
-                "facsimile",
-                str(row["publication_facsimile_collection_id"])
-            )
-        pre_pages = row["start_page_number"] or 0
+        result = []
+        for row in connection.execute(statement).fetchall():
+            facsimile = dict(row)
+            if row.folder_path != '' and row.folder_path is not None:
+                facsimile["start_url"] = row.folder_path
+            else:
+                facsimile["start_url"] = safe_join(
+                    "digitaledition",
+                    project,
+                    "facsimile",
+                    str(row["publication_facsimile_collection_id"])
+                )
+            pre_pages = row["start_page_number"] or 0
 
-        facsimile["first_page"] = pre_pages + row["page_nr"]
+            facsimile["first_page"] = pre_pages + row["page_nr"]
 
-        sql2 = "SELECT * FROM publication_facsimile WHERE publication_facsimile_collection_id=:fc_id AND page_nr>:page_nr ORDER BY page_nr ASC LIMIT 1"
-        statement2 = sqlalchemy.sql.text(sql2).bindparams(fc_id=row["publication_facsimile_collection_id"], page_nr=row["page_nr"])
-        for row2 in connection.execute(statement2).fetchall():
-            facsimile["last_page"] = pre_pages + row2["page_nr"] - 1
+            sql2 = "SELECT * FROM publication_facsimile WHERE publication_facsimile_collection_id=:fc_id AND page_nr>:page_nr ORDER BY page_nr ASC LIMIT 1"
+            statement2 = sqlalchemy.sql.text(sql2).bindparams(fc_id=row["publication_facsimile_collection_id"], page_nr=row["page_nr"])
+            for row2 in connection.execute(statement2).fetchall():
+                facsimile["last_page"] = pre_pages + row2["page_nr"] - 1
 
-        if "last_page" not in facsimile.keys():
-            facsimile["last_page"] = row["number_of_pages"]
+            if "last_page" not in facsimile.keys():
+                facsimile["last_page"] = row["number_of_pages"]
 
-        result.append(facsimile)
-        '''try:
-            with open(facsimile_image, "rb") as imageFile:
-                facsimile["image_data"] = base64.b64encode(imageFile.read()).decode("utf-8")
-        except:
-            logger.error("Missing facsimile image: {}".format(facsimile_image))
+            result.append(facsimile)
+            '''try:
+                with open(facsimile_image, "rb") as imageFile:
+                    facsimile["image_data"] = base64.b64encode(imageFile.read()).decode("utf-8")
+            except:
+                logger.error("Missing facsimile image: {}".format(facsimile_image))
+            '''
+        connection.close()
+
+        return_data = result
+        '''for row in result:
+            if row["ed_id"] not in project_config.get(project).get("disabled_publications"):
+                return_data.append(row)
         '''
-    connection.close()
-
-    return_data = result
-    '''for row in result:
-        if row["ed_id"] not in project_config.get(project).get("disabled_publications"):
-            return_data.append(row)
-    '''
-    return jsonify(return_data), 200, {"Access-Control-Allow-Origin": "*"}
+        return jsonify(return_data), 200, {"Access-Control-Allow-Origin": "*"}
 
 
 @digital_edition.route("/<project>/toc/<collection_id>", methods=["GET", "PUT"])
 @jwt_optional
 def handle_toc(project, collection_id):
-    if request.method == "GET":
-        logger.info(f"Getting table of contents for /{project}/toc/{collection_id}")
-        file_path_query = safe_join(config[project]["file_root"], "toc", f'{collection_id}.json')
+    config = get_project_config(project)
+    if config is None:
+        return jsonify({"msg": "No such project."}), 400
+    else:
+        if request.method == "GET":
+            logger.info(f"Getting table of contents for /{project}/toc/{collection_id}")
+            file_path_query = safe_join(config["file_root"], "toc", f'{collection_id}.json')
 
-        try:
-            file_path = [f for f in glob.iglob(file_path_query)][0]
-            logger.info(f"Finding {file_path} (toc collection fetch)")
-            if os.path.exists(file_path):
-                with io.open(file_path, encoding="UTF-8") as json_file:
-                    contents = json_file.read()
-                return contents, 200
-            else:
-                abort(404)
-        except IndexError:
-            logger.warning(f"File {file_path_query} not found on disk.")
-            abort(404)
-        except Exception:
-            logger.exception(f"Error fetching {file_path_query}")
-            abort(404)
-    elif request.method == "PUT":
-        # uploading a new table of contents requires authorization and project permission
-        identity = get_jwt_identity()
-        if identity is None:
-            return jsonify({"msg": "Missing Authorization Header"}), 403
-        else:
-            authorized = False
-            # in debug mode, test user has access to every project
-            if int(os.environ.get("FLASK_DEBUG", 0)) == 1 and identity["sub"] == "test@test.com":
-                authorized = True
-            elif project in identity["projects"]:
-                authorized = True
-
-            if not authorized:
-                return jsonify({"msg": "No access to this project."}), 403
-            else:
-                logger.info(f"Processing new table of contents for /{project}/toc/{collection_id}")
-                data = request.json()
-                if not data:
-                    return jsonify({"msg": "No JSON in payload."}), 400
-                file_path = safe_join(config[project]["file_root"], "toc", f"{collection_id}.json")
-                try:
-                    # save new toc as file_path.new
-                    with open(f"{file_path}.new", "w", encoding="utf-8") as outfile:
-                        json.dump(data, outfile)
-                except Exception as ex:
-                    # if we fail to save the file, make sure it doesn't exist before returning an error
-                    try:
-                        os.remove(f"{file_path}.new")
-                    except FileNotFoundError:
-                        pass
-                    return jsonify({"msg": "Failed to save JSON data to disk.", "reason": ex}), 500
+            try:
+                file_path = [f for f in glob.iglob(file_path_query)][0]
+                logger.info(f"Finding {file_path} (toc collection fetch)")
+                if os.path.exists(file_path):
+                    with io.open(file_path, encoding="UTF-8") as json_file:
+                        contents = json_file.read()
+                    return contents, 200
                 else:
-                    # if we succeed, remove the old file and rename file_path.new to file_path
-                    # (could be combined into just os.rename, but some OSes don't like that)
-                    os.remove(file_path)
-                    os.rename(f"{file_path}.new", file_path)
-                    return jsonify({"msg": f"Saved new toc as {file_path}"})
+                    abort(404)
+            except IndexError:
+                logger.warning(f"File {file_path_query} not found on disk.")
+                abort(404)
+            except Exception:
+                logger.exception(f"Error fetching {file_path_query}")
+                abort(404)
+        elif request.method == "PUT":
+            # uploading a new table of contents requires authorization and project permission
+            identity = get_jwt_identity()
+            if identity is None:
+                return jsonify({"msg": "Missing Authorization Header"}), 403
+            else:
+                authorized = False
+                # in debug mode, test user has access to every project
+                if int(os.environ.get("FLASK_DEBUG", 0)) == 1 and identity["sub"] == "test@test.com":
+                    authorized = True
+                elif project in identity["projects"]:
+                    authorized = True
+
+                if not authorized:
+                    return jsonify({"msg": "No access to this project."}), 403
+                else:
+                    logger.info(f"Processing new table of contents for /{project}/toc/{collection_id}")
+                    data = request.json()
+                    if not data:
+                        return jsonify({"msg": "No JSON in payload."}), 400
+                    file_path = safe_join(config["file_root"], "toc", f"{collection_id}.json")
+                    try:
+                        # save new toc as file_path.new
+                        with open(f"{file_path}.new", "w", encoding="utf-8") as outfile:
+                            json.dump(data, outfile)
+                    except Exception as ex:
+                        # if we fail to save the file, make sure it doesn't exist before returning an error
+                        try:
+                            os.remove(f"{file_path}.new")
+                        except FileNotFoundError:
+                            pass
+                        return jsonify({"msg": "Failed to save JSON data to disk.", "reason": ex}), 500
+                    else:
+                        # if we succeed, remove the old file and rename file_path.new to file_path
+                        # (could be combined into just os.rename, but some OSes don't like that)
+                        os.remove(file_path)
+                        os.rename(f"{file_path}.new", file_path)
+                        return jsonify({"msg": f"Saved new toc as {file_path}"})
 
 
 @digital_edition.route("/<project>/collections")
 def get_collections(project):
-    logger.info("Getting collections /{}/collections".format(project))
-    connection = db_engine.connect()
-    status = 1 if config[project]["show_internally_published"] else 2
-    project_id = get_project_id_from_name(project)
-    sql = sqlalchemy.sql.text("SELECT id, name as title FROM publication_collection WHERE project_id = :p_id AND published>=:p_status ORDER BY name")
-    statement = sql.bindparams(p_status=status, p_id=project_id)
-    results = []
-    for row in connection.execute(statement).fetchall():
-        results.append(dict(row))
-    connection.close()
-    return jsonify(results)
+    config = get_project_config(project)
+    if config is None:
+        return jsonify({"msg": "No such project."}), 400
+    else:
+        logger.info("Getting collections /{}/collections".format(project))
+        connection = db_engine.connect()
+        status = 1 if config["show_internally_published"] else 2
+        project_id = get_project_id_from_name(project)
+        sql = sqlalchemy.sql.text("SELECT id, name as title FROM publication_collection WHERE project_id = :p_id AND published>=:p_status ORDER BY name")
+        statement = sql.bindparams(p_status=status, p_id=project_id)
+        results = []
+        for row in connection.execute(statement).fetchall():
+            results.append(dict(row))
+        connection.close()
+        return jsonify(results)
 
 
 @digital_edition.route("/<project>/collection/<collection_id>")
@@ -366,24 +394,28 @@ def get_introduction(project, collection_id, publication_id, lang="swe"):
     """
     Get introduction text for a given publication @TODO: remove publication_id, it is not needed.
     """
-    can_show, message = get_published_status(project, collection_id, publication_id)
-    if can_show:
-        logger.info("Getting XML for {} and transforming...".format(request.full_path))
-        version = "int" if config[project]["show_internally_published"] else "ext"
-        # TODO get original_filename from publication_collection_introduction table? how handle language/version
-        filename = "{}_inl_{}_{}.xml".format(collection_id, lang, version)
-        xsl_file = "est.xsl"
-        content = get_content(project, "inl", filename, xsl_file, None)
-        data = {
-            "id": "{}_{}_inl".format(collection_id, publication_id),
-            "content": content
-        }
-        return jsonify(data), 200
+    config = get_project_config(project)
+    if config is None:
+        return jsonify({"msg": "No such project."}), 400
     else:
-        return jsonify({
-            "id": "{}_{}".format(collection_id, publication_id),
-            "error": message
-        }), 403
+        can_show, message = get_published_status(project, collection_id, publication_id)
+        if can_show:
+            logger.info("Getting XML for {} and transforming...".format(request.full_path))
+            version = "int" if config["show_internally_published"] else "ext"
+            # TODO get original_filename from publication_collection_introduction table? how handle language/version
+            filename = "{}_inl_{}_{}.xml".format(collection_id, lang, version)
+            xsl_file = "est.xsl"
+            content = get_content(project, "inl", filename, xsl_file, None)
+            data = {
+                "id": "{}_{}_inl".format(collection_id, publication_id),
+                "content": content
+            }
+            return jsonify(data), 200
+        else:
+            return jsonify({
+                "id": "{}_{}".format(collection_id, publication_id),
+                "error": message
+            }), 403
 
 
 @digital_edition.route("/<project>/text/<collection_id>/<publication_id>/tit")
@@ -392,24 +424,28 @@ def get_title(project, collection_id, publication_id, lang="swe"):
     """
     Get title page for a given publication @TODO: remove publication_id, it is not needed?
     """
-    can_show, message = get_title_published_status(project, collection_id)
-    if can_show:
-        logger.info("Getting XML for {} and transforming...".format(request.full_path))
-        version = "int" if config[project]["show_internally_published"] else "ext"
-        # TODO get original_filename from publication_collection_title table? how handle language/version
-        filename = "{}_tit_{}_{}.xml".format(collection_id, lang, version)
-        xsl_file = "title.xsl"
-        content = get_content(project, "tit", filename, xsl_file, None)
-        data = {
-            "id": "{}_{}_tit".format(collection_id, publication_id),
-            "content": content
-        }
-        return jsonify(data), 200
+    config = get_project_config(project)
+    if config is None:
+        return jsonify({"msg": "No such project."}), 400
     else:
-        return jsonify({
-            "id": "{}_{}".format(collection_id, publication_id),
-            "error": message
-        }), 403
+        can_show, message = get_title_published_status(project, collection_id)
+        if can_show:
+            logger.info("Getting XML for {} and transforming...".format(request.full_path))
+            version = "int" if config["show_internally_published"] else "ext"
+            # TODO get original_filename from publication_collection_title table? how handle language/version
+            filename = "{}_tit_{}_{}.xml".format(collection_id, lang, version)
+            xsl_file = "title.xsl"
+            content = get_content(project, "tit", filename, xsl_file, None)
+            data = {
+                "id": "{}_{}_tit".format(collection_id, publication_id),
+                "content": content
+            }
+            return jsonify(data), 200
+        else:
+            return jsonify({
+                "id": "{}_{}".format(collection_id, publication_id),
+                "error": message
+            }), 403
 
 
 @digital_edition.route("/<project>/text/<collection_id>/<publication_id>/est/<section_id>")
@@ -456,41 +492,45 @@ def get_comments(project, collection_id, publication_id, note_id=None):
     """
     Get comments file text for a given publication
     """
-    can_show, message = get_published_status(project, collection_id, publication_id)
-    if can_show:
-        logger.info("Getting XML for {} and transforming...".format(request.full_path))
-        connection = db_engine.connect()
-        select = "SELECT legacy_id FROM publication_comment WHERE id IN (SELECT publication_comment_id FROM publication WHERE id = :p_id)"
-        statement = sqlalchemy.sql.text(select).bindparams(p_id=publication_id)
-        result = connection.execute(statement).fetchone()
-        if result is None:
-            filename = "{}_{}_com.xml".format(collection_id, publication_id)
-            connection.close()
-        else:
-            filename = "{}_com.xml".format(result["legacy_id"])
-            connection.close()
-        params = {
-            "estDocument": '"file://{}"'.format(safe_join(config[project]["file_root"], "xml", "est", filename.replace("com", "est"))),
-            "bookId": collection_id
-        }
-        if note_id is not None:
-            params["noteId"] = '"{}"'.format(note_id)
-            xsl_file = "notes.xsl"
-        else:
-            xsl_file = "com.xsl"
-
-        content = get_content(project, "com", filename, xsl_file, params)
-        data = {
-            "id": "{}_{}_com".format(collection_id, publication_id),
-            "content": content
-        }
-        connection.close()
-        return jsonify(data), 200
+    config = get_project_config(project)
+    if config is None:
+        return jsonify({"msg": "No such project."}), 400
     else:
-        return jsonify({
-            "id": "{}_{}".format(collection_id, publication_id),
-            "error": message
-        }), 403
+        can_show, message = get_published_status(project, collection_id, publication_id)
+        if can_show:
+            logger.info("Getting XML for {} and transforming...".format(request.full_path))
+            connection = db_engine.connect()
+            select = "SELECT legacy_id FROM publication_comment WHERE id IN (SELECT publication_comment_id FROM publication WHERE id = :p_id)"
+            statement = sqlalchemy.sql.text(select).bindparams(p_id=publication_id)
+            result = connection.execute(statement).fetchone()
+            if result is None:
+                filename = "{}_{}_com.xml".format(collection_id, publication_id)
+                connection.close()
+            else:
+                filename = "{}_com.xml".format(result["legacy_id"])
+                connection.close()
+            params = {
+                "estDocument": '"file://{}"'.format(safe_join(config["file_root"], "xml", "est", filename.replace("com", "est"))),
+                "bookId": collection_id
+            }
+            if note_id is not None:
+                params["noteId"] = '"{}"'.format(note_id)
+                xsl_file = "notes.xsl"
+            else:
+                xsl_file = "com.xsl"
+    
+            content = get_content(project, "com", filename, xsl_file, params)
+            data = {
+                "id": "{}_{}_com".format(collection_id, publication_id),
+                "content": content
+            }
+            connection.close()
+            return jsonify(data), 200
+        else:
+            return jsonify({
+                "id": "{}_{}".format(collection_id, publication_id),
+                "error": message
+            }), 403
 
 
 @digital_edition.route("/<project>/text/<collection_id>/<publication_id>/ms/")
@@ -1033,59 +1073,63 @@ def get_facsimile_file(project, collection_id, number, zoom_level):
     However, the first page of a publication is not necessarily 1.jpg, as facsimiles often contain title pages and blank pages
     Thus, calling for facsimiles/1/1/1 may require fetching a file from root/facsimiles/1/1/5.jpg
     """
-    # TODO OpenStack Swift support for ISILON file storage - config param for root 'facsimiiles' path
-    connection = db_engine.connect()
-    check_statement = sqlalchemy.sql.text("SELECT published FROM publication WHERE id = "
-                                          "(SELECT publication_id FROM publication_facsimile WHERE publication_facsimile_collection_id=:coll_id LIMIT 1)").bindparams(coll_id=collection_id)
-    row = connection.execute(check_statement).fetchone()
-    if row is None:
-        return jsonify({
-            "msg": "Desired facsimile file not found in database."
-        }), 404
+    # TODO OpenStack Swift support for ISILON file storage - config param for root 'facsimiles' path
+    config = get_project_config(project)
+    if config is None:
+        return jsonify({"msg": "No such project."}), 400
     else:
-        try:
-            status = int(row[0])
-        except Exception:
+        connection = db_engine.connect()
+        check_statement = sqlalchemy.sql.text("SELECT published FROM publication WHERE id = "
+                                              "(SELECT publication_id FROM publication_facsimile WHERE publication_facsimile_collection_id=:coll_id LIMIT 1)").bindparams(coll_id=collection_id)
+        row = connection.execute(check_statement).fetchone()
+        if row is None:
             return jsonify({
                 "msg": "Desired facsimile file not found in database."
             }), 404
-        if status == 0:
-            return jsonify({
-                "msg": "Desired facsimile file not found in database."
-            }), 404
-        elif status == 1:
-            if not config[project]["show_internally_published"]:
+        else:
+            try:
+                status = int(row[0])
+            except Exception:
                 return jsonify({
                     "msg": "Desired facsimile file not found in database."
                 }), 404
-
-    statement = sqlalchemy.sql.text("SELECT * FROM publication_facsimile_collection WHERE id=:coll_id").bindparams(coll_id=collection_id)
-    row = connection.execute(statement).fetchone()
-    if row is None:
-        return jsonify({
-            "msg": "Desired facsimile collection was not found in database!"
-        }), 404
-    elif row.folder_path != '' and row.folder_path is not None:
-        file_path = safe_join(row.folder_path, collection_id, zoom_level, "{}.jpg".format(int(number)))
-    else:
-        file_path = safe_join(config[project]["file_root"],
-                              "facsimiles",
-                              collection_id,
-                              zoom_level,
-                              "{}.jpg".format(int(number)))
-    connection.close()
-
-    output = io.BytesIO()
-    try:
-        with open(file_path, mode="rb") as img_file:
-            output.write(img_file.read())
-        content = output.getvalue()
-        output.close()
-        return Response(content, status=200, content_type="image/jpeg")
-    except Exception:
-        return jsonify({
-            "msg": "Desired facsimile file not found."
-        }), 404
+            if status == 0:
+                return jsonify({
+                    "msg": "Desired facsimile file not found in database."
+                }), 404
+            elif status == 1:
+                if not config["show_internally_published"]:
+                    return jsonify({
+                        "msg": "Desired facsimile file not found in database."
+                    }), 404
+    
+        statement = sqlalchemy.sql.text("SELECT * FROM publication_facsimile_collection WHERE id=:coll_id").bindparams(coll_id=collection_id)
+        row = connection.execute(statement).fetchone()
+        if row is None:
+            return jsonify({
+                "msg": "Desired facsimile collection was not found in database!"
+            }), 404
+        elif row.folder_path != '' and row.folder_path is not None:
+            file_path = safe_join(row.folder_path, collection_id, zoom_level, "{}.jpg".format(int(number)))
+        else:
+            file_path = safe_join(config["file_root"],
+                                  "facsimiles",
+                                  collection_id,
+                                  zoom_level,
+                                  "{}.jpg".format(int(number)))
+        connection.close()
+    
+        output = io.BytesIO()
+        try:
+            with open(file_path, mode="rb") as img_file:
+                output.write(img_file.read())
+            content = output.getvalue()
+            output.close()
+            return Response(content, status=200, content_type="image/jpeg")
+        except Exception:
+            return jsonify({
+                "msg": "Desired facsimile file not found."
+            }), 404
 
 
 @digital_edition.route("/<project>/facsimile/page/<legacy_id>/")
@@ -1106,37 +1150,45 @@ def get_facsimile_pages(project, legacy_id):
 
 @digital_edition.route("/<project>/facsimile/page/image/<facs_id>/<facs_nr>")
 def get_facsimile_page_image(project, facs_id, facs_nr):
-    logger.info("Getting facsimile page image")
-    try:
-        zoom_level = "4"
-        file_path = safe_join(config[project]["file_root"],
-                              "facsimiles",
-                              facs_id,
-                              zoom_level,
-                              "{}.jpg".format(int(facs_nr)))
-        output = io.BytesIO()
+    config = get_project_config(project)
+    if config is None:
+        return jsonify({"msg": "No such project."}), 400
+    else:
+        logger.info("Getting facsimile page image")
         try:
-            with open(file_path, mode="rb") as img_file:
-                output.write(img_file.read())
-            content = output.getvalue()
-            output.close()
-            return Response(content, status=200, content_type="image/jpeg")
+            zoom_level = "4"
+            file_path = safe_join(config["file_root"],
+                                  "facsimiles",
+                                  facs_id,
+                                  zoom_level,
+                                  "{}.jpg".format(int(facs_nr)))
+            output = io.BytesIO()
+            try:
+                with open(file_path, mode="rb") as img_file:
+                    output.write(img_file.read())
+                content = output.getvalue()
+                output.close()
+                return Response(content, status=200, content_type="image/jpeg")
+            except Exception:
+                return Response("File not found: " + file_path, status=404, content_type="text/json")
         except Exception:
-            return Response("File not found: " + file_path, status=404, content_type="text/json")
-    except Exception:
-        return Response("Couldn't get facsimile page.", status=404, content_type="text/json")
+            return Response("Couldn't get facsimile page.", status=404, content_type="text/json")
 
 
 @digital_edition.route("/<project>/files/<folder>/<file_name>/")
 def get_json_file(project, folder, file_name):
-    file_path = safe_join(config[project]["file_root"], folder, "{}.json".format(str(file_name)))
-
-    try:
-        with open(file_path) as f:
-            data = json.load(f)
-        return jsonify(data), 200, {"Access-Control-Allow-Origin": "*"}
-    except Exception:
-        return Response("File not found.", status=404, content_type="text/json")
+    config = get_project_config(project)
+    if config is None:
+        return jsonify({"msg": "No such project."}), 400
+    else:
+        file_path = safe_join(config["file_root"], folder, "{}.json".format(str(file_name)))
+    
+        try:
+            with open(file_path) as f:
+                data = json.load(f)
+            return jsonify(data), 200, {"Access-Control-Allow-Origin": "*"}
+        except Exception:
+            return Response("File not found.", status=404, content_type="text/json")
 
 
 @digital_edition.route("/<project>/song/id/<song_id>/")
@@ -1161,36 +1213,36 @@ def get_pdf_file(project, collection_id, file_type, download_name):
     """
     # TODO published status for facsimile table to check against?
     # TODO S3 support
-    if project not in config:
-        return jsonify({
-            "msg": "Project {} not found.".format(project)
-        }), 404
-    connection = db_engine.connect()
-    # Check that the collection exists
-    statement = sqlalchemy.sql.text("SELECT * FROM publication_collection WHERE id=:coll_id").bindparams(coll_id=collection_id)
-    row = connection.execute(statement).fetchone()
-    if row is None:
-        return jsonify({
-            "msg": "Desired facsimile collection was not found in database!"
-        }), 404
-    file_path = ""
-    if 'pdf' in str(file_type):
-        file_path = safe_join(config[project]["file_root"],
-                              "downloads",
-                              collection_id,
-                              "{}.pdf".format(int(collection_id)))
-    elif 'epub' in str(file_type):
-        file_path = safe_join(config[project]["file_root"],
-                              "downloads",
-                              collection_id,
-                              "{}.epub".format(int(collection_id)))
-    connection.close()
-
-    try:
-        return send_file(file_path, as_attachment=True, mimetype='application/octet-stream',
-                         attachment_filename=download_name)
-    except Exception:
-        return Response("File not found.", status=404, content_type="text/json")
+    config = get_project_config(project)
+    if config is None:
+        return jsonify({"msg": "No such project."}), 400
+    else:
+        connection = db_engine.connect()
+        # Check that the collection exists
+        statement = sqlalchemy.sql.text("SELECT * FROM publication_collection WHERE id=:coll_id").bindparams(coll_id=collection_id)
+        row = connection.execute(statement).fetchone()
+        if row is None:
+            return jsonify({
+                "msg": "Desired facsimile collection was not found in database!"
+            }), 404
+        file_path = ""
+        if 'pdf' in str(file_type):
+            file_path = safe_join(config["file_root"],
+                                  "downloads",
+                                  collection_id,
+                                  "{}.pdf".format(int(collection_id)))
+        elif 'epub' in str(file_type):
+            file_path = safe_join(config["file_root"],
+                                  "downloads",
+                                  collection_id,
+                                  "{}.epub".format(int(collection_id)))
+        connection.close()
+    
+        try:
+            return send_file(file_path, as_attachment=True, mimetype='application/octet-stream',
+                             attachment_filename=download_name)
+        except Exception:
+            return Response("File not found.", status=404, content_type="text/json")
 
 
 @digital_edition.route("/<project>/urn/<url>/")
@@ -1473,15 +1525,17 @@ def slugify_id(path, language):
 
 
 def slugify_path(project, path):
-    path = split_after(path, "/" + config[project]["file_root"] + "/md/")
+    config = get_project_config(project)
+    path = split_after(path, "/" + config["file_root"] + "/md/")
     return re.sub('.md', '', path)
 
 
 def path_hierarchy(project, path, language):
+    config = get_project_config(project)
     hierarchy = {'id': slugify_id(path, language), 'title': filter_title(os.path.basename(path)),
                  'basename': re.sub('.md', '', os.path.basename(path)), 'path': slugify_path(project, path),
                  'fullpath': path,
-                 'route': slugify_route(split_after(path, "/" + config[project]["file_root"] + "/md/")),
+                 'route': slugify_route(split_after(path, "/" + config["file_root"] + "/md/")),
                  'type': 'folder',
                  'children': [path_hierarchy(project, p, language) for p in glob.glob(os.path.join(path, '*'))]}
 
@@ -1538,6 +1592,9 @@ def get_published_status(project, collection_id, publication_id):
     Publications can be shown if they're externally published (published==2),
     or if they're internally published (published==1) and show_internally_published is True
     """
+    config = get_project_config(project)
+    if config is None:
+        return False, "No such project."
     connection = db_engine.connect()
     select = """SELECT project.published AS proj_pub, publication_collection.published AS col_pub, publication.published as pub 
     FROM project 
@@ -1550,7 +1607,7 @@ def get_published_status(project, collection_id, publication_id):
     statement = sqlalchemy.sql.text(select).bindparams(project=project, c_id=collection_id, p_id=publication_id,
                                                        str_p_id=str(publication_id))
     result = connection.execute(statement)
-    show_internal = config[project]["show_internally_published"]
+    show_internal = config["show_internally_published"]
     can_show = False
     message = ""
     row = result.fetchone()
@@ -1581,6 +1638,9 @@ def get_title_published_status(project, collection_id):
     Publications can be shown if they're externally published (published==2),
     or if they're internally published (published==1) and show_internally_published is True
     """
+    config = get_project_config(project)
+    if config is None:
+        return False, "No such project."
     connection = db_engine.connect()
 
     project_id = get_project_id_from_name(project)
@@ -1593,7 +1653,7 @@ def get_title_published_status(project, collection_id):
     """
     statement = sqlalchemy.sql.text(select).bindparams(project_id=project_id, c_id=collection_id)
     result = connection.execute(statement)
-    show_internal = config[project]["show_internally_published"]
+    show_internal = config["show_internally_published"]
     can_show = False
     message = ""
     row = result.fetchone()
@@ -1652,9 +1712,12 @@ def xml_to_html(xsl_file_path, xml_file_path, replace_namespace=False, params=No
 
 
 def get_content(project, folder, xml_filename, xsl_filename, parameters):
+    config = get_project_config(project)
+    if config is None:
+        return "No such project."
     try:
-        xml_file_path = safe_join(config[project]["file_root"], "xml", folder, xml_filename)
-        xsl_file_path = safe_join(config[project]["file_root"], "xslt", xsl_filename)
+        xml_file_path = safe_join(config["file_root"], "xml", folder, xml_filename)
+        xsl_file_path = safe_join(config["file_root"], "xslt", xsl_filename)
         cache_folder = os.path.join("/tmp", "api_cache", folder)
         os.makedirs(cache_folder, exist_ok=True)
         if "ms" in xsl_filename:

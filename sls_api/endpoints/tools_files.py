@@ -7,7 +7,7 @@ import os
 import subprocess
 from werkzeug.utils import secure_filename
 
-from sls_api.endpoints.generics import config, project_permission_required
+from sls_api.endpoints.generics import get_project_config, project_permission_required
 
 
 file_tools = Blueprint("file_tools", __name__)
@@ -19,13 +19,14 @@ def check_project_config(project):
     Check the config file for project webfiles repository configuration.
     Returns True if config okay, otherwise False and a message
     """
-    if project not in config:
+    config = get_project_config(project)
+    if config is None:
         return False, "Project config not found."
-    if not is_a_test(project) and "git_repository" not in config[project]:
+    if not is_a_test(project) and "git_repository" not in config:
         return False, "git_repository not in project config."
-    if "git_branch" not in config[project]:
+    if "git_branch" not in config:
         return False, "git_branch information not in project config."
-    if "file_root" not in config[project]:
+    if "file_root" not in config:
         return False, "file_root information not in project config."
     return True, "Project config OK."
 
@@ -35,7 +36,10 @@ def file_exists_in_file_root(project, file_path):
     Check if the given file exists in the webfiles repository for the given project
     Returns True if the file exists, otherwise False.
     """
-    return os.path.exists(safe_join(config[project]["file_root"], file_path))
+    config = get_project_config(project)
+    if config is None:
+        return False
+    return os.path.exists(safe_join(config["file_root"], file_path))
 
 
 def run_git_command(project, command):
@@ -44,7 +48,8 @@ def run_git_command(project, command):
     @type project: str
     @type command: list
     """
-    git_root = config[project]["file_root"]
+    config = get_project_config(project)
+    git_root = config["file_root"]
     git_command = ["git", "-C", git_root]
     for c in command:
         git_command.append(c)
@@ -55,7 +60,10 @@ def update_files_in_git_repo(project, specific_file=False):
     """
     Helper method to sync local repositories with remote to get latest changes
     """
-    git_branch = config[project]["git_branch"]
+    config = get_project_config(project)
+    if config is None:
+        return False, "No such project."
+    git_branch = config["git_branch"]
 
     # First, fetch latest changes from remote, but don't update local
     try:
@@ -119,9 +127,10 @@ def is_a_test(project):
     """
     Returns true if running in debug mode and project git_repository not configured, indicating that this is a test
     """
-    if project not in config and int(os.environ.get("FLASK_DEBUG", 0)) == 1:
+    config = get_project_config(project)
+    if config is None and int(os.environ.get("FLASK_DEBUG", 0)) == 1:
         return True
-    elif project in config and config[project]["git_repository"] is None and int(os.environ.get("FLASK_DEBUG", 0)) == 1:
+    elif config is not None and config["git_repository"] is None and int(os.environ.get("FLASK_DEBUG", 0)) == 1:
         return True
 
 
@@ -141,7 +150,9 @@ def update_file(project, file_path):
     message: commit message for this change, if not given, generic "File update by <author>" message is used instead
     force: boolean value, if True uses force-push to override errors and possibly mangle the git remote to get the update through
     """
-
+    config = get_project_config(project)
+    if config is None:
+        return jsonify({"msg": "No such project."}), 400
     # Check if request has valid JSON and set author/message/force accordingly
     request_data = request.get_json()
     if not request_data:
@@ -185,15 +196,15 @@ def update_file(project, file_path):
         # check if desired file has changed in remote since last update
         # if so, fail and return both user file and repo file to user, unless force=True
         try:
-            output = run_git_command(project, ["show", "--pretty=format:", "--name-only", "..origin/{}".format(config[project]["git_branch"])])
+            output = run_git_command(project, ["show", "--pretty=format:", "--name-only", "..origin/{}".format(config["git_branch"])])
             new_and_changed_files = [s.strip().decode('utf-8', 'ignore') for s in output.splitlines()]
         except subprocess.CalledProcessError as e:
             return jsonify({
                 "msg": "Git show failed to execute properly.",
                 "reason": str(e.output)
             }), 500
-        if safe_join(config[project]["file_root"], file_path) in new_and_changed_files and not force:
-            with io.open(safe_join(config[project]["file_root"], file_path), mode="rb") as repo_file:
+        if safe_join(config["file_root"], file_path) in new_and_changed_files and not force:
+            with io.open(safe_join(config["file_root"], file_path), mode="rb") as repo_file:
                 file_bytestring = base64.b64encode(repo_file.read())
                 return jsonify({
                     "msg": "File {} has been changed in git repository since last update, please manually check file changes.",
@@ -203,7 +214,7 @@ def update_file(project, file_path):
 
         # merge in latest changes so that the local repository is updated
         try:
-            run_git_command(project, ["merge", "origin/{}".format(config[project]["git_branch"])])
+            run_git_command(project, ["merge", "origin/{}".format(config["git_branch"])])
         except subprocess.CalledProcessError as e:
             return jsonify({
                 "msg": "Git merge failed to execute properly.",
@@ -262,6 +273,9 @@ def get_file(project, file_path):
     """
     Get latest file from git remote
     """
+    config = get_project_config(project)
+    if config is None:
+        return jsonify({"msg": "No such project."}), 400
     # TODO swift and/or S3 support for large files (images/facsimiles)
     config_okay = check_project_config(project)
     if not config_okay[0]:
@@ -281,7 +295,7 @@ def get_file(project, file_path):
 
     if file_exists_in_file_root(project, file_path):
         # read file, encode as base64 string and return to user as JSON data.
-        with io.open(safe_join(config[project]["file_root"], file_path), mode="rb") as file:
+        with io.open(safe_join(config["file_root"], file_path), mode="rb") as file:
             file_bytestring = base64.b64encode(file.read())
             return jsonify({
                 "file": file_bytestring.decode("utf-8"),
@@ -298,10 +312,9 @@ def get_file_tree(project, file_path=None):
     """
     Get a file listing from the git remote
     """
-    if project not in config:
-        return jsonify({
-            "msg": "Project {} not found in configuration files.".format(project)
-        }), 404
+    config = get_project_config(project)
+    if config is None:
+        return jsonify({"msg": "No such project."}), 400
     # Fetch changes (to update index) but don't merge, and then run ls-files to get file listing.
     try:
         if not is_a_test(project):

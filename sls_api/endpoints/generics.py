@@ -20,6 +20,12 @@ with io.open(os.path.join(config_dir, "digital_editions.yml"), encoding="UTF-8")
     elastic_config = config["elasticsearch_connection"]
 
 
+def get_project_config(project_name):
+    if project_name in config:
+        return config[project_name]
+    return None
+
+
 def project_permission_required(fn):
     """
     Function decorator that checks for JWT authorization and that the user has edit rights for the project.
