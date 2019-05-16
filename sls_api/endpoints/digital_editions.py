@@ -1155,17 +1155,16 @@ def get_facsimile_page_image(project, facsimile_type, facs_id, facs_nr):
         return jsonify({"msg": "No such project."}), 400
     else:
         logger.info("Getting facsimile page image")
-
     try:
         zoom_level = "4"
         if facsimile_type == 'facsimile':
-            file_path = safe_join(config[project]["file_root"],
+            file_path = safe_join(config["file_root"],
                                 "facsimiles",
                                 facs_id,
                                 zoom_level,
                                 "{}.jpg".format(int(facs_nr)))
         elif facsimile_type == 'song-example':
-            file_path = safe_join(config[project]["file_root"],
+            file_path = safe_join(config["file_root"],
                                 "song-example-images",
                                 facs_id,
                                 "{}.jpg".format(int(facs_nr)))
