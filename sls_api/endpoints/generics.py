@@ -16,7 +16,7 @@ config_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file
 with io.open(os.path.join(config_dir, "digital_editions.yml"), encoding="UTF-8") as config:
     yaml = YAML(typ="safe")
     config = yaml.load(config)
-    db_engine = create_engine(config["engine"], pool_pre_ping=True)
+    db_engine = create_engine(config["engine"], pool_pre_ping=True, pool_size=30, max_overflow=60, pool_timeout=15)
     elastic_config = config["elasticsearch_connection"]
 
 
