@@ -307,7 +307,7 @@ def handle_toc(project, collection_id):
                     return jsonify({"msg": "No access to this project."}), 403
                 else:
                     logger.info(f"Processing new table of contents for /{project}/toc/{collection_id}")
-                    data = request.json()
+                    data = request.get_json()
                     if not data:
                         return jsonify({"msg": "No JSON in payload."}), 400
                     file_path = safe_join(config["file_root"], "toc", f"{collection_id}.json")
