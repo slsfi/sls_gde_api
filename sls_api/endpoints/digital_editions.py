@@ -17,6 +17,7 @@ import json
 from PIL import Image
 from hashlib import md5
 from elasticsearch import Elasticsearch
+from base64 import b64encode
 
 from sls_api.endpoints.generics import config, get_project_config, db_engine, select_all_from_table, elastic_config, get_project_id_from_name
 
@@ -1212,9 +1213,42 @@ def get_song_by_id(project, song_id):
         return Response("Couldn't get song by id.", status=404, content_type="text/json")
 
 
-@digital_edition.route("/<project>/files/<collection_id>/<file_type>/<download_name>/", defaults={'is_child_pdf': None})
-@digital_edition.route("/<project>/files/<collection_id>/<file_type>/<download_name>/<is_child_pdf>")
-def get_pdf_file(project, collection_id, file_type, download_name, is_child_pdf):
+@digital_edition.route("/<project>/media/data/<media_type>/<media_id>")
+def get_media_data(project, media_type, media_id):
+    logger.info("Getting media data...")
+
+    project_id = get_project_id_from_name(project)
+    media_column = "{}_id".format(media_type)
+    try:
+        connection = db_engine.connect()
+        sql = sqlalchemy.sql.text("SELECT media.id, media.description FROM media WHERE {}=:m_id".format(media_column))
+        statement = sql.bindparams(m_id=media_id)
+        result = connection.execute(statement).fetchone()
+        result = dict(result)
+        result["image_path"] = "/" + safe_join(project, "media", "image", str(result["id"]))
+        connection.close()
+        return jsonify(result), 200, {"Access-Control-Allow-Origin": "*"}
+    except Exception:
+        return Response("Couldn't get media data.", status=404, content_type="text/json")
+
+@digital_edition.route("/<project>/media/image/<id>")
+def get_media_data_image(project, id):
+    logger.info("Getting media image...")
+
+    try:
+        connection = db_engine.connect()
+        sql = sqlalchemy.sql.text("SELECT media.image FROM media WHERE id=:image_id".format(id))
+        statement = sql.bindparams(image_id=id)
+        result = connection.execute(statement).fetchone()
+        result = dict(result)
+        
+        return Response(io.BytesIO(result["image"]), status=200, content_type="image/jpeg")
+    except Exception:
+        return Response("Couldn't get media image.", status=404, content_type="text/json")
+
+@digital_edition.route("/<project>/files/<collection_id>/<file_type>/<download_name>/", defaults={'use_download_name': None})
+@digital_edition.route("/<project>/files/<collection_id>/<file_type>/<download_name>/<use_download_name>")
+def get_pdf_file(project, collection_id, file_type, download_name, use_download_name):
     """
     Retrieve a single file from project root
     Currently only PDF or ePub
@@ -1236,18 +1270,18 @@ def get_pdf_file(project, collection_id, file_type, download_name, is_child_pdf)
     
     file_path = ""
 
-    child_download_name = ""
+    direct_download_name = ""
     
-    if is_child_pdf and 'pdf' in str(file_type):
+    if use_download_name and 'pdf' in str(file_type):
         if '.pdf' in str(download_name):
-            child_download_name = download_name.split('.pdf')[0]
+            direct_download_name = download_name.split('.pdf')[0]
         else:
-            child_download_name = download_name
+            direct_download_name = download_name
 
         file_path = safe_join(config[project]["file_root"],
                               "downloads",
                               collection_id,
-                              "{}.pdf".format(child_download_name))
+                              "{}.pdf".format(direct_download_name))
     elif 'pdf' in str(file_type):
         file_path = safe_join(config[project]["file_root"],
                               "downloads",
