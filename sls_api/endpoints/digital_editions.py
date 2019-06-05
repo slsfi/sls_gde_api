@@ -593,10 +593,10 @@ def get_variant(project, collection_id, publication_id, section_id=None):
         logger.info("Getting XML for {} and transforming...".format(request.full_path))
         connection = db_engine.connect()
         if section_id is not None:
-            select = "SELECT sort_order, name, type, legacy_id, id FROM publication_version WHERE publication_id = :p_id AND section_id = :s_id ORDER BY sort_order ASC"
+            select = "SELECT sort_order, name, type, legacy_id, id FROM publication_version WHERE publication_id = :p_id AND section_id = :s_id ORDER BY type, sort_order ASC"
             statement = sqlalchemy.sql.text(select).bindparams(p_id=publication_id, s_id=section_id)
         else:
-            select = "SELECT sort_order, name, type, legacy_id, id FROM publication_version WHERE publication_id = :p_id ORDER BY sort_order ASC"
+            select = "SELECT sort_order, name, type, legacy_id, id FROM publication_version WHERE publication_id = :p_id ORDER BY type, sort_order ASC"
             statement = sqlalchemy.sql.text(select).bindparams(p_id=publication_id)
         variation_info = []
         for row in connection.execute(statement).fetchall():
@@ -1375,9 +1375,9 @@ def get_location_search(project, search_text):
             "query": {
                 "bool": {
                     "should": [
-                        {"match": {"name": {"query": str(search_text), "fuzziness": 2}}},
-                        {"match": {"city": {"query": str(search_text), "fuzziness": 2}}},
-                        {"match": {"country": {"query": str(search_text), "fuzziness": 2}}}
+                        {"match": {"name": {"query": str(search_text), "fuzziness": 1}}},
+                        {"match": {"city": {"query": str(search_text), "fuzziness": 1}}},
+                        {"match": {"country": {"query": str(search_text), "fuzziness": 1}}}
                     ],
                     "filter": {
                         "term": {
@@ -1414,8 +1414,8 @@ def get_subject_search(project, search_text):
             "query": {
                 "bool": {
                     "should": [
-                        {"match": {"first_name": {"query": str(search_text), "fuzziness": 2}}},
-                        {"match": {"last_name": {"query": str(search_text), "fuzziness": 2}}}
+                        {"match": {"first_name": {"query": str(search_text), "fuzziness": 1}}},
+                        {"match": {"last_name": {"query": str(search_text), "fuzziness": 1}}}
                     ],
                     "filter": {
                         "term": {
@@ -1451,7 +1451,7 @@ def get_tag_search(project, search_text):
             "query": {
                 "bool": {
                     "should": [
-                        {"match": {"name": {"query": str(search_text), "fuzziness": 2}}}
+                        {"match": {"name": {"query": str(search_text), "fuzziness": 1}}}
                     ],
                     "filter": {
                         "term": {
