@@ -1212,6 +1212,53 @@ def get_song_by_id(project, song_id):
     except Exception:
         return Response("Couldn't get song by id.", status=404, content_type="text/json")
 
+@digital_edition.route("/<project>/songs/category/<category>/")
+def get_songs_by_category(project, category):
+    logger.info("Getting songs by category...")
+    try:
+        connection = db_engine.connect()
+        song_query = "SELECT \
+                        e.description as song_name,   \
+                        t.name as song_type, \
+                        eo.publication_facsimile_page, \
+                        ec1.subject_id as playman_id, \
+                        s1.full_name as playman_name, \
+                        ec2.subject_id as recorder_id, \
+                        s2.full_name as recorder_name, \
+                        l.id as location_id, \
+                        l.name as location_name, \
+                        l.city as city, \
+                        l.region as region \
+                        FROM event e \
+                        join event_occurrence eo \
+                        on eo.event_id=e.id \
+                        join event_connection ec1 \
+                        on ec1.event_id = e.id \
+                        join tag t \
+                        on t.id = ec1.tag_id \
+                        join subject s1 \
+                        on ec1.subject_id = s1.id \
+                        join event_connection ec2 \
+                        on ec2.event_id = e.id \
+                        join subject s2 \
+                        on ec2.subject_id = s2.id \
+                        join location l \
+                        on l.id=ec1.location_id \
+                        where e.type='song' \
+                        and s1.type='playman' \
+                        and s2.type='recorder'  \
+                        and t.name=:ca \
+                        order by e.id"
+
+        sql = sqlalchemy.sql.text(song_query)
+        statement = sql.bindparams(ca=category)
+        result = connection.execute(statement).fetchall()
+        return_data = []
+        for row in result:
+            return_data.append(dict(row))
+        return jsonify(return_data), 200, {"Access-Control-Allow-Origin": "*"}
+    except Exception as e:
+        return Response("Couldn't get songs by category." + str(e), status=404, content_type="text/json")
 
 @digital_edition.route("/<project>/media/data/<media_type>/<media_id>")
 def get_media_data(project, media_type, media_id):
