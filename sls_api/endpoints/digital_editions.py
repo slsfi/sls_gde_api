@@ -1228,7 +1228,9 @@ def get_songs_by_category(project, category):
                         l.id as location_id, \
                         l.name as location_name, \
                         l.city as city, \
-                        l.region as region \
+                        l.region as region, \
+                        pf.publication_facsimile_collection_id, \
+                        pf.page_nr \
                         FROM event e \
                         join event_occurrence eo \
                         on eo.event_id=e.id \
@@ -1244,6 +1246,8 @@ def get_songs_by_category(project, category):
                         on ec2.subject_id = s2.id \
                         join location l \
                         on l.id=ec1.location_id \
+                        left join publication_facsimile pf \
+                        on pf.id=eo.publication_facsimile_id \
                         where e.type='song' \
                         and s1.type='playman' \
                         and s2.type='recorder'  \
