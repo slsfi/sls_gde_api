@@ -26,6 +26,13 @@ def get_project_config(project_name):
     return None
 
 
+def int_or_none(var):
+    try:
+        return int(var)
+    except Exception:
+        return None
+
+
 def project_permission_required(fn):
     """
     Function decorator that checks for JWT authorization and that the user has edit rights for the project.

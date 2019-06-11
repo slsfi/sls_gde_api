@@ -53,7 +53,7 @@ def run_git_command(project, command):
     git_command = ["git", "-C", git_root]
     for c in command:
         git_command.append(c)
-    return subprocess.check_output(git_command)
+    return subprocess.check_output(git_command, stderr=subprocess.STDOUT)
 
 
 def update_files_in_git_repo(project, specific_file=False):

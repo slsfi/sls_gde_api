@@ -3,8 +3,8 @@ from flask_jwt_extended import jwt_required
 from sqlalchemy import Table
 from sqlalchemy.sql import select, text
 
-from sls_api.endpoints.generics import db_engine, get_project_id_from_name, metadata, \
-    project_permission_required, select_all_from_table
+from sls_api.endpoints.generics import db_engine, get_project_id_from_name, int_or_none, \
+    metadata, project_permission_required, select_all_from_table
 
 event_tools = Blueprint("event_tools", __name__)
 
@@ -24,7 +24,7 @@ def add_new_location(project):
     description: location description
 
     POST data CAN also contain:
-    legacyId: legacy id for location
+    legacy_id: legacy id for location
     latitude: latitude coordinate for location
     longitude: longitude coordinate for location
     """
@@ -41,7 +41,7 @@ def add_new_location(project):
         "name": request_data["name"],
         "description": request_data.get("description", None),
         "project_id": get_project_id_from_name(project),
-        "legacy_id": request_data.get("legacyId", None),
+        "legacy_id": request_data.get("legacy_id", None),
         "latitude": request_data.get("latitude", None),
         "longitude": request_data.get("longitude", None)
     }
@@ -78,13 +78,13 @@ def add_new_subject(project):
     description: subject description
 
     POST data CAN also contain:
-    firstName: Subject first or given name
-    lastName Subject surname
+    first_name: Subject first or given name
+    last_name Subject surname
     preposition: preposition for subject
-    fullName: Subject full name
-    legacyId: Legacy id for subject
-    dateBorn: Subject date of birth
-    dateDeceased: Subject date of death
+    full_name: Subject full name
+    legacy_id: Legacy id for subject
+    date_born: Subject date of birth
+    date_deceased: Subject date of death
     """
     request_data = request.get_json()
     if not request_data:
@@ -96,13 +96,13 @@ def add_new_subject(project):
         "type": request_data.get("type", None),
         "description": request_data.get("description", None),
         "project_id": get_project_id_from_name(project),
-        "first_name": request_data.get("firstName", None),
-        "last_name": request_data.get("lastName", None),
+        "first_name": request_data.get("first_name", None),
+        "last_name": request_data.get("last_name", None),
         "preposition": request_data.get("preposition", None),
-        "full_name": request_data.get("fullName", None),
-        "legacy_id": request_data.get("legacyId", None),
-        "date_born": request_data.get("dateBorn", None),
-        "date_deceased": request_data.get("dateDeceased", None)
+        "full_name": request_data.get("full_name", None),
+        "legacy_id": request_data.get("legacy_id", None),
+        "date_born": request_data.get("date_born", None),
+        "date_deceased": request_data.get("date_deceased", None)
     }
     try:
         insert = subjects.insert()
@@ -138,7 +138,7 @@ def add_new_tag(project):
 
     POST data CAN also contain:
     description: tag description
-    legacyId: Legacy id for tag
+    legacy_id: Legacy id for tag
     """
     request_data = request.get_json()
     if not request_data:
@@ -151,7 +151,7 @@ def add_new_tag(project):
         "name": request_data.get("name", None),
         "project_id": get_project_id_from_name(project),
         "description": request_data.get("description", None),
-        "legacy_id": request_data.get("legacyId", None)
+        "legacy_id": request_data.get("legacy_id", None)
     }
     try:
         insert = tags.insert()
@@ -309,7 +309,7 @@ def connect_event(event_id):
         return jsonify({"msg": "No data provided."}), 400
     events = Table("event", metadata, autoload=True, autoload_with=db_engine)
     connection = db_engine.connect()
-    select_event = select([events]).where(events.c.id == int(event_id))
+    select_event = select([events]).where(events.c.id == int_or_none(event_id))
     event_exists = connection.execute(select_event).fetchall()
     if len(event_exists) != 1:
         return jsonify(
@@ -352,7 +352,7 @@ def get_event_connections(event_id):
     """
     event_connections = Table("event_connection", metadata, autoload=True, autoload_with=db_engine)
     connection = db_engine.connect()
-    statement = select([event_connections]).where(event_connections.c.event_id == int(event_id))
+    statement = select([event_connections]).where(event_connections.c.event_id == int_or_none(event_id))
     rows = connection.execute(statement).fetchall()
     result = []
     for row in rows:
@@ -369,7 +369,7 @@ def get_event_occurrences(event_id):
     """
     event_occurrences = Table("event_occurrence", metadata, autoload=True, autoload_with=db_engine)
     connection = db_engine.connect()
-    statement = select([event_occurrences]).where(event_occurrences.c.event_id == int(event_id))
+    statement = select([event_occurrences]).where(event_occurrences.c.event_id == int_or_none(event_id))
     rows = connection.execute(statement).fetchall()
     result = []
     for row in rows:
@@ -402,7 +402,7 @@ def new_event_occurrence(event_id):
         return jsonify({"msg": "No data provided."}), 400
     events = Table("event", metadata, autoload=True, autoload_with=db_engine)
     connection = db_engine.connect()
-    select_event = select([events]).where(events.c.id == int(event_id))
+    select_event = select([events]).where(events.c.id == int_or_none(event_id))
     event_exists = connection.execute(select_event).fetchall()
     if len(event_exists) != 1:
         return jsonify(

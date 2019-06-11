@@ -2,7 +2,7 @@ from flask import Blueprint, jsonify, request
 from sqlalchemy import Table
 from sqlalchemy.sql import select
 
-from sls_api.endpoints.generics import db_engine, metadata, project_permission_required
+from sls_api.endpoints.generics import db_engine, int_or_none, metadata, project_permission_required
 
 group_tools = Blueprint("group_tools", __name__)
 
@@ -30,7 +30,7 @@ def get_publication_group(project, group_id):
     """
     connection = db_engine.connect()
     groups = Table("publication_group", metadata, autoload=True, autoload_with=db_engine)
-    statement = select([groups]).where(groups.c.id == int(group_id))
+    statement = select([groups]).where(groups.c.id == int_or_none(group_id))
     rows = connection.execute(statement).fetchall()
     result = dict(rows[0])
     connection.close()
@@ -45,7 +45,7 @@ def get_publications_in_group(project, group_id):
     """
     connection = db_engine.connect()
     publications = Table("publication", metadata, autoload=True, autoload_with=db_engine)
-    statement = select([publications.c.id, publications.c.name]).where(publications.c.publication_group_id == int(group_id))
+    statement = select([publications.c.id, publications.c.name]).where(publications.c.publication_group_id == int_or_none(group_id))
     result = []
     for row in connection.execute(statement).fetchall():
         result.append(dict(row))
@@ -70,15 +70,15 @@ def add_publication_to_group(project, publication_id):
     if "group_id" not in request_data:
         return jsonify({"msg": "group_id not in POST data."}), 400
 
-    group_id = int(request_data["group_id"])
+    group_id = int_or_none(request_data["group_id"])
 
     connection = db_engine.connect()
     publications = Table("publication", metadata, autoload=True, autoload_with=db_engine)
-    statement = publications.update().where(publications.c.id == int(publication_id)).values(publication_group_id=group_id)
+    statement = publications.update().where(publications.c.id == int_or_none(publication_id)).values(publication_group_id=group_id)
     transaction = connection.begin()
     try:
         connection.execute(statement)
-        statement = select([publications]).where(publications.c.id == int(publication_id))
+        statement = select([publications]).where(publications.c.id == int_or_none(publication_id))
         updated = dict(connection.execute(statement).fetchone())
         transaction.commit()
         result = {

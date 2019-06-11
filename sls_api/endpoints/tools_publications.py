@@ -3,7 +3,8 @@ from flask_jwt_extended import jwt_required
 from sqlalchemy import Table
 from sqlalchemy.sql import join, select
 
-from sls_api.endpoints.generics import db_engine, get_project_id_from_name, metadata, project_permission_required
+from sls_api.endpoints.generics import db_engine, get_project_id_from_name, \
+    int_or_none, metadata, project_permission_required
 
 
 publication_tools = Blueprint("publication_tools", __name__)
@@ -39,7 +40,7 @@ def get_publication(project, publication_id):
     """
     connection = db_engine.connect()
     publications = Table("publication", metadata, autoload=True, autoload_with=db_engine)
-    statement = select([publications]).where(publications.c.id == int(publication_id))
+    statement = select([publications]).where(publications.c.id == int_or_none(publication_id))
     rows = connection.execute(statement).fetchall()
     result = dict(rows[0])
     connection.close()
@@ -54,7 +55,7 @@ def get_publication_versions(project, publication_id):
     """
     connection = db_engine.connect()
     publication_versions = Table("publication_version", metadata, autoload=True, autoload_with=db_engine)
-    statement = select([publication_versions]).where(publication_versions.c.publication_id == int(publication_id))
+    statement = select([publication_versions]).where(publication_versions.c.publication_id == int_or_none(publication_id))
     rows = connection.execute(statement).fetchall()
     result = []
     for row in rows:
@@ -71,7 +72,7 @@ def get_publication_manuscripts(project, publication_id):
     """
     connection = db_engine.connect()
     publication_manuscripts = Table("publication_manuscript", metadata, autoload=True, autoload_with=db_engine)
-    statement = select([publication_manuscripts]).where(publication_manuscripts.c.publication_id == int(publication_id))
+    statement = select([publication_manuscripts]).where(publication_manuscripts.c.publication_id == int_or_none(publication_id))
     rows = connection.execute(statement).fetchall()
     result = []
     for row in rows:
@@ -94,7 +95,7 @@ def get_publication_facsimiles(project, publication_id):
     tables = join(publication_facsimiles, facsimile_collections, publication_facsimiles.c.publication_facsimile_collection_id == facsimile_collections.c.id)
 
     statement = select([publication_facsimiles, facsimile_collections.c.title])\
-        .where(publication_facsimiles.c.publication_id == int(publication_id))\
+        .where(publication_facsimiles.c.publication_id == int_or_none(publication_id))\
         .select_from(tables)
 
     rows = connection.execute(statement).fetchall()
@@ -114,7 +115,7 @@ def get_publication_comments(project, publication_id):
     connection = db_engine.connect()
     publications = Table("publication", metadata, autoload=True, autoload_with=db_engine)
     publication_comments = Table("publication_comment", metadata, autoload=True, autoload_with=db_engine)
-    statement = select([publications.c.publication_comment_id]).where(publications.c.id == int(publication_id))
+    statement = select([publications.c.publication_comment_id]).where(publications.c.id == int_or_none(publication_id))
     comment_ids = connection.execute(statement).fetchall()
     comment_ids = [int(row[0]) for row in comment_ids]
     statement = select([publication_comments]).where(publication_comments.c.id.in_(comment_ids))
@@ -177,7 +178,7 @@ def link_file_to_publication(project, publication_id):
             new_row = dict(connection.execute(new_row).fetchone())
 
             # update publication object in database with new publication_comment ID
-            update_stmt = publications.update().where(publications.c.id == int(publication_id)). \
+            update_stmt = publications.update().where(publications.c.id == int_or_none(publication_id)). \
                 values(publications.c.publication_comment_id == result.inserted_primary_key[0])
             connection.execute(update_stmt)
 

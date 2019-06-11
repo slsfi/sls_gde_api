@@ -325,7 +325,6 @@ def handle_toc(project, collection_id):
                     else:
                         # if we succeed, remove the old file and rename file_path.new to file_path
                         # (could be combined into just os.rename, but some OSes don't like that)
-                        os.remove(file_path)
                         os.rename(f"{file_path}.new", file_path)
                         return jsonify({"msg": f"Saved new toc as {file_path}"})
 
