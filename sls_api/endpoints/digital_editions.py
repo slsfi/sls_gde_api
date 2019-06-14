@@ -902,7 +902,7 @@ def get_subject_occurrences(project=None):
                             JOIN publication pub ON pub.id = ev_o.publication_id \
                             JOIN publication_collection pub_c ON pub_c.id = pub.publication_collection_id \
                             JOIN subject sub ON ev_c.subject_id = sub.id \
-                            WHERE ev.deleted != 1 AND ev_o.deleted != 1 AND ev_c.deleted != 1 AND sub.id = :sub_id"
+                            WHERE ev.deleted != 1 AND ev_o.deleted != 1 AND ev_c.deleted != 1 AND sub.id = :sub_id ORDER BY pub_c.name ASC"
         statement_occ = sqlalchemy.sql.text(occurrence_sql).bindparams(sub_id=subject['id'])
         subject['occurrences'] = []
         connection_2 = db_engine.connect()
@@ -949,7 +949,7 @@ def get_location_occurrences(project=None):
                             JOIN publication pub ON pub.id = ev_o.publication_id \
                             JOIN publication_collection pub_c ON pub_c.id = pub.publication_collection_id \
                             JOIN location loc ON ev_c.location_id = loc.id \
-                            WHERE ev.deleted != 1 AND ev_o.deleted != 1 AND ev_c.deleted != 1 AND loc.id = :loc_id"
+                            WHERE ev.deleted != 1 AND ev_o.deleted != 1 AND ev_c.deleted != 1 AND loc.id = :loc_id ORDER BY pub_c.name ASC"
         statement_occ = sqlalchemy.sql.text(occurrence_sql).bindparams(loc_id=location['id'])
         location['occurrences'] = []
         connection_2 = db_engine.connect()
