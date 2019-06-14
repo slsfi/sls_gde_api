@@ -996,7 +996,7 @@ def get_tag_occurrences(project=None):
                             JOIN publication pub ON pub.id = ev_o.publication_id \
                             JOIN publication_collection pub_c ON pub_c.id = pub.publication_collection_id \
                             JOIN tag ON ev_c.tag_id = tag.id \
-                            WHERE ev.deleted != 1 AND ev_o.deleted != 1 AND ev_c.deleted != 1 AND tag.id = :tag_id"
+                            WHERE ev.deleted != 1 AND ev_o.deleted != 1 AND ev_c.deleted != 1 AND tag.id = :tag_id ORDER BY pub_c.name ASC"
         statement_occ = sqlalchemy.sql.text(occurrence_sql).bindparams(tag_id=tag['id'])
         tag['occurrences'] = []
         connection_2 = db_engine.connect()
