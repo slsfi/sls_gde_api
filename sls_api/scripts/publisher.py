@@ -101,6 +101,7 @@ def check_publication_mtimes_and_publish_files(project):
     if project_id is not None and project_settings is not None:
         file_root = project_settings.get("file_root", None)
         if file_root is not None:
+            # open DB connection for publication, comment, and manuscript data fetch
             connection = db_engine.connect()
 
             # publication & publication_comment info
@@ -118,6 +119,7 @@ def check_publication_mtimes_and_publish_files(project):
             publication_info = connection.execute(publication_query).fetchall()
             manuscript_info = connection.execute(manuscript_query).fetchall()
 
+            # close DB connection for now, it won't be needed for a while
             connection.close()
 
             # Keep a list of changed files for later git commit
@@ -169,6 +171,9 @@ def check_publication_mtimes_and_publish_files(project):
                                      "JOIN publication_collection ON publication.publication_collection_id=publication_collection.id "
                                      "WHERE publication_collection.project_id = :proj AND publication.id = :pub_id AND publication_version.type = :vers_type")
 
+                # open new DB connection for variant data fetch
+                connection = db_engine.connect()
+
                 # fetch info for "main" variant
                 main_variant_query = variant_query.bindparams(proj=project_id, pub_id=publication_id, vers_type=1)
                 main_variant_info = connection.execute(main_variant_query).fetchone()   # should only be one main variant per publication?
@@ -176,6 +181,9 @@ def check_publication_mtimes_and_publish_files(project):
                 # fetch info for all "other" variants
                 variants_query = variant_query.bindparams(proj=project_id, pub_id=publication_id, vers_type=2)
                 variants_info = connection.execute(variants_query).fetchall()
+
+                # close DB connection, as it's no longer needed
+                connection.close()
 
                 # compile info and generate files if needed
                 main_variant_source = os.path.join(file_root, main_variant_info["publication_version.original_filename"])
