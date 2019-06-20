@@ -1546,7 +1546,8 @@ def get_subject_search(project, search_text):
                 "bool": {
                     "should": [
                         {"match": {"first_name": {"query": str(search_text), "fuzziness": 1}}},
-                        {"match": {"last_name": {"query": str(search_text), "fuzziness": 1}}}
+                        {"match": {"last_name": {"query": str(search_text), "fuzziness": 1}}},
+                        {"match": {"full_name": {"query": str(search_text), "fuzziness": 1}}}
                     ],
                     "filter": {
                         "term": {
