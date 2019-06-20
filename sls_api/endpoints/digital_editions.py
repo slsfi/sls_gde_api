@@ -17,6 +17,7 @@ import json
 from PIL import Image
 from hashlib import md5
 from elasticsearch import Elasticsearch
+from base64 import b64encode
 
 from sls_api.endpoints.generics import config, get_project_config, db_engine, select_all_from_table, elastic_config, get_project_id_from_name
 
@@ -1147,31 +1148,38 @@ def get_facsimile_pages(project, legacy_id):
         return Response("Couldn't get facsimile page.", status=404, content_type="text/json")
 
 
-@digital_edition.route("/<project>/facsimile/page/image/<facs_id>/<facs_nr>")
-def get_facsimile_page_image(project, facs_id, facs_nr):
+@digital_edition.route("/<project>/<facsimile_type>/page/image/<facs_id>/<facs_nr>")
+def get_facsimile_page_image(project, facsimile_type, facs_id, facs_nr):
     config = get_project_config(project)
     if config is None:
         return jsonify({"msg": "No such project."}), 400
     else:
         logger.info("Getting facsimile page image")
-        try:
-            zoom_level = "4"
+    try:
+        zoom_level = "4"
+        if facsimile_type == 'facsimile':
             file_path = safe_join(config["file_root"],
-                                  "facsimiles",
-                                  facs_id,
-                                  zoom_level,
-                                  "{}.jpg".format(int(facs_nr)))
-            output = io.BytesIO()
-            try:
-                with open(file_path, mode="rb") as img_file:
-                    output.write(img_file.read())
-                content = output.getvalue()
-                output.close()
-                return Response(content, status=200, content_type="image/jpeg")
-            except Exception:
-                return Response("File not found: " + file_path, status=404, content_type="text/json")
+                                "facsimiles",
+                                facs_id,
+                                zoom_level,
+                                "{}.jpg".format(int(facs_nr)))
+        elif facsimile_type == 'song-example':
+            file_path = safe_join(config["file_root"],
+                                "song-example-images",
+                                facs_id,
+                                "{}.jpg".format(int(facs_nr)))
+
+        output = io.BytesIO()
+        try:
+            with open(file_path, mode="rb") as img_file:
+                output.write(img_file.read())
+            content = output.getvalue()
+            output.close()
+            return Response(content, status=200, content_type="image/jpeg")
         except Exception:
-            return Response("Couldn't get facsimile page.", status=404, content_type="text/json")
+            return Response("File not found: " + file_path, status=404, content_type="text/json")
+    except Exception:
+        return Response("Couldn't get facsimile page.", status=404, content_type="text/json")
 
 
 @digital_edition.route("/<project>/files/<folder>/<file_name>/")
@@ -1203,9 +1211,95 @@ def get_song_by_id(project, song_id):
     except Exception:
         return Response("Couldn't get song by id.", status=404, content_type="text/json")
 
+@digital_edition.route("/<project>/songs/category/<category>/")
+def get_songs_by_category(project, category):
+    logger.info("Getting songs by category...")
+    try:
+        connection = db_engine.connect()
+        song_query = "SELECT \
+                        e.description as song_name,   \
+                        t.name as song_type, \
+                        eo.publication_facsimile_page, \
+                        ec1.subject_id as playman_id, \
+                        s1.full_name as playman_name, \
+                        ec2.subject_id as recorder_id, \
+                        s2.full_name as recorder_name, \
+                        l.id as location_id, \
+                        l.name as location_name, \
+                        l.city as city, \
+                        l.region as region, \
+                        pf.publication_facsimile_collection_id, \
+                        pf.page_nr \
+                        FROM event e \
+                        join event_occurrence eo \
+                        on eo.event_id=e.id \
+                        join event_connection ec1 \
+                        on ec1.event_id = e.id \
+                        join tag t \
+                        on t.id = ec1.tag_id \
+                        join subject s1 \
+                        on ec1.subject_id = s1.id \
+                        join event_connection ec2 \
+                        on ec2.event_id = e.id \
+                        join subject s2 \
+                        on ec2.subject_id = s2.id \
+                        join location l \
+                        on l.id=ec1.location_id \
+                        left join publication_facsimile pf \
+                        on pf.id=eo.publication_facsimile_id \
+                        where e.type='song' \
+                        and s1.type='playman' \
+                        and s2.type='recorder'  \
+                        and t.name=:ca \
+                        order by e.id"
 
-@digital_edition.route("/<project>/files/<collection_id>/<file_type>/<download_name>/")
-def get_pdf_file(project, collection_id, file_type, download_name):
+        sql = sqlalchemy.sql.text(song_query)
+        statement = sql.bindparams(ca=category)
+        result = connection.execute(statement).fetchall()
+        connection.close()
+        return_data = []
+        for row in result:
+            return_data.append(dict(row))
+        return jsonify(return_data), 200, {"Access-Control-Allow-Origin": "*"}
+    except Exception as e:
+        return Response("Couldn't get songs by category." + str(e), status=404, content_type="text/json")
+
+@digital_edition.route("/<project>/media/data/<media_type>/<media_id>")
+def get_media_data(project, media_type, media_id):
+    logger.info("Getting media data...")
+
+    project_id = get_project_id_from_name(project)
+    media_column = "{}_id".format(media_type)
+    try:
+        connection = db_engine.connect()
+        sql = sqlalchemy.sql.text("SELECT media.id, media.description FROM media WHERE {}=:m_id".format(media_column))
+        statement = sql.bindparams(m_id=media_id)
+        result = connection.execute(statement).fetchone()
+        result = dict(result)
+        result["image_path"] = "/" + safe_join(project, "media", "image", str(result["id"]))
+        connection.close()
+        return jsonify(result), 200, {"Access-Control-Allow-Origin": "*"}
+    except Exception:
+        return Response("Couldn't get media data.", status=404, content_type="text/json")
+
+@digital_edition.route("/<project>/media/image/<id>")
+def get_media_data_image(project, id):
+    logger.info("Getting media image...")
+
+    try:
+        connection = db_engine.connect()
+        sql = sqlalchemy.sql.text("SELECT media.image FROM media WHERE id=:image_id".format(id))
+        statement = sql.bindparams(image_id=id)
+        result = connection.execute(statement).fetchone()
+        result = dict(result)
+        connection.close()
+        return Response(io.BytesIO(result["image"]), status=200, content_type="image/jpeg")
+    except Exception:
+        return Response("Couldn't get media image.", status=404, content_type="text/json")
+
+@digital_edition.route("/<project>/files/<collection_id>/<file_type>/<download_name>/", defaults={'use_download_name': None})
+@digital_edition.route("/<project>/files/<collection_id>/<file_type>/<download_name>/<use_download_name>")
+def get_pdf_file(project, collection_id, file_type, download_name, use_download_name):
     """
     Retrieve a single file from project root
     Currently only PDF or ePub
@@ -1215,34 +1309,72 @@ def get_pdf_file(project, collection_id, file_type, download_name):
     config = get_project_config(project)
     if config is None:
         return jsonify({"msg": "No such project."}), 400
-    else:
-        connection = db_engine.connect()
-        # Check that the collection exists
-        statement = sqlalchemy.sql.text("SELECT * FROM publication_collection WHERE id=:coll_id").bindparams(coll_id=collection_id)
-        row = connection.execute(statement).fetchone()
-        if row is None:
-            return jsonify({
-                "msg": "Desired facsimile collection was not found in database!"
-            }), 404
-        file_path = ""
-        if 'pdf' in str(file_type):
-            file_path = safe_join(config["file_root"],
-                                  "downloads",
-                                  collection_id,
-                                  "{}.pdf".format(int(collection_id)))
-        elif 'epub' in str(file_type):
-            file_path = safe_join(config["file_root"],
-                                  "downloads",
-                                  collection_id,
-                                  "{}.epub".format(int(collection_id)))
-        connection.close()
+    connection = db_engine.connect()
+    # Check that the collection exists
+    statement = sqlalchemy.sql.text("SELECT * FROM publication_collection WHERE id=:coll_id").bindparams(coll_id=collection_id)
+    row = connection.execute(statement).fetchone()
+    if row is None:
+        return jsonify({
+            "msg": "Desired facsimile collection was not found in database!"
+        }), 404
     
-        try:
-            return send_file(file_path, as_attachment=True, mimetype='application/octet-stream',
-                             attachment_filename=download_name)
-        except Exception:
-            return Response("File not found.", status=404, content_type="text/json")
+    file_path = ""
 
+    direct_download_name = ""
+    
+    if use_download_name and 'pdf' in str(file_type):
+        if '.pdf' in str(download_name):
+            direct_download_name = download_name.split('.pdf')[0]
+        else:
+            direct_download_name = download_name
+
+        file_path = safe_join(config["file_root"],
+                              "downloads",
+                              collection_id,
+                              "{}.pdf".format(direct_download_name))
+    elif 'pdf' in str(file_type):
+        file_path = safe_join(config["file_root"],
+                              "downloads",
+                              collection_id,
+                              "{}.pdf".format(int(collection_id)))
+    elif 'epub' in str(file_type):
+        file_path = safe_join(config["file_root"],
+                              "downloads",
+                              collection_id,
+                              "{}.epub".format(int(collection_id)))
+    connection.close()
+
+    try:
+        return send_file(file_path, as_attachment=True, mimetype='application/octet-stream',
+                         attachment_filename=download_name)
+    except Exception:
+        return Response("File not found.", status=404, content_type="text/json")
+
+@digital_edition.route("/<project>/song-files/<file_type>/<file_name>/")
+def get_song_file(project, file_type, file_name):
+    """
+    Retrieve a single file from project root that belongs to a song
+    It can be musicxml, midi
+    """
+    config = get_project_config(project)
+    if config is None:
+        return jsonify({"msg": "No such project."}), 400
+    file_path = ""
+    if 'musicxml' in str(file_type):
+        file_path = safe_join(config["file_root"],
+                              "musicxml",
+                              "{}.xml".format(str(file_name)))
+        file_name = "{}.xml".format(str(file_name))
+    elif 'midi' in str(file_type):
+        file_path = safe_join(config["file_root"],
+                              "midi-files",
+                              "{}.mid".format(str(file_name)))
+
+    try:
+        return send_file(file_path, as_attachment=True, mimetype='application/octet-stream',
+                         attachment_filename=file_name)
+    except Exception:
+        return Response("File not found.", status=404, content_type="text/json")
 
 @digital_edition.route("/<project>/urn/<url>/")
 @digital_edition.route("/<project>/urn/<url>/<legacy_id>/")
