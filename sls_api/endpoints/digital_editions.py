@@ -404,7 +404,7 @@ def get_introduction(project, collection_id, publication_id, lang="swe"):
             version = "int" if config["show_internally_published"] else "ext"
             # TODO get original_filename from publication_collection_introduction table? how handle language/version
             filename = "{}_inl_{}_{}.xml".format(collection_id, lang, version)
-            xsl_file = "est.xsl"
+            xsl_file = "introduction.xsl"
             content = get_content(project, "inl", filename, xsl_file, None)
             data = {
                 "id": "{}_{}_inl".format(collection_id, publication_id),
