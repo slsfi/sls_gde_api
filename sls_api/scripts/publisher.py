@@ -12,7 +12,7 @@ from sls_api.scripts.CTeiDocument import CTeiDocument
 
 valid_projects = [project for project in config if isinstance(config[project], dict) and config[project].get("comments_database", False)]
 
-comment_db_engines = {project: create_engine(config[project]["comment_database"], pool_pre_ping=True) for project in valid_projects}
+comment_db_engines = {project: create_engine(config[project]["comments_database"], pool_pre_ping=True) for project in valid_projects}
 
 # comment_db_engines = {"topelius": create_engine("mysql://web_user:SecretPassword@mysql.example.com:3306/topelius_notes", pool_pre_ping=True)}
 
