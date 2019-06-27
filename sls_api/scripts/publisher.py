@@ -309,5 +309,5 @@ if __name__ == "__main__":
         if args.project in valid_projects:
             check_publication_mtimes_and_publish_files(args.project)
         else:
-            print("{} is not in the API configuration or lacks 'comment_database' setting, aborting...".format(args.project))
+            print("{} is not in the API configuration or lacks 'comments_database' setting, aborting...".format(args.project))
             sys.exit(1)
