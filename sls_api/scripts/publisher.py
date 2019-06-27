@@ -299,11 +299,11 @@ if __name__ == "__main__":
 
     if args.project is None:
         # For each project with a valid entry in the config file, check modification times for publications and publish
-        for project_name in config.keys():
+        for project_name in valid_projects:
             check_publication_mtimes_and_publish_files(project_name)
     else:
-        if args.project in config:
+        if args.project in valid_projects:
             check_publication_mtimes_and_publish_files(args.project)
         else:
-            print("{} is not in the API configuration, aborting...".format(args.project))
+            print("{} is not in the API configuration or lacks 'comment_database' setting, aborting...".format(args.project))
             sys.exit(1)
