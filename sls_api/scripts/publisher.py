@@ -10,7 +10,9 @@ from sls_api.endpoints.generics import config, db_engine, get_project_id_from_na
 from sls_api.endpoints.tools_files import run_git_command, update_files_in_git_repo
 from sls_api.scripts.CTeiDocument import CTeiDocument
 
-comment_db_engines = {project: create_engine(config[project]["comment_database"], pool_pre_ping=True) for project in config.keys()}
+valid_projects = [project for project in config if isinstance(config[project], dict) and config[project].get("comment_database", False)]
+
+comment_db_engines = {project: create_engine(config[project]["comment_database"], pool_pre_ping=True) for project in valid_projects}
 
 # comment_db_engines = {"topelius": create_engine("mysql://web_user:SecretPassword@mysql.example.com:3306/topelius_notes", pool_pre_ping=True)}
 
