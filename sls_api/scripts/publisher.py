@@ -292,12 +292,16 @@ def check_publication_mtimes_and_publish_files(project):
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Publishing script to publish changes to EST/COM/VAR/MS files for GDE project.")
-    parser.add_argument("-p", "--project", help="Optional project name specification to only process the named project, rather than all projects.")
+    parser = argparse.ArgumentParser(description="Publishing script to publish changes to EST/COM/VAR/MS files for GDE project")
+    parser.add_argument("-p", "--project", help="Optional project name specification to only process the named project, rather than all projects")
+    parser.add_argument("-l", "--list_projects", action="store_true", help="Print a listing of available projects with seemingly valid configuration and exit")
 
     args = parser.parse_args()
 
-    if args.project is None:
+    if args.list_projects:
+        print(", ".join(valid_projects))
+        sys.exit(0)
+    elif args.project is None:
         # For each project with a valid entry in the config file, check modification times for publications and publish
         for project_name in valid_projects:
             check_publication_mtimes_and_publish_files(project_name)
