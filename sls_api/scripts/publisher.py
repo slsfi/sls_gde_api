@@ -94,9 +94,9 @@ def generate_ms_file(master_file_path, target_file_path):
 
 
 def check_publication_mtimes_and_publish_files(project):
-    update_success, _ = update_files_in_git_repo(project)
+    update_success, result_str = update_files_in_git_repo(project)
     if not update_success:
-        print("Git update failed!")
+        print("Git update failed! Reason: {}".format(result_str))
         return False
     project_id = get_project_id_from_name(project)
     project_settings = config.get(project, None)
