@@ -332,6 +332,9 @@ def edit_comment(project, publication_id):
         else:
             insert = comments.insert().values(**values)
             r = connection.execute(insert)
+            comment_id = r.inserted_primary_key[0]
+            update = publications.update().where(publications.c.id == int(publication_id)).values({"publication_comment_id": int(comment_id)})
+            connection.execute(update)
             connection.close()
             return jsonify({
                 "msg": "Created comment {} for publication {} with values {}".format(r.inserted_primary_key, publication_id[0], str(values)),
