@@ -293,6 +293,7 @@ def edit_publication(project, publication_id):
 def edit_comment(project, publication_id):
     """
     Takes "filename" and/or "published" as JSON data
+    If there is no publication_comment in the database, creates one
     Returns "msg" and "comment_id" on success, otherwise 40x
     """
     request_data = request.get_json()
@@ -320,13 +321,22 @@ def edit_comment(project, publication_id):
         values["published"] = published
 
     if len(values) > 0:
-        update = comments.update().where(comments.c.id == int(comment_id)).values(**values)
-        connection.execute(update)
-        connection.close()
-        return jsonify({
-            "msg": "Updated comment {} with values {}".format(comment_id, str(values)),
-            "comment_id": comment_id
-        })
+        if comment_id is not None:
+            update = comments.update().where(comments.c.id == int(comment_id)).values(**values)
+            connection.execute(update)
+            connection.close()
+            return jsonify({
+                "msg": "Updated comment {} with values {}".format(comment_id, str(values)),
+                "comment_id": comment_id
+            })
+        else:
+            insert = comments.insert().values(**values)
+            r = connection.execute(insert)
+            connection.close()
+            return jsonify({
+                "msg": "Created comment {} for publication {} with values {}".format(r.inserted_primary_key, publication_id[0], str(values)),
+                "comment_id": r.inserted_primary_key[0]
+            })
     else:
         connection.close()
         return jsonify("No valid update values given."), 400
