@@ -1,14 +1,17 @@
 import argparse
+import logging
 import os
 from sqlalchemy import create_engine
 from sqlalchemy.sql import text
 from subprocess import CalledProcessError
 import sys
-import traceback
 
 from sls_api.endpoints.generics import config, db_engine, get_project_id_from_name
 from sls_api.endpoints.tools_files import run_git_command, update_files_in_git_repo
 from sls_api.scripts.CTeiDocument import CTeiDocument
+
+logging.getLogger().setLevel(logging.INFO)
+logger = logging.getLogger("publisher")
 
 valid_projects = [project for project in config if isinstance(config[project], dict) and config[project].get("comments_database", False)]
 
@@ -96,7 +99,7 @@ def generate_ms_file(master_file_path, target_file_path):
 def check_publication_mtimes_and_publish_files(project):
     update_success, result_str = update_files_in_git_repo(project)
     if not update_success:
-        print("Git update failed! Reason: {}".format(result_str))
+        logger.error("Git update failed! Reason: {}".format(result_str))
         return False
     project_id = get_project_id_from_name(project)
     project_settings = config.get(project, None)
@@ -149,7 +152,7 @@ def check_publication_mtimes_and_publish_files(project):
                 com_source_file_path = os.path.join(file_root, comment_info.get(row["publication.id"], COMMENTS_TEMPLATE_PATH_IN_FILE_ROOT))
 
                 if not os.path.exists(est_source_file_path) or not os.path.exists(com_source_file_path):
-                    print("Source file for est or com file for publication {} does not exist!".format(row["publication.id"]))
+                    logger.error("Source file for est or com file for publication {} does not exist!".format(row["publication.id"]))
                     continue
                 try:
                     est_target_mtime = os.path.getmtime(est_target_file_path)
@@ -159,8 +162,8 @@ def check_publication_mtimes_and_publish_files(project):
                 except OSError:
                     # If there is an error, the web XML files likely don't exist or are otherwise corrupt
                     # It is then easiest to just generate new ones
-                    print("Error getting time_modified for target or source files for publication {}".format(row["publication.id"]))
-                    print("Generating new est/com files...")
+                    logger.warning("Error getting time_modified for target or source files for publication {}".format(row["publication.id"]))
+                    logger.info("Generating new est/com files...")
                     changes.append(est_target_file_path)
                     changes.append(com_target_file_path)
                     generate_est_and_com_files(project_name, est_source_file_path, com_source_file_path,
@@ -173,7 +176,7 @@ def check_publication_mtimes_and_publish_files(project):
                         # If one or either is outdated, generate new ones
                         changes.append(est_target_file_path)
                         changes.append(com_target_file_path)
-                        print("Reading files for publication {} are outdated, generating new est/com files...".format(row["publication.id"]))
+                        logger.info("Reading files for publication {} are outdated, generating new est/com files...".format(row["publication.id"]))
                         generate_est_and_com_files(project_name, est_source_file_path, com_source_file_path,
                                                    est_target_file_path, com_target_file_path)
 
@@ -203,7 +206,7 @@ def check_publication_mtimes_and_publish_files(project):
                 main_variant_source = os.path.join(file_root, main_variant_info["publication_version.original_filename"])
 
                 if not os.path.exists(main_variant_source):
-                    print("Source file for main variant {} (type=1) does not exist!".format(main_variant_info["publication_version.id"]))
+                    logger.error("Source file for main variant {} (type=1) does not exist!".format(main_variant_info["publication_version.id"]))
                     continue
 
                 target_filename = "{}_{}_var_{}.xml".format(row["publication.publication_collection_id"],
@@ -227,7 +230,7 @@ def check_publication_mtimes_and_publish_files(project):
                     source_file_path = os.path.join(file_root, source_filename)  # original_filename should be relative to the project root
 
                     if not os.path.exists(source_file_path):
-                        print("Source file for variant {} does not exist!".format(variant["publication_version.id"]))
+                        logger.error("Source file for variant {} does not exist!".format(variant["publication_version.id"]))
                         continue
 
                     try:
@@ -236,8 +239,8 @@ def check_publication_mtimes_and_publish_files(project):
                     except OSError:
                         # If there is an error, the web XML file likely doesn't exist or is otherwise corrupt
                         # It is then easiest to just generate a new one
-                        print("Error getting time_modified for target or source files for publication_version {}".format(variant["publication_version.id"]))
-                        print("Generating new file...")
+                        logger.warning("Error getting time_modified for target or source files for publication_version {}".format(variant["publication_version.id"]))
+                        logger.info("Generating new file...")
                         changes.append(target_file_path)
                         variant_doc = CTeiDocument()
                         variant_doc.Load(source_file_path)
@@ -245,7 +248,7 @@ def check_publication_mtimes_and_publish_files(project):
                         variant_paths.append(target_file_path)
                     else:
                         if target_mtime < source_mtime:
-                            print("File {} is older than source file {}, generating new file...".format(target_file_path, source_file_path))
+                            logger.info("File {} is older than source file {}, generating new file...".format(target_file_path, source_file_path))
                             changes.append(target_file_path)
                             variant_doc = CTeiDocument()
                             variant_doc.Load(source_file_path)
@@ -267,7 +270,7 @@ def check_publication_mtimes_and_publish_files(project):
                 source_file_path = os.path.join(file_root, source_filename)  # original_filename should be relative to the project root
 
                 if not os.path.exists(source_file_path):
-                    print("Source file for manuscript {} does not exist!".format(row["publication_manuscript.id"]))
+                    logger.error("Source file for manuscript {} does not exist!".format(row["publication_manuscript.id"]))
                     continue
 
                 try:
@@ -276,8 +279,8 @@ def check_publication_mtimes_and_publish_files(project):
                 except OSError:
                     # If there is an error, the web XML file likely doesn't exist or is otherwise corrupt
                     # It is then easiest to just generate a new one
-                    print("Error getting time_modified for target or source file for publication_manuscript {}".format(row["publication_manuscript.id"]))
-                    print("Generating new file...")
+                    logger.warning("Error getting time_modified for target or source file for publication_manuscript {}".format(row["publication_manuscript.id"]))
+                    logger.info("Generating new file...")
                     changes.append(target_file_path)
                     generate_ms_file(source_file_path, target_file_path)
                 else:
@@ -286,7 +289,7 @@ def check_publication_mtimes_and_publish_files(project):
                         continue
                     else:
                         changes.append(target_file_path)
-                        print("File {} is older than source file {}, generating new file...".format(target_file_path, source_file_path))
+                        logger.info("File {} is older than source file {}, generating new file...".format(target_file_path, source_file_path))
                         generate_ms_file(source_file_path, target_file_path)
 
             if len(changes) > 0:
@@ -299,8 +302,7 @@ def check_publication_mtimes_and_publish_files(project):
                     run_git_command(project_name, ["commit", "--author=Publisher <is@sls.fi>", "-m", "Published new web files"])
                     run_git_command(project_name, ["push"])
                 except CalledProcessError:
-                    print("Exception during git sync of webfile changes.")
-                    print(traceback.format_exc())
+                    logger.exception("Exception during git sync of webfile changes.")
 
 
 if __name__ == "__main__":
@@ -311,7 +313,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     if args.list_projects:
-        print(", ".join(valid_projects))
+        logger.info(", ".join(valid_projects))
         sys.exit(0)
     elif args.project is None:
         # For each project with a valid entry in the config file, check modification times for publications and publish
@@ -321,5 +323,5 @@ if __name__ == "__main__":
         if args.project in valid_projects:
             check_publication_mtimes_and_publish_files(args.project)
         else:
-            print("{} is not in the API configuration or lacks 'comments_database' setting, aborting...".format(args.project))
+            logger.error("{} is not in the API configuration or lacks 'comments_database' setting, aborting...".format(args.project))
             sys.exit(1)
