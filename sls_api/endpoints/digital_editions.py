@@ -1215,9 +1215,11 @@ def get_song_by_id(project, song_id):
 @digital_edition.route("/<project>/songs/filtered", methods=["GET"])
 def get_songs_filtered(project):
     """
-    Filter songs either by subject name or category.
+    Filter songs either by subject name, location or category.
     If no filter is provided all songs are returned.
     Sql injection is also prevented.
+    
+    Example: /<project>/songs/filtered?subject_name=Foo Bar
     """
 
     logger.info("Getting songs filtered...")
@@ -1227,6 +1229,7 @@ def get_songs_filtered(project):
         filter_query_sql = ''
         subject_name = ''
         category = ''
+        location = ''
 
         if request.args.get('subject_name') and request.args.get('subject_name') != '':
             subject_name = request.args.get('subject_name')
@@ -1236,6 +1239,10 @@ def get_songs_filtered(project):
             category = request.args.get('category')
             # Prevent sql injection
             filter_query_sql += 'and t.name=:ca'
+        elif request.args.get('location') and request.args.get('location') != '':
+            location = request.args.get('location')
+            # Prevent sql injection
+            filter_query_sql += 'and l.city=:lo'
 
         song_query = "SELECT \
                         e.description as song_name, \
@@ -1282,6 +1289,9 @@ def get_songs_filtered(project):
         elif category != '':
             # Filter songs by category
             statement = sql.bindparams(ca=category)
+        elif location != '':
+            # Filter songs by location
+            statement = sql.bindparams(lo=location)
         else:
             # All songs
             statement = sql
