@@ -106,20 +106,30 @@ def check_publication_mtimes_and_publish_files(project):
             # open DB connection for publication, comment, and manuscript data fetch
             connection = db_engine.connect()
 
-            # publication & publication_comment info
-            publication_query = text("SELECT publication.id, publication.publication_collection_id, publication.original_filename, publication_comment.original_filename "
+            # publication info
+            publication_query = text("SELECT publication.id, publication.publication_collection_id, publication.original_filename "
                                      "FROM publication JOIN publication_collection ON publication.publication_collection_id=publication_collection.id "
-                                     "JOIN publication_comment ON publication.publication_comment_id=publication_comment.id "
                                      "WHERE publication_collection.project_id = :proj").bindparams(proj=project_id)
 
+            # publication_comment info, relating to "general comments" file for each publication
+            comment_query = text("SELECT publication.id, publication_comment.original_filename "
+                                 "FROM publication JOIN publication_collection ON publication.publication_collection_id=publication_collection.id "
+                                 "JOIN publication_comment ON publication.publication_comment_id=publication_comment.id "
+                                 "WHERE publication_collection.project_id = :proj").bindparams(proj=project_id)
+
             # publication_manuscript info
-            manuscript_query = text("SELECT publication_manuscript.id, publication.id, publication.publication_collection_id, publication_manuscript.original_filename "
+            manuscript_query = text("SELECT publication_manuscript.id, publication.id, publication_collection.id, publication_manuscript.original_filename "
                                     "FROM publication_manuscript JOIN publication ON publication_manuscript.publication_id=publication.id "
                                     "JOIN publication_collection ON publication.publication_collection_id=publication_collection.id "
                                     "WHERE publication_collection.project_id = :proj").bindparams(proj=project_id)
 
             publication_info = connection.execute(publication_query).fetchall()
             manuscript_info = connection.execute(manuscript_query).fetchall()
+
+            # comment_info can just be a dict of publication.id to publication_comment.original_filename, this should also speed up access for it
+            comment_info = dict()
+            for row in connection.execute(comment_query):
+                comment_info[row["publication.id"]] = row["publication_comment.original_filename"]
 
             # close DB connection for now, it won't be needed for a while
             connection.close()
@@ -134,7 +144,9 @@ def check_publication_mtimes_and_publish_files(project):
                 est_target_file_path = os.path.join(file_root, "xml", "est", est_target_filename)
                 com_target_file_path = os.path.join(file_root, "xml", "com", com_target_filename)
                 est_source_file_path = os.path.join(file_root, row["publication.original_filename"])          # original_filename should be relative to the project root
-                com_source_file_path = os.path.join(file_root, row["publication_comment.original_filename"])  # original_filename should be relative to the project root
+
+                # default to template comment file if no entry in publication_comment pointing to a comments file for this publication
+                com_source_file_path = os.path.join(file_root, comment_info.get(row["publication.id"], COMMENTS_TEMPLATE_PATH_IN_FILE_ROOT))
 
                 if not os.path.exists(est_source_file_path) or not os.path.exists(com_source_file_path):
                     print("Source file for est or com file for publication {} does not exist!".format(row["publication.id"]))
@@ -168,7 +180,7 @@ def check_publication_mtimes_and_publish_files(project):
                 # Process all variants belonging to this publication
                 # publication_version with type=1 is the "main" variant, the others should have type=2 and be versions of that main variant
                 publication_id = row["publication.id"]
-                variant_query = text("SELECT publication_version.id, publication.id, publication.publication_collection_id, publication_version.original_filename "
+                variant_query = text("SELECT publication_version.id, publication.id, publication_collection.id, publication_version.original_filename "
                                      "FROM publication_version JOIN publication ON publication_version.publication_id=publication.id "
                                      "JOIN publication_collection ON publication.publication_collection_id=publication_collection.id "
                                      "WHERE publication_collection.project_id = :proj AND publication.id = :pub_id AND publication_version.type = :vers_type")
@@ -207,7 +219,7 @@ def check_publication_mtimes_and_publish_files(project):
                 variant_docs = []
                 variant_paths = []
                 for variant in variants_info:
-                    target_filename = "{}_{}_var_{}.xml".format(variant["publication.publication_collection_id"],
+                    target_filename = "{}_{}_var_{}.xml".format(variant["publication_collection.id"],
                                                                 variant["publication.id"],
                                                                 row["publication_version.id"])
                     source_filename = variant["publication_version.original_filename"]
@@ -247,7 +259,7 @@ def check_publication_mtimes_and_publish_files(project):
 
             # For each publication_manuscript belonging to this project, check the modification timestamp of its master file and compare it to the generated web XML file
             for row in manuscript_info:
-                target_filename = "{}_{}_ms_{}.xml".format(row["publication.publication_collection_id"],
+                target_filename = "{}_{}_ms_{}.xml".format(row["publication_collection.id"],
                                                            row["publication.id"],
                                                            row["publication_manuscript.id"])
                 source_filename = row["publication_manuscript.original_filename"]
