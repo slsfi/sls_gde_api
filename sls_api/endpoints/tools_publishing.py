@@ -337,8 +337,8 @@ def edit_comment(project, publication_id):
             connection.execute(update)
             connection.close()
             return jsonify({
-                "msg": "Created comment {} for publication {} with values {}".format(r.inserted_primary_key, publication_id[0], str(values)),
-                "comment_id": r.inserted_primary_key[0]
+                "msg": "Created comment {} for publication {} with values {}".format(comment_id, publication_id, str(values)),
+                "comment_id": comment_id
             })
     else:
         connection.close()
