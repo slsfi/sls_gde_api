@@ -1211,13 +1211,40 @@ def get_song_by_id(project, song_id):
     except Exception:
         return Response("Couldn't get song by id.", status=404, content_type="text/json")
 
-@digital_edition.route("/<project>/songs/category/<category>/")
-def get_songs_by_category(project, category):
-    logger.info("Getting songs by category...")
+@digital_edition.route("/<project>/songs/filtered", methods=["GET"])
+def get_songs_filtered(project):
+    """
+    Filter songs either by subject name, location or category.
+    If no filter is provided all songs are returned.
+    Sql injection is also prevented.
+    
+    Example: /<project>/songs/filtered?subject_name=Foo Bar
+    """
+
+    logger.info("Getting songs filtered...")
     try:
         connection = db_engine.connect()
+
+        filter_query_sql = ''
+        subject_name = ''
+        category = ''
+        location = ''
+
+        if request.args.get('subject_name') and request.args.get('subject_name') != '':
+            subject_name = request.args.get('subject_name')
+            # Prevent sql injection
+            filter_query_sql += 'and (s1.full_name = :s_name OR s2.full_name = :s_name )'
+        elif request.args.get('category') and request.args.get('category') != '':
+            category = request.args.get('category')
+            # Prevent sql injection
+            filter_query_sql += 'and t.name=:ca'
+        elif request.args.get('location') and request.args.get('location') != '':
+            location = request.args.get('location')
+            # Prevent sql injection
+            filter_query_sql += 'and l.city=:lo'
+
         song_query = "SELECT \
-                        e.description as song_name,   \
+                        e.description as song_name, \
                         t.name as song_type, \
                         eo.publication_facsimile_page, \
                         ec1.subject_id as playman_id, \
@@ -1249,20 +1276,33 @@ def get_songs_by_category(project, category):
                         on pf.id=eo.publication_facsimile_id \
                         where e.type='song' \
                         and s1.type='playman' \
-                        and s2.type='recorder'  \
-                        and t.name=:ca \
-                        order by e.id"
+                        and s2.type='recorder' \
+                        {} \
+                        order by e.id".format(filter_query_sql)
 
         sql = sqlalchemy.sql.text(song_query)
-        statement = sql.bindparams(ca=category)
+
+        if subject_name != '':
+            # Filter songs involving person
+            statement = sql.bindparams(s_name=subject_name)
+        elif category != '':
+            # Filter songs by category
+            statement = sql.bindparams(ca=category)
+        elif location != '':
+            # Filter songs by location
+            statement = sql.bindparams(lo=location)
+        else:
+            # All songs
+            statement = sql
+
         result = connection.execute(statement).fetchall()
-        connection.close()
         return_data = []
         for row in result:
             return_data.append(dict(row))
         return jsonify(return_data), 200, {"Access-Control-Allow-Origin": "*"}
     except Exception as e:
-        return Response("Couldn't get songs by category." + str(e), status=404, content_type="text/json")
+        return Response("Couldn't get songs filtered." + str(e), status=404, content_type="text/json")
+
 
 @digital_edition.route("/<project>/media/data/<media_type>/<media_id>")
 def get_media_data(project, media_type, media_id):
