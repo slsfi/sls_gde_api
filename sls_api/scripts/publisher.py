@@ -143,20 +143,19 @@ def check_publication_mtimes_and_publish_files(project):
             logger.debug("Publication query resulting rows: {}".format(publication_info[0].keys()))
             # For each publication belonging to this project, check the modification timestamp of its master files and compare them to the generated web XML files
             for row in publication_info:
-                row = dict(row)
-                est_target_filename = "{}_{}_est.xml".format(row["publication.publication_collection_id"],
-                                                             row["publication.id"])
+                est_target_filename = "{}_{}_est.xml".format(row["publication_collection_id"],
+                                                             row["id"])
                 com_target_filename = est_target_filename.replace("_est.xml", "_com.xml")
                 est_target_file_path = os.path.join(file_root, "xml", "est", est_target_filename)
                 com_target_file_path = os.path.join(file_root, "xml", "com", com_target_filename)
-                est_source_file_path = os.path.join(file_root, row["publication.original_filename"])          # original_filename should be relative to the project root
+                est_source_file_path = os.path.join(file_root, row["original_filename"])          # original_filename should be relative to the project root
 
                 # default to template comment file if no entry in publication_comment pointing to a comments file for this publication
                 comment_file = comment_filenames.get(row["id"], COMMENTS_TEMPLATE_PATH_IN_FILE_ROOT)
                 com_source_file_path = os.path.join(file_root, comment_file)
 
                 if not os.path.exists(est_source_file_path) or not os.path.exists(com_source_file_path):
-                    logger.error("Source file for est or com file for publication {} does not exist!".format(row["publication.id"]))
+                    logger.error("Source file for est or com file for publication {} does not exist!".format(row["id"]))
                     continue
                 try:
                     est_target_mtime = os.path.getmtime(est_target_file_path)
@@ -166,7 +165,7 @@ def check_publication_mtimes_and_publish_files(project):
                 except OSError:
                     # If there is an error, the web XML files likely don't exist or are otherwise corrupt
                     # It is then easiest to just generate new ones
-                    logger.warning("Error getting time_modified for target or source files for publication {}".format(row["publication.id"]))
+                    logger.warning("Error getting time_modified for target or source files for publication {}".format(row["id"]))
                     logger.info("Generating new est/com files...")
                     changes.add(est_target_file_path)
                     changes.add(com_target_file_path)
@@ -180,13 +179,13 @@ def check_publication_mtimes_and_publish_files(project):
                         # If one or either is outdated, generate new ones
                         changes.add(est_target_file_path)
                         changes.add(com_target_file_path)
-                        logger.info("Reading files for publication {} are outdated, generating new est/com files...".format(row["publication.id"]))
+                        logger.info("Reading files for publication {} are outdated, generating new est/com files...".format(row["id"]))
                         generate_est_and_com_files(project_name, est_source_file_path, com_source_file_path,
                                                    est_target_file_path, com_target_file_path)
 
                 # Process all variants belonging to this publication
                 # publication_version with type=1 is the "main" variant, the others should have type=2 and be versions of that main variant
-                publication_id = row["publication.id"]
+                publication_id = row["id"]
                 variant_query = text("SELECT publication_version.id, publication.id, publication_collection.id, publication_version.original_filename "
                                      "FROM publication_version JOIN publication ON publication_version.publication_id=publication.id "
                                      "JOIN publication_collection ON publication.publication_collection_id=publication_collection.id "
@@ -215,8 +214,8 @@ def check_publication_mtimes_and_publish_files(project):
                     logger.error("Source file for main variant {} (type=1) does not exist!".format(main_variant_info["publication_version.id"]))
                     continue
 
-                target_filename = "{}_{}_var_{}.xml".format(row["publication.publication_collection_id"],
-                                                            row["publication.id"],
+                target_filename = "{}_{}_var_{}.xml".format(row["publication_collection_id"],
+                                                            row["id"],
                                                             main_variant_info["publication_version.id"])
 
                 # If any variants have changed, we need a CTeiDocument for the main variant to ProcessVariants() with
