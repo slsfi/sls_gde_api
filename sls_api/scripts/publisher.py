@@ -140,7 +140,7 @@ def check_publication_mtimes_and_publish_files(project):
 
             # Keep a list of changed files for later git commit
             changes = set()
-            logger.debug("Publication query resulting rows: {}".format(publication_info.keys()))
+            logger.debug("Publication query resulting rows: {}".format(publication_info[0].keys()))
             # For each publication belonging to this project, check the modification timestamp of its master files and compare them to the generated web XML files
             for row in publication_info:
                 row = dict(row)
@@ -203,7 +203,7 @@ def check_publication_mtimes_and_publish_files(project):
                 # fetch info for all "other" variants
                 variants_query = variant_query.bindparams(proj=project_id, pub_id=publication_id, vers_type=2)
                 variants_info = connection.execute(variants_query).fetchall()
-                logger.debug("Variants query resulting rows: {}".format(variants_info.keys()))
+                logger.debug("Variants query resulting rows: {}".format(variants_info[0].keys()))
 
                 # close DB connection, as it's no longer needed
                 connection.close()
@@ -268,7 +268,7 @@ def check_publication_mtimes_and_publish_files(project):
                 process_var_documents_and_generate_files(main_variant_doc, main_variant_target, variant_docs, variant_paths)
 
             # For each publication_manuscript belonging to this project, check the modification timestamp of its master file and compare it to the generated web XML file
-            logger.debug("Manuscript query resulting rows: {}".format(manuscript_info.keys()))
+            logger.debug("Manuscript query resulting rows: {}".format(manuscript_info[0].keys()))
             for row in manuscript_info:
                 row = dict(row)
                 target_filename = "{}_{}_ms_{}.xml".format(row["publication_collection.id"],
