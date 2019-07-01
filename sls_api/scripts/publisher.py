@@ -227,7 +227,6 @@ def check_publication_mtimes_and_publish_files(project):
                 variant_docs = []
                 variant_paths = []
                 for variant in variants_info:
-                    variant = dict(variant)
                     target_filename = "{}_{}_var_{}.xml".format(variant["publication_collection.id"],
                                                                 variant["publication.id"],
                                                                 variant["publication_version.id"])
@@ -269,7 +268,6 @@ def check_publication_mtimes_and_publish_files(project):
             # For each publication_manuscript belonging to this project, check the modification timestamp of its master file and compare it to the generated web XML file
             logger.debug("Manuscript query resulting rows: {}".format(manuscript_info[0].keys()))
             for row in manuscript_info:
-                row = dict(row)
                 target_filename = "{}_{}_ms_{}.xml".format(row["publication_collection.id"],
                                                            row["publication.id"],
                                                            row["publication_manuscript.id"])
