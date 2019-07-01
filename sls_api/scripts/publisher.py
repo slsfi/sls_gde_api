@@ -155,7 +155,7 @@ def check_publication_mtimes_and_publish_files(project):
                 com_source_file_path = os.path.join(file_root, comment_file)
 
                 if not os.path.exists(est_source_file_path) or not os.path.exists(com_source_file_path):
-                    logger.error("Source file for est or com file for publication {} does not exist!".format(row["id"]))
+                    logger.warning("Source file for est or com file for publication {} does not exist!".format(row["id"]))
                     continue
                 try:
                     est_target_mtime = os.path.getmtime(est_target_file_path)
@@ -169,7 +169,7 @@ def check_publication_mtimes_and_publish_files(project):
                     logger.info("Generating new est/com files...")
                     changes.add(est_target_file_path)
                     changes.add(com_target_file_path)
-                    generate_est_and_com_files(project_name, est_source_file_path, com_source_file_path,
+                    generate_est_and_com_files(project, est_source_file_path, com_source_file_path,
                                                est_target_file_path, com_target_file_path)
                 else:
                     if est_target_mtime >= est_source_mtime and com_target_mtime >= com_source_mtime:
@@ -180,7 +180,7 @@ def check_publication_mtimes_and_publish_files(project):
                         changes.add(est_target_file_path)
                         changes.add(com_target_file_path)
                         logger.info("Reading files for publication {} are outdated, generating new est/com files...".format(row["id"]))
-                        generate_est_and_com_files(project_name, est_source_file_path, com_source_file_path,
+                        generate_est_and_com_files(project, est_source_file_path, com_source_file_path,
                                                    est_target_file_path, com_target_file_path)
 
                 # Process all variants belonging to this publication
@@ -211,7 +211,7 @@ def check_publication_mtimes_and_publish_files(project):
                 main_variant_source = os.path.join(file_root, main_variant_info["publication_version.original_filename"])
 
                 if not os.path.exists(main_variant_source):
-                    logger.error("Source file for main variant {} (type=1) does not exist!".format(main_variant_info["publication_version.id"]))
+                    logger.warning("Source file for main variant {} (type=1) does not exist!".format(main_variant_info["publication_version.id"]))
                     continue
 
                 target_filename = "{}_{}_var_{}.xml".format(row["publication_collection_id"],
@@ -235,7 +235,7 @@ def check_publication_mtimes_and_publish_files(project):
                     source_file_path = os.path.join(file_root, source_filename)  # original_filename should be relative to the project root
 
                     if not os.path.exists(source_file_path):
-                        logger.error("Source file for variant {} does not exist!".format(variant["publication_version.id"]))
+                        logger.warning("Source file for variant {} does not exist!".format(variant["publication_version.id"]))
                         continue
 
                     try:
@@ -276,7 +276,7 @@ def check_publication_mtimes_and_publish_files(project):
                 source_file_path = os.path.join(file_root, source_filename)  # original_filename should be relative to the project root
 
                 if not os.path.exists(source_file_path):
-                    logger.error("Source file for manuscript {} does not exist!".format(row["publication_manuscript.id"]))
+                    logger.warning("Source file for manuscript {} does not exist!".format(row["publication_manuscript.id"]))
                     continue
 
                 try:
@@ -304,10 +304,10 @@ def check_publication_mtimes_and_publish_files(project):
                 try:
                     for change in changes:
                         # Each changed file should be added, as there may be other activity in the git repo we don't want to commit
-                        run_git_command(project_name, ["add", change])
+                        run_git_command(project, ["add", change])
                     # Using Publisher as the author with the is@sls.fi email as a contact point should be fine
-                    run_git_command(project_name, ["commit", "--author=Publisher <is@sls.fi>", "-m", "Published new web files"])
-                    run_git_command(project_name, ["push"])
+                    run_git_command(project, ["commit", "--author=Publisher <is@sls.fi>", "-m", "Published new web files"])
+                    run_git_command(project, ["push"])
                 except CalledProcessError:
                     logger.exception("Exception during git sync of webfile changes.")
 
@@ -324,8 +324,8 @@ if __name__ == "__main__":
         sys.exit(0)
     elif args.project is None:
         # For each project with a valid entry in the config file, check modification times for publications and publish
-        for project_name in valid_projects:
-            check_publication_mtimes_and_publish_files(project_name)
+        for p in valid_projects:
+            check_publication_mtimes_and_publish_files(p)
     else:
         if args.project in valid_projects:
             check_publication_mtimes_and_publish_files(args.project)
