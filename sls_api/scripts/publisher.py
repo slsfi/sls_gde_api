@@ -154,8 +154,16 @@ def check_publication_mtimes_and_publish_files(project):
                 comment_file = comment_filenames.get(row["id"], COMMENTS_TEMPLATE_PATH_IN_FILE_ROOT)
                 com_source_file_path = os.path.join(file_root, comment_file)
 
-                if not os.path.exists(est_source_file_path) or not os.path.exists(com_source_file_path):
-                    logger.warning("Source file for est or com file for publication {} does not exist!".format(row["id"]))
+                if not est_source_file_path:
+                    logger.info("Source file not set for publication {}".format(row["id"]))
+                    continue
+                if not com_source_file_path:
+                    logger.info("Source file not set for publication {} comment".format(row["id"]))
+                if not os.path.exists(est_source_file_path):
+                    logger.warning("Source file {} for publication {} do not exist!".format(est_source_file_path, row["id"]))
+                    continue
+                if not os.path.exists(com_source_file_path):
+                    logger.warning("Source file {} for publication {} do not exist!".format(com_source_file_path, row["id"]))
                     continue
                 try:
                     est_target_mtime = os.path.getmtime(est_target_file_path)
@@ -210,8 +218,12 @@ def check_publication_mtimes_and_publish_files(project):
                 # compile info and generate files if needed
                 main_variant_source = os.path.join(file_root, main_variant_info["publication_version.original_filename"])
 
+                if not main_variant_source:
+                    logger.info("Source file for main variant {} is not set.".format(main_variant_info["publication_version.id"]))
+                    continue
+
                 if not os.path.exists(main_variant_source):
-                    logger.warning("Source file for main variant {} (type=1) does not exist!".format(main_variant_info["publication_version.id"]))
+                    logger.warning("Source file {} for main variant {} (type=1) does not exist!".format(main_variant_source, main_variant_info["publication_version.id"]))
                     continue
 
                 target_filename = "{}_{}_var_{}.xml".format(row["publication_collection_id"],
@@ -234,8 +246,12 @@ def check_publication_mtimes_and_publish_files(project):
                     target_file_path = os.path.join(file_root, "xml", "var", target_filename)
                     source_file_path = os.path.join(file_root, source_filename)  # original_filename should be relative to the project root
 
+                    if not source_filename:
+                        logger.info("Source file for variant {} is not set.".format(variant["publication_version.original_filename"]))
+                        continue
+
                     if not os.path.exists(source_file_path):
-                        logger.warning("Source file for variant {} does not exist!".format(variant["publication_version.id"]))
+                        logger.warning("Source file {} for variant {} does not exist!".format(source_file_path, variant["publication_version.id"]))
                         continue
 
                     try:
@@ -275,10 +291,12 @@ def check_publication_mtimes_and_publish_files(project):
                 target_file_path = os.path.join(file_root, "xml", "ms", target_filename)
                 source_file_path = os.path.join(file_root, source_filename)  # original_filename should be relative to the project root
 
-                if not os.path.exists(source_file_path):
-                    logger.warning("Source file for manuscript {} does not exist!".format(row["publication_manuscript.id"]))
+                if not source_filename:
+                    logger.info("Source file not set for manuscript {}".format(row["publication_manuscript.id"]))
                     continue
-
+                if not os.path.exists(source_file_path):
+                    logger.warning("Source file {} for manuscript {} does not exist!".format(source_file_path, row["publication_manuscript.id"]))
+                    continue
                 try:
                     target_mtime = os.path.getmtime(target_file_path)
                     source_mtime = os.path.getmtime(source_file_path)
