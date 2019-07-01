@@ -143,6 +143,9 @@ def check_publication_mtimes_and_publish_files(project):
             logger.debug("Publication query resulting rows: {}".format(publication_info[0].keys()))
             # For each publication belonging to this project, check the modification timestamp of its master files and compare them to the generated web XML files
             for row in publication_info:
+                if not row["original_filename"]:
+                    logger.info("Source file not set for publication {}".format(row["id"]))
+                    continue
                 est_target_filename = "{}_{}_est.xml".format(row["publication_collection_id"],
                                                              row["id"])
                 com_target_filename = est_target_filename.replace("_est.xml", "_com.xml")
@@ -243,12 +246,11 @@ def check_publication_mtimes_and_publish_files(project):
                                                                 variant["publication.id"],
                                                                 variant["publication_version.id"])
                     source_filename = variant["publication_version.original_filename"]
-                    target_file_path = os.path.join(file_root, "xml", "var", target_filename)
-                    source_file_path = os.path.join(file_root, source_filename)  # original_filename should be relative to the project root
-
                     if not source_filename:
                         logger.info("Source file for variant {} is not set.".format(variant["publication_version.original_filename"]))
                         continue
+                    target_file_path = os.path.join(file_root, "xml", "var", target_filename)
+                    source_file_path = os.path.join(file_root, source_filename)  # original_filename should be relative to the project root
 
                     if not os.path.exists(source_file_path):
                         logger.warning("Source file {} for variant {} does not exist!".format(source_file_path, variant["publication_version.id"]))
@@ -288,12 +290,13 @@ def check_publication_mtimes_and_publish_files(project):
                                                            row["publication.id"],
                                                            row["publication_manuscript.id"])
                 source_filename = row["publication_manuscript.original_filename"]
-                target_file_path = os.path.join(file_root, "xml", "ms", target_filename)
-                source_file_path = os.path.join(file_root, source_filename)  # original_filename should be relative to the project root
-
                 if not source_filename:
                     logger.info("Source file not set for manuscript {}".format(row["publication_manuscript.id"]))
                     continue
+
+                target_file_path = os.path.join(file_root, "xml", "ms", target_filename)
+                source_file_path = os.path.join(file_root, source_filename)  # original_filename should be relative to the project root
+
                 if not os.path.exists(source_file_path):
                     logger.warning("Source file {} for manuscript {} does not exist!".format(source_file_path, row["publication_manuscript.id"]))
                     continue
