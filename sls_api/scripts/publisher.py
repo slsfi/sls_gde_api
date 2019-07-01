@@ -317,7 +317,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     if args.list_projects:
-        logger.info(", ".join(valid_projects))
+        logger.info("Projects with seemingly valid configuration: {}".format(", ".join(valid_projects)))
         sys.exit(0)
     elif args.project is None:
         # For each project with a valid entry in the config file, check modification times for publications and publish
