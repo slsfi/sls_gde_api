@@ -12,6 +12,7 @@ from sls_api.scripts.CTeiDocument import CTeiDocument
 
 logging.getLogger().setLevel(logging.INFO)
 logger = logging.getLogger("publisher")
+logger.setLevel(logging.DEBUG)
 
 valid_projects = [project for project in config if isinstance(config[project], dict) and config[project].get("comments_database", False)]
 
@@ -139,6 +140,7 @@ def check_publication_mtimes_and_publish_files(project):
 
             # Keep a list of changed files for later git commit
             changes = set()
+            logger.debug("Publication query resulting rows: {}".format(publication_info.keys()))
             # For each publication belonging to this project, check the modification timestamp of its master files and compare them to the generated web XML files
             for row in publication_info:
                 row = dict(row)
@@ -196,10 +198,12 @@ def check_publication_mtimes_and_publish_files(project):
                 # fetch info for "main" variant
                 main_variant_query = variant_query.bindparams(proj=project_id, pub_id=publication_id, vers_type=1)
                 main_variant_info = connection.execute(main_variant_query).fetchone()   # should only be one main variant per publication?
+                logger.debug("Main variant query resulting rows: {}".format(main_variant_info.keys()))
 
                 # fetch info for all "other" variants
                 variants_query = variant_query.bindparams(proj=project_id, pub_id=publication_id, vers_type=2)
                 variants_info = connection.execute(variants_query).fetchall()
+                logger.debug("Variants query resulting rows: {}".format(variants_info.keys()))
 
                 # close DB connection, as it's no longer needed
                 connection.close()
@@ -264,6 +268,7 @@ def check_publication_mtimes_and_publish_files(project):
                 process_var_documents_and_generate_files(main_variant_doc, main_variant_target, variant_docs, variant_paths)
 
             # For each publication_manuscript belonging to this project, check the modification timestamp of its master file and compare it to the generated web XML file
+            logger.debug("Manuscript query resulting rows: {}".format(manuscript_info.keys()))
             for row in manuscript_info:
                 row = dict(row)
                 target_filename = "{}_{}_ms_{}.xml".format(row["publication_collection.id"],
@@ -296,6 +301,7 @@ def check_publication_mtimes_and_publish_files(project):
                         logger.info("File {} is older than source file {}, generating new file...".format(target_file_path, source_file_path))
                         generate_ms_file(source_file_path, target_file_path)
 
+            logger.debug("Changes made in publication script run: {}".format(changes))
             if len(changes) > 0:
                 # If there are changes, try to commit them to git
                 try:
