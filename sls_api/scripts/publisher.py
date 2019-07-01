@@ -129,18 +129,19 @@ def check_publication_mtimes_and_publish_files(project):
             publication_info = connection.execute(publication_query).fetchall()
             manuscript_info = connection.execute(manuscript_query).fetchall()
 
-            # comment_info can just be a dict of publication.id to publication_comment.original_filename, this should also speed up access for it
-            comment_info = dict()
+            # comment_filenames can just be a dict of publication.id to publication_comment.original_filename
+            comment_filenames = dict()
             for row in connection.execute(comment_query):
-                comment_info[row["publication.id"]] = row["publication_comment.original_filename"]
+                comment_filenames[row["id"]] = row["original_filename"]
 
             # close DB connection for now, it won't be needed for a while
             connection.close()
 
             # Keep a list of changed files for later git commit
-            changes = []
+            changes = set()
             # For each publication belonging to this project, check the modification timestamp of its master files and compare them to the generated web XML files
             for row in publication_info:
+                row = dict(row)
                 est_target_filename = "{}_{}_est.xml".format(row["publication.publication_collection_id"],
                                                              row["publication.id"])
                 com_target_filename = est_target_filename.replace("_est.xml", "_com.xml")
@@ -149,7 +150,8 @@ def check_publication_mtimes_and_publish_files(project):
                 est_source_file_path = os.path.join(file_root, row["publication.original_filename"])          # original_filename should be relative to the project root
 
                 # default to template comment file if no entry in publication_comment pointing to a comments file for this publication
-                com_source_file_path = os.path.join(file_root, comment_info.get(row["publication.id"], COMMENTS_TEMPLATE_PATH_IN_FILE_ROOT))
+                comment_file = comment_filenames.get(row["id"], COMMENTS_TEMPLATE_PATH_IN_FILE_ROOT)
+                com_source_file_path = os.path.join(file_root, comment_file)
 
                 if not os.path.exists(est_source_file_path) or not os.path.exists(com_source_file_path):
                     logger.error("Source file for est or com file for publication {} does not exist!".format(row["publication.id"]))
@@ -164,8 +166,8 @@ def check_publication_mtimes_and_publish_files(project):
                     # It is then easiest to just generate new ones
                     logger.warning("Error getting time_modified for target or source files for publication {}".format(row["publication.id"]))
                     logger.info("Generating new est/com files...")
-                    changes.append(est_target_file_path)
-                    changes.append(com_target_file_path)
+                    changes.add(est_target_file_path)
+                    changes.add(com_target_file_path)
                     generate_est_and_com_files(project_name, est_source_file_path, com_source_file_path,
                                                est_target_file_path, com_target_file_path)
                 else:
@@ -174,8 +176,8 @@ def check_publication_mtimes_and_publish_files(project):
                         continue
                     else:
                         # If one or either is outdated, generate new ones
-                        changes.append(est_target_file_path)
-                        changes.append(com_target_file_path)
+                        changes.add(est_target_file_path)
+                        changes.add(com_target_file_path)
                         logger.info("Reading files for publication {} are outdated, generating new est/com files...".format(row["publication.id"]))
                         generate_est_and_com_files(project_name, est_source_file_path, com_source_file_path,
                                                    est_target_file_path, com_target_file_path)
@@ -211,7 +213,7 @@ def check_publication_mtimes_and_publish_files(project):
 
                 target_filename = "{}_{}_var_{}.xml".format(row["publication.publication_collection_id"],
                                                             row["publication.id"],
-                                                            row["publication_version.id"])
+                                                            main_variant_info["publication_version.id"])
 
                 # If any variants have changed, we need a CTeiDocument for the main variant to ProcessVariants() with
                 main_variant_target = os.path.join(file_root, "xml", "var", target_filename)
@@ -222,9 +224,10 @@ def check_publication_mtimes_and_publish_files(project):
                 variant_docs = []
                 variant_paths = []
                 for variant in variants_info:
+                    variant = dict(variant)
                     target_filename = "{}_{}_var_{}.xml".format(variant["publication_collection.id"],
                                                                 variant["publication.id"],
-                                                                row["publication_version.id"])
+                                                                variant["publication_version.id"])
                     source_filename = variant["publication_version.original_filename"]
                     target_file_path = os.path.join(file_root, "xml", "var", target_filename)
                     source_file_path = os.path.join(file_root, source_filename)  # original_filename should be relative to the project root
@@ -241,7 +244,7 @@ def check_publication_mtimes_and_publish_files(project):
                         # It is then easiest to just generate a new one
                         logger.warning("Error getting time_modified for target or source files for publication_version {}".format(variant["publication_version.id"]))
                         logger.info("Generating new file...")
-                        changes.append(target_file_path)
+                        changes.add(target_file_path)
                         variant_doc = CTeiDocument()
                         variant_doc.Load(source_file_path)
                         variant_docs.append(variant_doc)
@@ -249,7 +252,7 @@ def check_publication_mtimes_and_publish_files(project):
                     else:
                         if target_mtime < source_mtime:
                             logger.info("File {} is older than source file {}, generating new file...".format(target_file_path, source_file_path))
-                            changes.append(target_file_path)
+                            changes.add(target_file_path)
                             variant_doc = CTeiDocument()
                             variant_doc.Load(source_file_path)
                             variant_docs.append(variant_doc)
@@ -262,6 +265,7 @@ def check_publication_mtimes_and_publish_files(project):
 
             # For each publication_manuscript belonging to this project, check the modification timestamp of its master file and compare it to the generated web XML file
             for row in manuscript_info:
+                row = dict(row)
                 target_filename = "{}_{}_ms_{}.xml".format(row["publication_collection.id"],
                                                            row["publication.id"],
                                                            row["publication_manuscript.id"])
@@ -281,14 +285,14 @@ def check_publication_mtimes_and_publish_files(project):
                     # It is then easiest to just generate a new one
                     logger.warning("Error getting time_modified for target or source file for publication_manuscript {}".format(row["publication_manuscript.id"]))
                     logger.info("Generating new file...")
-                    changes.append(target_file_path)
+                    changes.add(target_file_path)
                     generate_ms_file(source_file_path, target_file_path)
                 else:
                     if target_mtime >= source_mtime:
                         # If the target ms file is newer than the source, continue to the next publication_manuscript
                         continue
                     else:
-                        changes.append(target_file_path)
+                        changes.add(target_file_path)
                         logger.info("File {} is older than source file {}, generating new file...".format(target_file_path, source_file_path))
                         generate_ms_file(source_file_path, target_file_path)
 
