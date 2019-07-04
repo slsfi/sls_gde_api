@@ -143,30 +143,31 @@ def check_publication_mtimes_and_publish_files(project):
             logger.debug("Publication query resulting rows: {}".format(publication_info[0].keys()))
             # For each publication belonging to this project, check the modification timestamp of its master files and compare them to the generated web XML files
             for row in publication_info:
+                publication_id = row["id"]
                 if not row["original_filename"]:
-                    logger.info("Source file not set for publication {}".format(row["id"]))
+                    logger.info("Source file not set for publication {}".format(publication_id))
                     continue
                 est_target_filename = "{}_{}_est.xml".format(row["publication_collection_id"],
-                                                             row["id"])
+                                                             publication_id)
                 com_target_filename = est_target_filename.replace("_est.xml", "_com.xml")
                 est_target_file_path = os.path.join(file_root, "xml", "est", est_target_filename)
                 com_target_file_path = os.path.join(file_root, "xml", "com", com_target_filename)
                 est_source_file_path = os.path.join(file_root, row["original_filename"])          # original_filename should be relative to the project root
 
                 # default to template comment file if no entry in publication_comment pointing to a comments file for this publication
-                comment_file = comment_filenames.get(row["id"], COMMENTS_TEMPLATE_PATH_IN_FILE_ROOT)
+                comment_file = comment_filenames.get(publication_id, COMMENTS_TEMPLATE_PATH_IN_FILE_ROOT)
                 com_source_file_path = os.path.join(file_root, comment_file)
 
                 if not est_source_file_path:
-                    logger.info("Source file not set for publication {}".format(row["id"]))
+                    logger.info("Source file not set for publication {}".format(publication_id))
                     continue
                 if not com_source_file_path:
-                    logger.info("Source file not set for publication {} comment".format(row["id"]))
+                    logger.info("Source file not set for publication {} comment".format(publication_id))
                 if not os.path.exists(est_source_file_path):
-                    logger.warning("Source file {} for publication {} do not exist!".format(est_source_file_path, row["id"]))
+                    logger.warning("Source file {} for publication {} do not exist!".format(est_source_file_path, publication_id))
                     continue
                 if not os.path.exists(com_source_file_path):
-                    logger.warning("Source file {} for publication {} do not exist!".format(com_source_file_path, row["id"]))
+                    logger.warning("Source file {} for publication {} do not exist!".format(com_source_file_path, publication_id))
                     continue
                 try:
                     est_target_mtime = os.path.getmtime(est_target_file_path)
@@ -176,8 +177,8 @@ def check_publication_mtimes_and_publish_files(project):
                 except OSError:
                     # If there is an error, the web XML files likely don't exist or are otherwise corrupt
                     # It is then easiest to just generate new ones
-                    logger.warning("Error getting time_modified for target or source files for publication {}".format(row["id"]))
-                    logger.info("Generating new est/com files...")
+                    logger.warning("Error getting time_modified for target or source files for publication {}".format(publication_id))
+                    logger.info("Generating new est/com files for publication {}...".format(publication_id))
                     changes.add(est_target_file_path)
                     changes.add(com_target_file_path)
                     generate_est_and_com_files(project, est_source_file_path, com_source_file_path,
@@ -190,13 +191,12 @@ def check_publication_mtimes_and_publish_files(project):
                         # If one or either is outdated, generate new ones
                         changes.add(est_target_file_path)
                         changes.add(com_target_file_path)
-                        logger.info("Reading files for publication {} are outdated, generating new est/com files...".format(row["id"]))
+                        logger.info("Reading files for publication {} are outdated, generating new est/com files...".format(publication_id))
                         generate_est_and_com_files(project, est_source_file_path, com_source_file_path,
                                                    est_target_file_path, com_target_file_path)
 
                 # Process all variants belonging to this publication
                 # publication_version with type=1 is the "main" variant, the others should have type=2 and be versions of that main variant
-                publication_id = row["id"]
                 variant_query = text("SELECT publication_version.id, publication.id, publication_collection.id, publication_version.original_filename "
                                      "FROM publication_version JOIN publication ON publication_version.publication_id=publication.id "
                                      "JOIN publication_collection ON publication.publication_collection_id=publication_collection.id "
@@ -208,80 +208,83 @@ def check_publication_mtimes_and_publish_files(project):
                 # fetch info for "main" variant
                 main_variant_query = variant_query.bindparams(proj=project_id, pub_id=publication_id, vers_type=1)
                 main_variant_info = connection.execute(main_variant_query).fetchone()   # should only be one main variant per publication?
-                logger.debug("Main variant query resulting rows: {}".format(main_variant_info.keys()))
+                if main_variant_info is None:
+                    logger.warning("No main variant found for publication {}!".format(publication_id))
+                else:
+                    logger.debug("Main variant query resulting rows: {}".format(main_variant_info.keys()))
 
-                # fetch info for all "other" variants
-                variants_query = variant_query.bindparams(proj=project_id, pub_id=publication_id, vers_type=2)
-                variants_info = connection.execute(variants_query).fetchall()
-                logger.debug("Variants query resulting rows: {}".format(variants_info[0].keys()))
+                    # fetch info for all "other" variants
+                    variants_query = variant_query.bindparams(proj=project_id, pub_id=publication_id, vers_type=2)
+                    variants_info = connection.execute(variants_query).fetchall()
+                    logger.debug("Variants query resulting rows: {}".format(variants_info[0].keys()))
 
-                # close DB connection, as it's no longer needed
-                connection.close()
+                    # close DB connection, as it's no longer needed
+                    connection.close()
 
-                # compile info and generate files if needed
-                main_variant_source = os.path.join(file_root, main_variant_info["publication_version.original_filename"])
+                    # compile info and generate files if needed
+                    main_variant_source = os.path.join(file_root, main_variant_info["publication_version.original_filename"])
 
-                if not main_variant_source:
-                    logger.info("Source file for main variant {} is not set.".format(main_variant_info["publication_version.id"]))
-                    continue
-
-                if not os.path.exists(main_variant_source):
-                    logger.warning("Source file {} for main variant {} (type=1) does not exist!".format(main_variant_source, main_variant_info["publication_version.id"]))
-                    continue
-
-                target_filename = "{}_{}_var_{}.xml".format(row["publication_collection_id"],
-                                                            row["id"],
-                                                            main_variant_info["publication_version.id"])
-
-                # If any variants have changed, we need a CTeiDocument for the main variant to ProcessVariants() with
-                main_variant_target = os.path.join(file_root, "xml", "var", target_filename)
-                main_variant_doc = CTeiDocument()
-                main_variant_doc.Load(main_variant_source)
-
-                # For each "other" variant, create a new CTeiDocument if needed, but if main_variant_updated is True, just make a new for all
-                variant_docs = []
-                variant_paths = []
-                for variant in variants_info:
-                    target_filename = "{}_{}_var_{}.xml".format(variant["publication_collection.id"],
-                                                                variant["publication.id"],
-                                                                variant["publication_version.id"])
-                    source_filename = variant["publication_version.original_filename"]
-                    if not source_filename:
-                        logger.info("Source file for variant {} is not set.".format(variant["publication_version.original_filename"]))
-                        continue
-                    target_file_path = os.path.join(file_root, "xml", "var", target_filename)
-                    source_file_path = os.path.join(file_root, source_filename)  # original_filename should be relative to the project root
-
-                    if not os.path.exists(source_file_path):
-                        logger.warning("Source file {} for variant {} does not exist!".format(source_file_path, variant["publication_version.id"]))
+                    if not main_variant_source:
+                        logger.info("Source file for main variant {} is not set.".format(main_variant_info["publication_version.id"]))
                         continue
 
-                    try:
-                        target_mtime = os.path.getmtime(target_file_path)
-                        source_mtime = os.path.getmtime(source_file_path)
-                    except OSError:
-                        # If there is an error, the web XML file likely doesn't exist or is otherwise corrupt
-                        # It is then easiest to just generate a new one
-                        logger.warning("Error getting time_modified for target or source files for publication_version {}".format(variant["publication_version.id"]))
-                        logger.info("Generating new file...")
-                        changes.add(target_file_path)
-                        variant_doc = CTeiDocument()
-                        variant_doc.Load(source_file_path)
-                        variant_docs.append(variant_doc)
-                        variant_paths.append(target_file_path)
-                    else:
-                        if target_mtime < source_mtime:
-                            logger.info("File {} is older than source file {}, generating new file...".format(target_file_path, source_file_path))
+                    if not os.path.exists(main_variant_source):
+                        logger.warning("Source file {} for main variant {} (type=1) does not exist!".format(main_variant_source, main_variant_info["publication_version.id"]))
+                        continue
+
+                    target_filename = "{}_{}_var_{}.xml".format(row["publication_collection_id"],
+                                                                publication_id,
+                                                                main_variant_info["publication_version.id"])
+
+                    # If any variants have changed, we need a CTeiDocument for the main variant to ProcessVariants() with
+                    main_variant_target = os.path.join(file_root, "xml", "var", target_filename)
+                    main_variant_doc = CTeiDocument()
+                    main_variant_doc.Load(main_variant_source)
+
+                    # For each "other" variant, create a new CTeiDocument if needed, but if main_variant_updated is True, just make a new for all
+                    variant_docs = []
+                    variant_paths = []
+                    for variant in variants_info:
+                        target_filename = "{}_{}_var_{}.xml".format(variant["publication_collection.id"],
+                                                                    variant["publication.id"],
+                                                                    variant["publication_version.id"])
+                        source_filename = variant["publication_version.original_filename"]
+                        if not source_filename:
+                            logger.info("Source file for variant {} is not set.".format(variant["publication_version.original_filename"]))
+                            continue
+                        target_file_path = os.path.join(file_root, "xml", "var", target_filename)
+                        source_file_path = os.path.join(file_root, source_filename)  # original_filename should be relative to the project root
+
+                        if not os.path.exists(source_file_path):
+                            logger.warning("Source file {} for variant {} does not exist!".format(source_file_path, variant["publication_version.id"]))
+                            continue
+
+                        try:
+                            target_mtime = os.path.getmtime(target_file_path)
+                            source_mtime = os.path.getmtime(source_file_path)
+                        except OSError:
+                            # If there is an error, the web XML file likely doesn't exist or is otherwise corrupt
+                            # It is then easiest to just generate a new one
+                            logger.warning("Error getting time_modified for target or source files for publication_version {}".format(variant["publication_version.id"]))
+                            logger.info("Generating new file...")
                             changes.add(target_file_path)
                             variant_doc = CTeiDocument()
                             variant_doc.Load(source_file_path)
                             variant_docs.append(variant_doc)
                             variant_paths.append(target_file_path)
                         else:
-                            # If no changes, don't generate CTeiDocument and don't make a new web XML file
-                            continue
-                # lastly, actually process all generated CTeiDocument objects and create web XML files
-                process_var_documents_and_generate_files(main_variant_doc, main_variant_target, variant_docs, variant_paths)
+                            if target_mtime < source_mtime:
+                                logger.info("File {} is older than source file {}, generating new file...".format(target_file_path, source_file_path))
+                                changes.add(target_file_path)
+                                variant_doc = CTeiDocument()
+                                variant_doc.Load(source_file_path)
+                                variant_docs.append(variant_doc)
+                                variant_paths.append(target_file_path)
+                            else:
+                                # If no changes, don't generate CTeiDocument and don't make a new web XML file
+                                continue
+                    # lastly, actually process all generated CTeiDocument objects and create web XML files
+                    process_var_documents_and_generate_files(main_variant_doc, main_variant_target, variant_docs, variant_paths)
 
             # For each publication_manuscript belonging to this project, check the modification timestamp of its master file and compare it to the generated web XML file
             logger.debug("Manuscript query resulting rows: {}".format(manuscript_info[0].keys()))
