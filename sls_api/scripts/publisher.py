@@ -327,16 +327,18 @@ def check_publication_mtimes_and_publish_files(project):
 
             logger.debug("Changes made in publication script run: {}".format(changes))
             if len(changes) > 0:
+                outputs = []
                 # If there are changes, try to commit them to git
                 try:
                     for change in changes:
                         # Each changed file should be added, as there may be other activity in the git repo we don't want to commit
-                        run_git_command(project, ["add", change])
+                        outputs.append(run_git_command(project, ["add", change]))
                     # Using Publisher as the author with the is@sls.fi email as a contact point should be fine
-                    run_git_command(project, ["commit", "--author=Publisher <is@sls.fi>", "-m", "Published new web files"])
-                    run_git_command(project, ["push"])
+                    outputs.append(run_git_command(project, ["commit", "--author=Publisher <is@sls.fi>", "-m", "Published new web files"]))
+                    outputs.append(run_git_command(project, ["push"]))
                 except CalledProcessError:
                     logger.exception("Exception during git sync of webfile changes.")
+                    logger.debug("Git outputs: {}".format("\n".join(outputs)))
 
 
 if __name__ == "__main__":
