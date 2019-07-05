@@ -1251,6 +1251,7 @@ def get_songs_filtered(project):
                         s1.full_name as playman_name, \
                         ec2.subject_id as recorder_id, \
                         s2.full_name as recorder_name, \
+                        t.id as tag_id, \
                         l.id as location_id, \
                         l.name as location_name, \
                         l.city as city, \
