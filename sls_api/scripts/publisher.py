@@ -97,7 +97,7 @@ def generate_ms_file(master_file_path, target_file_path):
     ms_document.Save(target_file_path)
 
 
-def check_publication_mtimes_and_publish_files(project):
+def check_publication_mtimes_and_publish_files(project, publication_ids):
     update_success, result_str = update_files_in_git_repo(project)
     if not update_success:
         logger.error("Git update failed! Reason: {}".format(result_str))
@@ -111,21 +111,33 @@ def check_publication_mtimes_and_publish_files(project):
             connection = db_engine.connect()
 
             # publication info
-            publication_query = text("SELECT publication.id, publication.publication_collection_id, publication.original_filename "
-                                     "FROM publication JOIN publication_collection ON publication.publication_collection_id=publication_collection.id "
-                                     "WHERE publication_collection.project_id = :proj").bindparams(proj=project_id)
+            publication_query = "SELECT publication.id, publication.publication_collection_id, publication.original_filename "\
+                                "FROM publication JOIN publication_collection ON publication.publication_collection_id=publication_collection.id "\
+                                "WHERE publication_collection.project_id = :proj"
 
             # publication_comment info, relating to "general comments" file for each publication
-            comment_query = text("SELECT publication.id, publication_comment.original_filename "
-                                 "FROM publication JOIN publication_collection ON publication.publication_collection_id=publication_collection.id "
-                                 "JOIN publication_comment ON publication.publication_comment_id=publication_comment.id "
-                                 "WHERE publication_collection.project_id = :proj").bindparams(proj=project_id)
+            comment_query = "SELECT publication.id, publication_comment.original_filename "\
+                            "FROM publication JOIN publication_collection ON publication.publication_collection_id=publication_collection.id "\
+                            "JOIN publication_comment ON publication.publication_comment_id=publication_comment.id "\
+                            "WHERE publication_collection.project_id = :proj"
 
             # publication_manuscript info
-            manuscript_query = text("SELECT publication_manuscript.id as m_id, publication.id as p_id, publication_collection.id as c_id, publication_manuscript.original_filename "
-                                    "FROM publication_manuscript JOIN publication ON publication_manuscript.publication_id=publication.id "
-                                    "JOIN publication_collection ON publication.publication_collection_id=publication_collection.id "
-                                    "WHERE publication_collection.project_id = :proj").bindparams(proj=project_id)
+            manuscript_query = "SELECT publication_manuscript.id as m_id, publication.id as p_id, publication_collection.id as c_id, publication_manuscript.original_filename "\
+                               "FROM publication_manuscript JOIN publication ON publication_manuscript.publication_id=publication.id "\
+                               "JOIN publication_collection ON publication.publication_collection_id=publication_collection.id "\
+                               "WHERE publication_collection.project_id = :proj"
+
+            if publication_ids is None:
+                publication_query = text(publication_query).bindparams(proj=project_id)
+                comment_query = text(comment_query).bindparams(proj=project_id)
+                manuscript_query = text(manuscript_query).bindparams(proj=project_id)
+            else:
+                publication_query += " AND publication.id IN :p_ids"
+                publication_query = text(publication_query).bindparams(proj=project_id, p_ids=publication_ids)
+                comment_query += " AND publication.id IN :p_ids"
+                comment_query = text(comment_query).bindparams(proj=project_id, p_ids=publication_ids)
+                manuscript_query += " AND publication.id IN :p_ids"
+                manuscript_query = text(manuscript_query).bindparams(proj=project_id, p_ids=publication_ids)
 
             publication_info = connection.execute(publication_query).fetchall()
             manuscript_info = connection.execute(manuscript_query).fetchall()
@@ -343,7 +355,8 @@ def check_publication_mtimes_and_publish_files(project):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Publishing script to publish changes to EST/COM/VAR/MS files for GDE project")
-    parser.add_argument("-p", "--project", help="Optional project name specification to only process the named project, rather than all projects")
+    parser.add_argument("project", help="Which project to publish, either a project name from --list_projects or 'all' for all valid projects")
+    parser.add_argument("-i", "--publication_ids", type=int, nargs="*", help="Force re-publication of specific publications (tries to publish all files, est/com/var/ms)")
     parser.add_argument("-l", "--list_projects", action="store_true", help="Print a listing of available projects with seemingly valid configuration and exit")
 
     args = parser.parse_args()
@@ -351,13 +364,18 @@ if __name__ == "__main__":
     if args.list_projects:
         logger.info("Projects with seemingly valid configuration: {}".format(", ".join(valid_projects)))
         sys.exit(0)
-    elif args.project is None:
-        # For each project with a valid entry in the config file, check modification times for publications and publish
-        for p in valid_projects:
-            check_publication_mtimes_and_publish_files(p)
     else:
-        if args.project in valid_projects:
-            check_publication_mtimes_and_publish_files(args.project)
+        if len(args.publication_ids) == 0:
+            ids = None
         else:
-            logger.error("{} is not in the API configuration or lacks 'comments_database' setting, aborting...".format(args.project))
-            sys.exit(1)
+            # use a tuple rather than a list, to make SQLAlchemy happier more easily
+            ids = tuple(args.publication_ids)
+        if str(args.project).lower() == "all":
+            for p in valid_projects:
+                check_publication_mtimes_and_publish_files(p, ids)
+        else:
+            if args.project in valid_projects:
+                check_publication_mtimes_and_publish_files(args.project, ids)
+            else:
+                logger.error("{} is not in the API configuration or lacks 'comments_database' setting, aborting...".format(args.project))
+                sys.exit(1)
