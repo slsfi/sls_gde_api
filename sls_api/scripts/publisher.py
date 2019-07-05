@@ -104,6 +104,13 @@ def check_publication_mtimes_and_publish_files(project, publication_ids):
         return False
     project_id = get_project_id_from_name(project)
     project_settings = config.get(project, None)
+
+    # if publication_ids is a tuple of ints, we're (re)publishing a certain publication(s)
+    if isinstance(publication_ids, tuple):
+        force_publish = True
+    else:
+        force_publish = False
+
     if project_id is not None and project_settings is not None:
         file_root = project_settings.get("file_root", None)
         if file_root is not None:
@@ -127,17 +134,18 @@ def check_publication_mtimes_and_publish_files(project, publication_ids):
                                "JOIN publication_collection ON publication.publication_collection_id=publication_collection.id "\
                                "WHERE publication_collection.project_id = :proj"
 
-            if publication_ids is None:
-                publication_query = text(publication_query).bindparams(proj=project_id)
-                comment_query = text(comment_query).bindparams(proj=project_id)
-                manuscript_query = text(manuscript_query).bindparams(proj=project_id)
-            else:
+            if force_publish:
+                # append publication.id checks if this is a forced (re)publication of certain publication(s)
                 publication_query += " AND publication.id IN :p_ids"
                 publication_query = text(publication_query).bindparams(proj=project_id, p_ids=publication_ids)
                 comment_query += " AND publication.id IN :p_ids"
                 comment_query = text(comment_query).bindparams(proj=project_id, p_ids=publication_ids)
                 manuscript_query += " AND publication.id IN :p_ids"
                 manuscript_query = text(manuscript_query).bindparams(proj=project_id, p_ids=publication_ids)
+            else:
+                publication_query = text(publication_query).bindparams(proj=project_id)
+                comment_query = text(comment_query).bindparams(proj=project_id)
+                manuscript_query = text(manuscript_query).bindparams(proj=project_id)
 
             publication_info = connection.execute(publication_query).fetchall()
             manuscript_info = connection.execute(manuscript_query).fetchall()
@@ -182,31 +190,41 @@ def check_publication_mtimes_and_publish_files(project, publication_ids):
                 if not os.path.exists(com_source_file_path):
                     logger.warning("Source file {} for publication {} do not exist!".format(com_source_file_path, publication_id))
                     continue
-                try:
-                    est_target_mtime = os.path.getmtime(est_target_file_path)
-                    com_target_mtime = os.path.getmtime(com_target_file_path)
-                    est_source_mtime = os.path.getmtime(est_source_file_path)
-                    com_source_mtime = os.path.getmtime(com_source_file_path)
-                except OSError:
-                    # If there is an error, the web XML files likely don't exist or are otherwise corrupt
-                    # It is then easiest to just generate new ones
-                    logger.warning("Error getting time_modified for target or source files for publication {}".format(publication_id))
+
+                if force_publish:
+                    # during force_publish, just generate
                     logger.info("Generating new est/com files for publication {}...".format(publication_id))
                     changes.add(est_target_file_path)
                     changes.add(com_target_file_path)
                     generate_est_and_com_files(project, est_source_file_path, com_source_file_path,
                                                est_target_file_path, com_target_file_path)
                 else:
-                    if est_target_mtime >= est_source_mtime and com_target_mtime >= com_source_mtime:
-                        # If both the est and com files are newer than the source files, just continue to the next publication
-                        continue
-                    else:
-                        # If one or either is outdated, generate new ones
+                    # otherwise, check if this publication's files need to be re-generated
+                    try:
+                        est_target_mtime = os.path.getmtime(est_target_file_path)
+                        com_target_mtime = os.path.getmtime(com_target_file_path)
+                        est_source_mtime = os.path.getmtime(est_source_file_path)
+                        com_source_mtime = os.path.getmtime(com_source_file_path)
+                    except OSError:
+                        # If there is an error, the web XML files likely don't exist or are otherwise corrupt
+                        # It is then easiest to just generate new ones
+                        logger.warning("Error getting time_modified for target or source files for publication {}".format(publication_id))
+                        logger.info("Generating new est/com files for publication {}...".format(publication_id))
                         changes.add(est_target_file_path)
                         changes.add(com_target_file_path)
-                        logger.info("Reading files for publication {} are outdated, generating new est/com files...".format(publication_id))
                         generate_est_and_com_files(project, est_source_file_path, com_source_file_path,
                                                    est_target_file_path, com_target_file_path)
+                    else:
+                        if est_target_mtime >= est_source_mtime and com_target_mtime >= com_source_mtime:
+                            # If both the est and com files are newer than the source files, just continue to the next publication
+                            continue
+                        else:
+                            # If one or either is outdated, generate new ones
+                            changes.add(est_target_file_path)
+                            changes.add(com_target_file_path)
+                            logger.info("Reading files for publication {} are outdated, generating new est/com files...".format(publication_id))
+                            generate_est_and_com_files(project, est_source_file_path, com_source_file_path,
+                                                       est_target_file_path, com_target_file_path)
 
                 # Process all variants belonging to this publication
                 # publication_version with type=1 is the "main" variant, the others should have type=2 and be versions of that main variant
@@ -271,30 +289,40 @@ def check_publication_mtimes_and_publish_files(project, publication_ids):
                             logger.warning("Source file {} for variant {} does not exist!".format(source_file_path, variant["id"]))
                             continue
 
-                        try:
-                            target_mtime = os.path.getmtime(target_file_path)
-                            source_mtime = os.path.getmtime(source_file_path)
-                        except OSError:
-                            # If there is an error, the web XML file likely doesn't exist or is otherwise corrupt
-                            # It is then easiest to just generate a new one
-                            logger.warning("Error getting time_modified for target or source files for publication_version {}".format(variant["id"]))
-                            logger.info("Generating new file...")
+                        # in a force_publish, just load all variants for generation/processing
+                        if force_publish:
+                            logger.info("Generating new var file for publication_version {}...".format(variant["id"]))
                             changes.add(target_file_path)
                             variant_doc = CTeiDocument()
                             variant_doc.Load(source_file_path)
                             variant_docs.append(variant_doc)
                             variant_paths.append(target_file_path)
+                        # otherwise, check which ones need to be updated and load only those
                         else:
-                            if target_mtime < source_mtime:
-                                logger.info("File {} is older than source file {}, generating new file...".format(target_file_path, source_file_path))
+                            try:
+                                target_mtime = os.path.getmtime(target_file_path)
+                                source_mtime = os.path.getmtime(source_file_path)
+                            except OSError:
+                                # If there is an error, the web XML file likely doesn't exist or is otherwise corrupt
+                                # It is then easiest to just generate a new one
+                                logger.warning("Error getting time_modified for target or source files for publication_version {}".format(variant["id"]))
+                                logger.info("Generating new file...")
                                 changes.add(target_file_path)
                                 variant_doc = CTeiDocument()
                                 variant_doc.Load(source_file_path)
                                 variant_docs.append(variant_doc)
                                 variant_paths.append(target_file_path)
                             else:
-                                # If no changes, don't generate CTeiDocument and don't make a new web XML file
-                                continue
+                                if target_mtime < source_mtime:
+                                    logger.info("File {} is older than source file {}, generating new file...".format(target_file_path, source_file_path))
+                                    changes.add(target_file_path)
+                                    variant_doc = CTeiDocument()
+                                    variant_doc.Load(source_file_path)
+                                    variant_docs.append(variant_doc)
+                                    variant_paths.append(target_file_path)
+                                else:
+                                    # If no changes, don't generate CTeiDocument and don't make a new web XML file
+                                    continue
                     # lastly, actually process all generated CTeiDocument objects and create web XML files
                     process_var_documents_and_generate_files(main_variant_doc, main_variant_target, variant_docs, variant_paths)
 
@@ -318,26 +346,34 @@ def check_publication_mtimes_and_publish_files(project, publication_ids):
                 if not os.path.exists(source_file_path):
                     logger.warning("Source file {} for manuscript {} does not exist!".format(source_file_path, manuscript_id))
                     continue
-                try:
-                    target_mtime = os.path.getmtime(target_file_path)
-                    source_mtime = os.path.getmtime(source_file_path)
-                except OSError:
-                    # If there is an error, the web XML file likely doesn't exist or is otherwise corrupt
-                    # It is then easiest to just generate a new one
-                    logger.warning("Error getting time_modified for target or source file for publication_manuscript {}".format(manuscript_id))
-                    logger.info("Generating new file...")
+
+                # in a force_publish, just generate all ms files
+                if force_publish:
+                    logger.info("Generating new ms file for publication_manuscript {}".format(manuscript_id))
                     changes.add(target_file_path)
                     generate_ms_file(source_file_path, target_file_path)
+                # otherwise, check if this file needs generating
                 else:
-                    if target_mtime >= source_mtime:
-                        # If the target ms file is newer than the source, continue to the next publication_manuscript
-                        continue
-                    else:
+                    try:
+                        target_mtime = os.path.getmtime(target_file_path)
+                        source_mtime = os.path.getmtime(source_file_path)
+                    except OSError:
+                        # If there is an error, the web XML file likely doesn't exist or is otherwise corrupt
+                        # It is then easiest to just generate a new one
+                        logger.warning("Error getting time_modified for target or source file for publication_manuscript {}".format(manuscript_id))
+                        logger.info("Generating new file...")
                         changes.add(target_file_path)
-                        logger.info("File {} is older than source file {}, generating new file...".format(target_file_path, source_file_path))
                         generate_ms_file(source_file_path, target_file_path)
+                    else:
+                        if target_mtime >= source_mtime:
+                            # If the target ms file is newer than the source, continue to the next publication_manuscript
+                            continue
+                        else:
+                            changes.add(target_file_path)
+                            logger.info("File {} is older than source file {}, generating new file...".format(target_file_path, source_file_path))
+                            generate_ms_file(source_file_path, target_file_path)
 
-            logger.debug("Changes made in publication script run: {}".format(changes))
+            logger.debug("Changes made in publication script run: {}".format([c for c in changes]))
             if len(changes) > 0:
                 outputs = []
                 # If there are changes, try to commit them to git
