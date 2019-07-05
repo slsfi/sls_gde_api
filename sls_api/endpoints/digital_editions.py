@@ -17,7 +17,6 @@ import json
 from PIL import Image
 from hashlib import md5
 from elasticsearch import Elasticsearch
-from base64 import b64encode
 
 from sls_api.endpoints.generics import config, get_project_config, db_engine, select_all_from_table, elastic_config, get_project_id_from_name
 
@@ -519,7 +518,7 @@ def get_comments(project, collection_id, publication_id, note_id=None):
                 xsl_file = "notes.xsl"
             else:
                 xsl_file = "com.xsl"
-    
+
             content = get_content(project, "com", filename, xsl_file, params)
             data = {
                 "id": "{}_{}_com".format(collection_id, publication_id),
@@ -1103,7 +1102,7 @@ def get_facsimile_file(project, collection_id, number, zoom_level):
                     return jsonify({
                         "msg": "Desired facsimile file not found in database."
                     }), 404
-    
+
         statement = sqlalchemy.sql.text("SELECT * FROM publication_facsimile_collection WHERE id=:coll_id").bindparams(coll_id=collection_id)
         row = connection.execute(statement).fetchone()
         if row is None:
@@ -1119,7 +1118,7 @@ def get_facsimile_file(project, collection_id, number, zoom_level):
                                   zoom_level,
                                   "{}.jpg".format(int(number)))
         connection.close()
-    
+
         output = io.BytesIO()
         try:
             with open(file_path, mode="rb") as img_file:
@@ -1160,15 +1159,15 @@ def get_facsimile_page_image(project, facsimile_type, facs_id, facs_nr):
         zoom_level = "4"
         if facsimile_type == 'facsimile':
             file_path = safe_join(config["file_root"],
-                                "facsimiles",
-                                facs_id,
-                                zoom_level,
-                                "{}.jpg".format(int(facs_nr)))
+                                  "facsimiles",
+                                  facs_id,
+                                  zoom_level,
+                                  "{}.jpg".format(int(facs_nr)))
         elif facsimile_type == 'song-example':
             file_path = safe_join(config["file_root"],
-                                "song-example-images",
-                                facs_id,
-                                "{}.jpg".format(int(facs_nr)))
+                                  "song-example-images",
+                                  facs_id,
+                                  "{}.jpg".format(int(facs_nr)))
 
         output = io.BytesIO()
         try:
@@ -1190,7 +1189,6 @@ def get_json_file(project, folder, file_name):
         return jsonify({"msg": "No such project."}), 400
     else:
         file_path = safe_join(config["file_root"], folder, "{}.json".format(str(file_name)))
-    
         try:
             with open(file_path) as f:
                 data = json.load(f)
@@ -1211,6 +1209,7 @@ def get_song_by_id(project, song_id):
         return jsonify(dict(result)), 200, {"Access-Control-Allow-Origin": "*"}
     except Exception:
         return Response("Couldn't get song by id.", status=404, content_type="text/json")
+
 
 @digital_edition.route("/<project>/songs/filtered", methods=["GET"])
 def get_songs_filtered(project):
@@ -1323,20 +1322,22 @@ def get_media_data(project, media_type, media_id):
     except Exception:
         return Response("Couldn't get media data.", status=404, content_type="text/json")
 
-@digital_edition.route("/<project>/media/image/<id>")
-def get_media_data_image(project, id):
+
+@digital_edition.route("/<project>/media/image/<image_id>")
+def get_media_data_image(project, image_id):
     logger.info("Getting media image...")
 
     try:
         connection = db_engine.connect()
-        sql = sqlalchemy.sql.text("SELECT media.image FROM media WHERE id=:image_id".format(id))
-        statement = sql.bindparams(image_id=id)
+        sql = sqlalchemy.sql.text("SELECT media.image FROM media WHERE id=:image_id".format(image_id))
+        statement = sql.bindparams(image_id=image_id)
         result = connection.execute(statement).fetchone()
         result = dict(result)
         connection.close()
         return Response(io.BytesIO(result["image"]), status=200, content_type="image/jpeg")
     except Exception:
         return Response("Couldn't get media image.", status=404, content_type="text/json")
+
 
 @digital_edition.route("/<project>/files/<collection_id>/<file_type>/<download_name>/", defaults={'use_download_name': None})
 @digital_edition.route("/<project>/files/<collection_id>/<file_type>/<download_name>/<use_download_name>")
@@ -1358,11 +1359,11 @@ def get_pdf_file(project, collection_id, file_type, download_name, use_download_
         return jsonify({
             "msg": "Desired facsimile collection was not found in database!"
         }), 404
-    
+
     file_path = ""
 
     direct_download_name = ""
-    
+
     if use_download_name and 'pdf' in str(file_type):
         if '.pdf' in str(download_name):
             direct_download_name = download_name.split('.pdf')[0]
@@ -1391,6 +1392,7 @@ def get_pdf_file(project, collection_id, file_type, download_name, use_download_
     except Exception:
         return Response("File not found.", status=404, content_type="text/json")
 
+
 @digital_edition.route("/<project>/song-files/<file_type>/<file_name>/")
 def get_song_file(project, file_type, file_name):
     """
@@ -1416,6 +1418,7 @@ def get_song_file(project, file_type, file_name):
                          attachment_filename=file_name)
     except Exception:
         return Response("File not found.", status=404, content_type="text/json")
+
 
 @digital_edition.route("/<project>/urn/<url>/")
 @digital_edition.route("/<project>/urn/<url>/<legacy_id>/")
@@ -1878,7 +1881,9 @@ def xml_to_html(xsl_file_path, xml_file_path, replace_namespace=False, params=No
     elif isinstance(params, dict) or isinstance(params, OrderedDict):
         result = xsl_transform(xml_root, **params)
     else:
-        raise Exception("Invalid parameters for XSLT transformation, must be of type dict or OrderedDict, not {}".format(type(params)))
+        raise Exception(
+            "Invalid parameters for XSLT transformation, must be of type dict or OrderedDict, not {}".format(
+                type(params)))
     if len(xsl_transform.error_log) > 0:
         logging.debug(xsl_transform.error_log)
     return str(result)
@@ -1907,13 +1912,10 @@ def get_content(project, folder, xml_filename, xsl_filename, parameters):
             param_ext += "_" + parameters["noteId"]
         if 'sectionId' in parameters:
             param_ext += "_" + parameters["sectionId"]
-        # not neended for bookId
+        # not needed for bookId
         param_file_name = xml_filename.split(".xml")[0] + param_ext
         cache_file_path = cache_file_path.replace(xml_filename.split(".xml")[0], param_file_name)
         cache_file_path = cache_file_path.replace('"', '')
-        cache_file_param_path_copy = cache_file_path
-        if not os.path.exists(cache_file_path):
-            cache_file_path = ""
 
     logger.debug("Cache file path for {} is {}".format(xml_filename, cache_file_path))
 
@@ -1935,10 +1937,8 @@ def get_content(project, folder, xml_filename, xsl_filename, parameters):
         try:
             content = xml_to_html(xsl_file_path, xml_file_path, params=parameters).replace('\n', '').replace('\r', '')
             try:
-                if parameters is not None:
-                    cache_file_path = cache_file_param_path_copy
-                    with io.open(cache_file_path, mode="w", encoding="UTF-8") as cache_file:
-                        cache_file.write(content)
+                with io.open(cache_file_path, mode="w", encoding="UTF-8") as cache_file:
+                    cache_file.write(content)
             except Exception:
                 logger.exception("Could not create cachefile")
                 content = "Successfully fetched content but could not generate cache for it."
