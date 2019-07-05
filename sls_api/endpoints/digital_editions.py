@@ -1888,21 +1888,17 @@ def get_content(project, folder, xml_filename, xsl_filename, parameters):
     config = get_project_config(project)
     if config is None:
         return "No such project."
-    try:
-        xml_file_path = safe_join(config["file_root"], "xml", folder, xml_filename)
-        xsl_file_path = safe_join(config["file_root"], "xslt", xsl_filename)
-        cache_folder = os.path.join("/tmp", "api_cache", project, folder)
-        os.makedirs(cache_folder, exist_ok=True)
-        if "ms" in xsl_filename:
-            # xsl_filename is 'ms_changes.xsl' or 'ms_normalized.xsl'
-            # ensure that '_changes' or '_normalized' is appended to the cache filename accordingly
-            cache_extension = "{}.html".format(xsl_filename.split("ms")[1].replace(".xsl", ""))
-        else:
-            cache_extension = ".html"
-        cache_file_path = os.path.join(cache_folder, xml_filename.replace(".xml", cache_extension))
-    except Exception:
-        logger.exception("Failed to find file {} in cache".format(xml_filename))
-        return "Could not find content to read"
+    xml_file_path = safe_join(config["file_root"], "xml", folder, xml_filename)
+    xsl_file_path = safe_join(config["file_root"], "xslt", xsl_filename)
+    cache_folder = os.path.join("/tmp", "api_cache", project, folder)
+    os.makedirs(cache_folder, exist_ok=True)
+    if "ms" in xsl_filename:
+        # xsl_filename is 'ms_changes.xsl' or 'ms_normalized.xsl'
+        # ensure that '_changes' or '_normalized' is appended to the cache filename accordingly
+        cache_extension = "{}.html".format(xsl_filename.split("ms")[1].replace(".xsl", ""))
+    else:
+        cache_extension = ".html"
+    cache_file_path = os.path.join(cache_folder, xml_filename.replace(".xml", cache_extension))
 
     content = None
     param_ext = ''
@@ -1918,6 +1914,8 @@ def get_content(project, folder, xml_filename, xsl_filename, parameters):
         cache_file_param_path_copy = cache_file_path
         if not os.path.exists(cache_file_path):
             cache_file_path = ""
+
+    logger.debug("Cache file path for {} is {}".format(xml_filename, cache_file_path))
 
     if os.path.exists(cache_file_path):
         if cache_is_recent(xml_file_path, xsl_file_path, cache_file_path):
