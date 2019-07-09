@@ -25,6 +25,8 @@ COMMENTS_TEMPLATE_PATH_IN_FILE_ROOT = "templates/comment.xml"
 
 
 def get_comments_from_database(project, document_note_ids):
+    if document_note_ids is None:
+        return []
     """
     Given the name of a project and a list of IDs of comments in a master file, returns data from the comments database with matching documentnote.id
     Returns a list of dicts, each dict representing one comment.
