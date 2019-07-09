@@ -41,7 +41,7 @@ def get_comments_from_database(project, document_note_ids):
     comments = connection.execute(
         comment_query, docnote_ids=tuple(document_note_ids)).fetchall()
     connection.close()
-    if len(comments.all()) <= 0:
+    if len(comments) <= 0:
         return []
     return [dict(comment) for comment in comments]
 
