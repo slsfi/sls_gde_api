@@ -1308,13 +1308,13 @@ def get_songs_filtered(project):
 @digital_edition.route("/<project>/media/data/<media_type>/<media_id>")
 def get_media_data(project, media_type, media_id):
     logger.info("Getting media data...")
-
     project_id = get_project_id_from_name(project)
     media_column = "{}_id".format(media_type)
     try:
         connection = db_engine.connect()
-        sql = sqlalchemy.sql.text("SELECT media.id, media.description FROM media WHERE {}=:m_id".format(media_column))
-        statement = sql.bindparams(m_id=media_id)
+        sql = sqlalchemy.sql.text("SELECT media.id, media.description FROM media \
+            WHERE {}=:m_id AND project_id = :p_id".format(media_column))
+        statement = sql.bindparams(m_id=media_id, p_id=project_id)
         result = connection.execute(statement).fetchone()
         result = dict(result)
         result["image_path"] = "/" + safe_join(project, "media", "image", str(result["id"]))
@@ -1323,19 +1323,33 @@ def get_media_data(project, media_type, media_id):
     except Exception:
         return Response("Couldn't get media data.", status=404, content_type="text/json")
 
-
-@digital_edition.route("/<project>/media/image/<image_id>")
-def get_media_data_image(project, image_id):
+@digital_edition.route("/<project>/media/image/<id>")
+def get_media_data_image(project, id):
     logger.info("Getting media image...")
-
     try:
+        project_id = get_project_id_from_name(project)
         connection = db_engine.connect()
-        sql = sqlalchemy.sql.text("SELECT media.image FROM media WHERE id=:image_id".format(image_id))
-        statement = sql.bindparams(image_id=image_id)
-        result = connection.execute(statement).fetchone()
+        sql = sqlalchemy.sql.text("SELECT media.image FROM media\
+            WHERE id = :image_id AND project_id = :p_id").bindparams(image_id=id, p_id=project_id)
+        result = connection.execute(sql).fetchone()
         result = dict(result)
         connection.close()
         return Response(io.BytesIO(result["image"]), status=200, content_type="image/jpeg")
+    except Exception:
+        return Response("Couldn't get media image.", status=404, content_type="text/json")
+
+@digital_edition.route("/<project>/media/pdf/<id>")
+def get_media_data_pdf(project, id):
+    logger.info("Getting media image...")
+    try:
+        project_id = get_project_id_from_name(project)
+        connection = db_engine.connect()
+        sql = sqlalchemy.sql.text("SELECT media.pdf FROM media\
+            WHERE id = :pdf_id AND project_id = :p_id").bindparams(pdf_id=id, p_id=project_id)
+        result = connection.execute(sql).fetchone()
+        result = dict(result)
+        connection.close()
+        return Response(io.BytesIO(result["pdf"]), status=200, content_type="application/pdf")
     except Exception:
         return Response("Couldn't get media image.", status=404, content_type="text/json")
 
