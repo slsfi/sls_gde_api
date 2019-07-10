@@ -1313,7 +1313,7 @@ def get_media_data(project, type, type_id):
     try:
         connection = db_engine.connect()
         sql = sqlalchemy.sql.text("SELECT media.id, media.description FROM media \
-            WHERE {}=:m_id AND project_id = :p_id".format(media_column))
+            WHERE {}=:m_id AND project_id = :p_id AND type='image' ".format(media_column))
         statement = sql.bindparams(m_id=type_id, p_id=project_id)
         result = connection.execute(statement).fetchone()
         result = dict(result)
