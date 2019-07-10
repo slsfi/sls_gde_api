@@ -1335,8 +1335,9 @@ def get_media_article_data(project, type, type_id):
         statement = sql.bindparams(m_id=type_id, p_id=project_id)
         return_data = []
         for row in connection.execute(statement).fetchall():
+            row = dict(row)
             row["pdf_path"] = "/" + safe_join(project, "media", "pdf", str(row["id"]))
-            return_data.append(dict(row))
+            return_data.append(row)
         connection.close()
         return jsonify(return_data), 200, {"Access-Control-Allow-Origin": "*"}
     except Exception:
