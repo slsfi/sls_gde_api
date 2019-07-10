@@ -1308,13 +1308,13 @@ def get_songs_filtered(project):
 @digital_edition.route("/<project>/media/data/<type>/<type_id>")
 def get_media_data(project, type, type_id):
     logger.info("Getting media data...")
-    project_id = get_project_id_from_name(project)
     media_column = "{}_id".format(type)
     try:
         connection = db_engine.connect()
         sql = sqlalchemy.sql.text("SELECT media.id, media.description FROM media \
-            WHERE {}=:m_id AND project_id = :p_id AND type='image' ".format(media_column))
-        statement = sql.bindparams(m_id=type_id, p_id=project_id)
+            JOIN media_connection mc ON mc.media_id = media.id \
+            WHERE mc.{}=:m_id AND type='image' ".format(media_column))
+        statement = sql.bindparams(m_id=type_id)
         result = connection.execute(statement).fetchone()
         result = dict(result)
         result["image_path"] = "/" + safe_join(project, "media", "image", str(result["id"]))
@@ -1326,13 +1326,13 @@ def get_media_data(project, type, type_id):
 @digital_edition.route("/<project>/media/articles/<type>/<type_id>")
 def get_media_article_data(project, type, type_id):
     logger.info("Getting media data...")
-    project_id = get_project_id_from_name(project)
     media_column = "{}_id".format(type)
     try:
         connection = db_engine.connect()
         sql = sqlalchemy.sql.text("SELECT media.id, media.description FROM media \
-            WHERE {}=:m_id AND project_id = :p_id AND type = 'pdf'".format(media_column))
-        statement = sql.bindparams(m_id=type_id, p_id=project_id)
+            JOIN media_connection mc ON mc.media_id = media.id \
+            WHERE mc.{}=:m_id AND type = 'pdf'".format(media_column))
+        statement = sql.bindparams(m_id=type_id)
         return_data = []
         for row in connection.execute(statement).fetchall():
             row = dict(row)
@@ -1347,10 +1347,8 @@ def get_media_article_data(project, type, type_id):
 def get_media_data_image(project, id):
     logger.info("Getting media image...")
     try:
-        project_id = get_project_id_from_name(project)
         connection = db_engine.connect()
-        sql = sqlalchemy.sql.text("SELECT media.image FROM media\
-            WHERE id = :image_id AND project_id = :p_id").bindparams(image_id=id, p_id=project_id)
+        sql = sqlalchemy.sql.text("SELECT media.image FROM media WHERE id = :image_id ").bindparams(image_id=id)
         result = connection.execute(sql).fetchone()
         result = dict(result)
         connection.close()
@@ -1362,10 +1360,8 @@ def get_media_data_image(project, id):
 def get_media_data_pdf(project, id):
     logger.info("Getting media image...")
     try:
-        project_id = get_project_id_from_name(project)
         connection = db_engine.connect()
-        sql = sqlalchemy.sql.text("SELECT media.pdf FROM media\
-            WHERE id = :pdf_id AND project_id = :p_id").bindparams(pdf_id=id, p_id=project_id)
+        sql = sqlalchemy.sql.text("SELECT media.pdf FROM media WHERE id = :pdf_id").bindparams(pdf_id=id)
         result = connection.execute(sql).fetchone()
         result = dict(result)
         connection.close()
