@@ -1318,11 +1318,29 @@ def get_media_data(project, type, type_id):
         result = connection.execute(statement).fetchone()
         result = dict(result)
         result["image_path"] = "/" + safe_join(project, "media", "image", str(result["id"]))
-        result["pdf_path"] = "/" + safe_join(project, "media", "pdf", str(result["id"]))
         connection.close()
         return jsonify(result), 200, {"Access-Control-Allow-Origin": "*"}
     except Exception:
         return Response("Couldn't get media data.", status=404, content_type="text/json")
+
+@digital_edition.route("/<project>/media/articles/<type>/<type_id>")
+def get_media_article_data(project, type, type_id):
+    logger.info("Getting media data...")
+    project_id = get_project_id_from_name(project)
+    media_column = "{}_id".format(type)
+    try:
+        connection = db_engine.connect()
+        sql = sqlalchemy.sql.text("SELECT media.id, media.description FROM media \
+            WHERE {}=:m_id AND project_id = :p_id AND type = 'pdf'".format(media_column))
+        statement = sql.bindparams(m_id=type_id, p_id=project_id)
+        return_data = []
+        for row in connection.execute(statement).fetchall():
+            row["pdf_path"] = "/" + safe_join(project, "media", "pdf", str(row["id"]))
+            return_data.append(dict(row))
+        connection.close()
+        return jsonify(return_data), 200, {"Access-Control-Allow-Origin": "*"}
+    except Exception:
+        return Response("Couldn't get article data.", status=404, content_type="text/json")
 
 @digital_edition.route("/<project>/media/image/<id>")
 def get_media_data_image(project, id):
