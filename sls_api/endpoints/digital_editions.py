@@ -1305,19 +1305,20 @@ def get_songs_filtered(project):
         return Response("Couldn't get songs filtered." + str(e), status=404, content_type="text/json")
 
 
-@digital_edition.route("/<project>/media/data/<media_type>/<media_id>")
-def get_media_data(project, media_type, media_id):
+@digital_edition.route("/<project>/media/data/<type>/<type_id>")
+def get_media_data(project, type, type_id):
     logger.info("Getting media data...")
     project_id = get_project_id_from_name(project)
-    media_column = "{}_id".format(media_type)
+    media_column = "{}_id".format(type)
     try:
         connection = db_engine.connect()
         sql = sqlalchemy.sql.text("SELECT media.id, media.description FROM media \
             WHERE {}=:m_id AND project_id = :p_id".format(media_column))
-        statement = sql.bindparams(m_id=media_id, p_id=project_id)
+        statement = sql.bindparams(m_id=type_id, p_id=project_id)
         result = connection.execute(statement).fetchone()
         result = dict(result)
         result["image_path"] = "/" + safe_join(project, "media", "image", str(result["id"]))
+        result["pdf_path"] = "/" + safe_join(project, "media", "pdf", str(result["id"]))
         connection.close()
         return jsonify(result), 200, {"Access-Control-Allow-Origin": "*"}
     except Exception:
