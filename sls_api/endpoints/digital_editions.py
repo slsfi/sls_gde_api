@@ -544,14 +544,14 @@ def get_manuscript(project, collection_id, publication_id, manuscript_id=None):
         logger.info("Getting XML for {} and transforming...".format(request.full_path))
         connection = db_engine.connect()
         if manuscript_id is None:
-            select = "SELECT sort_order, name, legacy_id, id FROM publication_manuscript WHERE publication_id = :p_id ORDER BY sort_order ASC"
+            select = "SELECT sort_order, name, legacy_id, id, original_filename FROM publication_manuscript WHERE publication_id = :p_id ORDER BY sort_order ASC"
             statement = sqlalchemy.sql.text(select).bindparams(p_id=publication_id)
             manuscript_info = []
             for row in connection.execute(statement).fetchall():
                 manuscript_info.append(dict(row))
             connection.close()
         else:
-            select = "SELECT sort_order, name, legacy_id, id FROM publication_manuscript WHERE id = :m_id ORDER BY sort_order ASC"
+            select = "SELECT sort_order, name, legacy_id, id, original_filename FROM publication_manuscript WHERE id = :m_id ORDER BY sort_order ASC"
             statement = sqlalchemy.sql.text(select).bindparams(m_id=manuscript_id)
             manuscript_info = []
             for row in connection.execute(statement).fetchall():
@@ -593,10 +593,10 @@ def get_variant(project, collection_id, publication_id, section_id=None):
         logger.info("Getting XML for {} and transforming...".format(request.full_path))
         connection = db_engine.connect()
         if section_id is not None:
-            select = "SELECT sort_order, name, type, legacy_id, id FROM publication_version WHERE publication_id = :p_id AND section_id = :s_id ORDER BY type, sort_order ASC"
+            select = "SELECT sort_order, name, type, legacy_id, id, original_filename FROM publication_version WHERE publication_id = :p_id AND section_id = :s_id ORDER BY type, sort_order ASC"
             statement = sqlalchemy.sql.text(select).bindparams(p_id=publication_id, s_id=section_id)
         else:
-            select = "SELECT sort_order, name, type, legacy_id, id FROM publication_version WHERE publication_id = :p_id ORDER BY type, sort_order ASC"
+            select = "SELECT sort_order, name, type, legacy_id, id, original_filename FROM publication_version WHERE publication_id = :p_id ORDER BY type, sort_order ASC"
             statement = sqlalchemy.sql.text(select).bindparams(p_id=publication_id)
         variation_info = []
         for row in connection.execute(statement).fetchall():
