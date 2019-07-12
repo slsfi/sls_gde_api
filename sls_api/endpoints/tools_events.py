@@ -166,8 +166,7 @@ def edit_subject(project, subject_id):
         update = subjects.update().where(subjects.c.id==subject_id).values()
         result = connection.execute(update, **new_subject)
         result = {
-            "msg": "Updated subject with ID {}".format(subject_id),
-            "row": new_row
+            "msg": "Updated subject with ID {}".format(subject_id)
         }
         return jsonify(result), 201
     except Exception as e:
