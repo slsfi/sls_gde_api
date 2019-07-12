@@ -225,10 +225,17 @@ def update_file(project, file_path):
     file_exists = file_exists_in_file_root(project, file_path)
 
     # Secure filename and save new file to local repo
-    filename = secure_filename(file_path)
-    if file and filename:
-        with io.open(filename, mode="wb") as new_file:
-            new_file.write(file.getvalue())
+    # Could be more secure...
+    pos = file_path.find('.xml')
+    if pos > 0:
+        filename = safe_join(config["file_root"], file_path)
+        if file and filename:
+            with io.open(filename, mode="wb") as new_file:
+                new_file.write(file.getvalue())
+    else:
+        return jsonify({
+                "msg": "File path error"
+            }), 500
 
     # Add file to local repo if it wasn't already in the repository
     if not file_exists:
