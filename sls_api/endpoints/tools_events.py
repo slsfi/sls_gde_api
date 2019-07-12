@@ -123,6 +123,61 @@ def add_new_subject(project):
     finally:
         connection.close()
 
+@event_tools.route("/<project>/subjects/<subject_id>/edit/", methods=["POST"])
+@project_permission_required
+def edit_subject(project, subject_id):
+    """
+    Update subject object to the database
+
+    POST data MUST be in JSON format
+
+    POST data SHOULD contain:
+    type: subject type
+    description: subject description
+
+    POST data CAN also contain:
+    first_name: Subject first or given name
+    last_name Subject surname
+    preposition: preposition for subject
+    full_name: Subject full name
+    legacy_id: Legacy id for subject
+    date_born: Subject date of birth
+    date_deceased: Subject date of death
+    """
+    request_data = request.get_json()
+    if not request_data:
+        return jsonify({"msg": "No data provided."}), 400
+    subjects = Table('subject', metadata, autoload=True, autoload_with=db_engine)
+    connection = db_engine.connect()
+
+    new_subject = {
+        "type": request_data.get("type", None),
+        "description": request_data.get("description", None),
+        "project_id": get_project_id_from_name(project),
+        "first_name": request_data.get("first_name", None),
+        "last_name": request_data.get("last_name", None),
+        "preposition": request_data.get("preposition", None),
+        "full_name": request_data.get("full_name", None),
+        "legacy_id": request_data.get("legacy_id", None),
+        "date_born": request_data.get("date_born", None),
+        "date_deceased": request_data.get("date_deceased", None)
+    }
+    try:
+        update = subjects.update().where(subjects.c.id==subject_id).values()
+        result = connection.execute(update, **new_subject)
+        result = {
+            "msg": "Updated subject with ID {}".format(subject_id),
+            "row": new_row
+        }
+        return jsonify(result), 201
+    except Exception as e:
+        result = {
+            "msg": "Failed to update subject.",
+            "reason": str(e)
+        }
+        return jsonify(result), 500
+    finally:
+        connection.close()
 
 @event_tools.route("/<project>/tags/new/", methods=["POST"])
 @project_permission_required
