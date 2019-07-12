@@ -64,6 +64,57 @@ def add_new_location(project):
     finally:
         connection.close()
 
+@event_tools.route("/<project>/locations/<location_id>/edit/", methods=["POST"])
+@project_permission_required
+def edit_location(project, location_id):
+    """
+    Edit a location object to the database
+
+    POST data MUST be in JSON format.
+
+    POST data MUST contain:
+    name: location name
+
+    POST data SHOULD also contain:
+    description: location description
+
+    POST data CAN also contain:
+    legacy_id: legacy id for location
+    latitude: latitude coordinate for location
+    longitude: longitude coordinate for location
+    """
+    request_data = request.get_json()
+    if not request_data:
+        return jsonify({"msg": "No data provided."}), 400
+    if "name" not in request_data:
+        return jsonify({"msg": "No name in POST data"}), 400
+
+    locations = Table('location', metadata, autoload=True, autoload_with=db_engine)
+    connection = db_engine.connect()
+
+    new_location = {
+        "name": request_data["name"],
+        "description": request_data.get("description", None),
+        "project_id": get_project_id_from_name(project),
+        "legacy_id": request_data.get("legacy_id", None),
+        "latitude": request_data.get("latitude", None),
+        "longitude": request_data.get("longitude", None)
+    }
+    try:
+        update = locations.update().where(locations.c.id==location_id).values()
+        result = connection.execute(update, **new_location)
+        result = {
+            "msg": "Updated location with ID {}".format(location_id)
+        }
+        return jsonify(result), 201
+    except Exception as e:
+        result = {
+            "msg": "Failed to update location.",
+            "reason": str(e)
+        }
+        return jsonify(result), 500
+    finally:
+        connection.close()
 
 @event_tools.route("/<project>/subjects/new/", methods=["POST"])
 @project_permission_required
