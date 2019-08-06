@@ -328,6 +328,35 @@ def handle_toc(project, collection_id):
                         os.rename(f"{file_path}.new", file_path)
                         return jsonify({"msg": f"Saved new toc as {file_path}"})
 
+@digital_edition.route("/<project>/search/suggestions/<search_string>/<limit>")
+def get_search_suggestions(project, search_string, limit):
+    """
+    This endpoint is used to get search suggestions (autocomplete).
+    """
+    config = get_project_config(project)
+    if config is None:
+        return jsonify({"msg": "No such project."}), 400
+    else:
+        logger.info("Getting search suggestiongs /{}/search/suggestions/{}/{}".format(project, search_string, limit))
+        connection = db_engine.connect()
+        project_id = get_project_id_from_name(project)
+        search_string = '%' + search_string + '%'
+        sql = sqlalchemy.sql.text("\
+                SELECT distinct full_name as suggestion from subject WHERE UPPER(full_name) LIKE UPPER(:search_str) AND project_id = :p_id \
+                UNION \
+                SELECT distinct name as suggestion from location WHERE UPPER(name) LIKE UPPER(:search_str) AND project_id = :p_id \
+                UNION \
+                SELECT distinct name as suggestion from tag WHERE UPPER(name) LIKE UPPER(:search_str) AND project_id = :p_id \
+                ORDER BY suggestion ASC \
+                LIMIT :li \
+              ")
+
+        statement = sql.bindparams(p_id=project_id, search_str=search_string, li=limit)
+        results = []
+        for row in connection.execute(statement).fetchall():
+            results.append(dict(row))
+        connection.close()
+        return jsonify(results)
 
 @digital_edition.route("/<project>/collections")
 def get_collections(project):
