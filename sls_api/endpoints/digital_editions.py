@@ -1686,6 +1686,7 @@ def get_tag_search(project, search_text):
 @digital_edition.route("<project>/search/user_defined/<index>/<field>/<search_text>/<fuzziness>/")
 def get_user_defined_search(project, index, field, search_text, fuzziness):
     logger.info("Getting results from elastic")
+    project_id = get_project_id_from_name(project)
     if len(search_text) > 0:
         res = es.search(index=str(index), body={
             "size": 1000,
@@ -1711,6 +1712,38 @@ def get_user_defined_search(project, index, field, search_text, fuzziness):
         return jsonify("")
 
 
+@digital_edition.route("/<project>/search/suggestions/<search_string>/<limit>")
+def get_search_suggestions(project, search_string, limit):
+    logger.info("Getting results from elastic")
+    project_id = get_project_id_from_name(project)
+    if len(search_string) > 0:
+        res = es.search(index="tag,location,subject", body={
+            "size": limit,
+            "query": {
+                "bool": {
+                    "should": [
+                        {"match": {"name": {"query": str(search_string), "fuzziness": 1}}}
+                    ],
+                    "filter": {
+                        "term": {
+                            "project_id": project_id
+                        }
+                    },
+                    "minimum_should_match": 1
+                }
+            },
+            "highlight": {
+                "fields": {
+                    "name": {}
+                }
+            }
+        })
+        if len(res['hits']) > 0:
+            return jsonify(res['hits']['hits'])
+        else:
+            return jsonify("")
+    else:
+        return jsonify("")
 '''
     HELPER FUNCTIONS
 '''
