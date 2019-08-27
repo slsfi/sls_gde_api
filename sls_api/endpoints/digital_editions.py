@@ -1722,7 +1722,9 @@ def get_search_suggestions(project, search_string, limit):
             "query": {
                 "bool": {
                     "should": [
-                        {"match": {"name": {"query": str(search_string), "fuzziness": 1}}}
+                        {"match": {"name": {"full_name": str(search_string), "fuzziness": 1}}},
+                        {"match": {"name": {"query": str(search_string), "fuzziness": 1}}},
+                        {"match": {"name": {"country": str(search_string), "fuzziness": 1}}}
                     ],
                     "filter": {
                         "term": {
