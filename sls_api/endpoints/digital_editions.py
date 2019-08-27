@@ -1719,25 +1719,12 @@ def get_search_suggestions(project, search_string, limit):
     if len(search_string) > 0:
         res = es.search(index="tag,location,subject", body={
             "size": limit,
-            "query": {
-                "bool": {
-                    "should": [
-                        {"match": {"full_name": {"query": str(search_string), "fuzziness": 1}}},
-                        {"match": {"name": {"query": str(search_string), "fuzziness": 1}}},
-                        {"match": {"country": {"query": str(search_string), "fuzziness": 1}}},
-                        {"match": {"city": {"query": str(search_string), "fuzziness": 1}}}
-                    ],
-                    "filter": {
-                        "term": {
-                            "project_id": project_id
-                        }
-                    },
-                    "minimum_should_match": 1
-                }
-            },
-            "highlight": {
-                "fields": {
-                    "name": {}
+            "query" : {
+                "multi_match" : {
+                    "query" :  str(search_string),
+                    "type" : "phrase_prefix",
+                    "fields" : [ "*" ], 
+                    "lenient" : True
                 }
             }
         })
