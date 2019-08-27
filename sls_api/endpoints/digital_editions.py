@@ -1723,7 +1723,7 @@ def get_search_suggestions(project, search_string, limit):
                 "multi_match" : {
                     "query" :  str(search_string),
                     "type" : "phrase_prefix",
-                    "fields" : [ "*" ], 
+                    "fields" : [ "full_name", "name", "city", "country" ], 
                     "lenient" : True
                 }
             }
