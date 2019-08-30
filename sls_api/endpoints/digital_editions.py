@@ -1655,19 +1655,52 @@ def get_tag_search(project, search_text):
     if len(search_text) > 0:
         res = es.search(index='tag', body={
             "size": 1000,
-            "query": {
-                "bool": {
-                    "should": [
-                        {"match": {"name": {"query": str(search_text), "fuzziness": 1}}}
-                    ],
-                    "filter": {
-                        "term": {
-                            "project_id": project_id
-                        }
-                    },
-                    "minimum_should_match": 1
+            "query" : {
+    "bool": {
+      "should": [
+        {
+          "bool": {
+            "must" : [
+                {
+                  "multi_match" : {
+                      "query" : str(search_text),
+                      "type" : "phrase_prefix",
+                      "fields" : [ "*" ], 
+                      "lenient" : True
+                  }
                 }
-            },
+              ,
+              {
+                "match": {
+                    "project_id": str(project_id)
+                }
+              }
+            ]
+          }
+        },
+        {
+          "bool": {
+            "must" : [
+                {
+                  "multi_match" : {
+                      "query" : str(search_text),
+                      "type" : "phrase_prefix",
+                      "fields" : [ "*" ], 
+                      "lenient" : True
+                  }
+                }
+              ,
+              {
+                "match": {
+                    "_type": "doc"
+                }
+              }
+            ]
+          }
+        }
+      ]
+    }
+  },
             "highlight": {
                 "fields": {
                     "name": {}
