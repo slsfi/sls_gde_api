@@ -1749,6 +1749,13 @@ def get_search_all(project, search_string, limit):
                     "fields" : [ "*" ], 
                     "lenient" : True
                 }
+            },
+            "highlight": {
+                "fields": {
+                    "message": {},
+                    "name": {},
+                    "full_name": {}
+                }
             }
         })
         if len(res['hits']) > 0:
