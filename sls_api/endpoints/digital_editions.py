@@ -1717,7 +1717,7 @@ def get_search_suggestions(project, search_string, limit):
     logger.info("Getting results from elastic")
     project_id = get_project_id_from_name(project)
     if len(search_string) > 0:
-        res = es.search(index="tag,location,subject", body={
+        res = es.search(index="tag,location,subject," + str(project), body={
             "size": limit,
             "query" : {
                 "bool": {
