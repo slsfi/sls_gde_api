@@ -1764,6 +1764,15 @@ def get_search_suggestions(project, search_string, limit):
                     }
                 ]
                 }
+            },
+            "highlight": {
+                "fields": {
+                    "name": {},
+                    "full_name": {},
+                    "message": {}
+                },
+                "boundary_scanner": "word",
+                "number_of_fragments": 1
             }
             })
         if len(res['hits']) > 0:
