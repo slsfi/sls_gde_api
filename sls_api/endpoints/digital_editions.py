@@ -1655,52 +1655,19 @@ def get_tag_search(project, search_text):
     if len(search_text) > 0:
         res = es.search(index='tag', body={
             "size": 1000,
-            "query" : {
-    "bool": {
-      "should": [
-        {
-          "bool": {
-            "must" : [
-                {
-                  "multi_match" : {
-                      "query" : str(search_text),
-                      "type" : "phrase_prefix",
-                      "fields" : [ "*" ], 
-                      "lenient" : True
-                  }
+            "query": {
+                "bool": {
+                    "should": [
+                        {"match": {"name": {"query": str(search_text), "fuzziness": 1}}}
+                    ],
+                    "filter": {
+                        "term": {
+                            "project_id": project_id
+                        }
+                    },
+                    "minimum_should_match": 1
                 }
-              ,
-              {
-                "match": {
-                    "project_id": str(project_id)
-                }
-              }
-            ]
-          }
-        },
-        {
-          "bool": {
-            "must" : [
-                {
-                  "multi_match" : {
-                      "query" : str(search_text),
-                      "type" : "phrase_prefix",
-                      "fields" : [ "*" ], 
-                      "lenient" : True
-                  }
-                }
-              ,
-              {
-                "match": {
-                    "_type": "doc"
-                }
-              }
-            ]
-          }
-        }
-      ]
-    }
-  },
+            },
             "highlight": {
                 "fields": {
                     "name": {}
@@ -1756,7 +1723,7 @@ def get_search_suggestions(project, search_string, limit):
                 "multi_match" : {
                     "query" :  str(search_string),
                     "type" : "phrase_prefix",
-                    "fields" : [ "full_name", "name", "city", "country" ], 
+                    "fields" : [ "full_name", ], 
                     "lenient" : True
                 }
             }
@@ -1776,19 +1743,60 @@ def get_search_all(project, search_string, limit):
         res = es.search(index="tag,location,subject," + str(project), body={
             "size": limit,
             "query" : {
-                "multi_match" : {
-                    "query" :  str(search_string),
-                    "type" : "phrase_prefix",
-                    "fields" : [ "*" ], 
-                    "lenient" : True
+                "bool": {
+                "should": [
+                    {
+                    "bool": {
+                        "must" : [
+                            {
+                            "multi_match" : {
+                                "query" : str(search_string),
+                                "type" : "phrase_prefix",
+                                "fields" : [ "*" ], 
+                                "lenient" : True
+                            }
+                            }
+                        ,
+                        {
+                            "match": {
+                                "project_id": str(project_id)
+                            }
+                        }
+                        ]
+                    }
+                    },
+                    {
+                    "bool": {
+                        "must" : [
+                            {
+                            "multi_match" : {
+                                "query" : str(search_string),
+                                "type" : "phrase_prefix",
+                                "fields" : [ "*" ], 
+                                "lenient" : True
+                            }
+                            }
+                        ,
+                        {
+                            "match": {
+                                "_type": "doc"
+                            }
+                        }
+                        ]
+                    }
+                    }
+                ]
                 }
             },
             "highlight": {
                 "fields": {
-                    "message": {},
                     "name": {},
-                    "full_name": {}
-                }
+                    "full_name": {},
+                    "message": {}
+                },
+                "boundary_scanner": "sentence",
+                "number_of_fragments": 1,
+                "boundary_max_scan": 10
             }
         })
         if len(res['hits']) > 0:
