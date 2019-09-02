@@ -1720,41 +1720,18 @@ def get_search_suggestions(project, search_string, limit):
         res = es.search(index="tag,location,subject", body={
             "size": limit,
             "query" : {
-                "multi_match" : {
-                    "query" :  str(search_string),
-                    "type" : "phrase_prefix",
-                    "fields" : [ "full_name", ], 
-                    "lenient" : True
-                }
-            }
-        })
-        if len(res['hits']) > 0:
-            return jsonify(res['hits']['hits'])
-        else:
-            return jsonify("")
-    else:
-        return jsonify("")
-
-@digital_edition.route("/<project>/search/all/<search_string>/<limit>")
-def get_search_all(project, search_string, limit):
-    logger.info("Getting results from elastic")
-    project_id = get_project_id_from_name(project)
-    if len(search_string) > 0:
-        res = es.search(index="tag,location,subject," + str(project), body={
-            "size": limit,
-            "query" : {
                 "bool": {
                 "should": [
                     {
                     "bool": {
                         "must" : [
                             {
-                            "multi_match" : {
-                                "query" : str(search_string),
-                                "type" : "phrase_prefix",
-                                "fields" : [ "*" ], 
-                                "lenient" : True
-                            }
+                                "multi_match" : {
+                                    "query" : str(search_string),
+                                    "type" : "phrase_prefix",
+                                    "fields" : [ "*" ], 
+                                    "lenient" : True
+                                }
                             }
                         ,
                         {
@@ -1779,7 +1756,68 @@ def get_search_all(project, search_string, limit):
                         ,
                         {
                             "match": {
-                                "_type": "doc"
+                                "_index": str(project)
+                            }
+                        }
+                        ]
+                    }
+                    }
+                ]
+                }
+            }
+            })
+        if len(res['hits']) > 0:
+            return jsonify(res['hits']['hits'])
+        else:
+            return jsonify("")
+    else:
+        return jsonify("")
+
+@digital_edition.route("/<project>/search/all/<search_string>/<limit>")
+def get_search_all(project, search_string, limit):
+    logger.info("Getting results from elastic")
+    project_id = get_project_id_from_name(project)
+    if len(search_string) > 0:
+        res = es.search(index="tag,location,subject," + str(project), body={
+            "size": limit,
+            "query" : {
+                "bool": {
+                "should": [
+                    {
+                    "bool": {
+                        "must" : [
+                            {
+                                "multi_match" : {
+                                    "query" : str(search_string),
+                                    "type" : "phrase_prefix",
+                                    "fields" : [ "*" ], 
+                                    "lenient" : True
+                                }
+                            }
+                        ,
+                        {
+                            "match": {
+                                "project_id": str(project_id)
+                            }
+                        }
+                        ]
+                    }
+                    },
+                    {
+                    "bool": {
+                        "must" : [
+                            {
+                            "multi_match" : {
+                                "query" : str(search_string),
+                                "type" : "phrase_prefix",
+                                "fields" : [ "*" ], 
+                                "lenient" : True
+                            }
+                            }
+                        ,
+                        {
+                            "match": {
+                                "_index": str(project)
                             }
                         }
                         ]
