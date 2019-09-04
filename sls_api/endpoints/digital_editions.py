@@ -347,6 +347,22 @@ def get_collections(project):
         connection.close()
         return jsonify(results)
 
+@digital_edition.route("/<project>/publication-facsimile-relations/")
+def get_project_publication_facsimile_relations(project):
+    logger.info("Getting publication relations for {}".format(project))
+    connection = db_engine.connect()
+    project_id = get_project_id_from_name(project)
+    sql = sqlalchemy.sql.text(
+        "SELECT pc.id, p.id, pf.id FROM publication_collection pc \
+         JOIN publication p ON p.publication_collection_id=pc.id \
+         JOIN publication_facsimile pf ON pf.publication_id = p.id \
+         WHERE project_id=:p_id ORDER BY id")
+    statement = sql.bindparams(p_id=project_id)
+    results = []
+    for row in connection.execute(statement).fetchall():
+        results.append(dict(row))
+    connection.close()
+    return jsonify(results)
 
 @digital_edition.route("/<project>/collection/<collection_id>")
 def get_collection(project, collection_id):
@@ -1217,7 +1233,7 @@ def get_songs_filtered(project):
     Filter songs either by subject name, location or category.
     If no filter is provided all songs are returned.
     Sql injection is also prevented.
-    
+
     Example: /<project>/songs/filtered?subject_name=Foo Bar
     """
 
@@ -1545,16 +1561,16 @@ def get_freetext_search(project, search_text, fuzziness=1):
     logger.info("Getting results from elastic")
     if len(search_text) > 0:
         res = es.search(index=str(project), body={
-            "query": 
-            { 
-                "match": 
-                { 
-                    "textData": 
+            "query":
+            {
+                "match":
+                {
+                    "textData":
                     {
                         "query": search_text,
                         "fuzziness": fuzziness
                     }
-                } 
+                }
             },
             "highlight": {
                 "fields" : {
@@ -1729,7 +1745,7 @@ def get_search_suggestions(project, search_string, limit):
                                 "multi_match" : {
                                     "query" : str(search_string),
                                     "type" : "phrase_prefix",
-                                    "fields" : [ "*" ], 
+                                    "fields" : [ "*" ],
                                     "lenient" : True
                                 }
                             }
@@ -1749,7 +1765,7 @@ def get_search_suggestions(project, search_string, limit):
                             "multi_match" : {
                                 "query" : str(search_string),
                                 "type" : "phrase_prefix",
-                                "fields" : [ "*" ], 
+                                "fields" : [ "*" ],
                                 "lenient" : True
                             }
                             }
@@ -1799,7 +1815,7 @@ def get_search_all(project, search_string, limit):
                                 "multi_match" : {
                                     "query" : str(search_string),
                                     "type" : "phrase_prefix",
-                                    "fields" : [ "*" ], 
+                                    "fields" : [ "*" ],
                                     "lenient" : True
                                 }
                             }
@@ -1819,7 +1835,7 @@ def get_search_all(project, search_string, limit):
                             "multi_match" : {
                                 "query" : str(search_string),
                                 "type" : "phrase_prefix",
-                                "fields" : [ "*" ], 
+                                "fields" : [ "*" ],
                                 "lenient" : True
                             }
                             }
@@ -1944,13 +1960,13 @@ def get_published_status(project, collection_id, publication_id):
     if config is None:
         return False, "No such project."
     connection = db_engine.connect()
-    select = """SELECT project.published AS proj_pub, publication_collection.published AS col_pub, publication.published as pub 
-    FROM project 
+    select = """SELECT project.published AS proj_pub, publication_collection.published AS col_pub, publication.published as pub
+    FROM project
     JOIN publication_collection ON publication_collection.project_id = project.id
     JOIN publication ON publication.publication_collection_id = publication_collection.id
     WHERE project.id = publication_collection.project_id
     AND publication.publication_collection_id = publication_collection.id
-    AND project.name = :project AND publication_collection.id = :c_id AND (publication.id = :p_id OR split_part(publication.legacy_id, '_', 2) = :str_p_id) 
+    AND project.name = :project AND publication_collection.id = :c_id AND (publication.id = :p_id OR split_part(publication.legacy_id, '_', 2) = :str_p_id)
     """
     statement = sqlalchemy.sql.text(select).bindparams(project=project, c_id=collection_id, p_id=publication_id,
                                                        str_p_id=str(publication_id))
@@ -1993,8 +2009,8 @@ def get_title_published_status(project, collection_id):
 
     project_id = get_project_id_from_name(project)
 
-    select = """SELECT project.published AS proj_pub, publication_collection.published AS col_pub, publication_collection_title.published as pub 
-    FROM project 
+    select = """SELECT project.published AS proj_pub, publication_collection.published AS col_pub, publication_collection_title.published as pub
+    FROM project
     JOIN publication_collection ON publication_collection.project_id = project.id
     JOIN publication_collection_title ON publication_collection_title.id = publication_collection.publication_collection_title_id
     AND project.id = :project_id AND publication_collection.id = :c_id
