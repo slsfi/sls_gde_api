@@ -353,10 +353,10 @@ def get_project_publication_facsimile_relations(project):
     connection = db_engine.connect()
     project_id = get_project_id_from_name(project)
     sql = sqlalchemy.sql.text(
-        "SELECT pc.id, p.id, pf.id FROM publication_collection pc \
+        "SELECT pc.id as pc_id, p.id as p_id, pf.id as pf_id FROM publication_collection pc \
          JOIN publication p ON p.publication_collection_id=pc.id \
          JOIN publication_facsimile pf ON pf.publication_id = p.id \
-         WHERE project_id=:p_id ORDER BY id")
+         WHERE project_id=:p_id ORDER BY pc.id")
     statement = sql.bindparams(p_id=project_id)
     results = []
     for row in connection.execute(statement).fetchall():
