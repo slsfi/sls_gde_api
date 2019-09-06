@@ -88,8 +88,12 @@ def get_md_contents_as_json(project, fileid):
     config = get_project_config(project)
     if config is None:
         return jsonify({"msg": "No such project."}), 400
-    else:
-        path = "*/".join(fileid.split("-")) + "*"
+    else:        
+        parts = fileid.split("-")
+        pathTmp = fileid
+        if len(parts) > 4:
+            pathTmp = parts[0] + "-" + parts[1] + "-" + parts[2] + "-0" + parts[4]
+        path = "*/".join(pathTmp.split("-")) + "*"
 
         file_path_query = safe_join(config["file_root"], "md", path)
 
