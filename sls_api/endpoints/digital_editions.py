@@ -92,7 +92,7 @@ def get_md_contents_as_json(project, fileid):
         parts = fileid.split("-")
         pathTmp = fileid
         if len(parts) > 4:
-            pathTmp = parts[0] + "-" + parts[1] + "-" + parts[2] + "-0" + parts[5]
+            pathTmp = parts[0] + "-" + parts[1] + "-" + parts[2] + "-0" + parts[4]
         path = "*/".join(pathTmp.split("-")) + "*"
 
         file_path_query = safe_join(config["file_root"], "md", path)
