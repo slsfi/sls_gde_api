@@ -2,10 +2,10 @@ import base64
 from flask import Blueprint, jsonify, request, safe_join
 from flask_jwt_extended import get_jwt_identity
 import io
+import json
 import logging
 import os
 import subprocess
-from werkzeug.utils import secure_filename
 
 from sls_api.endpoints.generics import get_project_config, project_permission_required
 
@@ -91,6 +91,31 @@ def update_files_in_git_repo(project, specific_file=False):
         except subprocess.CalledProcessError as e:
             return False, str(e.output)
         return True, specific_file
+
+
+@file_tools.route("/<project>/config/get")
+def get_config_file(project):
+    config = get_project_config(project)
+    if config is None:
+        return jsonify({"msg": "No such project."}), 400
+    else:
+        file_path = os.path.join(config["file_root"], "config.json")
+        with open(file_path) as f:
+            json_data = json.load(f)
+        return jsonify(json_data)
+
+
+@file_tools.route("/<project>/config/update", methods=["POST"])
+def update_config(project):
+    config = get_project_config(project)
+    if config is None:
+        return jsonify({"msg": "No such project."}), 400
+    else:
+        request_data = request.get_json()
+        file_path = os.path.join(config["file_root"], "config.json")
+        with open(file_path, "w") as f:
+            json.dump(request_data, f)
+        return jsonify({"msg": "received"})
 
 
 @file_tools.route("/<project>/sync_files/", methods=["POST"])
