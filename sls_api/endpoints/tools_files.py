@@ -100,6 +100,8 @@ def get_config_file(project):
         return jsonify({"msg": "No such project."}), 400
     else:
         file_path = os.path.join(config["file_root"], "config.json")
+        if not os.path.exists(file_path):
+            return jsonify({})
         with open(file_path) as f:
             json_data = json.load(f)
         return jsonify(json_data)
