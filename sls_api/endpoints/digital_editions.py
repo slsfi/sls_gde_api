@@ -809,7 +809,7 @@ def get_all_occurrences_by_type(object_type, project=None):
             occurrence_sql = "SELECT publication_collection.name AS collection_name, publication.publication_collection_id AS collection_id,\
              event_occurrence.id, type, description, event_occurrence.publication_id, event_occurrence.publication_version_id,\
              event_occurrence.publication_facsimile_id, event_occurrence.publication_comment_id, event_occurrence.publication_facsimile_page, \
-             event_occurrence.publication_manuscript_id FROM event_occurrence, publication, publication_collection \
+             event_occurrence.publication_manuscript_id, event_occurrence.publication_song_id FROM event_occurrence, publication, publication_collection \
              WHERE publication.publication_collection_id=publication_collection.id AND event_occurrence.event_id=:e_id AND event_occurrence.publication_id=publication.id"
 
             events_stmnt = sqlalchemy.sql.text(events_sql).bindparams(o_id=object_id)
@@ -888,6 +888,17 @@ def get_all_occurrences_by_type(object_type, project=None):
                         type_sql = sqlalchemy.sql.text("SELECT publication.id AS publication_id, publication.original_filename, publication.name FROM publication WHERE id=:pub_id").bindparams(pub_id=row["publication_id"])
                         publication = connection.execute(type_sql).fetchone()
                         row["publication"] = dict(publication)
+                    if row["publication_song_id"] is not None:
+                        type_sql = sqlalchemy.sql.text("SELECT \
+                            original_id as song_original_id, ps.name as song_name, ps.type as song_type, number as song_number, \
+                        variant as song_variant, landscape as song_landscape, place as song_place, recorder_firstname as song_recorder_firstname, \
+                        recorder_lastname as song_recorder_lastname, recorder_born_name as song_recorder_born_name, performer_firstname as song_performer_firstname,\
+                        performer_lastname as song_performer_lastname, performer_born_name as song_performer_born_name, note as song_note, comment as song_comment, \
+                        lyrics as song_lyrics, original_collection_location as song_original_collection_location, original_collection_signature as song_original_collection_signature,\
+                        ps.original_publication_date as song_original_publication_date, page_number as song_page_number, subtype as song_subtype \
+                         FROM publication_song WHERE id=:song_id").bindparams(song_id=row["publication_song_id"])
+                        publication_song = connection.execute(type_sql).fetchone()
+                        row["publication_song"] = dict(publication_song)
 
                     event["occurrences"].append(row)
 
