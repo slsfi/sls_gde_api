@@ -953,7 +953,7 @@ def get_subject_occurrences(project=None, subject_id=None):
                                 JOIN publication pub ON pub.id = ev_o.publication_id \
                                 JOIN publication_collection pub_c ON pub_c.id = pub.publication_collection_id \
                                 JOIN subject sub ON ev_c.subject_id = sub.id \
-                                WHERE ev.deleted != 1 AND ev_o.deleted != 1 AND ev_c.deleted != 1 AND sub.id = : sub_id ORDER BY pub_c.name ASC "
+                                WHERE ev.deleted != 1 AND ev_o.deleted != 1 AND ev_c.deleted != 1 AND sub.id = :sub_id ORDER BY pub_c.name ASC "
         else:
             occurrence_sql = "SELECT \
                             original_id as song_original_id, ps.name as song_name, ps.type as song_type, number as song_number, \
