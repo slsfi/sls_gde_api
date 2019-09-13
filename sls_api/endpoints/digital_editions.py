@@ -88,7 +88,7 @@ def get_md_contents_as_json(project, fileid):
     config = get_project_config(project)
     if config is None:
         return jsonify({"msg": "No such project."}), 400
-    else:        
+    else:
         parts = fileid.split("-")
         pathTmp = fileid
         if len(parts) > 4:
@@ -912,19 +912,28 @@ def get_all_occurrences_by_type(object_type, project=None):
         return jsonify(occur)
 
 
+@digital_edition.route("/<project>/subject/occurrences/<subject_id>/")
 @digital_edition.route("/<project>/subject/occurrences/")
-def get_subject_occurrences(project=None):
+def get_subject_occurrences(project=None, subject_id=None):
     if project == 'all':
         subject_sql = " SELECT id, date_born::text, date_deceased::text, description, first_name, last_name, full_name as name, \
                         type as object_type, occupation, place_of_birth, source \
                         FROM subject WHERE deleted != 1"
-        statement_subj = sqlalchemy.sql.text(subject_sql)
+        if subject_id is not None:
+            subject_sql = subject_sql + " AND id = :sub_id "
+            statement_subj = sqlalchemy.sql.text(subject_sql).bindparams(sub_id=subject_id)
+        else:
+            statement_subj = sqlalchemy.sql.text(subject_sql)
     else:
         subject_sql = " SELECT id, date_born::text, date_deceased::text, description, first_name, last_name, full_name as name, \
                         type as object_type, occupation, place_of_birth, source \
                         FROM subject WHERE deleted != 1 AND project_id = :project_id"
         project_id = get_project_id_from_name(project)
-        statement_subj = sqlalchemy.sql.text(subject_sql).bindparams(project_id=project_id)
+        if subject_id is not None:
+            subject_sql = subject_sql + " AND id = :sub_id "
+            statement_subj = sqlalchemy.sql.text(subject_sql).bindparams(sub_id=subject_id, project_id=project_id)
+        else:
+            statement_subj = sqlalchemy.sql.text(subject_sql).bindparams(project_id=project_id)
 
     connection = db_engine.connect()
     subjects = []
