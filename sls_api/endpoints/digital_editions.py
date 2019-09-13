@@ -933,17 +933,28 @@ def get_subject_occurrences(project=None):
     while subject is not None:
         subject = dict(subject)
         occurrence_sql = "SELECT \
+                            original_id as song_original_id, ps.name as song_name, ps.type as song_type, number as song_number, \
+                            variant as song_variant, landscape as song_landscape, place as song_place, recorder_firstname as song_recorder_firstname, \
+                            recorder_lastname as song_recorder_lastname, recorder_born_name as song_recorder_born_name, performer_firstname as song_performer_firstname,\
+                            performer_lastname as song_performer_lastname, performer_born_name as song_performer_born_name, note as song_note, comment as song_comment, \
+                            lyrics as song_lyrics, original_collection_location as song_original_collection_location, \
+                            original_collection_signature as song_original_collection_signature,\
+                            ps.original_publication_date as song_original_publication_date, page_number as song_page_number, subtype as song_subtype,\
                             pub_c.name as collection_name, pub_c.id as collection_id, ev.description, ev.id, ev_o.publication_comment_id, \
                             publication_facsimile_id, publication_facsimile_page, \
                             publication_manuscript_id, publication_version_id, ev.type, \
-                            pub.id as publication_id, pub.name as publication_name, pub.original_filename as original_filename \
+                            pub.id as publication_id, pub.name as publication_name, pub.original_filename as original_filename,\
+                            ev_o.publication_song_id as publication_song_id \
                             FROM event_connection ev_c \
                             JOIN event ev ON ev.id = ev_c.event_id \
                             JOIN event_occurrence ev_o ON ev_o.event_id = ev_c.event_id \
                             JOIN publication pub ON pub.id = ev_o.publication_id \
                             JOIN publication_collection pub_c ON pub_c.id = pub.publication_collection_id \
                             JOIN subject sub ON ev_c.subject_id = sub.id \
-                            WHERE ev.deleted != 1 AND ev_o.deleted != 1 AND ev_c.deleted != 1 AND sub.id = :sub_id ORDER BY pub_c.name ASC"
+                            LEFT OUTER JOIN publication_song ps ON ps.publication_id = pub.id \
+                            WHERE ev.deleted != 1 AND ev_o.deleted != 1 AND ev_c.deleted != 1 AND sub.id = :sub_id \
+                            AND (ev_o.publication_song_id = ps.id OR ev_o.publication_song_id is null)\
+                            ORDER BY pub_c.name ASC"
         statement_occ = sqlalchemy.sql.text(occurrence_sql).bindparams(sub_id=subject['id'])
         subject['occurrences'] = []
         connection_2 = db_engine.connect()
