@@ -732,13 +732,21 @@ def get_occurrences(object_type, ident):
 
         events_sql = "SELECT id, type, description FROM event WHERE id IN " \
                      "(SELECT event_id FROM event_connection WHERE {}_id=:o_id)".format(object_type)
-        occurrence_sql = "SELECT publication.publication_collection_id AS collection_id, event_occurrence.id, type, description, \
-        event_occurrence.publication_id, event_occurrence.publication_version_id, event_occurrence.publication_facsimile_id, \
+        occurrence_sql = "SELECT original_id as song_original_id, ps.name as song_name, ps.type as song_type, number as song_number, \
+                        variant as song_variant, landscape as song_landscape, place as song_place, recorder_firstname as song_recorder_firstname, \
+                        recorder_lastname as song_recorder_lastname, recorder_born_name as song_recorder_born_name, performer_firstname as song_performer_firstname,\
+                        performer_lastname as song_performer_lastname, performer_born_name as song_performer_born_name, note as song_note, comment as song_comment, \
+                        lyrics as song_lyrics, original_collection_location as song_original_collection_location, original_collection_signature as song_original_collection_signature,\
+                        ps.original_publication_date as song_original_publication_date, page_number as song_page_number, subtype as song_subtype, event_occurrence.id,\
+                        publication.publication_collection_id AS collection_id, event_occurrence.id, event_occurrence.type, description, \
+                        event_occurrence.publication_id, event_occurrence.publication_version_id, event_occurrence.publication_facsimile_id, \
         event_occurrence.publication_comment_id, event_occurrence.publication_manuscript_id, \
         pc.name as publication_collection_name, publication.name as publication_name \
         FROM event_occurrence, publication \
         JOIN publication_collection pc ON pc.id = publication.publication_collection_id \
-        WHERE event_occurrence.event_id=:e_id AND event_occurrence.publication_id=publication.id"
+        LEFT OUTER JOIN publication_song ps ON ps.publication_id = publication.id \
+        WHERE event_occurrence.event_id=:e_id AND event_occurrence.publication_id=publication.id \
+        AND (event_occurrence.publication_song_id = ps.id OR event_occurrence.publication_song_id is null)"
 
         events_stmnt = sqlalchemy.sql.text(events_sql).bindparams(o_id=object_id)
         results = []
