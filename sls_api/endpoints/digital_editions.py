@@ -956,11 +956,11 @@ def get_subject_occurrences(project=None, subject_id=None):
                                 WHERE ev.deleted != 1 AND ev_o.deleted != 1 AND ev_c.deleted != 1 AND sub.id = :sub_id ORDER BY pub_c.name ASC "
         else:
             occurrence_sql = "SELECT \
-                            original_id as song_original_id, ps.name as song_name, ps.type as song_type, number as song_number, \
+                            ps.name as song_name, ps.type as song_type, number as song_number, \
                             variant as song_variant, landscape as song_landscape, place as song_place, recorder_firstname as song_recorder_firstname, \
                             recorder_lastname as song_recorder_lastname, recorder_born_name as song_recorder_born_name, performer_firstname as song_performer_firstname,\
-                            performer_lastname as song_performer_lastname, performer_born_name as song_performer_born_name, note as song_note, comment as song_comment, \
-                            lyrics as song_lyrics, original_collection_location as song_original_collection_location, \
+                            performer_lastname as song_performer_lastname, performer_born_name as song_performer_born_name, \
+                            original_collection_location as song_original_collection_location, \
                             original_collection_signature as song_original_collection_signature,\
                             ps.original_publication_date as song_original_publication_date, page_number as song_page_number, subtype as song_subtype,\
                             pub_c.name as collection_name, pub_c.id as collection_id, ev.description, ev.id, ev_o.publication_comment_id, \
