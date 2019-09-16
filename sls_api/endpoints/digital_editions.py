@@ -961,7 +961,7 @@ def get_subject_occurrences(project=None, subject_id=None):
         result_2 = connection_2.execute(statement_occ)
         occurrence = result_2.fetchone()
         while occurrence is not None:
-            occurrence = dict(occurrence)
+            occurrenceData = dict(occurrence)
             if subject_id is not None:
                 song_sql = "SELECT \
                 ps.id as song_id, ps.name as song_name, ps.type as song_type, number as song_number, \
@@ -978,8 +978,8 @@ def get_subject_occurrences(project=None, subject_id=None):
                 song_data = song_result.fetchone()
                 if song_data is not None:
                     song_data = dict(song_data)
-                    occurrence.update(song_data)
-            subject['occurrences'].append(occurrence)
+                    occurrenceData.update(song_data)
+            subject['occurrences'].append(occurrenceData)
             occurrence = result_2.fetchone()
         
         if len(subject['occurrences']) > 0:
