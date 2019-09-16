@@ -975,8 +975,9 @@ def get_subject_occurrences(project=None, subject_id=None):
                 ORDER BY ps.type ASC"
                 song_sql = sqlalchemy.sql.text(song_sql).bindparams(song_id=occurrence['publication_song_id'])
                 song_result = connection_2.execute(song_sql)
-                song_data = dict(song_result.fetchone())
-                if len(song_data) > 0:
+                song_data = song_result.fetchone()
+                if song_data is not None:
+                    song_data = dict(song_data)
                     occurrence.update(song_data)
             subject['occurrences'].append(occurrence)
             occurrence = result_2.fetchone()
