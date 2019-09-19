@@ -1121,7 +1121,7 @@ def get_person_occurrences_by_collection(project, object_type, collection_id):
 
 
 @digital_edition.route("/<project>/song/<id>")
-def get_publication_song(project, song_id):
+def get_publication_song(project, id):
     logger.info("Getting songs /{}/song/{}".format(project, song_id))
     connection = db_engine.connect()
     song_sql = "SELECT \
