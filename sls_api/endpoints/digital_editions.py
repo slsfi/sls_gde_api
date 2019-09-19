@@ -1153,6 +1153,81 @@ def get_publication_song(project, id):
     else:
         return jsonify(dict(return_data)), 200, {"Access-Control-Allow-Origin": "*"}
 
+
+@digital_edition.route("/<project>/subject/<id>")
+def get_subject(project, id):
+    logger.info("Getting subject /{}/subject/{}".format(project, id))
+    connection = db_engine.connect()
+    subject_sql = "SELECT * FROM subject "
+
+    # Check if song is a number
+    try:
+        subject_id = int(id)
+        subject_sql = subject_sql + " WHERE id = :id AND deleted = 0 "
+    except ValueError:
+        subject_id = id
+        subject_sql = subject_sql + " WHERE legacy_id = :id AND deleted = 0 "
+
+    statement = sqlalchemy.sql.text(subject_sql).bindparams(id=subject_id)
+    return_data = []
+    return_data = connection.execute(statement).fetchone()
+    connection.close()
+
+    if return_data is None:
+        return jsonify({"msg": "Desired subject not found in database."}), 404
+    else:
+        return jsonify(dict(return_data)), 200, {"Access-Control-Allow-Origin": "*"}
+
+
+@digital_edition.route("/<project>/tag/<id>")
+def get_tag(project, id):
+    logger.info("Getting tag /{}/tag/{}".format(project, id))
+    connection = db_engine.connect()
+    tag_sql = "SELECT * FROM tag "
+
+    # Check if song is a number
+    try:
+        tag_id = int(id)
+        tag_sql = tag_sql + " WHERE id = :id AND deleted = 0 "
+    except ValueError:
+        tag_id = id
+        tag_sql = tag_sql + " WHERE legacy_id = :id AND deleted = 0 "
+
+    statement = sqlalchemy.sql.text(tag_sql).bindparams(id=tag_id)
+    return_data = []
+    return_data = connection.execute(statement).fetchone()
+    connection.close()
+
+    if return_data is None:
+        return jsonify({"msg": "Desired tag not found in database."}), 404
+    else:
+        return jsonify(dict(return_data)), 200, {"Access-Control-Allow-Origin": "*"}
+
+
+@digital_edition.route("/<project>/location/<id>")
+def get_location(project, id):
+    logger.info("Getting location /{}/location/{}".format(project, id))
+    connection = db_engine.connect()
+    location_sql = "SELECT * FROM location "
+
+    # Check if song is a number
+    try:
+        location_id = int(id)
+        location_sql = location_sql + " WHERE id = :id AND deleted = 0 "
+    except ValueError:
+        location_id = id
+        location_sql = location_sql + " WHERE legacy_id = :id AND deleted = 0 "
+
+    statement = sqlalchemy.sql.text(location_sql).bindparams(id=location_id)
+    return_data = []
+    return_data = connection.execute(statement).fetchone()
+    connection.close()
+
+    if return_data is None:
+        return jsonify({"msg": "Desired location not found in database."}), 404
+    else:
+        return jsonify(dict(return_data)), 200, {"Access-Control-Allow-Origin": "*"}
+
 @digital_edition.route("/<project>/facsimiles/collections/<facsimile_collection_ids>")
 def get_facsimile_collections(project, facsimile_collection_ids):
     logger.info("Getting facsimiles /{}/facsimiles/collections/{}".format(project, facsimile_collection_ids))
