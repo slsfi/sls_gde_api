@@ -1138,10 +1138,10 @@ def get_publication_song(project, id):
     # Check if song is a number
     try:
         song_id = int(id)
-        song_sql = song_sql + " WHERE ps.id = : song_id "
+        song_sql = song_sql + " WHERE ps.id = :song_id "
     except ValueError:
         song_id = id
-        song_sql = song_sql + " WHERE ps.original_id = : song_id "
+        song_sql = song_sql + " WHERE ps.original_id = :song_id "
 
     statement = sqlalchemy.sql.text(song_sql).bindparams(song_id=song_id)
     return_data = []
