@@ -981,7 +981,7 @@ def get_subject_occurrences(project=None, subject_id=None):
                     occurrenceData.update(song_data)
             subject['occurrences'].append(occurrenceData)
             occurrence = result_2.fetchone()
-        
+
         if len(subject['occurrences']) > 0:
             subjects.append(subject)
 
@@ -1118,6 +1118,36 @@ def get_person_occurrences_by_collection(project, object_type, collection_id):
     connection.close()
 
     return jsonify(subjects)
+
+
+@digital_edition.route("/<project>/song/<id>")
+def get_publication_song(project, song_id):
+    logger.info("Getting songs /{}/song/{}".format(project, song_id))
+    connection = db_engine.connect()
+    song_sql = "SELECT \
+                ps.id as song_id, ps.original_id as song_original_id, ps.name as song_name, ps.type as song_type, number as song_number, \
+                variant as song_variant, landscape as song_landscape, place as song_place, recorder_firstname as song_recorder_firstname, \
+                recorder_lastname as song_recorder_lastname, recorder_born_name as song_recorder_born_name, performer_firstname as song_performer_firstname,\
+                performer_lastname as song_performer_lastname, performer_born_name as song_performer_born_name, \
+                original_collection_location as song_original_collection_location, \
+                original_collection_signature as song_original_collection_signature,\
+                ps.original_publication_date as song_original_publication_date, page_number as song_page_number, subtype as song_subtype, \
+                ps.note as song_note, ps.comment as song_comment, ps.lyrics as song_lyrics \
+                FROM publication_song ps  "
+
+    # Check if song is a number
+    try:
+        song_id = int(id)
+        song_sql = song_sql + " WHERE ps.id = : song_id "
+    except ValueError:
+        song_id = id
+        song_sql = song_sql + " WHERE ps.original_id = : song_id "
+
+    statement = sqlalchemy.sql.text(song_sql).bindparams(song_id=song_id)
+    return_data = []
+    return_data = dict(connection.execute(statement).fetchone())
+    connection.close()
+    return jsonify(return_data), 200, {"Access-Control-Allow-Origin": "*"}
 
 
 @digital_edition.route("/<project>/facsimiles/collections/<facsimile_collection_ids>")
