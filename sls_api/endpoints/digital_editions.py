@@ -964,7 +964,7 @@ def get_subject_occurrences(project=None, subject_id=None):
             occurrenceData = dict(occurrence)
             if subject_id is not None:
                 song_sql = "SELECT \
-                ps.id as song_id, ps.name as song_name, ps.type as song_type, number as song_number, \
+                ps.volume as song_volume, ps.id as song_id, ps.name as song_name, ps.type as song_type, number as song_number, \
                 variant as song_variant, landscape as song_landscape, place as song_place, recorder_firstname as song_recorder_firstname, \
                 recorder_lastname as song_recorder_lastname, recorder_born_name as song_recorder_born_name, performer_firstname as song_performer_firstname,\
                 performer_lastname as song_performer_lastname, performer_born_name as song_performer_born_name, \
@@ -1125,7 +1125,7 @@ def get_publication_song(project, id):
     logger.info("Getting songs /{}/song/{}".format(project, id))
     connection = db_engine.connect()
     song_sql = "SELECT \
-                ps.id as song_id, ps.original_id as song_original_id, ps.name as song_name, ps.type as song_type, number as song_number, \
+                ps.volume as song_volume, ps.id as song_id, ps.original_id as song_original_id, ps.name as song_name, ps.type as song_type, number as song_number, \
                 variant as song_variant, landscape as song_landscape, place as song_place, recorder_firstname as song_recorder_firstname, \
                 recorder_lastname as song_recorder_lastname, recorder_born_name as song_recorder_born_name, performer_firstname as song_performer_firstname,\
                 performer_lastname as song_performer_lastname, performer_born_name as song_performer_born_name, \
