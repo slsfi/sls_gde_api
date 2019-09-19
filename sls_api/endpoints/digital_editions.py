@@ -1145,10 +1145,13 @@ def get_publication_song(project, id):
 
     statement = sqlalchemy.sql.text(song_sql).bindparams(song_id=song_id)
     return_data = []
-    return_data = dict(connection.execute(statement).fetchone())
+    return_data = connection.execute(statement).fetchone()
     connection.close()
-    return jsonify(return_data), 200, {"Access-Control-Allow-Origin": "*"}
 
+    if return_data is None:
+        return jsonify({"msg": "Desired song not found in database."}), 404
+    else:
+        return jsonify(dict(return_data)), 200, {"Access-Control-Allow-Origin": "*"}
 
 @digital_edition.route("/<project>/facsimiles/collections/<facsimile_collection_ids>")
 def get_facsimile_collections(project, facsimile_collection_ids):
