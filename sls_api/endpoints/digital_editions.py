@@ -1898,6 +1898,12 @@ def get_search_suggestions(project, search_string, limit):
     if len(search_string) > 0:
         res = es.search(index="tag,location,subject,song," + str(project), body={
             "size": limit,
+            "indices_boost" : [
+                { "song" : 2.0 },
+                { "subject" : 2.0 },
+                { "location" : 2.0 },
+                { "tag" : 2.0 }
+            ],
             "query" : {
                 "bool": {
                 "should": [
@@ -1969,6 +1975,12 @@ def get_search_all(project, search_string, limit):
     if len(search_string) > 0:
         res = es.search(index="tag,location,subject,song," + str(project), body={
             "size": limit,
+            "indices_boost" : [
+                { "song" : 2.0 },
+                { "subject" : 2.0 },
+                { "location" : 2.0 },
+                { "tag" : 2.0 }
+            ],
             "query" : {
                 "bool": {
                 "should": [
