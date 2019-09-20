@@ -1948,6 +1948,7 @@ def get_search_suggestions(project, search_string, limit):
                 "fields": {
                     "name": {},
                     "full_name": {},
+                    "song_name": {},
                     "message": {}
                 },
                 "boundary_scanner": "word",
@@ -2018,6 +2019,7 @@ def get_search_all(project, search_string, limit):
                 "fields": {
                     "name": {},
                     "full_name": {},
+                    "song_name": {},
                     "message": {}
                 },
                 "boundary_scanner": "sentence",
