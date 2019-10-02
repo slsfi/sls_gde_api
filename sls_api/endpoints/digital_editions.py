@@ -1436,6 +1436,7 @@ def get_songs_filtered(project):
                         l.city as city, \
                         l.region as region, \
                         pf.publication_facsimile_collection_id, \
+                        eo.publication_song_id, \
                         pf.page_nr \
                         FROM event e \
                         join event_occurrence eo \
