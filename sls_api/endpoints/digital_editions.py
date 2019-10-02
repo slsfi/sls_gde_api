@@ -991,18 +991,27 @@ def get_subject_occurrences(project=None, subject_id=None):
 
     return jsonify(subjects)
 
-
+@digital_edition.route("/<project>/location/occurrences/<location_id>/")
 @digital_edition.route("/<project>/location/occurrences/")
-def get_location_occurrences(project=None):
+def get_location_occurrences(project=None, location_id=None):
     if project == 'all':
         location_sql = " SELECT id, city, country, description, latitude, longitude, name, region, source \
                         FROM location WHERE deleted != 1"
-        statement_loc = sqlalchemy.sql.text(location_sql)
+        if location_id is not None:
+            location_sql = location_sql + " AND id = :location_id "
+            statement_loc = sqlalchemy.sql.text(location_sql).bindparams(location_id=location_id)
+        else:
+            statement_loc = sqlalchemy.sql.text(location_sql)
     else:
         location_sql = " SELECT id, city, country, description, latitude, longitude, name, region, source \
                         FROM location WHERE deleted != 1 AND project_id = :project_id"
         project_id = get_project_id_from_name(project)
-        statement_loc = sqlalchemy.sql.text(location_sql).bindparams(project_id=project_id)
+        if location_id is not None:
+            location_sql = location_sql + " AND id = :location_id "
+            statement_loc = sqlalchemy.sql.text(location_sql).bindparams(location_id=location_id, project_id=project_id)
+        else:
+            statement_loc = sqlalchemy.sql.text(location_sql).bindparams(project_id=project_id)
+
 
     connection = db_engine.connect()
     locations = []
@@ -1014,7 +1023,8 @@ def get_location_occurrences(project=None):
                             pub_c.name as collection_name, pub_c.id as collection_id, ev.description, ev.id, ev_o.publication_comment_id, \
                             publication_facsimile_id, publication_facsimile_page, \
                             publication_manuscript_id, publication_version_id, ev.type, \
-                            pub.id as publication_id, pub.name as publication_name, pub.original_filename as original_filename \
+                            pub.id as publication_id, pub.name as publication_name, pub.original_filename as original_filename, \
+                            ev_o.publication_song_id as publication_song_id \
                             FROM event_connection ev_c \
                             JOIN event ev ON ev.id = ev_c.event_id \
                             JOIN event_occurrence ev_o ON ev_o.event_id = ev_c.event_id \
@@ -1028,28 +1038,56 @@ def get_location_occurrences(project=None):
         result_2 = connection_2.execute(statement_occ)
         occurrence = result_2.fetchone()
         while occurrence is not None:
-            location['occurrences'].append(dict(occurrence))
+            occurrenceData = dict(occurrence)
+            if location_id is not None:
+                song_sql = "SELECT \
+                ps.volume as song_volume, ps.id as song_id, ps.name as song_name, ps.type as song_type, number as song_number, \
+                variant as song_variant, landscape as song_landscape, place as song_place, recorder_firstname as song_recorder_firstname, \
+                recorder_lastname as song_recorder_lastname, recorder_born_name as song_recorder_born_name, performer_firstname as song_performer_firstname,\
+                performer_lastname as song_performer_lastname, performer_born_name as song_performer_born_name, \
+                original_collection_location as song_original_collection_location, \
+                original_collection_signature as song_original_collection_signature,\
+                ps.original_publication_date as song_original_publication_date, page_number as song_page_number, subtype as song_subtype\
+                FROM publication_song ps WHERE ps.id = :song_id\
+                ORDER BY ps.type ASC"
+                song_sql = sqlalchemy.sql.text(song_sql).bindparams(song_id=occurrence['publication_song_id'])
+                song_result = connection_2.execute(song_sql)
+                song_data = song_result.fetchone()
+                if song_data is not None:
+                    song_data = dict(song_data)
+                    occurrenceData.update(song_data)
+            location['occurrences'].append(occurrenceData)
             occurrence = result_2.fetchone()
+
         if len(location['occurrences']) > 0:
             locations.append(location)
+
         connection_2.close()
         location = result.fetchone()
     connection.close()
 
     return jsonify(locations)
 
-
+@digital_edition.route("/<project>/tag/occurrences/<tag_id>/")
 @digital_edition.route("/<project>/tag/occurrences/")
-def get_tag_occurrences(project=None):
+def get_tag_occurrences(project=None, tag_id=None):
     if project == 'all':
         tag_sql = " SELECT id, type, name, description, source \
                         FROM tag WHERE deleted != 1"
-        statement_tag = sqlalchemy.sql.text(tag_sql)
+        if tag_id is not None:
+            tag_sql = tag_sql + " AND id = :tag_id "
+            statement_tag = sqlalchemy.sql.text(tag_sql).bindparams(tag_id=tag_id)
+        else:
+            statement_tag = sqlalchemy.sql.text(tag_sql)
     else:
         tag_sql = " SELECT id, type, name, description, source \
                         FROM tag WHERE deleted != 1 AND project_id = :project_id"
         project_id = get_project_id_from_name(project)
-        statement_tag = sqlalchemy.sql.text(tag_sql).bindparams(project_id=project_id)
+        if tag_id is not None:
+            tag_sql = tag_sql + " AND id = :tag_id "
+            statement_tag = sqlalchemy.sql.text(tag_sql).bindparams(tag_id=tag_id, project_id=project_id)
+        else:
+            statement_tag = sqlalchemy.sql.text(tag_sql).bindparams(project_id=project_id)
 
     connection = db_engine.connect()
     tags = []
@@ -1061,7 +1099,8 @@ def get_tag_occurrences(project=None):
                             pub_c.name as collection_name, pub_c.id as collection_id, ev.description, ev.id, ev_o.publication_comment_id, \
                             publication_facsimile_id, publication_facsimile_page, \
                             publication_manuscript_id, publication_version_id, ev.type, \
-                            pub.id as publication_id, pub.name as publication_name, pub.original_filename as original_filename \
+                            pub.id as publication_id, pub.name as publication_name, pub.original_filename as original_filename, \
+                            ev_o.publication_song_id as publication_song_id \
                             FROM event_connection ev_c \
                             JOIN event ev ON ev.id = ev_c.event_id \
                             JOIN event_occurrence ev_o ON ev_o.event_id = ev_c.event_id \
@@ -1075,10 +1114,30 @@ def get_tag_occurrences(project=None):
         result_2 = connection_2.execute(statement_occ)
         occurrence = result_2.fetchone()
         while occurrence is not None:
-            tag['occurrences'].append(dict(occurrence))
+            occurrenceData = dict(occurrence)
+            if tag_id is not None:
+                song_sql = "SELECT \
+                ps.volume as song_volume, ps.id as song_id, ps.name as song_name, ps.type as song_type, number as song_number, \
+                variant as song_variant, landscape as song_landscape, place as song_place, recorder_firstname as song_recorder_firstname, \
+                recorder_lastname as song_recorder_lastname, recorder_born_name as song_recorder_born_name, performer_firstname as song_performer_firstname,\
+                performer_lastname as song_performer_lastname, performer_born_name as song_performer_born_name, \
+                original_collection_location as song_original_collection_location, \
+                original_collection_signature as song_original_collection_signature,\
+                ps.original_publication_date as song_original_publication_date, page_number as song_page_number, subtype as song_subtype\
+                FROM publication_song ps WHERE ps.id = :song_id\
+                ORDER BY ps.type ASC"
+                song_sql = sqlalchemy.sql.text(song_sql).bindparams(song_id=occurrence['publication_song_id'])
+                song_result = connection_2.execute(song_sql)
+                song_data = song_result.fetchone()
+                if song_data is not None:
+                    song_data = dict(song_data)
+                    occurrenceData.update(song_data)
+            tag['occurrences'].append(occurrenceData)
             occurrence = result_2.fetchone()
+
         if len(tag['occurrences']) > 0:
             tags.append(tag)
+            
         connection_2.close()
         tag = result.fetchone()
 
