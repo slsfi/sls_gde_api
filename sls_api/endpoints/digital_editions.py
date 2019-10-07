@@ -119,6 +119,7 @@ def get_md_contents_as_json(project, fileid):
             abort(404)
 
 
+@digital_edition.route("/<project>/static-pages-toc/<language>/sort")
 @digital_edition.route("/<project>/static-pages-toc/<language>")
 def get_static_pages_as_json(project, language):
     config = get_project_config(project)
@@ -2137,7 +2138,7 @@ def path_hierarchy(project, path, language):
                  'fullpath': path,
                  'route': slugify_route(split_after(path, "/" + config["file_root"] + "/md/")),
                  'type': 'folder',
-                 'children': [path_hierarchy(project, p, language) for p in glob.glob(os.path.join(path, '*'))]}
+                 'children': [path_hierarchy(project, p, language) for p in sorted(glob.glob(os.path.join(path, '*')))]}
 
     if not hierarchy['children']:
         del hierarchy['children']
