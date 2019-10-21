@@ -524,11 +524,11 @@ def get_comments(project, collection_id, publication_id, note_id=None):
             select = "SELECT legacy_id FROM publication_comment WHERE id IN (SELECT publication_comment_id FROM publication WHERE id = :p_id)"
             statement = sqlalchemy.sql.text(select).bindparams(p_id=publication_id)
             result = connection.execute(statement).fetchone()
-            if not result[0]:
-                filename = "{}_{}_com.xml".format(collection_id, publication_id)
+            if result is not None:
+                filename = "{}_com.xml".format(result["legacy_id"])
                 connection.close()
             else:
-                filename = "{}_com.xml".format(result["legacy_id"])
+                filename = "{}_{}_com.xml".format(collection_id, publication_id)
                 connection.close()
             logger.debug("Filename (com) for {} is {}".format(publication_id, filename))
             params = {
