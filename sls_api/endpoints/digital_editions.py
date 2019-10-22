@@ -1607,9 +1607,9 @@ def get_gallery_data(project, id, lang=None):
                                     FROM media m \
                                     JOIN media_collection mc ON m.media_collection_id = mc.id\
                                     JOIN translation t_title ON t_title.id = m.title_translation_id\
-                                    JOIN translation_text tt_title ON tt_title.translation = t_title.id AND tt_title.language=:l\
+                                    JOIN translation_text tt_title ON tt_title.translation_id = t_title.id AND tt_title.language=:l\
                                     JOIN translation t_desc ON t_desc.id = m.description_translation_id\
-                                    JOIN translation_text tt_desc ON tt_desc.translation = t_desc.id AND tt_desc.language=:l\
+                                    JOIN translation_text tt_desc ON tt_desc.translation_id = t_desc.id AND tt_desc.language=:l\
                                     WHERE mc.project_id = :p_id \
                                     AND mc.id= :image_id\
                                     AND m.type='image_ref' ").bindparams(image_id=id, p_id=project_id, l=lang)
