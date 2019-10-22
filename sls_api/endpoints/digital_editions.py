@@ -1596,6 +1596,51 @@ def get_media_data_image(project, id):
     except Exception:
         return Response("Couldn't get media image.", status=404, content_type="text/json")
 
+@digital_edition.route("/<project>/gallery/data/<id>/<lang>")
+def get_gallery_data(project, id, lang=None):
+    logger.info("Getting gallery image data")
+    try:
+        connection = db_engine.connect()
+        project_id = get_project_id_from_name(project)
+        sql = sqlalchemy.sql.text("SELECT m.image_filename_front AS front, m.image_filename_back AS back,\
+                                    mc.image_path AS folder, tt_title.text AS title, tt_desc.text AS description \
+                                    FROM media m \
+                                    JOIN media_collection mc ON m.media_collection_id = mc.id\
+                                    JOIN translation t_title ON t_title.id = m.title_translation_id\
+                                    JOIN translation_text tt_title ON tt_title.translation = t_title.id AND tt_title.language=:l\
+                                    JOIN translation t_desc ON t_desc.id = m.description_translation_id\
+                                    JOIN translation_text tt_desc ON tt_desc.translation = t_desc.id AND tt_desc.language=:l\
+                                    WHERE mc.project_id = :p_id \
+                                    AND mc.id= :image_id\
+                                    AND m.type='image_ref' ").bindparams(image_id=id, p_id=project_id, l=lang)
+        results = []
+        for row in connection.execute(sql).fetchall():
+            results.append(dict(row))
+        connection.close()
+        return jsonify(results), 200, {"Access-Control-Allow-Origin": "*"}
+    except Exception:
+        return Response("Couldn't gallery image data.", status=404, content_type="text/json")
+
+@digital_edition.route("/<project>/gallery/data/<lang>")
+def get_galleries(project, lang=None):
+    logger.info("Getting galleries")
+    try:
+        connection = db_engine.connect()
+        project_id = get_project_id_from_name(project)
+        sql = sqlalchemy.sql.text("SELECT mc.*, count(m.id) AS media_count FROM media m\
+                                    JOIN media_collection mc ON m.media_collection_id = mc.id\
+                                    WHERE m.deleted != 1 AND mc.deleted != 1 AND mc.project_id = :p_id\
+                                    GROUP BY mc.id ").bindparams(p_id=project_id)
+        results = []
+        for row in connection.execute(sql).fetchall():
+            results.append(dict(row))
+        connection.close()
+        return jsonify(results), 200, {"Access-Control-Allow-Origin": "*"}
+    except Exception:
+        return Response("Couldn't get galleries.", status=404, content_type="text/json")
+
+# TODO: get subjects, locations and tags for gallery 
+
 @digital_edition.route("/<project>/media/pdf/<id>")
 def get_media_data_pdf(project, id):
     logger.info("Getting media image...")
