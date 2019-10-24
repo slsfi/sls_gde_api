@@ -384,8 +384,7 @@ def check_publication_mtimes_and_publish_files(project, publication_ids):
                         main_variant_doc, main_variant_target, variant_docs, variant_paths)
 
             # For each publication_manuscript belonging to this project, check the modification timestamp of its master file and compare it to the generated web XML file
-            logger.debug("Manuscript query resulting rows: {}".format(
-                manuscript_info[0].keys()))
+            #logger.debug("Manuscript query resulting rows: {}".format(manuscript_info[0].keys()))
             for row in manuscript_info:
                 collection_id = row["c_id"]
                 publication_id = row["p_id"]
