@@ -521,7 +521,7 @@ def get_comments(project, collection_id, publication_id, note_id=None):
         if can_show:
             logger.info("Getting XML for {} and transforming...".format(request.full_path))
             connection = db_engine.connect()
-            select = "SELECT legacy_id FROM publication_comment WHERE id IN (SELECT publication_comment_id FROM publication WHERE id = :p_id)"
+            select = "SELECT legacy_id FROM publication_comment WHERE id IN (SELECT publication_comment_id FROM publication WHERE id = :p_id) AND legacy_id IS NOT NULL"
             statement = sqlalchemy.sql.text(select).bindparams(p_id=publication_id)
             result = connection.execute(statement).fetchone()
             if result is not None:
