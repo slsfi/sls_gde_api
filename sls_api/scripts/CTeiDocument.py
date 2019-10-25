@@ -737,7 +737,7 @@ class CTeiDocument:
         if len(sHtml) > 0 and transform is not None:
             try:
                 parser = ET.XMLParser(recover=True)
-                soup = BeautifulSoup(sHtml, "lxml")
+                soup = BeautifulSoup(sHtml, "html.parser")
                 xml_doc_in = ET.XML(str(soup), parser)
                 xml_doc_out = transform(xml_doc_in)
                 result = ET.tostring(xml_doc_out, encoding='unicode')
