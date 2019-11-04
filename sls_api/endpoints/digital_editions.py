@@ -2009,6 +2009,9 @@ def get_search_suggestions(project, search_string, limit):
                 { "location" : 2.0 },
                 { "tag" : 2.0 }
             ],
+            "_source": {
+                "includes": [""]
+            },
             "query" : {
                 "bool": {
                 "should": [
@@ -2060,7 +2063,8 @@ def get_search_suggestions(project, search_string, limit):
                     "name": {},
                     "full_name": {},
                     "song_name": {},
-                    "message": {}
+                    "message": {},
+                    "textData": {}
                 },
                 "boundary_scanner": "word",
                 "number_of_fragments": 1
@@ -2137,7 +2141,8 @@ def get_search_all(project, search_string, limit):
                     "name": {},
                     "full_name": {},
                     "song_name": {},
-                    "message": {}
+                    "message": {},
+                    "textData": {}
                 },
                 "boundary_scanner": "sentence",
                 "number_of_fragments": 1,
