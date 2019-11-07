@@ -1643,12 +1643,13 @@ def get_gallery_image(project, collection_id, file_name):
     try:
         project_id = get_project_id_from_name(project)
         connection = db_engine.connect()
-        sql = sqlalchemy.sql.text("SELECT image_path from media_collection WHERE project_id = :p_id AND id = :id ").bindparams(p_id=project_id, id=collection_id)
+        sql = sqlalchemy.sql.text("SELECT image_path as image_path from media_collection WHERE project_id = :p_id AND id = :id ").bindparams(p_id=project_id, id=collection_id)
         result = connection.execute(sql).fetchone()
         result = dict(result)
         connection.close()
-
-        file_path = safe_join(config["file_root"], "media", result['image_path'], file_name)
+        logger.info(str(result['image_path']))
+        file_path = safe_join(config["file_root"], "media", result['image_path'],"{}".format(file_name))
+        
         try:
             output = io.BytesIO()
             with open(file_path, mode="rb") as img_file:
