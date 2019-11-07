@@ -1602,12 +1602,10 @@ def get_gallery_data(project, id, lang=None):
     try:
         connection = db_engine.connect()
         project_id = get_project_id_from_name(project)
-        sql = sqlalchemy.sql.text("SELECT m.image_filename_front AS front, m.image_filename_back AS back,\
-                                    mc.image_path AS folder, tt_title.text AS title, tt_desc.text AS description \
+        sql = sqlalchemy.sql.text("SELECT mc.id as collection_id, m.image_filename_front AS front, m.image_filename_back AS back,\
+                                    mc.image_path AS folder, 'title' AS title, tt_desc.text AS description \
                                     FROM media m \
                                     JOIN media_collection mc ON m.media_collection_id = mc.id\
-                                    JOIN translation t_title ON t_title.id = m.title_translation_id\
-                                    JOIN translation_text tt_title ON tt_title.translation_id = t_title.id AND tt_title.language=:l\
                                     JOIN translation t_desc ON t_desc.id = m.description_translation_id\
                                     JOIN translation_text tt_desc ON tt_desc.translation_id = t_desc.id AND tt_desc.language=:l\
                                     WHERE mc.project_id = :p_id \
@@ -1638,6 +1636,30 @@ def get_galleries(project, lang=None):
         return jsonify(results), 200, {"Access-Control-Allow-Origin": "*"}
     except Exception:
         return Response("Couldn't get galleries.", status=404, content_type="text/json")
+
+@digital_edition.route("/<project>/gallery/get/<collection_id>/<file_name>")
+def get_gallery_image(project, collection_id, file_name):
+    logger.info("Getting galleries")
+    try:
+        project_id = get_project_id_from_name(project)
+        connection = db_engine.connect()
+        sql = sqlalchemy.sql.text("SELECT image_path from media_collection WHERE project_id = :p_id AND id = :id ").bindparams(p_id=project_id, id=collection_id)
+        result = connection.execute(sql).fetchone()
+        result = dict(result)
+        connection.close()
+
+        file_path = safe_join(config["file_root"], "media", result['image_path'],"{}".format(file_name))
+        output = io.BytesIO()
+        try:
+            with open(file_path, mode="rb") as img_file:
+                output.write(img_file.read())
+            content = output.getvalue()
+            output.close()
+            return Response(content, status=200, content_type="image/jpeg")
+        except Exception:
+            return Response("File not found: " + file_path, status=404, content_type="text/json")
+    except Exception:
+        return Response("Couldn't get gallery file.", status=404, content_type="text/json")
 
 # TODO: get subjects, locations and tags for gallery 
 
