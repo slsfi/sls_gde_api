@@ -1648,8 +1648,9 @@ def get_gallery_image(project, collection_id, file_name):
         result = dict(result)
         connection.close()
         logger.info(str(result['image_path']))
-        file_path = safe_join(config["file_root"], "media", result['image_path'],"{}".format(file_name))
-        
+        logger.info(str(file_name))
+        file_path = safe_join(config["file_root"], "media", str(result['image_path']),"{}".format(str(file_name)))
+        logger.info(str(file_path))
         try:
             output = io.BytesIO()
             with open(file_path, mode="rb") as img_file:
