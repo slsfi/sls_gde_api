@@ -1678,7 +1678,8 @@ def get_galleries(project, lang=None):
     try:
         connection = db_engine.connect()
         project_id = get_project_id_from_name(project)
-        sql = sqlalchemy.sql.text("SELECT mc.*, count(m.id) AS media_count FROM media m\
+        sql = sqlalchemy.sql.text("SELECT mc.*, count(m.id) AS media_count, (SELECT text FROM translation_text \
+															  WHERE id = mc.title_translation_id) AS title FROM media m\
                                     JOIN media_collection mc ON m.media_collection_id = mc.id\
                                     WHERE m.deleted != 1 AND mc.deleted != 1 AND mc.project_id = :p_id\
                                     GROUP BY mc.id ").bindparams(p_id=project_id)
