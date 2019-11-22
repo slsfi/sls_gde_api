@@ -1606,10 +1606,11 @@ def get_media_connections(project, type, media_id):
     try:
         project_id = get_project_id_from_name(project)
         connection = db_engine.connect()
+
         sql = sqlalchemy.sql.text(f"SELECT t.* FROM media_connection mcon \
-            JOIN media_collection mcol ON mcol.id = mcon.media_id \
-            JOIN {type} t ON t.id = mcon.id \
-            JOIN media m ON mcon.{type_column} = t.id \
+            JOIN {type} t ON t.id = mcon.{type_column} \
+            JOIN media m ON m.id = mcon.media_id \
+            JOIN media_collection mcol ON mcol.id = m.media_collection_id \
             WHERE m.id = :id \
             AND t.project_id = :p_id \
             AND mcol.deleted != 1 AND t.deleted != 1 AND m.deleted != 1 AND mcon.deleted != 1")
@@ -1632,9 +1633,9 @@ def get_gallery_connections(project, type, gallery_id):
         project_id = get_project_id_from_name(project)
         connection = db_engine.connect()
         sql = sqlalchemy.sql.text(f"SELECT t.* FROM media_connection mcon \
-            JOIN media_collection mcol ON mcol.id = mcon.media_id \
-            JOIN {type} t ON t.id = mcon.id \
-            JOIN media m ON mcon.{type_column} = t.id \
+            JOIN {type} t ON t.id = mcon.{type_column} \
+            JOIN media m ON m.id = mcon.media_id \
+            JOIN media_collection mcol ON mcol.id = m.media_collection_id \
             WHERE mcol.id = :id \
             AND t.project_id = :p_id \
             AND mcol.deleted != 1 AND t.deleted != 1 AND m.deleted != 1 AND mcon.deleted != 1")
