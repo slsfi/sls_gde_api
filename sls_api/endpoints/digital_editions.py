@@ -1597,7 +1597,7 @@ def get_media_data_image(project, id):
     except Exception:
         return Response("Couldn't get media image.", status=404, content_type="text/json")
 
-@digital_edition.route("/<project>/media/connections/<type>/<gallery_id>")
+@digital_edition.route("/<project>/media/connections/<type>/<media_id>")
 def get_media_connections(project, type, media_id):
     logger.info("Getting media connection data...")
     if type not in ['tag', 'location', 'subject']:
@@ -1614,10 +1614,11 @@ def get_media_connections(project, type, media_id):
             AND t.project_id = :p_id \
             AND mcol.deleted != 1 AND t.deleted != 1 AND m.deleted != 1 AND mcon.deleted != 1")
         statement = sql.bindparams(id=media_id, p_id=project_id)
-        result = connection.execute(statement).fetchone()
-        result = dict(result)
+        results = []
+        for row in connection.execute(sql).fetchall():
+            results.append(dict(row))
         connection.close()
-        return jsonify(result), 200, {"Access-Control-Allow-Origin": "*"}
+        return jsonify(results), 200, {"Access-Control-Allow-Origin": "*"}
     except Exception:
         return Response("Couldn't get media connection data.", status=404, content_type="text/json")
 
@@ -1638,10 +1639,11 @@ def get_gallery_connections(project, type, gallery_id):
             AND t.project_id = :p_id \
             AND mcol.deleted != 1 AND t.deleted != 1 AND m.deleted != 1 AND mcon.deleted != 1")
         statement = sql.bindparams(id=gallery_id, p_id=project_id)
-        result = connection.execute(statement).fetchone()
-        result = dict(result)
+        results = []
+        for row in connection.execute(sql).fetchall():
+            results.append(dict(row))
         connection.close()
-        return jsonify(result), 200, {"Access-Control-Allow-Origin": "*"}
+        return jsonify(results), 200, {"Access-Control-Allow-Origin": "*"}
     except Exception:
         return Response("Couldn't get gallery connection data.", status=404, content_type="text/json")
 
