@@ -1563,6 +1563,7 @@ def get_media_data(project, type, type_id):
     except Exception:
         return Response("Couldn't get media data.", status=404, content_type="text/json")
 
+
 @digital_edition.route("/<project>/media/articles/<type>/<type_id>")
 def get_media_article_data(project, type, type_id):
     logger.info("Getting media data...")
@@ -1595,6 +1596,54 @@ def get_media_data_image(project, id):
         return Response(io.BytesIO(result["image"]), status=200, content_type="image/jpeg")
     except Exception:
         return Response("Couldn't get media image.", status=404, content_type="text/json")
+
+@digital_edition.route("/<project>/media/connections/<type>/<gallery_id>")
+def get_media_connections(project, type, media_id):
+    logger.info("Getting media connection data...")
+    if type not in ['tag', 'location', 'subject']:
+        return Response("Couldn't get media connection data.", status=404, content_type="text/json")
+    type_column = "{}_id".format(type)
+    try:
+        project_id = get_project_id_from_name(project)
+        connection = db_engine.connect()
+        sql = sqlalchemy.sql.text(f"SELECT t.* FROM media_connection mcon \
+            JOIN media_collection mcol ON mcol.id = mcon.media_id \
+            JOIN {type} t ON t.id = mcon.id \
+            JOIN media m ON mcon.{type_column} = t.id \
+            WHERE m.id = :id \
+            AND t.project_id = :p_id \
+            AND mcol.deleted != 1 AND t.deleted != 1 AND m.deleted != 1 AND mcon.deleted != 1")
+        statement = sql.bindparams(id=media_id, p_id=project_id)
+        result = connection.execute(statement).fetchone()
+        result = dict(result)
+        connection.close()
+        return jsonify(result), 200, {"Access-Control-Allow-Origin": "*"}
+    except Exception:
+        return Response("Couldn't get media connection data.", status=404, content_type="text/json")
+
+@digital_edition.route("/<project>/gallery/connections/<type>/<gallery_id>")
+def get_gallery_connections(project, type, gallery_id):
+    logger.info("Getting gallery connection data...")
+    if type not in ['tag', 'location', 'subject']:
+        return Response("Couldn't get gallery connection data.", status=404, content_type="text/json")
+    type_column = "{}_id".format(type)
+    try:
+        project_id = get_project_id_from_name(project)
+        connection = db_engine.connect()
+        sql = sqlalchemy.sql.text(f"SELECT t.* FROM media_connection mcon \
+            JOIN media_collection mcol ON mcol.id = mcon.media_id \
+            JOIN {type} t ON t.id = mcon.id \
+            JOIN media m ON mcon.{type_column} = t.id \
+            WHERE mcol.id = :id \
+            AND t.project_id = :p_id \
+            AND mcol.deleted != 1 AND t.deleted != 1 AND m.deleted != 1 AND mcon.deleted != 1")
+        statement = sql.bindparams(id=gallery_id, p_id=project_id)
+        result = connection.execute(statement).fetchone()
+        result = dict(result)
+        connection.close()
+        return jsonify(result), 200, {"Access-Control-Allow-Origin": "*"}
+    except Exception:
+        return Response("Couldn't get gallery connection data.", status=404, content_type="text/json")
 
 @digital_edition.route("/<project>/gallery/data/<id>/<lang>")
 def get_gallery_data(project, id, lang=None):
