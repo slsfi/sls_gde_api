@@ -1615,7 +1615,7 @@ def get_media_connections(project, type, media_id):
             AND mcol.deleted != 1 AND t.deleted != 1 AND m.deleted != 1 AND mcon.deleted != 1")
         statement = sql.bindparams(id=media_id, p_id=project_id)
         results = []
-        for row in connection.execute(sql).fetchall():
+        for row in connection.execute(statement).fetchall():
             results.append(dict(row))
         connection.close()
         return jsonify(results), 200, {"Access-Control-Allow-Origin": "*"}
@@ -1640,7 +1640,7 @@ def get_gallery_connections(project, type, gallery_id):
             AND mcol.deleted != 1 AND t.deleted != 1 AND m.deleted != 1 AND mcon.deleted != 1")
         statement = sql.bindparams(id=gallery_id, p_id=project_id)
         results = []
-        for row in connection.execute(sql).fetchall():
+        for row in connection.execute(statement).fetchall():
             results.append(dict(row))
         connection.close()
         return jsonify(results), 200, {"Access-Control-Allow-Origin": "*"}
