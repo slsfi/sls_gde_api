@@ -1623,8 +1623,9 @@ def get_media_connections(project, type, media_id):
     except Exception:
         return Response("Couldn't get media connection data.", status=404, content_type="text/json")
 
+@digital_edition.route("/<project>/gallery/connections/<type>")
 @digital_edition.route("/<project>/gallery/connections/<type>/<gallery_id>")
-def get_gallery_connections(project, type, gallery_id):
+def get_gallery_connections(project, type, gallery_id=None):
     logger.info("Getting gallery connection data...")
     if type not in ['tag', 'location', 'subject']:
         return Response("Couldn't get gallery connection data.", status=404, content_type="text/json")
@@ -1632,14 +1633,25 @@ def get_gallery_connections(project, type, gallery_id):
     try:
         project_id = get_project_id_from_name(project)
         connection = db_engine.connect()
-        sql = sqlalchemy.sql.text(f"SELECT t.* FROM media_connection mcon \
-            JOIN {type} t ON t.id = mcon.{type_column} \
-            JOIN media m ON m.id = mcon.media_id \
-            JOIN media_collection mcol ON mcol.id = m.media_collection_id \
-            WHERE mcol.id = :id \
-            AND t.project_id = :p_id \
-            AND mcol.deleted != 1 AND t.deleted != 1 AND m.deleted != 1 AND mcon.deleted != 1")
-        statement = sql.bindparams(id=gallery_id, p_id=project_id)
+        if gallery_id is not None:
+            sql = sqlalchemy.sql.text(f"SELECT t.id as t_id, m.id as media_id, m.image_filename_front as filename,\
+                                            mcol.id as media_collection_id, mcol.image_path, t.* FROM media_connection mcon \
+                                        JOIN {type} t ON t.id = mcon.{type_column} \
+                                        JOIN media m ON m.id = mcon.media_id \
+                                        JOIN media_collection mcol ON mcol.id = m.media_collection_id \
+                                        WHERE mcol.id = :id \
+                                        AND t.project_id = :p_id \
+                                        AND mcol.deleted != 1 AND t.deleted != 1 AND m.deleted != 1 AND mcon.deleted != 1")
+            statement = sql.bindparams(id=gallery_id, p_id=project_id)
+        else:
+            sql = sqlalchemy.sql.text(f"SELECT t.id as t_id, m.id as media_id, m.image_filename_front as filename,\
+                                            mcol.id as media_collection_id, mcol.image_path, t.* FROM media_connection mcon \
+                                        JOIN {type} t ON t.id = mcon.{type_column} \
+                                        JOIN media m ON m.id = mcon.media_id \
+                                        JOIN media_collection mcol ON mcol.id = m.media_collection_id \
+                                        AND t.project_id = :p_id \
+                                        AND mcol.deleted != 1 AND t.deleted != 1 AND m.deleted != 1 AND mcon.deleted != 1")
+            statement = sql.bindparams(p_id=project_id)
         results = []
         for row in connection.execute(statement).fetchall():
             results.append(dict(row))
@@ -1647,6 +1659,34 @@ def get_gallery_connections(project, type, gallery_id):
         return jsonify(results), 200, {"Access-Control-Allow-Origin": "*"}
     except Exception:
         return Response("Couldn't get gallery connection data.", status=404, content_type="text/json")
+
+
+@digital_edition.route("/<project>/gallery/<type>/connections/<type_id>")
+def get_type_gallery_connections(project, type, type_id):
+    logger.info("Getting type gallery connection data...")
+    if type not in ['tag', 'location', 'subject']:
+        return Response("Couldn't get gallery connection data.", status=404, content_type="text/json")
+    type_column = "{}_id".format(type)
+    try:
+        project_id = get_project_id_from_name(project)
+        connection = db_engine.connect()
+        sql = sqlalchemy.sql.text(f"SELECT t.id as t_id, m.id as media_id, m.image_filename_front as filename,\
+                                        mcol.id as media_collection_id, mcol.image_path, t.* FROM media_connection mcon \
+                                    JOIN {type} t ON t.id = mcon.{type_column} \
+                                    JOIN media m ON m.id = mcon.media_id \
+                                    JOIN media_collection mcol ON mcol.id = m.media_collection_id \
+                                    WHERE t.id = :id \
+                                    AND t.project_id = :p_id \
+                                    AND mcol.deleted != 1 AND t.deleted != 1 AND m.deleted != 1 AND mcon.deleted != 1")
+        statement = sql.bindparams(id=type_id, p_id=project_id)
+      
+        results = []
+        for row in connection.execute(statement).fetchall():
+            results.append(dict(row))
+        connection.close()
+        return jsonify(results), 200, {"Access-Control-Allow-Origin": "*"}
+    except Exception:
+        return Response("Couldn't get type gallery connection data.", status=404, content_type="text/json")
 
 @digital_edition.route("/<project>/gallery/data/<id>/<lang>")
 def get_gallery_data(project, id, lang=None):
