@@ -1765,6 +1765,39 @@ def get_gallery_image(project, collection_id, file_name):
     except Exception:
         return Response("Couldn't get gallery file.", status=404, content_type="text/json")
 
+@digital_edition.route("/<project>/gallery/get/<type>/<id>")
+def get_type_gallery_image(project, type, id):
+    logger.info("Getting galleries")
+    if type not in ['tag', 'location', 'subject']:
+        return Response("Couldn't get media connection data.", status=404, content_type="text/json")
+    type_column = "{}_id".format(type)
+    try:
+        project_id = get_project_id_from_name(project)
+        config = get_project_config(project)
+        connection = db_engine.connect()
+        sql = sqlalchemy.sql.text(f"SELECT mcol.image_path, m.image_filename_front FROM media_connection mcon \
+                                    JOIN {type} t ON t.id = mcon.{type_column} \
+                                    JOIN media m ON m.id = mcon.media_id \
+                                    JOIN media_collection mcol ON mcol.id = m.media_collection_id \
+                                    WHERE t.id = :id \
+                                    AND t.project_id = :p_id \
+                                    AND mcol.deleted != 1 AND t.deleted != 1 AND m.deleted != 1 AND mcon.deleted != 1 LIMIT 1").bindparams(p_id=project_id, id=id)
+        result = connection.execute(sql).fetchone()
+        result = dict(result)
+        connection.close()
+        file_path = safe_join(config["file_root"], "media", str(result['image_path']), str(result['image_filename_front']))
+        try:
+            output = io.BytesIO()
+            with open(file_path, mode="rb") as img_file:
+                output.write(img_file.read())
+            content = output.getvalue()
+            output.close()
+            return Response(content, status=200, content_type="image/jpeg")
+        except Exception:
+            return Response("File not found: " + file_path, status=404, content_type="text/json")
+    except Exception:
+        return Response("Couldn't get gallery file.", status=404, content_type="text/json")
+
 # TODO: get subjects, locations and tags for gallery 
 
 @digital_edition.route("/<project>/media/pdf/<id>")
