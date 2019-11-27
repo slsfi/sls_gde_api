@@ -1695,8 +1695,10 @@ def get_gallery_data(project, id, lang=None):
         connection = db_engine.connect()
         project_id = get_project_id_from_name(project)
         sql = sqlalchemy.sql.text("SELECT mc.id as collection_id, m.image_filename_front AS front, m.image_filename_back AS back,\
-                                    mc.image_path AS folder, (SELECT text FROM translation_text \
-															  WHERE id = mc.title_translation_id) AS title, tt_desc.text AS description \
+                                    mc.image_path AS folder, (SELECT text \
+                                    FROM translation_text tt \
+                                    JOIN translation t ON t.id = tt.translation_id \
+                                    WHERE t.id = mc.title_translation_id AND tt.language = :l) AS title, tt_desc.text AS description \
                                     FROM media m \
                                     JOIN media_collection mc ON m.media_collection_id = mc.id\
                                     JOIN translation t_desc ON t_desc.id = m.description_translation_id\
