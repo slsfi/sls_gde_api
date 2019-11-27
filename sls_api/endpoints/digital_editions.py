@@ -1765,9 +1765,9 @@ def get_gallery_image(project, collection_id, file_name):
     except Exception:
         return Response("Couldn't get gallery file.", status=404, content_type="text/json")
 
-@digital_edition.route("/<project>/gallery/get/<type>/<id>")
+@digital_edition.route("/<project>/gallery/file/<type>/<id>")
 def get_type_gallery_image(project, type, id):
-    logger.info("Getting galleries")
+    logger.info("Getting gallery file")
     if type not in ['tag', 'location', 'subject']:
         return Response("Couldn't get media connection data.", status=404, content_type="text/json")
     type_column = "{}_id".format(type)
@@ -1796,7 +1796,7 @@ def get_type_gallery_image(project, type, id):
         except Exception:
             return Response("File not found: " + file_path, status=404, content_type="text/json")
     except Exception:
-        return Response("Couldn't get gallery file.", status=404, content_type="text/json")
+        return Response("Couldn't get type file.", status=404, content_type="text/json")
 
 # TODO: get subjects, locations and tags for gallery 
 
