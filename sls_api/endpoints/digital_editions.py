@@ -1138,7 +1138,7 @@ def get_tag_occurrences(project=None, tag_id=None):
 
         if len(tag['occurrences']) > 0:
             tags.append(tag)
-            
+
         connection_2.close()
         tag = result.fetchone()
 
@@ -1658,18 +1658,18 @@ def get_gallery_connections(project, type, gallery_id=None):
         connection.close()
         return jsonify(results), 200, {"Access-Control-Allow-Origin": "*"}
     except Exception:
-        return Response("Couldn't get gallery connection data.", status=404, content_type="text/json")
+        return Response("Couldn't get gallery connection data due to error.", status=404, content_type="text/json")
 
 @digital_edition.route("/<project>/gallery/<type>/connections/<type_id>")
 @digital_edition.route("/<project>/gallery/<type>/connections/<type_id>/<limit>")
 def get_type_gallery_connections(project, type, type_id, limit=None):
     logger.info("Getting type gallery connection data...")
     if type not in ['tag', 'location', 'subject']:
-        return Response("Couldn't get gallery connection data.", status=404, content_type="text/json")
+        return Response("Couldn't get gallery type connection data.", status=404, content_type="text/json")
     if limit is not None:
         limit = " LIMIT 1 "
     else:
-        limit = "";
+        limit = ""
     type_column = "{}_id".format(type)
     try:
         project_id = get_project_id_from_name(project)
@@ -1683,7 +1683,7 @@ def get_type_gallery_connections(project, type, type_id, limit=None):
                                     AND t.project_id = :p_id \
                                     AND mcol.deleted != 1 AND t.deleted != 1 AND m.deleted != 1 AND mcon.deleted != 1 {limit}")
         statement = sql.bindparams(id=type_id, p_id=project_id)
-      
+
         results = []
         for row in connection.execute(statement).fetchall():
             results.append(dict(row))
@@ -1798,7 +1798,7 @@ def get_type_gallery_image(project, type, id):
     except Exception:
         return Response("Couldn't get type file.", status=404, content_type="text/json")
 
-# TODO: get subjects, locations and tags for gallery 
+# TODO: get subjects, locations and tags for gallery
 
 @digital_edition.route("/<project>/media/pdf/<id>")
 def get_media_data_pdf(project, id):
