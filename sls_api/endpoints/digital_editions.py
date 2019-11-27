@@ -1660,12 +1660,16 @@ def get_gallery_connections(project, type, gallery_id=None):
     except Exception:
         return Response("Couldn't get gallery connection data.", status=404, content_type="text/json")
 
-
 @digital_edition.route("/<project>/gallery/<type>/connections/<type_id>")
-def get_type_gallery_connections(project, type, type_id):
+@digital_edition.route("/<project>/gallery/<type>/connections/<type_id>/<limit>")
+def get_type_gallery_connections(project, type, type_id, limit=None):
     logger.info("Getting type gallery connection data...")
     if type not in ['tag', 'location', 'subject']:
         return Response("Couldn't get gallery connection data.", status=404, content_type="text/json")
+    if limit is not None:
+        limit = " LIMIT 1 "
+    else:
+        limit = "";
     type_column = "{}_id".format(type)
     try:
         project_id = get_project_id_from_name(project)
@@ -1677,7 +1681,7 @@ def get_type_gallery_connections(project, type, type_id):
                                     JOIN media_collection mcol ON mcol.id = m.media_collection_id \
                                     WHERE t.id = :id \
                                     AND t.project_id = :p_id \
-                                    AND mcol.deleted != 1 AND t.deleted != 1 AND m.deleted != 1 AND mcon.deleted != 1")
+                                    AND mcol.deleted != 1 AND t.deleted != 1 AND m.deleted != 1 AND mcon.deleted != 1 {limit}")
         statement = sql.bindparams(id=type_id, p_id=project_id)
       
         results = []
