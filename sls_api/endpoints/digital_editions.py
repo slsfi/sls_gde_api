@@ -1765,7 +1765,7 @@ def get_gallery_image(project, collection_id, file_name):
     except Exception:
         return Response("Couldn't get gallery file.", status=404, content_type="text/json")
 
-@digital_edition.route("/<project>/gallery/file/<type>/<id>")
+@digital_edition.route("/<project>/gallery/thumb/<type>/<id>")
 def get_type_gallery_image(project, type, id):
     logger.info("Getting gallery file")
     if type not in ['tag', 'location', 'subject']:
@@ -1785,7 +1785,7 @@ def get_type_gallery_image(project, type, id):
         result = connection.execute(sql).fetchone()
         result = dict(result)
         connection.close()
-        file_path = safe_join(config["file_root"], "media", str(result['image_path']), str(result['image_filename_front']))
+        file_path = safe_join(config["file_root"], "media", str(result['image_path']), str(result['image_filename_front']).replace(".jpg", "_thumb.jpg"))
         try:
             output = io.BytesIO()
             with open(file_path, mode="rb") as img_file:
