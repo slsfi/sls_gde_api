@@ -1649,7 +1649,7 @@ def get_gallery_connections(project, type, gallery_id=None):
                                         JOIN {type} t ON t.id = mcon.{type_column} \
                                         JOIN media m ON m.id = mcon.media_id \
                                         JOIN media_collection mcol ON mcol.id = m.media_collection_id \
-                                        AND t.project_id = :p_id \
+                                        WHERE t.project_id = :p_id \
                                         AND mcol.deleted != 1 AND t.deleted != 1 AND m.deleted != 1 AND mcon.deleted != 1")
             statement = sql.bindparams(p_id=project_id)
         results = []
