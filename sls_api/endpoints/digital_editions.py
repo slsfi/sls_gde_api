@@ -1657,8 +1657,9 @@ def get_gallery_connections(project, type, gallery_id=None):
             results.append(dict(row))
         connection.close()
         return jsonify(results), 200, {"Access-Control-Allow-Origin": "*"}
-    except Exception:
-        return Response("Couldn't get gallery connection data due to error.", status=404, content_type="text/json")
+    except Exception as e:
+        logger.debug(e)
+        return Response(f"Couldn't get gallery connection data due to error.", status=404, content_type="text/json")
 
 @digital_edition.route("/<project>/gallery/<type>/connections/<type_id>")
 @digital_edition.route("/<project>/gallery/<type>/connections/<type_id>/<limit>")
