@@ -1634,23 +1634,42 @@ def get_gallery_connections(project, type, gallery_id=None):
         project_id = get_project_id_from_name(project)
         connection = db_engine.connect()
         if gallery_id is not None:
-            sql = sqlalchemy.sql.text(f"SELECT t.id as t_id, m.id as media_id, m.image_filename_front as filename,\
-                                            mcol.id as media_collection_id, mcol.image_path, t.* FROM media_connection mcon \
-                                        JOIN {type} t ON t.id = mcon.{type_column} \
-                                        JOIN media m ON m.id = mcon.media_id \
-                                        JOIN media_collection mcol ON mcol.id = m.media_collection_id \
-                                        WHERE mcol.id = :id \
-                                        AND t.project_id = :p_id \
-                                        AND mcol.deleted != 1 AND t.deleted != 1 AND m.deleted != 1 AND mcon.deleted != 1")
+            if type in ['tag', 'location']:
+                sql = sqlalchemy.sql.text(f"SELECT t.id as t_id, m.id as media_id, m.image_filename_front as filename,\
+                                                mcol.id as media_collection_id, mcol.image_path, t.* FROM media_connection mcon \
+                                            JOIN {type} t ON t.id = mcon.{type_column} \
+                                            JOIN media m ON m.id = mcon.media_id \
+                                            JOIN media_collection mcol ON mcol.id = m.media_collection_id \
+                                            WHERE mcol.id = :id \
+                                            AND t.project_id = :p_id \
+                                            AND mcol.deleted != 1 AND t.deleted != 1 AND m.deleted != 1 AND mcon.deleted != 1 ")
+            else:
+                sql = sqlalchemy.sql.text(f"SELECT t.id as t_id, m.id as media_id, m.image_filename_front as filename,\
+                                                mcol.id as media_collection_id, mcol.image_path, t.full_name as name, t.id FROM media_connection mcon \
+                                            JOIN {type} t ON t.id = mcon.{type_column} \
+                                            JOIN media m ON m.id = mcon.media_id \
+                                            JOIN media_collection mcol ON mcol.id = m.media_collection_id \
+                                            WHERE mcol.id = :id \
+                                            AND t.project_id = :p_id \
+                                            AND mcol.deleted != 1 AND t.deleted != 1 AND m.deleted != 1 AND mcon.deleted != 1 ")
             statement = sql.bindparams(id=gallery_id, p_id=project_id)
         else:
-            sql = sqlalchemy.sql.text(f"SELECT t.id as t_id, m.id as media_id, m.image_filename_front as filename,\
-                                            mcol.id as media_collection_id, mcol.image_path, t.* FROM media_connection mcon \
-                                        JOIN {type} t ON t.id = mcon.{type_column} \
-                                        JOIN media m ON m.id = mcon.media_id \
-                                        JOIN media_collection mcol ON mcol.id = m.media_collection_id \
-                                        WHERE t.project_id = :p_id \
-                                        AND mcol.deleted != 1 AND t.deleted != 1 AND m.deleted != 1 AND mcon.deleted != 1")
+            if type in ['tag', 'location']:
+                sql = sqlalchemy.sql.text(f"SELECT t.id as t_id, m.id as media_id, m.image_filename_front as filename,\
+                                                mcol.id as media_collection_id, mcol.image_path, t.* FROM media_connection mcon \
+                                            JOIN {type} t ON t.id = mcon.{type_column} \
+                                            JOIN media m ON m.id = mcon.media_id \
+                                            JOIN media_collection mcol ON mcol.id = m.media_collection_id \
+                                            WHERE t.project_id = :p_id \
+                                            AND mcol.deleted != 1 AND t.deleted != 1 AND m.deleted != 1 AND mcon.deleted != 1 ")
+            else:
+                sql = sqlalchemy.sql.text(f"SELECT t.id as t_id, m.id as media_id, m.image_filename_front as filename,\
+                                                mcol.id as media_collection_id, mcol.image_path, t.full_name as name, t.id FROM media_connection mcon \
+                                            JOIN {type} t ON t.id = mcon.{type_column} \
+                                            JOIN media m ON m.id = mcon.media_id \
+                                            JOIN media_collection mcol ON mcol.id = m.media_collection_id \
+                                            WHERE t.project_id = :p_id \
+                                            AND mcol.deleted != 1 AND t.deleted != 1 AND m.deleted != 1 AND mcon.deleted != 1 ")
             statement = sql.bindparams(p_id=project_id)
         results = []
         for row in connection.execute(statement).fetchall():
