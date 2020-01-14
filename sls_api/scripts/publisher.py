@@ -14,11 +14,9 @@ logging.getLogger().setLevel(logging.INFO)
 logger = logging.getLogger("publisher")
 logger.setLevel(logging.DEBUG)
 
-valid_projects = [project for project in config if isinstance(
-    config[project], dict) and config[project].get("comments_database", False)]
+valid_projects = [project for project in config if isinstance(config[project], dict) and config[project].get("comments_database", False)]
 
-comment_db_engines = {project: create_engine(
-    config[project]["comments_database"], pool_pre_ping=True) for project in valid_projects}
+comment_db_engines = {project: create_engine(config[project]["comments_database"], pool_pre_ping=True) for project in valid_projects}
 
 # comment_db_engines = {"topelius": create_engine("mysql://web_user:SecretPassword@mysql.example.com:3306/topelius_notes", pool_pre_ping=True)}
 
@@ -38,8 +36,7 @@ def get_comments_from_database(project, document_note_ids):
     comment_query = text("SELECT documentnote.id, documentnote.shortenedSelection, note.description "
                          "FROM documentnote INNER JOIN note ON documentnote.note_id = note.id "
                          "WHERE documentnote.deleted = 0 AND note.deleted = 0 AND documentnote.id IN :docnote_ids")
-    comments = connection.execute(
-        comment_query, docnote_ids=tuple(document_note_ids)).fetchall()
+    comments = connection.execute(comment_query, docnote_ids=tuple(document_note_ids)).fetchall()
     connection.close()
     if len(comments) <= 0:
         return []
@@ -146,20 +143,17 @@ def check_publication_mtimes_and_publish_files(project, publication_ids):
             if force_publish:
                 # append publication.id checks if this is a forced (re)publication of certain publication(s)
                 publication_query += " AND publication.id IN :p_ids"
-                publication_query = text(publication_query).bindparams(
-                    proj=project_id, p_ids=publication_ids)
+                publication_query = text(publication_query).bindparams(proj=project_id, p_ids=publication_ids)
+
                 comment_query += " AND publication.id IN :p_ids"
-                comment_query = text(comment_query).bindparams(
-                    proj=project_id, p_ids=publication_ids)
+                comment_query = text(comment_query).bindparams(proj=project_id, p_ids=publication_ids)
+
                 manuscript_query += " AND publication.id IN :p_ids"
-                manuscript_query = text(manuscript_query).bindparams(
-                    proj=project_id, p_ids=publication_ids)
+                manuscript_query = text(manuscript_query).bindparams(proj=project_id, p_ids=publication_ids)
             else:
-                publication_query = text(
-                    publication_query).bindparams(proj=project_id)
+                publication_query = text(publication_query).bindparams(proj=project_id)
                 comment_query = text(comment_query).bindparams(proj=project_id)
-                manuscript_query = text(
-                    manuscript_query).bindparams(proj=project_id)
+                manuscript_query = text(manuscript_query).bindparams(proj=project_id)
 
             publication_info = connection.execute(publication_query).fetchall()
             manuscript_info = connection.execute(manuscript_query).fetchall()
@@ -174,53 +168,40 @@ def check_publication_mtimes_and_publish_files(project, publication_ids):
 
             # Keep a list of changed files for later git commit
             changes = set()
-            logger.debug("Publication query resulting rows: {}".format(
-                publication_info[0].keys()))
+            # logger.debug("Publication query resulting rows: {}".format(publication_info[0].keys()))  TODO: fix IndexError if publication_info has no rows
             # For each publication belonging to this project, check the modification timestamp of its master files and compare them to the generated web XML files
             for row in publication_info:
                 publication_id = row["id"]
                 collection_id = row["publication_collection_id"]
                 if not row["original_filename"]:
-                    logger.info(
-                        "Source file not set for publication {}".format(publication_id))
+                    logger.info("Source file not set for publication {}".format(publication_id))
                     continue
-                est_target_filename = "{}_{}_est.xml".format(collection_id,
-                                                             publication_id)
-                com_target_filename = est_target_filename.replace(
-                    "_est.xml", "_com.xml")
-                est_target_file_path = os.path.join(
-                    file_root, "xml", "est", est_target_filename)
-                com_target_file_path = os.path.join(
-                    file_root, "xml", "com", com_target_filename)
+                est_target_filename = "{}_{}_est.xml".format(collection_id, publication_id)
+                com_target_filename = est_target_filename.replace("_est.xml", "_com.xml")
+                est_target_file_path = os.path.join(file_root, "xml", "est", est_target_filename)
+                com_target_file_path = os.path.join(file_root, "xml", "com", com_target_filename)
                 # original_filename should be relative to the project root
-                est_source_file_path = os.path.join(
-                    file_root, row["original_filename"])
+                est_source_file_path = os.path.join(file_root, row["original_filename"])
 
                 # default to template comment file if no entry in publication_comment pointing to a comments file for this publication
-                comment_file = comment_filenames.get(
-                    publication_id, COMMENTS_TEMPLATE_PATH_IN_FILE_ROOT)
+                comment_file = comment_filenames.get(publication_id, COMMENTS_TEMPLATE_PATH_IN_FILE_ROOT)
                 com_source_file_path = os.path.join(file_root, comment_file)
 
                 if not est_source_file_path:
-                    logger.info(
-                        "Source file not set for publication {}".format(publication_id))
+                    logger.info("Source file not set for publication {}".format(publication_id))
                     continue
                 if not com_source_file_path:
-                    logger.info(
-                        "Source file not set for publication {} comment".format(publication_id))
+                    logger.info("Source file not set for publication {} comment".format(publication_id))
                 if not os.path.exists(est_source_file_path):
-                    logger.warning("Source file {} for publication {} do not exist!".format(
-                        est_source_file_path, publication_id))
+                    logger.warning("Source file {} for publication {} do not exist!".format(est_source_file_path, publication_id))
                     continue
                 if not os.path.exists(com_source_file_path):
-                    logger.warning("Source file {} for publication {} do not exist!".format(
-                        com_source_file_path, publication_id))
+                    logger.warning("Source file {} for publication {} do not exist!".format(com_source_file_path, publication_id))
                     continue
 
                 if force_publish:
                     # during force_publish, just generate
-                    logger.info(
-                        "Generating new est/com files for publication {}...".format(publication_id))
+                    logger.info("Generating new est/com files for publication {}...".format(publication_id))
                     changes.add(est_target_file_path)
                     changes.add(com_target_file_path)
                     generate_est_and_com_files(project, est_source_file_path, com_source_file_path,
@@ -228,21 +209,15 @@ def check_publication_mtimes_and_publish_files(project, publication_ids):
                 else:
                     # otherwise, check if this publication's files need to be re-generated
                     try:
-                        est_target_mtime = os.path.getmtime(
-                            est_target_file_path)
-                        com_target_mtime = os.path.getmtime(
-                            com_target_file_path)
-                        est_source_mtime = os.path.getmtime(
-                            est_source_file_path)
-                        com_source_mtime = os.path.getmtime(
-                            com_source_file_path)
+                        est_target_mtime = os.path.getmtime(est_target_file_path)
+                        com_target_mtime = os.path.getmtime(com_target_file_path)
+                        est_source_mtime = os.path.getmtime(est_source_file_path)
+                        com_source_mtime = os.path.getmtime(com_source_file_path)
                     except OSError:
                         # If there is an error, the web XML files likely don't exist or are otherwise corrupt
                         # It is then easiest to just generate new ones
-                        logger.warning(
-                            "Error getting time_modified for target or source files for publication {}".format(publication_id))
-                        logger.info(
-                            "Generating new est/com files for publication {}...".format(publication_id))
+                        logger.warning("Error getting time_modified for target or source files for publication {}".format(publication_id))
+                        logger.info("Generating new est/com files for publication {}...".format(publication_id))
                         changes.add(est_target_file_path)
                         changes.add(com_target_file_path)
                         generate_est_and_com_files(project, est_source_file_path, com_source_file_path,
@@ -255,8 +230,7 @@ def check_publication_mtimes_and_publish_files(project, publication_ids):
                             # If one or either is outdated, generate new ones
                             changes.add(est_target_file_path)
                             changes.add(com_target_file_path)
-                            logger.info(
-                                "Reading files for publication {} are outdated, generating new est/com files...".format(publication_id))
+                            logger.info("Reading files for publication {} are outdated, generating new est/com files...".format(publication_id))
                             generate_est_and_com_files(project, est_source_file_path, com_source_file_path,
                                                        est_target_file_path, com_target_file_path)
 
@@ -270,41 +244,31 @@ def check_publication_mtimes_and_publish_files(project, publication_ids):
                 connection = db_engine.connect()
 
                 # fetch info for "main" variant
-                main_variant_query = variant_query.bindparams(
-                    pub_id=publication_id, vers_type=1)
+                main_variant_query = variant_query.bindparams(pub_id=publication_id, vers_type=1)
                 # should only be one main variant per publication?
-                main_variant_info = connection.execute(
-                    main_variant_query).fetchone()
+                main_variant_info = connection.execute(main_variant_query).fetchone()
                 if main_variant_info is None:
-                    logger.warning(
-                        "No main variant found for publication {}!".format(publication_id))
+                    logger.warning("No main variant found for publication {}!".format(publication_id))
                 else:
-                    logger.debug("Main variant query resulting rows: {}".format(
-                        main_variant_info.keys()))
+                    logger.debug("Main variant query resulting rows: {}".format(main_variant_info.keys()))
 
                     # fetch info for all "other" variants
-                    variants_query = variant_query.bindparams(
-                        pub_id=publication_id, vers_type=2)
-                    variants_info = connection.execute(
-                        variants_query).fetchall()
-                    logger.debug("Variants query resulting rows: {}".format(
-                        variants_info[0].keys()))
+                    variants_query = variant_query.bindparams(pub_id=publication_id, vers_type=2)
+                    variants_info = connection.execute(variants_query).fetchall()
+                    # logger.debug("Variants query resulting rows: {}".format(variants_info[0].keys())) TODO: fix IndexError if variants_info has no rows
 
                     # close DB connection, as it's no longer needed
                     connection.close()
 
                     # compile info and generate files if needed
-                    main_variant_source = os.path.join(
-                        file_root, main_variant_info["original_filename"])
+                    main_variant_source = os.path.join(file_root, main_variant_info["original_filename"])
 
                     if not main_variant_source:
-                        logger.info("Source file for main variant {} is not set.".format(
-                            main_variant_info["id"]))
+                        logger.info("Source file for main variant {} is not set.".format(main_variant_info["id"]))
                         continue
 
                     if not os.path.exists(main_variant_source):
-                        logger.warning("Source file {} for main variant {} (type=1) does not exist!".format(
-                            main_variant_source, main_variant_info["id"]))
+                        logger.warning("Source file {} for main variant {} (type=1) does not exist!".format(main_variant_source, main_variant_info["id"]))
                         continue
 
                     target_filename = "{}_{}_var_{}.xml".format(collection_id,
@@ -312,8 +276,7 @@ def check_publication_mtimes_and_publish_files(project, publication_ids):
                                                                 main_variant_info["id"])
 
                     # If any variants have changed, we need a CTeiDocument for the main variant to ProcessVariants() with
-                    main_variant_target = os.path.join(
-                        file_root, "xml", "var", target_filename)
+                    main_variant_target = os.path.join(file_root, "xml", "var", target_filename)
                     main_variant_doc = CTeiDocument()
                     main_variant_doc.Load(main_variant_source)
 
@@ -326,18 +289,14 @@ def check_publication_mtimes_and_publish_files(project, publication_ids):
                                                                     variant["id"])
                         source_filename = variant["original_filename"]
                         if not source_filename:
-                            logger.info("Source file for variant {} is not set.".format(
-                                variant["original_filename"]))
+                            logger.info("Source file for variant {} is not set.".format(variant["original_filename"]))
                             continue
-                        target_file_path = os.path.join(
-                            file_root, "xml", "var", target_filename)
+                        target_file_path = os.path.join(file_root, "xml", "var", target_filename)
                         # original_filename should be relative to the project root
-                        source_file_path = os.path.join(
-                            file_root, source_filename)
+                        source_file_path = os.path.join(file_root, source_filename)
 
                         if not os.path.exists(source_file_path):
-                            logger.warning("Source file {} for variant {} does not exist!".format(
-                                source_file_path, variant["id"]))
+                            logger.warning("Source file {} for variant {} does not exist!".format(source_file_path, variant["id"]))
                             continue
 
                         # in a force_publish, just load all variants for generation/processing
@@ -352,15 +311,12 @@ def check_publication_mtimes_and_publish_files(project, publication_ids):
                         # otherwise, check which ones need to be updated and load only those
                         else:
                             try:
-                                target_mtime = os.path.getmtime(
-                                    target_file_path)
-                                source_mtime = os.path.getmtime(
-                                    source_file_path)
+                                target_mtime = os.path.getmtime(target_file_path)
+                                source_mtime = os.path.getmtime(source_file_path)
                             except OSError:
                                 # If there is an error, the web XML file likely doesn't exist or is otherwise corrupt
                                 # It is then easiest to just generate a new one
-                                logger.warning(
-                                    "Error getting time_modified for target or source files for publication_version {}".format(variant["id"]))
+                                logger.warning("Error getting time_modified for target or source files for publication_version {}".format(variant["id"]))
                                 logger.info("Generating new file...")
                                 changes.add(target_file_path)
                                 variant_doc = CTeiDocument()
@@ -369,8 +325,7 @@ def check_publication_mtimes_and_publish_files(project, publication_ids):
                                 variant_paths.append(target_file_path)
                             else:
                                 if target_mtime < source_mtime:
-                                    logger.info("File {} is older than source file {}, generating new file...".format(
-                                        target_file_path, source_file_path))
+                                    logger.info("File {} is older than source file {}, generating new file...".format(target_file_path, source_file_path))
                                     changes.add(target_file_path)
                                     variant_doc = CTeiDocument()
                                     variant_doc.Load(source_file_path)
@@ -380,11 +335,10 @@ def check_publication_mtimes_and_publish_files(project, publication_ids):
                                     # If no changes, don't generate CTeiDocument and don't make a new web XML file
                                     continue
                     # lastly, actually process all generated CTeiDocument objects and create web XML files
-                    process_var_documents_and_generate_files(
-                        main_variant_doc, main_variant_target, variant_docs, variant_paths)
+                    process_var_documents_and_generate_files(main_variant_doc, main_variant_target, variant_docs, variant_paths)
 
             # For each publication_manuscript belonging to this project, check the modification timestamp of its master file and compare it to the generated web XML file
-            #logger.debug("Manuscript query resulting rows: {}".format(manuscript_info[0].keys()))
+            # logger.debug("Manuscript query resulting rows: {}".format(manuscript_info[0].keys())) TODO: fix IndexError if manuscript_info has no rows
             for row in manuscript_info:
                 collection_id = row["c_id"]
                 publication_id = row["p_id"]
@@ -394,8 +348,7 @@ def check_publication_mtimes_and_publish_files(project, publication_ids):
                                                            manuscript_id)
                 source_filename = row["original_filename"]
                 if not source_filename:
-                    logger.info(
-                        "Source file not set for manuscript {}".format(manuscript_id))
+                    logger.info("Source file not set for manuscript {}".format(manuscript_id))
                     continue
 
                 target_file_path = os.path.join(
@@ -404,14 +357,12 @@ def check_publication_mtimes_and_publish_files(project, publication_ids):
                 source_file_path = os.path.join(file_root, source_filename)
 
                 if not os.path.exists(source_file_path):
-                    logger.warning("Source file {} for manuscript {} does not exist!".format(
-                        source_file_path, manuscript_id))
+                    logger.warning("Source file {} for manuscript {} does not exist!".format(source_file_path, manuscript_id))
                     continue
 
                 # in a force_publish, just generate all ms files
                 if force_publish:
-                    logger.info(
-                        "Generating new ms file for publication_manuscript {}".format(manuscript_id))
+                    logger.info("Generating new ms file for publication_manuscript {}".format(manuscript_id))
                     changes.add(target_file_path)
                     generate_ms_file(source_file_path, target_file_path)
                 # otherwise, check if this file needs generating
@@ -422,8 +373,7 @@ def check_publication_mtimes_and_publish_files(project, publication_ids):
                     except OSError:
                         # If there is an error, the web XML file likely doesn't exist or is otherwise corrupt
                         # It is then easiest to just generate a new one
-                        logger.warning(
-                            "Error getting time_modified for target or source file for publication_manuscript {}".format(manuscript_id))
+                        logger.warning("Error getting time_modified for target or source file for publication_manuscript {}".format(manuscript_id))
                         logger.info("Generating new file...")
                         changes.add(target_file_path)
                         generate_ms_file(source_file_path, target_file_path)
@@ -433,36 +383,28 @@ def check_publication_mtimes_and_publish_files(project, publication_ids):
                             continue
                         else:
                             changes.add(target_file_path)
-                            logger.info("File {} is older than source file {}, generating new file...".format(
-                                target_file_path, source_file_path))
-                            generate_ms_file(source_file_path,
-                                             target_file_path)
+                            logger.info("File {} is older than source file {}, generating new file...".format(target_file_path, source_file_path))
+                            generate_ms_file(source_file_path, target_file_path)
 
-            logger.debug("Changes made in publication script run: {}".format(
-                [c for c in changes]))
+            logger.debug("Changes made in publication script run: {}".format([c for c in changes]))
             if len(changes) > 0:
                 outputs = []
                 # If there are changes, try to commit them to git
                 try:
                     for change in changes:
                         # Each changed file should be added, as there may be other activity in the git repo we don't want to commit
-                        outputs.append(run_git_command(
-                            project, ["add", change]))
+                        outputs.append(run_git_command(project, ["add", change]))
                     # Using Publisher as the author with the is@sls.fi email as a contact point should be fine
-                    outputs.append(run_git_command(project, [
-                                   "commit", "--author=Publisher <is@sls.fi>", "-m", "Published new web files"]))
+                    outputs.append(run_git_command(project, ["commit", "--author=Publisher <is@sls.fi>", "-m", "Published new web files"]))
                     outputs.append(run_git_command(project, ["push"]))
                 except CalledProcessError:
-                    logger.exception(
-                        "Exception during git sync of webfile changes.")
+                    logger.exception("Exception during git sync of webfile changes.")
                     logger.debug("Git outputs: {}".format("\n".join(outputs)))
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(
-        description="Publishing script to publish changes to EST/COM/VAR/MS files for GDE project")
-    parser.add_argument(
-        "project", help="Which project to publish, either a project name from --list_projects or 'all' for all valid projects")
+    parser = argparse.ArgumentParser(description="Publishing script to publish changes to EST/COM/VAR/MS files for GDE project")
+    parser.add_argument("project", help="Which project to publish, either a project name from --list_projects or 'all' for all valid projects")
     parser.add_argument("-i", "--publication_ids", type=int, nargs="*",
                         help="Force re-publication of specific publications (tries to publish all files, est/com/var/ms)")
     parser.add_argument("-l", "--list_projects", action="store_true",
@@ -471,11 +413,12 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     if args.list_projects:
-        logger.info("Projects with seemingly valid configuration: {}".format(
-            ", ".join(valid_projects)))
+        logger.info(f"Projects with seemingly valid configuration: {', '.join(valid_projects)}")
         sys.exit(0)
     else:
-        if len(args.publication_ids) == 0:
+        if args.publication_ids is None:
+            ids = None
+        elif len(args.publication_ids) == 0:
             ids = None
         else:
             # use a tuple rather than a list, to make SQLAlchemy happier more easily
@@ -487,6 +430,5 @@ if __name__ == "__main__":
             if args.project in valid_projects:
                 check_publication_mtimes_and_publish_files(args.project, ids)
             else:
-                logger.error(
-                    "{} is not in the API configuration or lacks 'comments_database' setting, aborting...".format(args.project))
+                logger.error(f"{args.project} is not in the API configuration or lacks 'comments_database' setting, aborting...")
                 sys.exit(1)
