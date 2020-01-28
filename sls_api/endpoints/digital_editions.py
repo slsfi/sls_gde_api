@@ -20,6 +20,8 @@ from elasticsearch import Elasticsearch
 
 from sls_api.endpoints.generics import config, get_project_config, db_engine, select_all_from_table, elastic_config, get_project_id_from_name
 
+# TODO convert sqlalchemy.sql.text calls to SQL Expression Language
+
 digital_edition = Blueprint('digital_edition', __name__)
 
 logger = logging.getLogger("sls_api.digital_edition")
@@ -179,7 +181,8 @@ def getFacsimileImage(project, edition_id, publication_id, size=(300, 300)):
     if config is None:
         return jsonify({"msg": "No such project."}), 400
     else:
-        logger.info("Getting facsimile image from funciton getFacsimileImage({},{},{})".format(project, edition_id, publication_id))
+        logger.info("Getting facsimile image from funciton getFacsimileImage({},{},{})".format(project, edition_id,
+                                                                                               publication_id))
 
         outfile = md5("{}-{}-{}-{}".format(edition_id, publication_id, size[0], size[1]).encode('utf-8'))
         cache_file_path = safe_join(config["file_root"], "cache", "faksimil", "{}.png".format(outfile))
@@ -245,7 +248,8 @@ def get_facsimiles(project, publication_id):
             facsimile["first_page"] = pre_pages + row["page_nr"]
 
             sql2 = "SELECT * FROM publication_facsimile WHERE publication_facsimile_collection_id=:fc_id AND page_nr>:page_nr ORDER BY page_nr ASC LIMIT 1"
-            statement2 = sqlalchemy.sql.text(sql2).bindparams(fc_id=row["publication_facsimile_collection_id"], page_nr=row["page_nr"])
+            statement2 = sqlalchemy.sql.text(sql2).bindparams(fc_id=row["publication_facsimile_collection_id"],
+                                                              page_nr=row["page_nr"])
             for row2 in connection.execute(statement2).fetchall():
                 facsimile["last_page"] = pre_pages + row2["page_nr"] - 1
 
@@ -253,19 +257,9 @@ def get_facsimiles(project, publication_id):
                 facsimile["last_page"] = row["number_of_pages"]
 
             result.append(facsimile)
-            '''try:
-                with open(facsimile_image, "rb") as imageFile:
-                    facsimile["image_data"] = base64.b64encode(imageFile.read()).decode("utf-8")
-            except:
-                logger.error("Missing facsimile image: {}".format(facsimile_image))
-            '''
         connection.close()
 
         return_data = result
-        '''for row in result:
-            if row["ed_id"] not in project_config.get(project).get("disabled_publications"):
-                return_data.append(row)
-        '''
         return jsonify(return_data), 200, {"Access-Control-Allow-Origin": "*"}
 
 
@@ -344,13 +338,15 @@ def get_collections(project):
         connection = db_engine.connect()
         status = 1 if config["show_internally_published"] else 2
         project_id = get_project_id_from_name(project)
-        sql = sqlalchemy.sql.text("SELECT id, name as title FROM publication_collection WHERE project_id = :p_id AND published>=:p_status ORDER BY name")
+        sql = sqlalchemy.sql.text(
+            "SELECT id, name as title FROM publication_collection WHERE project_id = :p_id AND published>=:p_status ORDER BY name")
         statement = sql.bindparams(p_status=status, p_id=project_id)
         results = []
         for row in connection.execute(statement).fetchall():
             results.append(dict(row))
         connection.close()
         return jsonify(results)
+
 
 @digital_edition.route("/<project>/publication-facsimile-relations/")
 def get_project_publication_facsimile_relations(project):
@@ -369,6 +365,7 @@ def get_project_publication_facsimile_relations(project):
         results.append(dict(row))
     connection.close()
     return jsonify(results)
+
 
 @digital_edition.route("/<project>/collection/<collection_id>")
 def get_collection(project, collection_id):
@@ -492,7 +489,8 @@ def get_reading_text(project, collection_id, publication_id, section_id=None):
         xsl_file = "est.xsl"
         if section_id is not None:
             section_id = '"{}"'.format(section_id)
-            content = get_content(project, "est", filename, xsl_file, {"bookId": collection_id, "sectionId": section_id})
+            content = get_content(project, "est", filename, xsl_file,
+                                  {"bookId": collection_id, "sectionId": section_id})
         else:
             content = get_content(project, "est", filename, xsl_file, {"bookId": collection_id})
         data = {
@@ -532,7 +530,8 @@ def get_comments(project, collection_id, publication_id, note_id=None):
                 connection.close()
             logger.debug("Filename (com) for {} is {}".format(publication_id, filename))
             params = {
-                "estDocument": '"file://{}"'.format(safe_join(config["file_root"], "xml", "est", filename.replace("com", "est"))),
+                "estDocument": '"file://{}"'.format(
+                    safe_join(config["file_root"], "xml", "est", filename.replace("com", "est"))),
                 "bookId": collection_id
             }
             if note_id is not None:
@@ -589,8 +588,10 @@ def get_manuscript(project, collection_id, publication_id, manuscript_id=None):
                 filename = "{}.xml".format(manuscript["legacy_id"])
             else:
                 filename = "{}_{}_ms_{}.xml".format(collection_id, publication_id, manuscript["id"])
-            manuscript_info[index]["manuscript_changes"] = get_content(project, "ms", filename, "ms_changes.xsl", params)
-            manuscript_info[index]["manuscript_normalized"] = get_content(project, "ms", filename, "ms_normalized.xsl", params)
+            manuscript_info[index]["manuscript_changes"] = get_content(project, "ms", filename, "ms_changes.xsl",
+                                                                       params)
+            manuscript_info[index]["manuscript_normalized"] = get_content(project, "ms", filename, "ms_normalized.xsl",
+                                                                          params)
 
         data = {
             "id": "{}_{}".format(collection_id, publication_id),
@@ -788,7 +789,8 @@ def get_all_occurrences_by_type(object_type, project=None):
             project_id = get_project_id_from_name(project)
             ob_sql = "SELECT DISTINCT event_connection.{}, {}.{} FROM event_connection, event_occurrence, {} \
             WHERE event_connection.event_id=event_occurrence.event_id AND event_connection.{}={}.id AND {}.project_id={}"
-            ob_sql = ob_sql.format(ob_id, object_type, name_attr, object_type, ob_id, object_type, object_type, project_id)
+            ob_sql = ob_sql.format(ob_id, object_type, name_attr, object_type, ob_id, object_type, object_type,
+                                   project_id)
 
         ob_statement = sqlalchemy.sql.text(ob_sql)
         obs = []
@@ -818,7 +820,9 @@ def get_all_occurrences_by_type(object_type, project=None):
             for row in connection.execute(events_stmnt).fetchall():
                 row = dict(row)
                 if object_type == "subject":
-                    type_stmnt = sqlalchemy.sql.text("SELECT type, subject.first_name::text, subject.last_name::text, subject.source::text, subject.description::text, subject.occupation::text, subject.place_of_birth::text, subject.date_born::text, subject.date_deceased::text FROM subject WHERE id=:ty_id").bindparams(ty_id=object_id)
+                    type_stmnt = sqlalchemy.sql.text(
+                        "SELECT type, subject.first_name::text, subject.last_name::text, subject.source::text, subject.description::text, subject.occupation::text, subject.place_of_birth::text, subject.date_born::text, subject.date_deceased::text FROM subject WHERE id=:ty_id").bindparams(
+                        ty_id=object_id)
                     type_object = connection.execute(type_stmnt).fetchone()
                     type_object = dict(type_object)
                     row["object_type"] = type_object["type"]
@@ -831,7 +835,9 @@ def get_all_occurrences_by_type(object_type, project=None):
                     row["occupation"] = type_object["occupation"]
                     row["place_of_birth"] = type_object["place_of_birth"]
                 if object_type == "tag":
-                    type_stmnt = sqlalchemy.sql.text("SELECT tag.type::text, tag.description::text, tag.source::text, tag.name::text FROM tag WHERE id=:ty_id").bindparams(ty_id=object_id)
+                    type_stmnt = sqlalchemy.sql.text(
+                        "SELECT tag.type::text, tag.description::text, tag.source::text, tag.name::text FROM tag WHERE id=:ty_id").bindparams(
+                        ty_id=object_id)
                     type_object = connection.execute(type_stmnt).fetchone()
                     type_object = dict(type_object)
                     row["description"] = type_object["description"]
@@ -840,7 +846,8 @@ def get_all_occurrences_by_type(object_type, project=None):
                     row["type"] = type_object["type"]
                 if object_type == "location":
                     type_stmnt = sqlalchemy.sql.text("SELECT location.description::text, location.source::text, location.name::text, location.country::text, location.city::text, \
-                                                        location.latitude::text, location.longitude::text, location.region::text FROM location WHERE id=:ty_id").bindparams(ty_id=object_id)
+                                                        location.latitude::text, location.longitude::text, location.region::text FROM location WHERE id=:ty_id").bindparams(
+                        ty_id=object_id)
                     type_object = connection.execute(type_stmnt).fetchone()
                     type_object = dict(type_object)
                     row["description"] = type_object["description"]
@@ -877,7 +884,8 @@ def get_all_occurrences_by_type(object_type, project=None):
                         publication_facsimile.section_id, publication_facsimile_collection.start_page_number, publication_facsimile_collection.folder_path, \
                         publication_facsimile_collection.page_comment FROM publication_facsimile, publication_facsimile_collection \
                         WHERE publication_facsimile.id={} AND \
-                        publication_facsimile_collection.id=publication_facsimile.publication_facsimile_collection_id".format(row["publication_facsimile_id"])
+                        publication_facsimile_collection.id=publication_facsimile.publication_facsimile_collection_id".format(
+                            row["publication_facsimile_id"])
                         facs = connection.execute(type_sql).fetchone()
                         row["publication_facsimile"] = dict(facs)
                     if row["publication_id"] is not None \
@@ -886,7 +894,9 @@ def get_all_occurrences_by_type(object_type, project=None):
                             and row["publication_comment_id"] is None \
                             and row["publication_version_id"] is None \
                             and row["publication_manuscript_id"] is None:
-                        type_sql = sqlalchemy.sql.text("SELECT publication.id AS publication_id, publication.original_filename, publication.name FROM publication WHERE id=:pub_id").bindparams(pub_id=row["publication_id"])
+                        type_sql = sqlalchemy.sql.text(
+                            "SELECT publication.id AS publication_id, publication.original_filename, publication.name FROM publication WHERE id=:pub_id").bindparams(
+                            pub_id=row["publication_id"])
                         publication = connection.execute(type_sql).fetchone()
                         row["publication"] = dict(publication)
                     if row["publication_song_id"] is not None:
@@ -992,6 +1002,7 @@ def get_subject_occurrences(project=None, subject_id=None):
 
     return jsonify(subjects)
 
+
 @digital_edition.route("/<project>/location/occurrences/<location_id>/")
 @digital_edition.route("/<project>/location/occurrences/")
 def get_location_occurrences(project=None, location_id=None):
@@ -1012,7 +1023,6 @@ def get_location_occurrences(project=None, location_id=None):
             statement_loc = sqlalchemy.sql.text(location_sql).bindparams(location_id=location_id, project_id=project_id)
         else:
             statement_loc = sqlalchemy.sql.text(location_sql).bindparams(project_id=project_id)
-
 
     connection = db_engine.connect()
     locations = []
@@ -1068,6 +1078,7 @@ def get_location_occurrences(project=None, location_id=None):
     connection.close()
 
     return jsonify(locations)
+
 
 @digital_edition.route("/<project>/tag/occurrences/<tag_id>/")
 @digital_edition.route("/<project>/tag/occurrences/")
@@ -1288,6 +1299,7 @@ def get_location(project, id):
     else:
         return jsonify(dict(return_data)), 200, {"Access-Control-Allow-Origin": "*"}
 
+
 @digital_edition.route("/<project>/facsimiles/collections/<facsimile_collection_ids>")
 def get_facsimile_collections(project, facsimile_collection_ids):
     logger.info("Getting facsimiles /{}/facsimiles/collections/{}".format(project, facsimile_collection_ids))
@@ -1319,7 +1331,8 @@ def get_facsimile_file(project, collection_id, number, zoom_level):
     else:
         connection = db_engine.connect()
         check_statement = sqlalchemy.sql.text("SELECT published FROM publication WHERE id = "
-                                              "(SELECT publication_id FROM publication_facsimile WHERE publication_facsimile_collection_id=:coll_id LIMIT 1)").bindparams(coll_id=collection_id)
+                                              "(SELECT publication_id FROM publication_facsimile WHERE publication_facsimile_collection_id=:coll_id LIMIT 1)").bindparams(
+            coll_id=collection_id)
         row = connection.execute(check_statement).fetchone()
         if row is None:
             return jsonify({
@@ -1342,7 +1355,8 @@ def get_facsimile_file(project, collection_id, number, zoom_level):
                         "msg": "Desired facsimile file not found in database."
                     }), 404
 
-        statement = sqlalchemy.sql.text("SELECT * FROM publication_facsimile_collection WHERE id=:coll_id").bindparams(coll_id=collection_id)
+        statement = sqlalchemy.sql.text("SELECT * FROM publication_facsimile_collection WHERE id=:coll_id").bindparams(
+            coll_id=collection_id)
         row = connection.execute(statement).fetchone()
         if row is None:
             return jsonify({
@@ -1584,6 +1598,7 @@ def get_media_article_data(project, type, type_id):
     except Exception:
         return Response("Couldn't get article data.", status=404, content_type="text/json")
 
+
 @digital_edition.route("/<project>/media/image/<id>")
 def get_media_data_image(project, id):
     logger.info("Getting media image...")
@@ -1596,6 +1611,7 @@ def get_media_data_image(project, id):
         return Response(io.BytesIO(result["image"]), status=200, content_type="image/jpeg")
     except Exception:
         return Response("Couldn't get media image.", status=404, content_type="text/json")
+
 
 @digital_edition.route("/<project>/media/connections/<type>/<media_id>")
 def get_media_connections(project, type, media_id):
@@ -1622,6 +1638,7 @@ def get_media_connections(project, type, media_id):
         return jsonify(results), 200, {"Access-Control-Allow-Origin": "*"}
     except Exception:
         return Response("Couldn't get media connection data.", status=404, content_type="text/json")
+
 
 @digital_edition.route("/<project>/gallery/connections/<type>")
 @digital_edition.route("/<project>/gallery/connections/<type>/<gallery_id>")
@@ -1680,6 +1697,7 @@ def get_gallery_connections(project, type, gallery_id=None):
         logger.debug(e)
         return Response(f"Couldn't get gallery connection data due to error.", status=404, content_type="text/json")
 
+
 @digital_edition.route("/<project>/gallery/<type>/connections/<type_id>")
 @digital_edition.route("/<project>/gallery/<type>/connections/<type_id>/<limit>")
 def get_type_gallery_connections(project, type, type_id, limit=None):
@@ -1712,6 +1730,7 @@ def get_type_gallery_connections(project, type, type_id, limit=None):
     except Exception:
         return Response("Couldn't get type gallery connection data.", status=404, content_type="text/json")
 
+
 @digital_edition.route("/<project>/gallery/data/<id>/<lang>")
 def get_gallery_data(project, id, lang=None):
     logger.info("Getting gallery image data")
@@ -1726,10 +1745,10 @@ def get_gallery_data(project, id, lang=None):
                                     FROM media m \
                                     JOIN media_collection mc ON m.media_collection_id = mc.id\
                                     JOIN translation t_desc ON t_desc.id = m.description_translation_id\
-                                    JOIN translation_text tt_desc ON tt_desc.translation_id = t_desc.id AND tt_desc.language=:l\
+                                    JOIN translation_text tt_desc ON tt_desc.translation_id = t_desc.id AND tt_desc.language=:lang\
                                     WHERE mc.project_id = :p_id \
                                     AND mc.id= :image_id\
-                                    AND m.type='image_ref' ").bindparams(image_id=id, p_id=project_id, l=lang)
+                                    AND m.type='image_ref' ").bindparams(image_id=id, p_id=project_id, lang=lang)
         results = []
         for row in connection.execute(sql).fetchall():
             results.append(dict(row))
@@ -1737,6 +1756,7 @@ def get_gallery_data(project, id, lang=None):
         return jsonify(results), 200, {"Access-Control-Allow-Origin": "*"}
     except Exception:
         return Response("Couldn't gallery image data.", status=404, content_type="text/json")
+
 
 @digital_edition.route("/<project>/gallery/data/<lang>")
 def get_galleries(project, lang=None):
@@ -1761,6 +1781,7 @@ def get_galleries(project, lang=None):
     except Exception:
         return Response("Couldn't get galleries.", status=404, content_type="text/json")
 
+
 @digital_edition.route("/<project>/gallery/get/<collection_id>/<file_name>")
 def get_gallery_image(project, collection_id, file_name):
     logger.info("Getting galleries")
@@ -1768,11 +1789,13 @@ def get_gallery_image(project, collection_id, file_name):
         project_id = get_project_id_from_name(project)
         config = get_project_config(project)
         connection = db_engine.connect()
-        sql = sqlalchemy.sql.text("SELECT image_path as image_path from media_collection WHERE project_id = :p_id AND id = :id ").bindparams(p_id=project_id, id=collection_id)
+        sql = sqlalchemy.sql.text(
+            "SELECT image_path as image_path from media_collection WHERE project_id = :p_id AND id = :id ").bindparams(
+            p_id=project_id, id=collection_id)
         result = connection.execute(sql).fetchone()
         result = dict(result)
         connection.close()
-        file_path = safe_join(config["file_root"], "media", str(result['image_path']),"{}".format(str(file_name)))
+        file_path = safe_join(config["file_root"], "media", str(result['image_path']), "{}".format(str(file_name)))
         try:
             output = io.BytesIO()
             with open(file_path, mode="rb") as img_file:
@@ -1784,6 +1807,7 @@ def get_gallery_image(project, collection_id, file_name):
             return Response("File not found: " + file_path, status=404, content_type="text/json")
     except Exception:
         return Response("Couldn't get gallery file.", status=404, content_type="text/json")
+
 
 @digital_edition.route("/<project>/gallery/thumb/<type>/<id>")
 def get_type_gallery_image(project, type, id):
@@ -1801,11 +1825,13 @@ def get_type_gallery_image(project, type, id):
                                     JOIN media_collection mcol ON mcol.id = m.media_collection_id \
                                     WHERE t.id = :id \
                                     AND t.project_id = :p_id \
-                                    AND mcol.deleted != 1 AND t.deleted != 1 AND m.deleted != 1 AND mcon.deleted != 1 LIMIT 1").bindparams(p_id=project_id, id=id)
+                                    AND mcol.deleted != 1 AND t.deleted != 1 AND m.deleted != 1 AND mcon.deleted != 1 LIMIT 1").bindparams(
+            p_id=project_id, id=id)
         result = connection.execute(sql).fetchone()
         result = dict(result)
         connection.close()
-        file_path = safe_join(config["file_root"], "media", str(result['image_path']), str(result['image_filename_front']).replace(".jpg", "_thumb.jpg"))
+        file_path = safe_join(config["file_root"], "media", str(result['image_path']),
+                              str(result['image_filename_front']).replace(".jpg", "_thumb.jpg"))
         try:
             output = io.BytesIO()
             with open(file_path, mode="rb") as img_file:
@@ -1817,6 +1843,7 @@ def get_type_gallery_image(project, type, id):
             return Response("File not found: " + file_path, status=404, content_type="text/json")
     except Exception:
         return Response("Couldn't get type file.", status=404, content_type="text/json")
+
 
 # TODO: get subjects, locations and tags for gallery
 
@@ -1834,7 +1861,8 @@ def get_media_data_pdf(project, id):
         return Response("Couldn't get media image.", status=404, content_type="text/json")
 
 
-@digital_edition.route("/<project>/files/<collection_id>/<file_type>/<download_name>/", defaults={'use_download_name': None})
+@digital_edition.route("/<project>/files/<collection_id>/<file_type>/<download_name>/",
+                       defaults={'use_download_name': None})
 @digital_edition.route("/<project>/files/<collection_id>/<file_type>/<download_name>/<use_download_name>")
 def get_pdf_file(project, collection_id, file_type, download_name, use_download_name):
     """
@@ -1848,7 +1876,8 @@ def get_pdf_file(project, collection_id, file_type, download_name, use_download_
         return jsonify({"msg": "No such project."}), 400
     connection = db_engine.connect()
     # Check that the collection exists
-    statement = sqlalchemy.sql.text("SELECT * FROM publication_collection WHERE id=:coll_id").bindparams(coll_id=collection_id)
+    statement = sqlalchemy.sql.text("SELECT * FROM publication_collection WHERE id=:coll_id").bindparams(
+        coll_id=collection_id)
     row = connection.execute(statement).fetchone()
     if row is None:
         return jsonify({
@@ -1922,10 +1951,12 @@ def get_urn(project, url, legacy_id=None):
     project_id = get_project_id_from_name(project)
     connection = db_engine.connect()
     if legacy_id is not None:
-        sql = sqlalchemy.sql.text("SELECT * FROM urn_lookup where legacy_id=:l_id  AND project_id=:p_id").bindparams(l_id=str(legacy_id), p_id=project_id)
+        sql = sqlalchemy.sql.text("SELECT * FROM urn_lookup where legacy_id=:l_id  AND project_id=:p_id").bindparams(
+            l_id=str(legacy_id), p_id=project_id)
     else:
         url_like_str = "%#{}".format(url)
-        sql = sqlalchemy.sql.text("SELECT * FROM urn_lookup where url LIKE :url AND project_id=:p_id").bindparams(url=url_like_str, p_id=project_id)
+        sql = sqlalchemy.sql.text("SELECT * FROM urn_lookup where url LIKE :url AND project_id=:p_id").bindparams(
+            url=url_like_str, p_id=project_id)
     return_data = []
     for row in connection.execute(sql).fetchall():
         return_data.append(dict(row))
@@ -2007,24 +2038,22 @@ def get_tooltip(table, row_id, project=None, use_legacy=False):
 def get_freetext_search(project, search_text, fuzziness=1):
     logger.info("Getting results from elastic")
     if len(search_text) > 0:
-        res = es.search(index=str(project), body={
-            "query":
-            {
-                "match":
-                {
-                    "textData":
-                    {
+        es_body = {
+            "query": {
+                "match": {
+                    "textData": {
                         "query": search_text,
                         "fuzziness": fuzziness
                     }
                 }
             },
             "highlight": {
-                "fields" : {
-                    "textData" : {}
+                "fields": {
+                    "textData": {}
                 }
             }
-        })
+        }
+        res = es.search(index=str(project), body=es_body)
         if len(res['hits']) > 0:
             return jsonify(res['hits']['hits'])
         else:
@@ -2145,11 +2174,10 @@ def get_tag_search(project, search_text):
         return jsonify("")
 
 
-# Tag seach through ElasticSearch API
+# Tag search through ElasticSearch API
 @digital_edition.route("<project>/search/user_defined/<index>/<field>/<search_text>/<fuzziness>/")
 def get_user_defined_search(project, index, field, search_text, fuzziness):
     logger.info("Getting results from elastic")
-    project_id = get_project_id_from_name(project)
     if len(search_text) > 0:
         res = es.search(index=str(index), body={
             "size": 1000,
@@ -2182,59 +2210,57 @@ def get_search_suggestions(project, search_string, limit):
     if len(search_string) > 0:
         res = es.search(index="tag,location,subject,song," + str(project), body={
             "size": limit,
-            "indices_boost" : [
-                { "song" : 2.0 },
-                { "subject" : 2.0 },
-                { "location" : 2.0 },
-                { "tag" : 2.0 }
+            "indices_boost": [
+                {"song": 2.0},
+                {"subject": 2.0},
+                {"location": 2.0},
+                {"tag": 2.0}
             ],
             "_source": {
                 "includes": [""]
             },
-            "query" : {
+            "query": {
                 "bool": {
-                "should": [
-                    {
-                    "bool": {
-                        "must" : [
-                            {
-                                "multi_match" : {
-                                    "query" : str(search_string),
-                                    "type" : "phrase_prefix",
-                                    "fields" : [ "*" ],
-                                    "lenient" : True
-                                }
-                            }
-                        ,
+                    "should": [
                         {
-                            "match": {
-                                "project_id": str(project_id)
+                            "bool": {
+                                "must": [
+                                    {
+                                        "multi_match": {
+                                            "query": str(search_string),
+                                            "type": "phrase_prefix",
+                                            "fields": ["*"],
+                                            "lenient": True
+                                        }
+                                    },
+                                    {
+                                        "match": {
+                                            "project_id": str(project_id)
+                                        }
+                                    }
+                                ]
+                            }
+                        },
+                        {
+                            "bool": {
+                                "must": [
+                                    {
+                                        "multi_match": {
+                                            "query": str(search_string),
+                                            "type": "phrase_prefix",
+                                            "fields": ["*"],
+                                            "lenient": True
+                                        }
+                                    },
+                                    {
+                                        "match": {
+                                            "_index": str(project)
+                                        }
+                                    }
+                                ]
                             }
                         }
-                        ]
-                    }
-                    },
-                    {
-                    "bool": {
-                        "must" : [
-                            {
-                            "multi_match" : {
-                                "query" : str(search_string),
-                                "type" : "phrase_prefix",
-                                "fields" : [ "*" ],
-                                "lenient" : True
-                            }
-                            }
-                        ,
-                        {
-                            "match": {
-                                "_index": str(project)
-                            }
-                        }
-                        ]
-                    }
-                    }
-                ]
+                    ]
                 }
             },
             "highlight": {
@@ -2248,13 +2274,14 @@ def get_search_suggestions(project, search_string, limit):
                 "boundary_scanner": "word",
                 "number_of_fragments": 1
             }
-            })
+        })
         if len(res['hits']) > 0:
             return jsonify(res['hits']['hits'])
         else:
             return jsonify("")
     else:
         return jsonify("")
+
 
 @digital_edition.route("/<project>/search/all/<search_string>/<limit>")
 def get_search_all(project, search_string, limit):
@@ -2263,56 +2290,54 @@ def get_search_all(project, search_string, limit):
     if len(search_string) > 0:
         res = es.search(index="tag,location,subject,song," + str(project), body={
             "size": limit,
-            "indices_boost" : [
-                { "song" : 2.0 },
-                { "subject" : 2.0 },
-                { "location" : 2.0 },
-                { "tag" : 2.0 }
+            "indices_boost": [
+                {"song": 2.0},
+                {"subject": 2.0},
+                {"location": 2.0},
+                {"tag": 2.0}
             ],
-            "query" : {
+            "query": {
                 "bool": {
-                "should": [
-                    {
-                    "bool": {
-                        "must" : [
-                            {
-                                "multi_match" : {
-                                    "query" : str(search_string),
-                                    "type" : "phrase_prefix",
-                                    "fields" : [ "*" ],
-                                    "lenient" : True
-                                }
-                            }
-                        ,
+                    "should": [
                         {
-                            "match": {
-                                "project_id": str(project_id)
+                            "bool": {
+                                "must": [
+                                    {
+                                        "multi_match": {
+                                            "query": str(search_string),
+                                            "type": "phrase_prefix",
+                                            "fields": ["*"],
+                                            "lenient": True
+                                        }
+                                    },
+                                    {
+                                        "match": {
+                                            "project_id": str(project_id)
+                                        }
+                                    }
+                                ]
+                            }
+                        },
+                        {
+                            "bool": {
+                                "must": [
+                                    {
+                                        "multi_match": {
+                                            "query": str(search_string),
+                                            "type": "phrase_prefix",
+                                            "fields": ["*"],
+                                            "lenient": True
+                                        }
+                                    },
+                                    {
+                                        "match": {
+                                            "_index": str(project)
+                                        }
+                                    }
+                                ]
                             }
                         }
-                        ]
-                    }
-                    },
-                    {
-                    "bool": {
-                        "must" : [
-                            {
-                            "multi_match" : {
-                                "query" : str(search_string),
-                                "type" : "phrase_prefix",
-                                "fields" : [ "*" ],
-                                "lenient" : True
-                            }
-                            }
-                        ,
-                        {
-                            "match": {
-                                "_index": str(project)
-                            }
-                        }
-                        ]
-                    }
-                    }
-                ]
+                    ]
                 }
             },
             "highlight": {
@@ -2334,6 +2359,8 @@ def get_search_all(project, search_string, limit):
             return jsonify("")
     else:
         return jsonify("")
+
+
 '''
     HELPER FUNCTIONS
 '''
@@ -2343,12 +2370,12 @@ def slugify_route(path):
     path = path.replace(" - ", "")
     path = path.replace(" ", "-")
     path = ''.join([i for i in path.lstrip('-') if not i.isdigit()])
-    path = re.sub('[^a-zA-Z0-9\\\/-]|_', '', re.sub('.md', '', path))
+    path = re.sub(r'[^a-zA-Z0-9\\\/-]|_', '', re.sub('.md', '', path))
     return path.lower()
 
 
 def slugify_id(path, language):
-    path = re.sub('[^0-9]', '', path)
+    path = re.sub(r'[^0-9]', '', path)
     path = language + path
     path = '-'.join(path[i:i + 2] for i in range(0, len(path), 2))
     return path

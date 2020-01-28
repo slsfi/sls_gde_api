@@ -64,6 +64,7 @@ def add_new_location(project):
     finally:
         connection.close()
 
+
 @event_tools.route("/<project>/locations/<location_id>/edit/", methods=["POST"])
 @project_permission_required
 def edit_location(project, location_id):
@@ -101,8 +102,8 @@ def edit_location(project, location_id):
         "longitude": request_data.get("longitude", None)
     }
     try:
-        update = locations.update().where(locations.c.id==location_id).values()
-        result = connection.execute(update, **new_location)
+        update = locations.update().where(locations.c.id == location_id).values()
+        connection.execute(update, **new_location)
         result = {
             "msg": "Updated location with ID {}".format(location_id)
         }
@@ -115,6 +116,7 @@ def edit_location(project, location_id):
         return jsonify(result), 500
     finally:
         connection.close()
+
 
 @event_tools.route("/<project>/subjects/new/", methods=["POST"])
 @project_permission_required
@@ -174,6 +176,7 @@ def add_new_subject(project):
     finally:
         connection.close()
 
+
 @event_tools.route("/<project>/subjects/<subject_id>/edit/", methods=["POST"])
 @project_permission_required
 def edit_subject(project, subject_id):
@@ -214,8 +217,8 @@ def edit_subject(project, subject_id):
         "date_deceased": request_data.get("date_deceased", None)
     }
     try:
-        update = subjects.update().where(subjects.c.id==subject_id).values()
-        result = connection.execute(update, **new_subject)
+        update = subjects.update().where(subjects.c.id == subject_id).values()
+        connection.execute(update, **new_subject)
         result = {
             "msg": "Updated subject with ID {}".format(subject_id)
         }
@@ -228,6 +231,7 @@ def edit_subject(project, subject_id):
         return jsonify(result), 500
     finally:
         connection.close()
+
 
 @event_tools.route("/<project>/tags/new/", methods=["POST"])
 @project_permission_required
@@ -406,7 +410,7 @@ def connect_event(event_id):
 
     POST data MUST contain at least one of the following:
     subject_id: ID for the subject involved in the given event
-    location_id: ID for the location involced in the given event
+    location_id: ID for the location involved in the given event
     tag_id: ID for the tag involved in the given event
     """
     request_data = request.get_json()
@@ -492,8 +496,8 @@ def new_event_occurrence(event_id):
     POST data MUST be in JSON format.
 
     POST data SHOULD contain the following:
-    type: event occurance type
-    description: event occurance description
+    type: event occurrence type
+    description: event occurrence description
 
     POST data SHOULD also contain at least one of the following:
     publication_id: ID for publication the event occurs in
