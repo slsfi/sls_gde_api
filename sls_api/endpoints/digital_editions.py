@@ -416,7 +416,7 @@ def get_introduction(project, collection_id, publication_id, lang="swe"):
     if config is None:
         return jsonify({"msg": "No such project."}), 400
     else:
-        can_show, message = get_published_status(project, collection_id, publication_id)
+        can_show, message = get_collection_published_status(project, collection_id)
         if can_show:
             logger.info("Getting XML for {} and transforming...".format(request.full_path))
             version = "int" if config["show_internally_published"] else "ext"
@@ -446,7 +446,7 @@ def get_title(project, collection_id, publication_id, lang="swe"):
     if config is None:
         return jsonify({"msg": "No such project."}), 400
     else:
-        can_show, message = get_title_published_status(project, collection_id)
+        can_show, message = get_collection_published_status(project, collection_id)
         if can_show:
             logger.info("Getting XML for {} and transforming...".format(request.full_path))
             version = "int" if config["show_internally_published"] else "ext"
@@ -2485,7 +2485,7 @@ def get_published_status(project, collection_id, publication_id):
     return can_show, message
 
 
-def get_title_published_status(project, collection_id):
+def get_collection_published_status(project, collection_id):
     """
     Returns info on if project, publication_collection, and publication are all published
     Returns two values:
@@ -2502,10 +2502,9 @@ def get_title_published_status(project, collection_id):
 
     project_id = get_project_id_from_name(project)
 
-    select = """SELECT project.published AS proj_pub, publication_collection.published AS col_pub, publication_collection_title.published as pub
+    select = """SELECT project.published AS proj_pub, publication_collection.published AS col_pub
     FROM project
     JOIN publication_collection ON publication_collection.project_id = project.id
-    JOIN publication_collection_title ON publication_collection_title.id = publication_collection.publication_collection_title_id
     AND project.id = :project_id AND publication_collection.id = :c_id
     """
     statement = sqlalchemy.sql.text(select).bindparams(project_id=project_id, c_id=collection_id)
@@ -2517,7 +2516,7 @@ def get_title_published_status(project, collection_id):
     if row is None:
         message = "Content does not exist"
     else:
-        status = min(row.proj_pub, row.col_pub, row.pub)
+        status = min(row.proj_pub, row.col_pub)
         if status < 1:
             message = "Content is not published"
         elif status == 1 and not show_internal:
@@ -2526,7 +2525,6 @@ def get_title_published_status(project, collection_id):
             can_show = True
     connection.close()
     return can_show, message
-
 
 class FileResolver(etree.Resolver):
     def resolve(self, system_url, public_id, context):
