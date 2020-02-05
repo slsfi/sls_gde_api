@@ -2547,6 +2547,7 @@ def get_collection_published_status(project, collection_id):
     connection.close()
     return can_show, message
 
+
 class FileResolver(etree.Resolver):
     def resolve(self, system_url, public_id, context):
         logger.debug("Resolving {}".format(system_url))
