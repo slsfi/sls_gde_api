@@ -1753,7 +1753,7 @@ def get_gallery_data(project, id, lang=None):
                                     mc.image_path AS folder, (SELECT text \
                                     FROM translation_text tt \
                                     JOIN translation t ON t.id = tt.translation_id \
-                                    WHERE t.id = mc.title_translation_id AND tt.language = :l) AS title, tt_desc.text AS description \
+                                    WHERE t.id = mc.title_translation_id AND tt.language = :lang) AS title, tt_desc.text AS description \
                                     FROM media m \
                                     JOIN media_collection mc ON m.media_collection_id = mc.id\
                                     JOIN translation t_desc ON t_desc.id = m.description_translation_id\
