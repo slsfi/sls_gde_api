@@ -1342,6 +1342,7 @@ def get_facsimile_file(project, collection_id, number, zoom_level):
             try:
                 status = int(row[0])
             except Exception:
+                logger.exception(f"Couldn't convert {row[0]} to integer.")
                 return jsonify({
                     "msg": "Desired facsimile file not found in database."
                 }), 404
@@ -1380,6 +1381,7 @@ def get_facsimile_file(project, collection_id, number, zoom_level):
             output.close()
             return Response(content, status=200, content_type="image/jpeg")
         except Exception:
+            logger.exception(f"Exception reading facsimile at {file_path}")
             return jsonify({
                 "msg": "Desired facsimile file not found."
             }), 404
@@ -1398,6 +1400,7 @@ def get_facsimile_pages(project, legacy_id):
 
         return jsonify(facs), 200, {"Access-Control-Allow-Origin": "*"}
     except Exception:
+        logger.exception("Exception while getting facsimile page from database")
         return Response("Couldn't get facsimile page.", status=404, content_type="text/json")
 
 
@@ -1430,8 +1433,10 @@ def get_facsimile_page_image(project, facsimile_type, facs_id, facs_nr):
             output.close()
             return Response(content, status=200, content_type="image/jpeg")
         except Exception:
+            logger.exception(f"Failed to read facsimile page from {file_path}")
             return Response("File not found: " + file_path, status=404, content_type="text/json")
     except Exception:
+        logger.exception(f"Failed to interpret facsimile page image request {request.url}")
         return Response("Couldn't get facsimile page.", status=404, content_type="text/json")
 
 
@@ -1447,6 +1452,7 @@ def get_json_file(project, folder, file_name):
                 data = json.load(f)
             return jsonify(data), 200, {"Access-Control-Allow-Origin": "*"}
         except Exception:
+            logger.exception(f"Failed to read JSON file at {file_path}")
             return Response("File not found.", status=404, content_type="text/json")
 
 
@@ -1461,6 +1467,7 @@ def get_song_by_id(project, song_id):
         connection.close()
         return jsonify(dict(result)), 200, {"Access-Control-Allow-Origin": "*"}
     except Exception:
+        logger.exception(f"Failed to get song by id.")
         return Response("Couldn't get song by id.", status=404, content_type="text/json")
 
 
@@ -1575,6 +1582,7 @@ def get_media_data(project, type, type_id):
         connection.close()
         return jsonify(result), 200, {"Access-Control-Allow-Origin": "*"}
     except Exception:
+        logger.exception("Failed to get media data.")
         return Response("Couldn't get media data.", status=404, content_type="text/json")
 
 
@@ -1596,6 +1604,7 @@ def get_media_article_data(project, type, type_id):
         connection.close()
         return jsonify(return_data), 200, {"Access-Control-Allow-Origin": "*"}
     except Exception:
+        logger.exception("Failed to get article data.")
         return Response("Couldn't get article data.", status=404, content_type="text/json")
 
 
@@ -1610,6 +1619,7 @@ def get_media_data_image(project, id):
         connection.close()
         return Response(io.BytesIO(result["image"]), status=200, content_type="image/jpeg")
     except Exception:
+        logger.exception("Failed to get media image from database.")
         return Response("Couldn't get media image.", status=404, content_type="text/json")
 
 
@@ -1637,6 +1647,7 @@ def get_media_connections(project, type, media_id):
         connection.close()
         return jsonify(results), 200, {"Access-Control-Allow-Origin": "*"}
     except Exception:
+        logger.exception("Failed to get media connection data.")
         return Response("Couldn't get media connection data.", status=404, content_type="text/json")
 
 
@@ -1728,6 +1739,7 @@ def get_type_gallery_connections(project, type, type_id, limit=None):
         connection.close()
         return jsonify(results), 200, {"Access-Control-Allow-Origin": "*"}
     except Exception:
+        logger.exception("Failed to get type gallery connection data.")
         return Response("Couldn't get type gallery connection data.", status=404, content_type="text/json")
 
 
@@ -1755,7 +1767,8 @@ def get_gallery_data(project, id, lang=None):
         connection.close()
         return jsonify(results), 200, {"Access-Control-Allow-Origin": "*"}
     except Exception:
-        return Response("Couldn't gallery image data.", status=404, content_type="text/json")
+        logger.exception("Failed to get gallery image data.")
+        return Response("Couldn't get gallery image data.", status=404, content_type="text/json")
 
 
 @digital_edition.route("/<project>/gallery/data/<lang>")
@@ -1779,6 +1792,7 @@ def get_galleries(project, lang=None):
         connection.close()
         return jsonify(results), 200, {"Access-Control-Allow-Origin": "*"}
     except Exception:
+        logger.exception("Failed to get galleries data.")
         return Response("Couldn't get galleries.", status=404, content_type="text/json")
 
 
@@ -1804,8 +1818,10 @@ def get_gallery_image(project, collection_id, file_name):
             output.close()
             return Response(content, status=200, content_type="image/jpeg")
         except Exception:
+            logger.exception(f"Failed to read from image file at {file_path}")
             return Response("File not found: " + file_path, status=404, content_type="text/json")
     except Exception:
+        logger.exception("Failed to parse gallery image request.")
         return Response("Couldn't get gallery file.", status=404, content_type="text/json")
 
 
@@ -1840,8 +1856,10 @@ def get_type_gallery_image(project, type, id):
             output.close()
             return Response(content, status=200, content_type="image/jpeg")
         except Exception:
+            logger.exception(f"Failed to read from image file at {file_path}")
             return Response("File not found: " + file_path, status=404, content_type="text/json")
     except Exception:
+        logger.exception("Failed to parse gallery image request.")
         return Response("Couldn't get type file.", status=404, content_type="text/json")
 
 
@@ -1858,6 +1876,7 @@ def get_media_data_pdf(project, id):
         connection.close()
         return Response(io.BytesIO(result["pdf"]), status=200, content_type="application/pdf")
     except Exception:
+        logger.exception("Failed to get PDF from database.")
         return Response("Couldn't get media image.", status=404, content_type="text/json")
 
 
@@ -1913,6 +1932,7 @@ def get_pdf_file(project, collection_id, file_type, download_name, use_download_
     try:
         return send_file(file_path, attachment_filename=download_name, conditional=True)
     except Exception:
+        logger.exception(f"Failed sending file from {file_path}")
         return Response("File not found.", status=404, content_type="text/json")
 
 
@@ -1940,6 +1960,7 @@ def get_song_file(project, file_type, file_name):
         return send_file(file_path, as_attachment=True, mimetype='application/octet-stream',
                          attachment_filename=file_name)
     except Exception:
+        logger.exception(f"Failed sending file from {file_path}")
         return Response("File not found.", status=404, content_type="text/json")
 
 
