@@ -9,7 +9,7 @@ engine: 'mysql://web_user:SecretPassword@mysql_server.example.com:3306?charset=u
 # It may be wise to change https://git-scm.com/docs/git-config#git-config-corequotePath for the repositories using git config
 parland:
     # First, settings about how the publication tools should communicate towards git
-    git_repository: 'publisher@parland:slsfi/parland.git'
+    git_repository: 'git@github.com:slsfi/parland_required_files.git'
     git_branch: 'staging'
     # And then the actual local directory where the files are located (should be a local git repository with the above configured as its remote)
     file_root: '/var/www/parland'
@@ -22,7 +22,7 @@ parland:
 
 topelius:
     # First, settings about how the publication tools should communicate towards git
-    git_repository: 'publisher@topelius:slsfi/topelius.git'
+    git_repository: 'git@github.com:slsfi/topelius_required_files.git'
     git_branch: 'master'
     # And then the actual local directory where the files are located (should be a local git repository with the above configured as its remote)
     file_root: '/var/www/topelius'
@@ -33,8 +33,6 @@ topelius:
     # SQLAlchemy engine string for comments (edith) database
     comments_database: 'mysql://web_user:SecretPassword@mysql_server.example.com:3306?charset=utf8mb4/topelius_comments'
 
-# In addition to STDOUT, messages can also be logged to file
-log_file: '/log/digital_editions/api.log'
 # XML-to-HTML is somewhat computationally expensive, so HTML reading texts are cached for up to this amount of time
 cache_lifetime_seconds: 7200  # 2 hours
 

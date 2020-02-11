@@ -2,7 +2,7 @@
 - Flask-driven REST API
 - Runs on Python 3.6 (Python2 may work, but will likely run slower and may have issues with unicode)
 ---
-Copyright 2018 Svenska Litteratursällskapet i Finland, r.f.
+Copyright 2018-2020 Svenska Litteratursällskapet i Finland, r.f.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -56,3 +56,7 @@ limitations under the License.
 - Needs connection details for MySQL server and paths to folders for XML, HTML, and XSL files
     - configs/digital_editions.yml
     - See digital_editions_example.yml for specifics    
+
+### SSH configuration
+- If API needs pull/push access to private git repositories (defined in `configs/digital_editions.yml`)
+    - Mount SSH keys and/or ssh_config files in `/home/uwsgi/.ssh/` inside the container

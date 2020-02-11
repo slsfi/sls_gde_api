@@ -21,10 +21,8 @@ RUN pip install -e .
 
 # finally drop back into uwsgi user to copy final files and run API
 USER uwsgi
-# Add SSH configuration to ssh config file for openssh agent
+# Ensure .ssh folder exists, for SSH keys/configuration to be mounted
 RUN mkdir ~/.ssh
-RUN cat ssh_config >> ~/.ssh/config
-RUN cp /app/ssh/* ~/.ssh/
 
-# Run using uwsgi.ini configuration file
-CMD ["uwsgi", "--ini", "/app/uwsgi.ini"]
+# Set SSH file permissions and then start API using uwsgi.ini configuration file
+CMD ["/bin/bash", "-c", "chmod -R 600 ~/.ssh && uwsgi --ini /app/uwsgi.ini"]

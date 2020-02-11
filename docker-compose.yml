@@ -19,8 +19,10 @@ services:
             #- /var/files/topelius:/var/topelius-files/
             #- /var/files/parland:/var/parland-files/
             #- /var/files/xslt:/var/xslt-files/
-            #- D:\Development\generic\vonWright\required_files:/var/topelius
 
-            # Config files need to be mounted aswell
+            # SSH keys for API to use may be mounted if needed
+            #- /var/www/ssh/deploy_key:/home/uwsgi/.ssh/id_rsa
+
+            # Config files need to be mounted
             - ./sls_api/configs:/app/sls_api/configs
         restart: unless-stopped
