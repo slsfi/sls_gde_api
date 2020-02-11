@@ -490,4 +490,3 @@ def get_person_occurrences_by_collection(project, object_type, collection_id):
     connection.close()
 
     return jsonify(subjects)
-

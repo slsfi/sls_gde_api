@@ -230,5 +230,3 @@ def get_facsimile_page_image(project, facsimile_type, facs_id, facs_nr):
     except Exception:
         logger.exception(f"Failed to interpret facsimile page image request {request.url}")
         return Response("Couldn't get facsimile page.", status=404, content_type="text/json")
-
-

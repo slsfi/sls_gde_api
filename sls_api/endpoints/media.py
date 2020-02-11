@@ -374,4 +374,3 @@ def get_pdf_file(project, collection_id, file_type, download_name, use_download_
     except Exception:
         logger.exception(f"Failed sending file from {file_path}")
         return Response("File not found.", status=404, content_type="text/json")
-

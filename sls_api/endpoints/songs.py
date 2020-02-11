@@ -179,4 +179,3 @@ def get_song_file(project, file_type, file_name):
     except Exception:
         logger.exception(f"Failed sending file from {file_path}")
         return Response("File not found.", status=404, content_type="text/json")
-

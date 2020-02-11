@@ -282,4 +282,3 @@ def get_variant(project, collection_id, publication_id, section_id=None):
             "id": "{}_{}".format(collection_id, publication_id),
             "error": message
         }), 403
-
