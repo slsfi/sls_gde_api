@@ -16,7 +16,7 @@ import time
 
 metadata = MetaData()
 
-logger = logging.getLogger("sls_api.de_tools")
+logger = logging.getLogger("sls_api.generics")
 
 config_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "configs")
 with io.open(os.path.join(config_dir, "digital_editions.yml"), encoding="UTF-8") as config:

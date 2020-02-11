@@ -9,7 +9,7 @@ from sls_api.endpoints.generics import db_engine, int_or_none, metadata, project
 
 publishing_tools = Blueprint("publishing_tools", __name__)
 
-logger = logging.getLogger("sls_api.publishing_tools")
+logger = logging.getLogger("sls_api.tools.publishing")
 
 
 @publishing_tools.route("/projects/new/", methods=["POST"])

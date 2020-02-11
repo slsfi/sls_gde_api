@@ -11,7 +11,7 @@ from sls_api.endpoints.generics import get_project_config, project_permission_re
 
 
 file_tools = Blueprint("file_tools", __name__)
-logger = logging.getLogger("tools_files")
+logger = logging.getLogger("sls_api.tools.files")
 
 
 def check_project_config(project):
