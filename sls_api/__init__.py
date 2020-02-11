@@ -56,8 +56,20 @@ else:
 
 # Selectively import and register endpoints based on which configs exist and can be loaded
 if os.path.exists(os.path.join("sls_api", "configs", "digital_editions.yml")):
-    from sls_api.endpoints.digital_editions import digital_edition
-    app.register_blueprint(digital_edition, url_prefix="/digitaledition")
+    from sls_api.endpoints.metadata import meta
+    app.register_blueprint(meta, url_prefix="/digitaledition")
+    from sls_api.endpoints.facsimiles import facsimiles
+    app.register_blueprint(facsimiles, url_prefix="/digitaledition")
+    from sls_api.endpoints.media import media
+    app.register_blueprint(media, url_prefix="/digitaledition")
+    from sls_api.endpoints.occurrences import occurrences
+    app.register_blueprint(occurrences, url_prefix="/digitaledition")
+    from sls_api.endpoints.search import search
+    app.register_blueprint(search, url_prefix="/digitaledition")
+    from sls_api.endpoints.songs import songs
+    app.register_blueprint(songs, url_prefix="/digitaledition")
+    from sls_api.endpoints.text import text
+    app.register_blueprint(text, url_prefix="/digitaledition")
 
 if os.path.exists(os.path.join("sls_api", "configs", "security.yml")):
     from sls_api.endpoints.auth import auth
@@ -84,17 +96,31 @@ if "digital_edition" in app.blueprints and "auth" in app.blueprints:
     """
     If we have a digital_edition config, and JWT is configured, load in JWT-protected publication tool endpoints
     """
-    from sls_api.endpoints.tools_events import event_tools
-    app.register_blueprint(event_tools, url_prefix="/digitaledition")
-    from sls_api.endpoints.tools_publications import publication_tools
-    app.register_blueprint(publication_tools, url_prefix="/digitaledition")
-    from sls_api.endpoints.tools_files import file_tools
-    app.register_blueprint(file_tools, url_prefix="/digitaledition")
-    from sls_api.endpoints.tools_collections import collection_tools
+    from sls_api.endpoints.tools.collections import collection_tools
     app.register_blueprint(collection_tools, url_prefix="/digitaledition")
-    from sls_api.endpoints.tools_groups import group_tools
+    from sls_api.endpoints.tools.events import event_tools
+    app.register_blueprint(event_tools, url_prefix="/digitaledition")
+    from sls_api.endpoints.tools.files import file_tools
+    app.register_blueprint(file_tools, url_prefix="/digitaledition")
+    from sls_api.endpoints.tools.groups import group_tools
     app.register_blueprint(group_tools, url_prefix="/digitaledition")
-    from sls_api.endpoints.tools_publishing import publishing_tools
+    from sls_api.endpoints.tools.publications import publication_tools
+    app.register_blueprint(publication_tools, url_prefix="/digitaledition")
+    from sls_api.endpoints.tools.publishing import publishing_tools
     app.register_blueprint(publishing_tools, url_prefix="/digitaledition")
 
 logger.info(" * Loaded endpoints: {}".format(", ".join(app.blueprints)))
+
+
+# after every request, make sure CORS headers are set for response
+@app.after_request
+def set_access_control_headers(response):
+    if "Access-Control-Allow-Origin" not in response.headers:
+        response.headers["Access-Control-Allow-Origin"] = "*"
+    response.headers["Access-Control-Allow-Headers"] = "X-Requested-With, Content-Type, Accept, Origin, Authorization"
+    response.headers["Access-Control-Allow-Methods"] = "GET, PUT"
+
+    if response.headers.get("Content-Type") == "application/json":
+        response.headers["Content-Type"] = "application/json;charset=utf-8"
+
+    return response

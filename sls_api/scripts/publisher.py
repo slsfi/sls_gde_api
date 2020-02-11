@@ -7,7 +7,7 @@ from subprocess import CalledProcessError
 import sys
 
 from sls_api.endpoints.generics import config, db_engine, get_project_id_from_name
-from sls_api.endpoints.tools_files import run_git_command, update_files_in_git_repo
+from sls_api.endpoints.tools.files import run_git_command, update_files_in_git_repo
 from sls_api.scripts.CTeiDocument import CTeiDocument
 
 logging.getLogger().setLevel(logging.INFO)
