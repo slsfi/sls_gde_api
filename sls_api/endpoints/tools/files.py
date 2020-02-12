@@ -108,6 +108,7 @@ def get_config_file(project):
 
 
 @file_tools.route("/<project>/config/update", methods=["POST"])
+@project_permission_required
 def update_config(project):
     config = get_project_config(project)
     if config is None:
