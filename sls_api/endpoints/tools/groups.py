@@ -1,8 +1,7 @@
 from flask import Blueprint, jsonify, request
-from sqlalchemy import Table
-from sqlalchemy.sql import select
+from sqlalchemy import select
 
-from sls_api.endpoints.generics import db_engine, int_or_none, metadata, project_permission_required
+from sls_api.endpoints.generics import db_engine, get_table, int_or_none, project_permission_required
 
 group_tools = Blueprint("group_tools", __name__)
 
@@ -14,7 +13,7 @@ def list_publication_groups(project):
     List all available publication groups
     """
     connection = db_engine.connect()
-    groups = Table("publication_group", metadata, autoload=True, autoload_with=db_engine)
+    groups = get_table("publication_group")
     statement = select([groups.c.id, groups.c.published, groups.c.name])
     rows = connection.execute(statement).fetchall()
     result = dict(rows[0])
@@ -29,7 +28,7 @@ def get_publication_group(project, group_id):
     Get all data for a single publication group
     """
     connection = db_engine.connect()
-    groups = Table("publication_group", metadata, autoload=True, autoload_with=db_engine)
+    groups = get_table("publication_group")
     statement = select([groups]).where(groups.c.id == int_or_none(group_id))
     rows = connection.execute(statement).fetchall()
     result = dict(rows[0])
@@ -44,7 +43,7 @@ def get_publications_in_group(project, group_id):
     List all publications in a given publication_group
     """
     connection = db_engine.connect()
-    publications = Table("publication", metadata, autoload=True, autoload_with=db_engine)
+    publications = get_table("publication")
     statement = select([publications.c.id, publications.c.name]).where(publications.c.publication_group_id == int_or_none(group_id))
     result = []
     for row in connection.execute(statement).fetchall():
@@ -73,7 +72,7 @@ def add_publication_to_group(project, publication_id):
     group_id = int_or_none(request_data["group_id"])
 
     connection = db_engine.connect()
-    publications = Table("publication", metadata, autoload=True, autoload_with=db_engine)
+    publications = get_table("publication")
     statement = publications.update().where(publications.c.id == int_or_none(publication_id)).values(publication_group_id=group_id)
     transaction = connection.begin()
     try:
@@ -112,7 +111,7 @@ def add_new_publication_group(project):
     request_data = request.get_json()
     if not request_data:
         return jsonify({"msg": "No data provided."}), 400
-    groups = Table("publication_group", metadata, autoload=True, autoload_with=db_engine)
+    groups = get_table("publication_group")
     connection = db_engine.connect()
     insert = groups.insert()
     new_group = {

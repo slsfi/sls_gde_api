@@ -1,10 +1,9 @@
 import logging
 from flask import Blueprint, jsonify, request
 from flask_jwt_extended import jwt_required
-from sqlalchemy import Table
-from sqlalchemy.sql import select
+from sqlalchemy import select
 
-from sls_api.endpoints.generics import db_engine, int_or_none, metadata, project_permission_required
+from sls_api.endpoints.generics import db_engine, get_table, int_or_none, project_permission_required
 
 
 publishing_tools = Blueprint("publishing_tools", __name__)
@@ -24,7 +23,7 @@ def add_new_project():
         return jsonify({"msg": "No data provided."}), 400
     name = request_data.get("name", None)
 
-    projects = Table("project", metadata, autoload=True, autoload_with=db_engine)
+    projects = get_table("project")
     connection = db_engine.connect()
     ins = projects.insert().values(name=name)
 
@@ -49,7 +48,7 @@ def edit_project(project_id):
     name = request_data.get("name", None)
     published = request_data.get("published", None)
 
-    projects = Table("project", metadata, autoload=True, autoload_with=db_engine)
+    projects = get_table("project")
     query = select([projects.c.id]).where(projects.c.id == int_or_none(project_id))
     connection = db_engine.connect()
 
@@ -90,7 +89,7 @@ def edit_publication_collection(project, collection_id):
     name = request_data.get("name", None)
     published = request_data.get("published", None)
 
-    collections = Table("publication_collection", metadata, autoload=True, autoload_with=db_engine)
+    collections = get_table("publication_collection")
     query = select([collections.c.id]).where(collections.c.id == int_or_none(collection_id))
     connection = db_engine.connect()
 
@@ -121,8 +120,8 @@ def edit_publication_collection(project, collection_id):
 @publishing_tools.route("<project>/publication_collection/<collection_id>/intro/")
 @project_permission_required
 def get_intro(project, collection_id):
-    collections = Table("publication_collection", metadata, autoload=True, autoload_with=db_engine)
-    introductions = Table("publication_collection_introduction", metadata, autoload=True, autoload_with=db_engine)
+    collections = get_table("publication_collection")
+    introductions = get_table("publication_collection_introduction")
     query = select([collections.c.publication_collection_introduction_id]).where(collections.c.id == int_or_none(collection_id))
     connection = db_engine.connect()
     result = connection.execute(query)
@@ -151,8 +150,8 @@ def edit_intro(project, collection_id):
     filename = request_data.get("filename", None)
     published = request_data.get("published", None)
 
-    collections = Table("publication_collection", metadata, autoload=True, autoload_with=db_engine)
-    introductions = Table("publication_collection_introduction", metadata, autoload=True, autoload_with=db_engine)
+    collections = get_table("publication_collection")
+    introductions = get_table("publication_collection_introduction")
     query = select([collections.c.publication_collection_introduction_id]).where(collections.c.id == int_or_none(collection_id))
     connection = db_engine.connect()
     result = connection.execute(query).fetchone()
@@ -183,8 +182,8 @@ def edit_intro(project, collection_id):
 @publishing_tools.route("<project>/publication_collection/<collection_id>/title/")
 @project_permission_required
 def get_title(project, collection_id):
-    collections = Table("publication_collection", metadata, autoload=True, autoload_with=db_engine)
-    titles = Table("publication_collection_title", metadata, autoload=True, autoload_with=db_engine)
+    collections = get_table("publication_collection")
+    titles = get_table("publication_collection_title")
     query = select([collections.c.publication_collection_title_id]).where(collections.c.id == int_or_none(collection_id))
     connection = db_engine.connect()
     result = connection.execute(query).fetchone()
@@ -212,8 +211,8 @@ def edit_title(project, collection_id):
     filename = request_data.get("filename", None)
     published = request_data.get("published", None)
 
-    collections = Table("publication_collection", metadata, autoload=True, autoload_with=db_engine)
-    titles = Table("publication_collection_title", metadata, autoload=True, autoload_with=db_engine)
+    collections = get_table("publication_collection")
+    titles = get_table("publication_collection_title")
     query = select([collections.c.publication_collection_title_id]).where(collections.c.id == int_or_none(collection_id))
     connection = db_engine.connect()
     result = connection.execute(query).fetchone()
@@ -256,7 +255,7 @@ def edit_publication(project, publication_id):
     filename = request_data.get("filename", None)
     published = request_data.get("published", None)
 
-    publications = Table("publication", metadata, autoload=True, autoload_with=db_engine)
+    publications = get_table("publication")
     query = select([publications.c.id]).where(publications.c.id == int_or_none(publication_id))
     connection = db_engine.connect()
 
@@ -302,8 +301,8 @@ def edit_comment(project, publication_id):
     filename = request_data.get("filename", None)
     published = request_data.get("published", None)
 
-    publications = Table("publication", metadata, autoload=True, autoload_with=db_engine)
-    comments = Table("publication_comment", metadata, autoload=True, autoload_with=db_engine)
+    publications = get_table("publication")
+    comments = get_table("publication_comment")
     query = select([publications.c.publication_comment_id]).where(publications.c.id == int_or_none(publication_id))
     connection = db_engine.connect()
 
@@ -360,8 +359,8 @@ def add_manuscript(project, publication_id):
     published = request_data.get("published", None)
     sort_order = request_data.get("sort_order", None)
 
-    publications = Table("publication", metadata, autoload=True, autoload_with=db_engine)
-    manuscripts = Table("publication_manuscript", metadata, autoload=True, autoload_with=db_engine)
+    publications = get_table("publication")
+    manuscripts = get_table("publication_manuscript")
     query = select([publications]).where(publications.c.id == int_or_none(publication_id))
     connection = db_engine.connect()
 
@@ -403,7 +402,7 @@ def edit_manuscript(project, manuscript_id):
     published = request_data.get("published", None)
     sort_order = request_data.get("sort_order", None)
 
-    manuscripts = Table("publication_manuscript", metadata, autoload=True, autoload_with=db_engine)
+    manuscripts = get_table("publication_manuscript")
     query = select([manuscripts]).where(manuscripts.c.id == int_or_none(manuscript_id))
     connection = db_engine.connect()
 
@@ -452,8 +451,8 @@ def add_version(project, publication_id):
     sort_order = request_data.get("sort_order", None)
     version_type = request_data.get("type", None)
 
-    publications = Table("publication", metadata, autoload=True, autoload_with=db_engine)
-    versions = Table("publication_version", metadata, autoload=True, autoload_with=db_engine)
+    publications = get_table("publication")
+    versions = get_table("publication_version")
     query = select([publications]).where(publications.c.id == int_or_none(publication_id))
     connection = db_engine.connect()
 
@@ -499,7 +498,7 @@ def edit_version(project, version_id):
     sort_order = request_data.get("sort_order", None)
     version_type = request_data.get("type", None)
 
-    versions = Table("publication_version", metadata, autoload=True, autoload_with=db_engine)
+    versions = get_table("publication_version")
     query = select([versions]).where(versions.c.id == int_or_none(version_id))
     connection = db_engine.connect()
 
@@ -548,7 +547,7 @@ def edit_facsimile_collection(project, collection_id):
     start_page = request_data.get("startPageNumber", None)
     description = request_data.get("description", None)
 
-    collections = Table("publication_facsimile_collection", metadata, autoload=True, autoload_with=db_engine)
+    collections = get_table("publication_facsimile_collection")
     query = select([collections]).where(collections.c.id == int_or_none(collection_id))
     connection = db_engine.connect()
 
@@ -587,9 +586,9 @@ def get_publication_collection_info(project, collection_id):
     Returns published status for publication_collection and associated introduction and title objects
     Also returns the original_filename for the introduction and title objects
     """
-    collections = Table("publication_collection", metadata, autoload=True, autoload_with=db_engine)
-    intros = Table("publication_collection_introduction", metadata, autoload=True, autoload_with=db_engine)
-    titles = Table("publication_collection_title", metadata, autoload=True, autoload_with=db_engine)
+    collections = get_table("publication_collection")
+    intros = get_table("publication_collection_introduction")
+    titles = get_table("publication_collection_title")
 
     query = select([collections]).where(collections.c.id == int_or_none(collection_id))
     connection = db_engine.connect()
@@ -639,7 +638,7 @@ def edit_location(project, location_id):
     if not request_data:
         return jsonify({"msg": "No data provided."}), 400
 
-    locations = Table("location", metadata, autoload=True, autoload_with=db_engine)
+    locations = get_table("location")
 
     connection = db_engine.connect()
     location_query = select([locations.c.id]).where(locations.c.id == int_or_none(location_id))
@@ -701,7 +700,7 @@ def edit_subject(project, subject_id):
     if not request_data:
         return jsonify({"msg": "No data provided."}), 400
 
-    subjects = Table("subject", metadata, autoload=True, autoload_with=db_engine)
+    subjects = get_table("subject")
 
     connection = db_engine.connect()
     subject_query = select([subjects.c.id]).where(subjects.c.id == int_or_none(subject_id))

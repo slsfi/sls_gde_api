@@ -1,10 +1,9 @@
 from flask import Blueprint, jsonify, request
 from flask_jwt_extended import jwt_required
-from sqlalchemy import Table
-from sqlalchemy.sql import select, text
+from sqlalchemy import cast, select, Text
 
-from sls_api.endpoints.generics import db_engine, get_project_id_from_name, int_or_none, \
-    metadata, project_permission_required, select_all_from_table
+from sls_api.endpoints.generics import db_engine, get_project_id_from_name, get_table, int_or_none, \
+    project_permission_required, select_all_from_table
 
 event_tools = Blueprint("event_tools", __name__)
 
@@ -34,7 +33,7 @@ def add_new_location(project):
     if "name" not in request_data:
         return jsonify({"msg": "No name in POST data"}), 400
 
-    locations = Table('location', metadata, autoload=True, autoload_with=db_engine)
+    locations = get_table("location")
     connection = db_engine.connect()
 
     new_location = {
@@ -90,7 +89,7 @@ def edit_location(project, location_id):
     if "name" not in request_data:
         return jsonify({"msg": "No name in POST data"}), 400
 
-    locations = Table('location', metadata, autoload=True, autoload_with=db_engine)
+    locations = get_table("location")
     connection = db_engine.connect()
 
     new_location = {
@@ -142,7 +141,7 @@ def add_new_subject(project):
     request_data = request.get_json()
     if not request_data:
         return jsonify({"msg": "No data provided."}), 400
-    subjects = Table('subject', metadata, autoload=True, autoload_with=db_engine)
+    subjects = get_table("subject")
     connection = db_engine.connect()
 
     new_subject = {
@@ -201,7 +200,7 @@ def edit_subject(project, subject_id):
     request_data = request.get_json()
     if not request_data:
         return jsonify({"msg": "No data provided."}), 400
-    subjects = Table('subject', metadata, autoload=True, autoload_with=db_engine)
+    subjects = get_table("subject")
     connection = db_engine.connect()
 
     new_subject = {
@@ -252,7 +251,7 @@ def add_new_tag(project):
     request_data = request.get_json()
     if not request_data:
         return jsonify({"msg": "No data provided."}), 400
-    tags = Table("tag", metadata, autoload=True, autoload_with=db_engine)
+    tags = get_table("tag")
     connection = db_engine.connect()
 
     new_tag = {
@@ -297,11 +296,15 @@ def get_subjects():
     """
     Get all subjects from the database
     """
-    # TODO better workaround because subject.date_born and subject.date_death may contain BC dates
     connection = db_engine.connect()
-    stmt = text("SELECT id, date_created::text, date_modified::text, deleted, type, first_name, last_name, "
-                "place_of_birth, occupation, preposition, full_name, description, legacy_id, "
-                "date_born::text, date_deceased::text, project_id, source FROM subject")
+    subject = get_table("subject")
+    columns = [subject.c.id, cast(subject.c.date_created, Text), cast(subject.c.date_modified, Text),
+               subject.c.deleted, subject.c.type, subject.c.first_name, subject.c.last_name,
+               subject.c.place_of_birth, subject.c.occupation, subject.c.preposition,
+               subject.c.full_name, subject.c.description, subject.c.legacy_id,
+               cast(subject.c.date_born, Text), cast(subject.c.date_deceased, Text),
+               subject.c.project_id, subject.c.source]
+    stmt = select(columns)
     rows = connection.execute(stmt).fetchall()
     result = []
     for row in rows:
@@ -345,7 +348,7 @@ def find_event_by_description():
     if "phrase" not in request_data:
         return jsonify({"msg": "No phrase in POST data"}), 400
 
-    events = Table("event", metadata, autoload=True, autoload_with=db_engine)
+    events = get_table("event")
     connection = db_engine.connect()
 
     statement = select([events]).where(events.c.description.ilike("%{}%".format(request_data["phrase"])))
@@ -373,7 +376,7 @@ def add_new_event():
     request_data = request.get_json()
     if not request_data:
         return jsonify({"msg": "No data provided."}), 400
-    events = Table("event", metadata, autoload=True, autoload_with=db_engine)
+    events = get_table("event")
     connection = db_engine.connect()
 
     new_event = {
@@ -416,7 +419,7 @@ def connect_event(event_id):
     request_data = request.get_json()
     if not request_data:
         return jsonify({"msg": "No data provided."}), 400
-    events = Table("event", metadata, autoload=True, autoload_with=db_engine)
+    events = get_table("event")
     connection = db_engine.connect()
     select_event = select([events]).where(events.c.id == int_or_none(event_id))
     event_exists = connection.execute(select_event).fetchall()
@@ -426,7 +429,7 @@ def connect_event(event_id):
                 "msg": "Event ID not found in database"
             }
         ), 404
-    event_connections = Table("event_connection", metadata, autoload=True, autoload_with=db_engine)
+    event_connections = get_table("event_connection")
     insert = event_connections.insert()
     new_event_connection = {
         "event_id": int(event_id),
@@ -459,7 +462,7 @@ def get_event_connections(event_id):
     """
     List all event_connections for a given event, to find related locations, subjects, and tags
     """
-    event_connections = Table("event_connection", metadata, autoload=True, autoload_with=db_engine)
+    event_connections = get_table("event_connection")
     connection = db_engine.connect()
     statement = select([event_connections]).where(event_connections.c.event_id == int_or_none(event_id))
     rows = connection.execute(statement).fetchall()
@@ -476,7 +479,7 @@ def get_event_occurrences(event_id):
     """
     Get a list of all event_occurrence in the database, optionally limiting to a given event
     """
-    event_occurrences = Table("event_occurrence", metadata, autoload=True, autoload_with=db_engine)
+    event_occurrences = get_table("event_occurrence")
     connection = db_engine.connect()
     statement = select([event_occurrences]).where(event_occurrences.c.event_id == int_or_none(event_id))
     rows = connection.execute(statement).fetchall()
@@ -509,7 +512,7 @@ def new_event_occurrence(event_id):
     request_data = request.get_json()
     if not request_data:
         return jsonify({"msg": "No data provided."}), 400
-    events = Table("event", metadata, autoload=True, autoload_with=db_engine)
+    events = get_table("event")
     connection = db_engine.connect()
     select_event = select([events]).where(events.c.id == int_or_none(event_id))
     event_exists = connection.execute(select_event).fetchall()
@@ -520,7 +523,7 @@ def new_event_occurrence(event_id):
             }
         ), 404
 
-    event_occurrences = Table("event_occurrence", metadata, autoload=True, autoload_with=db_engine)
+    event_occurrences = get_table("event_occurrence")
     insert = event_occurrences.insert()
     new_occurrence = {
         "event_id": int(event_id),

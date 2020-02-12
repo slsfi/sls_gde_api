@@ -1,10 +1,9 @@
 from flask import Blueprint, jsonify, request
 from flask_jwt_extended import jwt_required
-from sqlalchemy import Table
-from sqlalchemy.sql import join, select
+from sqlalchemy import join, select
 
-from sls_api.endpoints.generics import db_engine, get_project_id_from_name, \
-    int_or_none, metadata, project_permission_required
+from sls_api.endpoints.generics import db_engine, get_project_id_from_name, get_table, int_or_none, \
+    project_permission_required
 
 
 publication_tools = Blueprint("publication_tools", __name__)
@@ -18,8 +17,8 @@ def get_publications(project):
     """
     project_id = get_project_id_from_name(project)
     connection = db_engine.connect()
-    publication_collections = Table("publication_collection", metadata, autoload=True, autoload_with=db_engine)
-    publications = Table("publication", metadata, autoload=True, autoload_with=db_engine)
+    publication_collections = get_table("publication_collection")
+    publications = get_table("publication")
     statement = select([publication_collections.c.id]).where(publication_collections.c.project_id == project_id)
     collection_ids = connection.execute(statement).fetchall()
     collection_ids = [int(row["id"]) for row in collection_ids]
@@ -39,7 +38,7 @@ def get_publication(project, publication_id):
     Get a publication object from the database
     """
     connection = db_engine.connect()
-    publications = Table("publication", metadata, autoload=True, autoload_with=db_engine)
+    publications = get_table("publication")
     statement = select([publications]).where(publications.c.id == int_or_none(publication_id))
     rows = connection.execute(statement).fetchall()
     result = dict(rows[0])
@@ -54,7 +53,7 @@ def get_publication_versions(project, publication_id):
     List all versions of the given publication
     """
     connection = db_engine.connect()
-    publication_versions = Table("publication_version", metadata, autoload=True, autoload_with=db_engine)
+    publication_versions = get_table("publication_version")
     statement = select([publication_versions]).where(publication_versions.c.publication_id == int_or_none(publication_id))
     rows = connection.execute(statement).fetchall()
     result = []
@@ -71,7 +70,7 @@ def get_publication_manuscripts(project, publication_id):
     List all manuscripts for the given publication
     """
     connection = db_engine.connect()
-    publication_manuscripts = Table("publication_manuscript", metadata, autoload=True, autoload_with=db_engine)
+    publication_manuscripts = get_table("publication_manuscript")
     statement = select([publication_manuscripts]).where(publication_manuscripts.c.publication_id == int_or_none(publication_id))
     rows = connection.execute(statement).fetchall()
     result = []
@@ -88,8 +87,8 @@ def get_publication_facsimiles(project, publication_id):
     List all fascimilies for the given publication
     """
     connection = db_engine.connect()
-    publication_facsimiles = Table("publication_facsimile", metadata, autoload=True, autoload_with=db_engine)
-    facsimile_collections = Table("publication_facsimile_collection", metadata, autoload=True, autoload_with=db_engine)
+    publication_facsimiles = get_table("publication_facsimile")
+    facsimile_collections = get_table("publication_facsimile_collection")
 
     # join in facsimile_collections to we can get the collection title as well
     tables = join(publication_facsimiles, facsimile_collections, publication_facsimiles.c.publication_facsimile_collection_id == facsimile_collections.c.id)
@@ -113,8 +112,8 @@ def get_publication_comments(project, publication_id):
     List all comments for the given publication
     """
     connection = db_engine.connect()
-    publications = Table("publication", metadata, autoload=True, autoload_with=db_engine)
-    publication_comments = Table("publication_comment", metadata, autoload=True, autoload_with=db_engine)
+    publications = get_table("publication")
+    publication_comments = get_table("publication_comment")
     statement = select([publications.c.publication_comment_id]).where(publications.c.id == int_or_none(publication_id))
     comment_ids = connection.execute(statement).fetchall()
     comment_ids = [int(row[0]) for row in comment_ids]
@@ -161,8 +160,8 @@ def link_file_to_publication(project, publication_id):
     connection = db_engine.connect()
 
     if file_type == "comment":
-        comments = Table("publication_comment", metadata, autoload=True, autoload_with=db_engine)
-        publications = Table("publication", metadata, autoload=True, autoload_with=db_engine)
+        comments = get_table("publication_comment")
+        publications = get_table("publication")
         transaction = connection.begin()
         new_comment = {
             "original_file_name": request_data.get("file_path"),
@@ -209,9 +208,9 @@ def link_file_to_publication(project, publication_id):
             "section_id": request_data.get("sectionId", None)
         }
         if file_type == "manuscript":
-            table = Table("publication_manuscript", metadata, autoload=True, autoload_with=False)
+            table = get_table("publication_manuscript")
         else:
-            table = Table("publication_version", metadata, autoload=True, autoload_with=False)
+            table = get_table("publication_version")
         ins = table.insert()
         try:
             result = connection.execute(ins, **new_object)

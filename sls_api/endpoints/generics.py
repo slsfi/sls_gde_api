@@ -86,6 +86,10 @@ def select_all_from_table(table_name):
     return jsonify(result)
 
 
+def get_table(table_name):
+    return Table(table_name, metadata, autoload=True, autoload_with=db_engine)
+
+
 def slugify_route(path):
     path = path.replace(" - ", "")
     path = path.replace(" ", "-")

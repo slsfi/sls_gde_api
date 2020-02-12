@@ -1,9 +1,8 @@
 from flask import Blueprint, jsonify, request
-from sqlalchemy import Table
-from sqlalchemy.sql import select
+from sqlalchemy import select
 
-from sls_api.endpoints.generics import db_engine, get_project_id_from_name, int_or_none, \
-    metadata, project_permission_required, select_all_from_table
+from sls_api.endpoints.generics import db_engine, get_project_id_from_name, get_table, int_or_none, \
+    project_permission_required, select_all_from_table
 
 
 collection_tools = Blueprint("collection_tools", __name__)
@@ -31,7 +30,7 @@ def create_facsimile_collection(project):
     request_data = request.get_json()
     if not request_data:
         return jsonify({"msg": "No data provided."}), 400
-    collections = Table("publication_facsimile_collection", metadata, autoload=True, autoload_with=db_engine)
+    collections = get_table("publication_facsimile_collection")
     connection = db_engine.connect()
     insert = collections.insert()
 
@@ -98,9 +97,9 @@ def link_facsimile_collection_to_publication(project, collection_id):
     publication_id = int_or_none(request_data["publication_id"])
     project_id = get_project_id_from_name(project)
 
-    publication_facsimiles = Table("publication_facsimile", metadata, autoload=True, autoload_with=db_engine)
-    publication_collections = Table("publication_collection", metadata, autoload=True, autoload_with=db_engine)
-    publications = Table("publication", metadata, autoload=True, autoload_with=db_engine)
+    publication_facsimiles = get_table("publication_facsimile")
+    publication_collections = get_table("publication_collection")
+    publications = get_table("publication")
 
     statement = select([publications.c.publication_collection_id]).where(publications.c.id == publication_id)
     result = connection.execute(statement).fetchall()
@@ -161,7 +160,7 @@ def list_facsimile_collection_links(project, collection_id):
     List all publication_facsimile objects in the given publication_facsimile_collection
     """
     connection = db_engine.connect()
-    facsimiles = Table("publication_facsimile", metadata, autoload=True, autoload_with=db_engine)
+    facsimiles = get_table("publication_facsimile")
     statement = select([facsimiles]).where(facsimiles.c.publication_facsimile_collection_id == int_or_none(collection_id))
     rows = connection.execute(statement).fetchall()
     result = []
@@ -179,7 +178,7 @@ def list_publication_collections(project):
     """
     project_id = get_project_id_from_name(project)
     connection = db_engine.connect()
-    collections = Table("publication_collection", metadata, autoload=True, autoload_with=db_engine)
+    collections = get_table("publication_collection")
     statement = select([collections]).where(collections.c.project_id == int_or_none(project_id))
     rows = connection.execute(statement).fetchall()
     result = []
@@ -210,9 +209,9 @@ def new_publication_collection(project):
     if not request_data:
         return jsonify({"msg": "No data provided."}), 400
 
-    collections = Table("publication_collection", metadata, autoload=True, autoload_with=db_engine)
-    introductions = Table("publication_collection_introduction", metadata, autoload=True, autoload_with=db_engine)
-    titles = Table("publication_collection_title", metadata, autoload=True, autoload_with=db_engine)
+    collections = get_table("publication_collection")
+    introductions = get_table("publication_collection_introduction")
+    titles = get_table("publication_collection_title")
 
     connection = db_engine.connect()
     transaction = connection.begin()
@@ -279,8 +278,8 @@ def list_publications(project, collection_id):
     """
     project_id = get_project_id_from_name(project)
     connection = db_engine.connect()
-    collections = Table("publication_collection", metadata, autoload=True, autoload_with=db_engine)
-    publications = Table("publication", metadata, autoload=True, autoload_with=db_engine)
+    collections = get_table("publication_collection")
+    publications = get_table("publication")
     statement = select([collections]).where(collections.c.id == int_or_none(collection_id))
     rows = connection.execute(statement).fetchall()
     if len(rows) != 1:
@@ -333,8 +332,8 @@ def new_publication(project, collection_id):
     project_id = get_project_id_from_name(project)
 
     connection = db_engine.connect()
-    collections = Table("publication_collection", metadata, autoload=True, autoload_with=db_engine)
-    publications = Table("publication", metadata, autoload=True, autoload_with=db_engine)
+    collections = get_table("publication_collection")
+    publications = get_table("publication")
 
     statement = select([collections.c.project_id]).where(collections.c.id == int_or_none(collection_id))
     result = connection.execute(statement).fetchall()
