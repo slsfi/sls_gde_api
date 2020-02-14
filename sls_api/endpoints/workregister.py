@@ -15,21 +15,14 @@ def get_work_manifestations_for_project(project):
     logger.info("Getting results for /workregister/manifestations/")
     connection = db_engine.connect()
     project_id = get_project_id_from_name(project)
-    manifestation_sql = "SELECT w_m.* FROM work_manifestation w_m " \
-                        "JOIN event_connection e_c ON e_c.work_manifestation_id = w_m.id " \
-                        "JOIN subject s ON s.id = e_c.subject_id " \
-                        "JOIN event e ON e.id = e_c.event_id " \
-                        "JOIN work_reference w_r ON w_r.work_manifestation_id = w_m.id " \
-                        "WHERE w_r.project_id = :proj_id " \
-                        "AND e_c.deleted = 0 AND e.deleted = 0 AND w_r.deleted = 0 AND w_m.deleted = 0 AND s.deleted = 0 " \
-                        "ORDER BY w_m.title"
+    manifestation_sql = "SELECT json_data FROM get_manifestations_with_authors WHERE project_id = :proj_id"
     manifestation_sql = text(manifestation_sql).bindparams(proj_id=project_id)
 
     manifestations = []
     result = connection.execute(manifestation_sql)
     row = result.fetchone()
     while row is not None:
-        manifestations.append(dict(row))
+        manifestations.append(row)
         row = result.fetchone()
 
     connection.close()
