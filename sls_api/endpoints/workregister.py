@@ -1,8 +1,7 @@
-from flask import Blueprint, jsonify, Response, request, safe_join, send_file
+from flask import Blueprint, jsonify
 import logging
-import sqlalchemy
 
-from sls_api.endpoints.generics import db_engine, get_project_config, get_project_id_from_name
+from sls_api.endpoints.generics import db_engine, get_project_id_from_name
 
 workregister = Blueprint('workregister', __name__)
 logger = logging.getLogger("sls_api.workregister")
