@@ -109,14 +109,14 @@ def get_work_manifestations_for_publication(project, publication_id):
         return jsonify({"msg": "Desired publication_id not found in database."}), 404
 
     sql = "SELECT p.* FROM work_manifestation w_m " \
-                      "JOIN event_connection e_c ON e_c.work_manifestation_id = w_m.id " \
-                      "JOIN event e ON e.id = e_c.event_id " \
-                      "JOIN event_occurrence e_o ON e.id = e_o.event_id " \
-                      "JOIN work_reference w_r ON w_r.work_manifestation_id = w_m.id " \
-                      "JOIN publication p ON p.id = e_o.publication_id " \
-                      "WHERE p.id = :pub_id " \
-                      "AND e_c.deleted = 0 AND e.deleted = 0 AND w_r.deleted = 0 AND p.deleted = 0 AND w_m.deleted = 0 AND e_o.deleted = 0 " \
-                      "AND w_r.project_id = :proj_id"
+        "JOIN event_connection e_c ON e_c.work_manifestation_id = w_m.id " \
+        "JOIN event e ON e.id = e_c.event_id " \
+        "JOIN event_occurrence e_o ON e.id = e_o.event_id " \
+        "JOIN work_reference w_r ON w_r.work_manifestation_id = w_m.id " \
+        "JOIN publication p ON p.id = e_o.publication_id " \
+        "WHERE p.id = :pub_id " \
+        "AND e_c.deleted = 0 AND e.deleted = 0 AND w_r.deleted = 0 AND p.deleted = 0 AND w_m.deleted = 0 AND e_o.deleted = 0 " \
+        "AND w_r.project_id = :proj_id"
 
     sql = text(sql).bindparams(pub_id=publication_id, proj_id=project_id)
 
@@ -142,13 +142,13 @@ def get_work_manifestations_by_author(project, author_id):
         return jsonify({"msg": "Desired author_id not found in database."}), 404
 
     sql = "SELECT w_m.*, w_r.project_id FROM work_manifestation w_m "\
-                  "JOIN event_connection e_c ON e_c.work_manifestation_id = w_m.id "\
-                  "JOIN subject s ON s.id = e_c.subject_id "\
-                  "JOIN event e ON e.id = e_c.event_id "\
-                  "JOIN work_reference w_r ON w_r.work_manifestation_id = w_m.id "\
-                  "WHERE s.id = :author_id "\
-                  "AND e_c.deleted = 0 AND e.deleted = 0 AND w_r.deleted = 0 AND w_m.deleted = 0 AND s.deleted = 0 "\
-                  "ORDER BY w_m.title"
+        "JOIN event_connection e_c ON e_c.work_manifestation_id = w_m.id "\
+        "JOIN subject s ON s.id = e_c.subject_id "\
+        "JOIN event e ON e.id = e_c.event_id "\
+        "JOIN work_reference w_r ON w_r.work_manifestation_id = w_m.id "\
+        "WHERE s.id = :author_id "\
+        "AND e_c.deleted = 0 AND e.deleted = 0 AND w_r.deleted = 0 AND w_m.deleted = 0 AND s.deleted = 0 "\
+        "ORDER BY w_m.title"
 
     sql = text(sql).bindparams(author_id=author_id)
 
