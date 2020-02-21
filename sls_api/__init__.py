@@ -70,6 +70,8 @@ if os.path.exists(os.path.join("sls_api", "configs", "digital_editions.yml")):
     app.register_blueprint(songs, url_prefix="/digitaledition")
     from sls_api.endpoints.text import text
     app.register_blueprint(text, url_prefix="/digitaledition")
+    from sls_api.endpoints.workregister import workregister
+    app.register_blueprint(workregister, url_prefix="/digitaledition")
 
 if os.path.exists(os.path.join("sls_api", "configs", "security.yml")):
     from sls_api.endpoints.auth import auth
