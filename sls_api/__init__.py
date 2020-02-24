@@ -92,7 +92,7 @@ if os.path.exists(os.path.join("sls_api", "configs", "security.yml")):
         if User.find_by_email("test@test.com") is None:
             User.create_new_user("test@test.com", "test")
 
-if "digital_edition" in app.blueprints and "auth" in app.blueprints:
+if "metadata" in app.blueprints and "auth" in app.blueprints:
     """
     If we have a digital_edition config, and JWT is configured, load in JWT-protected publication tool endpoints
     """
