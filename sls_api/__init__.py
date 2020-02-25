@@ -37,6 +37,10 @@ if os.path.exists(os.path.join("sls_api", "configs", "sentry.yml")):
 else:
     sentry = None
 
+# check what config files exists, so we know what blueprints to load
+projects_config_exists = os.path.exists(os.path.join("sls_api", "configs", "digital_editions.yml"))
+security_config_exists = os.path.exists(os.path.join("sls_api", "configs", "security.yml"))
+
 # Load in Swagger UI to display api documentation at /apidocs, with a 302-redirect at the base URL
 if os.path.exists("openapi.json"):
     app.config["SWAGGER"] = {
@@ -55,7 +59,7 @@ else:
 
 
 # Selectively import and register endpoints based on which configs exist and can be loaded
-if os.path.exists(os.path.join("sls_api", "configs", "digital_editions.yml")):
+if projects_config_exists:
     from sls_api.endpoints.metadata import meta
     app.register_blueprint(meta, url_prefix="/digitaledition")
     from sls_api.endpoints.facsimiles import facsimiles
@@ -73,7 +77,7 @@ if os.path.exists(os.path.join("sls_api", "configs", "digital_editions.yml")):
     from sls_api.endpoints.workregister import workregister
     app.register_blueprint(workregister, url_prefix="/digitaledition")
 
-if os.path.exists(os.path.join("sls_api", "configs", "security.yml")):
+if security_config_exists:
     from sls_api.endpoints.auth import auth
     from sls_api.models import db, User
     with open(os.path.join("sls_api", "configs", "security.yml")) as config_file:
@@ -90,13 +94,16 @@ if os.path.exists(os.path.join("sls_api", "configs", "security.yml")):
 
     @app.before_first_request
     def create_tables():
+        """
+        Before our first request, ensure all database tables are created and the test user account exists
+        """
         db.create_all()
         if User.find_by_email("test@test.com") is None:
             User.create_new_user("test@test.com", "test")
 
-if "digital_edition" in app.blueprints and "auth" in app.blueprints:
+if projects_config_exists and security_config_exists:
     """
-    If we have a digital_edition config, and JWT is configured, load in JWT-protected publication tool endpoints
+    If we have both a projects config (digital_edition.yml) and a security config (security.yml), load tools endpoints for JWT-protected writing to database
     """
     from sls_api.endpoints.tools.collections import collection_tools
     app.register_blueprint(collection_tools, url_prefix="/digitaledition")
