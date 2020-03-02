@@ -185,6 +185,11 @@ def check_publication_mtimes_and_publish_files(project, publication_ids):
 
                 # default to template comment file if no entry in publication_comment pointing to a comments file for this publication
                 comment_file = comment_filenames.get(publication_id, COMMENTS_TEMPLATE_PATH_IN_FILE_ROOT)
+
+                if comment_file is None:
+                    logger.info("Comment file not set for publication {}".format(publication_id))
+                    continue
+
                 com_source_file_path = os.path.join(file_root, comment_file)
 
                 if not est_source_file_path:
