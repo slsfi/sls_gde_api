@@ -245,6 +245,22 @@ def get_collection_publications(project, collection_id):
     connection.close()
     return jsonify(results)
 
+# Get the collection and publication id for a legacy id
+@meta.route("/<project>/legacy/<legacy_id>")
+def get_collection_publication_by_legacyid(project, legacy_id):
+    logger.info("Getting /<project>/legacy/<legacy_id>".format(project, legacy_id))
+    connection = db_engine.connect()
+    project_id = get_project_id_from_name(project)
+    sql = sqlalchemy.sql.text("SELECT p.id as pub_id, pc.id as coll_id FROM publication p \
+                                JOIN publication_collection pc ON pc.id = p.publication_collection_id \
+                                WHERE p.legacy_id = :l_id AND pc.project_id = :p_id ORDER BY pc.id")
+    statement = sql.bindparams(l_id=legacy_id, p_id=project_id)
+    results = []
+    for row in connection.execute(statement).fetchall():
+        results.append(dict(row))
+    connection.close()
+    return jsonify(results)
+
 
 @meta.route("/tooltips/subjects")
 def subject_tooltips():
