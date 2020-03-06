@@ -104,7 +104,7 @@ def get_reading_text(project, collection_id, publication_id, section_id=None):
     if can_show:
         logger.info("Getting XML for {} and transforming...".format(request.full_path))
         connection = db_engine.connect()
-        select = "SELECT legacy_id FROM publication WHERE id = :p_id"
+        select = "SELECT legacy_id FROM publication WHERE id = :p_id AND original_filename IS NULL"
         statement = sqlalchemy.sql.text(select).bindparams(p_id=publication_id)
         result = connection.execute(statement).fetchone()
         if not result[0]:
@@ -147,7 +147,8 @@ def get_comments(project, collection_id, publication_id, note_id=None):
         if can_show:
             logger.info("Getting XML for {} and transforming...".format(request.full_path))
             connection = db_engine.connect()
-            select = "SELECT legacy_id FROM publication_comment WHERE id IN (SELECT publication_comment_id FROM publication WHERE id = :p_id) AND legacy_id IS NOT NULL"
+            select = "SELECT legacy_id FROM publication_comment WHERE id IN (SELECT publication_comment_id FROM publication WHERE id = :p_id) \
+                        AND legacy_id IS NOT NULL AND original_filename IS NULL"
             statement = sqlalchemy.sql.text(select).bindparams(p_id=publication_id)
             result = connection.execute(statement).fetchone()
             if result is not None:
@@ -211,7 +212,7 @@ def get_manuscript(project, collection_id, publication_id, manuscript_id=None):
             params = {
                 "bookId": collection_id
             }
-            if manuscript["legacy_id"] is not None:
+            if manuscript["original_filename"] is None and manuscript["legacy_id"] is not None:
                 filename = "{}.xml".format(manuscript["legacy_id"])
             else:
                 filename = "{}_{}_ms_{}.xml".format(collection_id, publication_id, manuscript["id"])
@@ -265,7 +266,7 @@ def get_variant(project, collection_id, publication_id, section_id=None):
             if section_id is not None:
                 params["section_id"] = section_id
 
-            if variation["legacy_id"] is not None:
+            if variation["original_filename"] is None and variation["legacy_id"] is not None:
                 filename = "{}.xml".format(variation["legacy_id"])
             else:
                 filename = "{}_{}_var_{}.xml".format(collection_id, publication_id, variation["id"])
