@@ -107,7 +107,7 @@ def get_reading_text(project, collection_id, publication_id, section_id=None):
         select = "SELECT legacy_id FROM publication WHERE id = :p_id AND original_filename IS NULL"
         statement = sqlalchemy.sql.text(select).bindparams(p_id=publication_id)
         result = connection.execute(statement).fetchone()
-        if result is not None:
+        if result is None:
             filename = "{}_{}_est.xml".format(collection_id, publication_id)
             connection.close()
         else:
