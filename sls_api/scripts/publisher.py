@@ -185,6 +185,11 @@ def check_publication_mtimes_and_publish_files(project, publication_ids):
 
                 # default to template comment file if no entry in publication_comment pointing to a comments file for this publication
                 comment_file = comment_filenames.get(publication_id, COMMENTS_TEMPLATE_PATH_IN_FILE_ROOT)
+
+                if comment_file is None:
+                    logger.info("Comment file not set for publication {}".format(publication_id))
+                    continue
+
                 com_source_file_path = os.path.join(file_root, comment_file)
 
                 if not est_source_file_path:
@@ -261,6 +266,9 @@ def check_publication_mtimes_and_publish_files(project, publication_ids):
                     connection.close()
 
                     # compile info and generate files if needed
+                    if main_variant_info["original_filename"] is None:
+                        continue
+
                     main_variant_source = os.path.join(file_root, main_variant_info["original_filename"])
 
                     if not main_variant_source:
@@ -287,6 +295,9 @@ def check_publication_mtimes_and_publish_files(project, publication_ids):
                         target_filename = "{}_{}_var_{}.xml".format(collection_id,
                                                                     publication_id,
                                                                     variant["id"])
+                        if variant["original_filename"] is None:
+                            continue
+
                         source_filename = variant["original_filename"]
                         if not source_filename:
                             logger.info("Source file for variant {} is not set.".format(variant["original_filename"]))
@@ -346,6 +357,9 @@ def check_publication_mtimes_and_publish_files(project, publication_ids):
                 target_filename = "{}_{}_ms_{}.xml".format(collection_id,
                                                            publication_id,
                                                            manuscript_id)
+                if row["original_filename"] is None:
+                    continue
+
                 source_filename = row["original_filename"]
                 if not source_filename:
                     logger.info("Source file not set for manuscript {}".format(manuscript_id))
