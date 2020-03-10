@@ -74,6 +74,8 @@ if projects_config_exists:
     app.register_blueprint(songs, url_prefix="/digitaledition")
     from sls_api.endpoints.text import text
     app.register_blueprint(text, url_prefix="/digitaledition")
+    from sls_api.endpoints.workregister import workregister
+    app.register_blueprint(workregister, url_prefix="/digitaledition")
 
 if security_config_exists:
     from sls_api.endpoints.auth import auth
