@@ -326,7 +326,7 @@ def check_publication_mtimes_and_publish_files(project, publication_ids):
                     logger.info("Generating new est/com files for publication {}...".format(publication_id))
                     changes.add(est_target_file_path)
                     changes.add(com_target_file_path)
-                    generate_est_and_com_files(publication_info, project, est_source_file_path, com_source_file_path,
+                    generate_est_and_com_files(row, project, est_source_file_path, com_source_file_path,
                                                est_target_file_path, com_target_file_path)
                 else:
                     # otherwise, check if this publication's files need to be re-generated
@@ -342,7 +342,7 @@ def check_publication_mtimes_and_publish_files(project, publication_ids):
                         logger.info("Generating new est/com files for publication {}...".format(publication_id))
                         changes.add(est_target_file_path)
                         changes.add(com_target_file_path)
-                        generate_est_and_com_files(publication_info, project, est_source_file_path, com_source_file_path,
+                        generate_est_and_com_files(row, project, est_source_file_path, com_source_file_path,
                                                    est_target_file_path, com_target_file_path)
                     else:
                         if est_target_mtime >= est_source_mtime and com_target_mtime >= com_source_mtime:
@@ -353,7 +353,7 @@ def check_publication_mtimes_and_publish_files(project, publication_ids):
                             changes.add(est_target_file_path)
                             changes.add(com_target_file_path)
                             logger.info("Reading files for publication {} are outdated, generating new est/com files...".format(publication_id))
-                            generate_est_and_com_files(publication_info, project, est_source_file_path, com_source_file_path,
+                            generate_est_and_com_files(row, project, est_source_file_path, com_source_file_path,
                                                        est_target_file_path, com_target_file_path)
 
                 # Process all variants belonging to this publication
@@ -463,7 +463,7 @@ def check_publication_mtimes_and_publish_files(project, publication_ids):
                                     # If no changes, don't generate CTeiDocument and don't make a new web XML file
                                     continue
                     # lastly, actually process all generated CTeiDocument objects and create web XML files
-                    process_var_documents_and_generate_files(main_variant_doc, main_variant_target, variant_docs, variant_paths, publication_info)
+                    process_var_documents_and_generate_files(main_variant_doc, main_variant_target, variant_docs, variant_paths, row)
 
             # For each publication_manuscript belonging to this project, check the modification timestamp of its master file and compare it to the generated web XML file
             # logger.debug("Manuscript query resulting rows: {}".format(manuscript_info[0].keys())) TODO: fix IndexError if manuscript_info has no rows
