@@ -606,29 +606,29 @@ class CTeiDocument:
         # Create origDate
         if len(sOrigDate) > 0:
             elem = self.__GetOrCreate(elemContainer, self.sPrefix + ':origDate', 'origDate')
-            elem.text = sOrigDate
+            elem.text = str(sOrigDate)
 
         # Create default idNo and for book id
         if sItemId > 0:
             elem = self.__GetOrCreate(elemContainer, self.sPrefix + ':idNo[not(@type)]', 'idNo')
-            elem.text = sItemId
+            elem.text = str(sItemId)
             # For book id
             elem = self.__GetOrCreate(elemContainer, self.sPrefix + ':idNo[@type="bookid"]', 'idNo')
             elem.attrib['type'] = 'bookid'
-            if sItemId.find('_') >= 0:
-                elem.text = sItemId[:sItemId.find('_')]
+            if str(sItemId).find('_') >= 0:
+                elem.text = str(sItemId[:sItemId.find('_')])
 
         # Create idNo for collection
         if sCollectionId > 0:
             elem = self.__GetOrCreate(elemContainer, self.sPrefix + ':idNo[@type="collection"]', 'idNo')
             elem.attrib['type'] = 'collection'
-            elem.text = sCollectionId
+            elem.text = str(sCollectionId)
 
         # Create idNo for group
         if sGroupId > 0:
             elem = self.__GetOrCreate(elemContainer, self.sPrefix + ':idNo[@type="group"]', 'idNo')
             elem.attrib['type'] = 'group'
-            elem.text = sGroupId
+            elem.text = str(sGroupId)
 
         # Create title element
         if len(sMainTitle) > 0:
