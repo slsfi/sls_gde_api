@@ -278,7 +278,7 @@ def check_publication_mtimes_and_publish_files(project, publication_ids):
             # comment_filenames can just be a dict of publication.id to publication_comment.original_filename
             comment_filenames = dict()
             for row in connection.execute(comment_query):
-                comment_filenames[row["id"]] = row["original_filename"]
+                comment_filenames[row["p_id"]] = row["original_filename"]
 
             # close DB connection for now, it won't be needed for a while
             connection.close()
@@ -288,7 +288,7 @@ def check_publication_mtimes_and_publish_files(project, publication_ids):
             # logger.debug("Publication query resulting rows: {}".format(publication_info[0].keys()))  TODO: fix IndexError if publication_info has no rows
             # For each publication belonging to this project, check the modification timestamp of its master files and compare them to the generated web XML files
             for row in publication_info:
-                publication_id = row["id"]
+                publication_id = row["p_id"]
                 collection_id = row["c_id"]
                 if not row["original_filename"]:
                     logger.info("Source file not set for publication {}".format(publication_id))
