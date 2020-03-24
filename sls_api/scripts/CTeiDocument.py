@@ -625,7 +625,7 @@ class CTeiDocument:
             elem.text = str(sCollectionId)
 
         # Create idNo for group
-        if sGroupId > 0:
+        if sGroupId is not None and sGroupId > 0:
             elem = self.__GetOrCreate(elemContainer, self.sPrefix + ':idNo[@type="group"]', 'idNo')
             elem.attrib['type'] = 'group'
             elem.text = str(sGroupId)
