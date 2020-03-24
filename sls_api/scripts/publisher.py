@@ -246,7 +246,7 @@ def check_publication_mtimes_and_publish_files(project, publication_ids):
                                 publication.id as p_id, \
                                 p.publication_collection_id as c_id, \
                                 pcol.id as c_id, \
-                                pm.original_filename as original_filename \
+                                pm.original_filename as original_filename, \
                                 p.original_publication_date as original_publication_date, \
                                 p.genre as genre, \
                                 p.publication_group_id as publication_group_id, \
