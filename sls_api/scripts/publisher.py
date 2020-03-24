@@ -243,7 +243,7 @@ def check_publication_mtimes_and_publish_files(project, publication_ids):
             # publication_manuscript info
             manuscript_query = "SELECT \
                                 pm.id as m_id, \
-                                publication.id as p_id, \
+                                p.id as p_id, \
                                 p.publication_collection_id as c_id, \
                                 pcol.id as c_id, \
                                 pm.original_filename as original_filename, \
