@@ -609,7 +609,7 @@ class CTeiDocument:
             elem.text = sOrigDate
 
         # Create default idNo and for book id
-        if len(sItemId) > 0:
+        if sItemId > 0:
             elem = self.__GetOrCreate(elemContainer, self.sPrefix + ':idNo[not(@type)]', 'idNo')
             elem.text = sItemId
             # For book id
@@ -619,13 +619,13 @@ class CTeiDocument:
                 elem.text = sItemId[:sItemId.find('_')]
 
         # Create idNo for collection
-        if len(sCollectionId) > 0:
+        if sCollectionId > 0:
             elem = self.__GetOrCreate(elemContainer, self.sPrefix + ':idNo[@type="collection"]', 'idNo')
             elem.attrib['type'] = 'collection'
             elem.text = sCollectionId
 
         # Create idNo for group
-        if len(sGroupId) > 0:
+        if sGroupId > 0:
             elem = self.__GetOrCreate(elemContainer, self.sPrefix + ':idNo[@type="group"]', 'idNo')
             elem.attrib['type'] = 'group'
             elem.text = sGroupId
