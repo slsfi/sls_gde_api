@@ -109,7 +109,7 @@ def get_letter_location(letter_id, type):
     return data
 
 
-def generate_est_and_com_files(project, est_master_file_path, com_master_file_path, est_target_path, com_target_path, com_xsl_path=None, publication_info=None):
+def generate_est_and_com_files(publication_info, project, est_master_file_path, com_master_file_path, est_target_path, com_target_path, com_xsl_path=None):
     """
     Given a project name, and paths to valid EST/COM masters and targets, regenerates target files based on source files
     """
@@ -326,8 +326,8 @@ def check_publication_mtimes_and_publish_files(project, publication_ids):
                     logger.info("Generating new est/com files for publication {}...".format(publication_id))
                     changes.add(est_target_file_path)
                     changes.add(com_target_file_path)
-                    generate_est_and_com_files(project, est_source_file_path, com_source_file_path,
-                                               est_target_file_path, com_target_file_path, publication_info)
+                    generate_est_and_com_files(publication_info, project, est_source_file_path, com_source_file_path,
+                                               est_target_file_path, com_target_file_path)
                 else:
                     # otherwise, check if this publication's files need to be re-generated
                     try:
@@ -342,8 +342,8 @@ def check_publication_mtimes_and_publish_files(project, publication_ids):
                         logger.info("Generating new est/com files for publication {}...".format(publication_id))
                         changes.add(est_target_file_path)
                         changes.add(com_target_file_path)
-                        generate_est_and_com_files(project, est_source_file_path, com_source_file_path,
-                                                   est_target_file_path, com_target_file_path, publication_info)
+                        generate_est_and_com_files(publication_info, project, est_source_file_path, com_source_file_path,
+                                                   est_target_file_path, com_target_file_path)
                     else:
                         if est_target_mtime >= est_source_mtime and com_target_mtime >= com_source_mtime:
                             # If both the est and com files are newer than the source files, just continue to the next publication
@@ -353,8 +353,8 @@ def check_publication_mtimes_and_publish_files(project, publication_ids):
                             changes.add(est_target_file_path)
                             changes.add(com_target_file_path)
                             logger.info("Reading files for publication {} are outdated, generating new est/com files...".format(publication_id))
-                            generate_est_and_com_files(project, est_source_file_path, com_source_file_path,
-                                                       est_target_file_path, com_target_file_path, publication_info)
+                            generate_est_and_com_files(publication_info, project, est_source_file_path, com_source_file_path,
+                                                       est_target_file_path, com_target_file_path)
 
                 # Process all variants belonging to this publication
                 # publication_version with type=1 is the "main" variant, the others should have type=2 and be versions of that main variant
