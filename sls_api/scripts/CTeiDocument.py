@@ -668,9 +668,7 @@ class CTeiDocument:
 
     # ------------------------------------------------
     # Used by the Topelius project to insert metadata in letters, can be edited to your needs
-    # letterData['title'], letterData['sender_location'], letterData['reciever_location'], letterData['sender'], letterData['reciever']
     def SetLetterTitleAndStatusAndMeta(self, letterData):
-
         # Get the profileDesc element
         elemProfileDesc = self.xmlRoot.find('.//' + self.sPrefixUrl + 'profileDesc')
         # If no such element, create it

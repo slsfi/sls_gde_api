@@ -88,7 +88,6 @@ def get_letter_info_from_database(letter_id):
     else:
         letter['title'] = ''
         letter['title_id'] = ''
-
     return letter
 
 
