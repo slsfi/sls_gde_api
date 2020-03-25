@@ -511,7 +511,7 @@ def check_publication_mtimes_and_publish_files(project, publication_ids):
                 if force_publish:
                     logger.info("Generating new ms file for publication_manuscript {}".format(manuscript_id))
                     changes.add(target_file_path)
-                    generate_ms_file(source_file_path, target_file_path, publication_info)
+                    generate_ms_file(source_file_path, target_file_path, row)
                 # otherwise, check if this file needs generating
                 else:
                     try:
@@ -523,7 +523,7 @@ def check_publication_mtimes_and_publish_files(project, publication_ids):
                         logger.warning("Error getting time_modified for target or source file for publication_manuscript {}".format(manuscript_id))
                         logger.info("Generating new file...")
                         changes.add(target_file_path)
-                        generate_ms_file(source_file_path, target_file_path, publication_info)
+                        generate_ms_file(source_file_path, target_file_path, row)
                     else:
                         if target_mtime >= source_mtime:
                             # If the target ms file is newer than the source, continue to the next publication_manuscript
@@ -531,7 +531,7 @@ def check_publication_mtimes_and_publish_files(project, publication_ids):
                         else:
                             changes.add(target_file_path)
                             logger.info("File {} is older than source file {}, generating new file...".format(target_file_path, source_file_path))
-                            generate_ms_file(source_file_path, target_file_path, publication_info)
+                            generate_ms_file(source_file_path, target_file_path, row)
 
             logger.debug("Changes made in publication script run: {}".format([c for c in changes]))
             if len(changes) > 0:
