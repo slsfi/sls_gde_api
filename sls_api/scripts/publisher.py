@@ -45,7 +45,7 @@ def get_comments_from_database(project, document_note_ids):
 
 def get_letter_info_from_database(letter_id):
     logger.info("Getting correspondence info for letter: {}".format(letter_id))
-     
+    
     if letter_id is None:
         return []
 
