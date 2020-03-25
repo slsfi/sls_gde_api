@@ -44,20 +44,42 @@ def get_comments_from_database(project, document_note_ids):
 
 
 def get_letter_info_from_database(letter_id):
+    logger.info("Getting correspondence info for letter: {}".format(letter_id))
+     
     if letter_id is None:
         return []
 
     letter = dict()
     # Get Sender
-    letter['sender'] = get_letter_person(letter_id, 'avsändare')['full_name']
+    sender = get_letter_person(letter_id, 'avsändare')
+    if sender is not None:
+        letter['sender'] = sender['full_name']
+    else:
+        letter['sender'] = ''
     # Get Reciever
-    letter['reciever'] = get_letter_person(letter_id, 'mottagare')['full_name']
+    reciever = get_letter_person(letter_id, 'mottagare')
+    if reciever is not None:
+        letter['reciever'] = reciever['full_name']
+    else:
+        letter['reciever'] = ''
     # Get Sender Location
-    letter['sender_location'] = get_letter_location(letter_id, 'avsändarort')['name']
+    sender_location = get_letter_location(letter_id, 'avsändarort')
+    if sender_location is not None:
+        letter['sender_location'] = sender_location['name']
+    else:
+        letter['sender_location'] = ''
     # Get Reciever Location
-    letter['reciever_location'] = get_letter_location(letter_id, 'mottagarort')['name']
+    reciever_location = get_letter_location(letter_id, 'mottagarort')
+    if reciever_location is not None:
+        letter['reciever_location'] = reciever_location['name']
+    else:
+        letter['reciever_location'] = ''
     # Get Title and Status
-    letter['title'] = get_letter_info(letter_id)['title']
+    title = get_letter_info(letter_id)
+    if title is not None:
+        letter['title'] = title['title']
+    else:
+        letter['title'] = ''
 
     return letter
 
@@ -70,8 +92,6 @@ def get_letter_info(letter_id):
                      where c.legacy_id = :letter_id ")
     data = connection.execute(statement, letter_id=letter_id).fetchone()
     connection.close()
-    if len(data) <= 0:
-        return []
     return data
 
 
@@ -87,8 +107,6 @@ def get_letter_person(letter_id, type):
                      where c.legacy_id = :letter_id and ec.type = :type ")
     data = connection.execute(statement, letter_id=letter_id, type=type).fetchone()
     connection.close()
-    if len(data) <= 0:
-        return []
     return data
 
 
@@ -104,8 +122,6 @@ def get_letter_location(letter_id, type):
                      where c.legacy_id = :letter_id and ec.type = :type ")
     data = connection.execute(statement, letter_id=letter_id, type=type).fetchone()
     connection.close()
-    if len(data) <= 0:
-        return []
     return data
 
 
