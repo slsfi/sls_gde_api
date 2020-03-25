@@ -68,7 +68,7 @@ def get_letter_info(letter_id):
     connection = db_engine.connect()
     statement = text("SELECT c.title from correspondence c \
                      where c.legacy_id = :letter_id ")
-    data = connection.execute(statement, letter_id=letter_id).fetchOne()
+    data = connection.execute(statement, letter_id=letter_id).fetchone()
     connection.close()
     if len(data) <= 0:
         return []
@@ -85,7 +85,7 @@ def get_letter_person(letter_id, type):
                      join event_connection ec on ec.correspondence_id = c.id \
                      join subject s on s.id = ec.subject_id \
                      where c.legacy_id = :letter_id and ec.type = :type ")
-    data = connection.execute(statement, letter_id=letter_id, type=type).fetchOne()
+    data = connection.execute(statement, letter_id=letter_id, type=type).fetchone()
     connection.close()
     if len(data) <= 0:
         return []
@@ -102,7 +102,7 @@ def get_letter_location(letter_id, type):
                      join event_connection ec on ec.correspondence_id = c.id \
                      join location l on l.id = ec.location_id \
                      where c.legacy_id = :letter_id and ec.type = :type ")
-    data = connection.execute(statement, letter_id=letter_id, type=type).fetchOne()
+    data = connection.execute(statement, letter_id=letter_id, type=type).fetchone()
     connection.close()
     if len(data) <= 0:
         return []
