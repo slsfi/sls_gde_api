@@ -604,7 +604,7 @@ class CTeiDocument:
         elemContainer = self.__GetOrCreate(elemProfileDesc, self.sPrefix + ':creation', 'creation')
 
         # Create origDate
-        if len(sOrigDate) > 0:
+        if sOrigDate is not None and len(sOrigDate) > 0:
             elem = self.__GetOrCreate(elemContainer, self.sPrefix + ':origDate', 'origDate')
             elem.text = str(sOrigDate)
 
@@ -631,7 +631,7 @@ class CTeiDocument:
             elem.text = str(sGroupId)
 
         # Create title element
-        if len(sMainTitle) > 0:
+        if sMainTitle is not None and len(sMainTitle) > 0:
             elem = self.__GetOrCreate(elemContainer, self.sPrefix + ':title[@type="main"]', 'title')
             elem.attrib['type'] = 'main'
             elem.text = sMainTitle
