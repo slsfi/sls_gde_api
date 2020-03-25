@@ -567,12 +567,12 @@ class CTeiDocument:
         return self.GetMainTitle()
 
     # ------------------------------------------------
-    def __GetLetterId(self):
+    def GetLetterId(self):
         # Find document title (this element is used for letter ids (database) in the Topelius project)
         elem = self.xmlRoot.find('.//' + self.sPrefixUrl + 'titleStmt/' + self.sPrefixUrl + 'title')
         # If title is found, return the text of the element
         if elem is not None:
-            return elem.text
+            return re.sub('br', '', str(elem.text), flags=re.IGNORECASE)
             # If you want to validate the id, uncomment and the following lines and edit the RegEx to your needs
             # if re.match(r"^[Bb]r[0-9]", elem.text) is not None:
             #  return elem.text
@@ -604,34 +604,34 @@ class CTeiDocument:
         elemContainer = self.__GetOrCreate(elemProfileDesc, self.sPrefix + ':creation', 'creation')
 
         # Create origDate
-        if len(sOrigDate) > 0:
+        if sOrigDate is not None and len(sOrigDate) > 0:
             elem = self.__GetOrCreate(elemContainer, self.sPrefix + ':origDate', 'origDate')
-            elem.text = sOrigDate
+            elem.text = str(sOrigDate)
 
         # Create default idNo and for book id
-        if len(sItemId) > 0:
+        if sItemId > 0:
             elem = self.__GetOrCreate(elemContainer, self.sPrefix + ':idNo[not(@type)]', 'idNo')
-            elem.text = sItemId
+            elem.text = str(sItemId)
             # For book id
             elem = self.__GetOrCreate(elemContainer, self.sPrefix + ':idNo[@type="bookid"]', 'idNo')
             elem.attrib['type'] = 'bookid'
-            if sItemId.find('_') >= 0:
-                elem.text = sItemId[:sItemId.find('_')]
+            if str(sItemId).find('_') >= 0:
+                elem.text = str(sItemId[:sItemId.find('_')])
 
         # Create idNo for collection
-        if len(sCollectionId) > 0:
+        if sCollectionId > 0:
             elem = self.__GetOrCreate(elemContainer, self.sPrefix + ':idNo[@type="collection"]', 'idNo')
             elem.attrib['type'] = 'collection'
-            elem.text = sCollectionId
+            elem.text = str(sCollectionId)
 
         # Create idNo for group
-        if len(sGroupId) > 0:
+        if sGroupId is not None and sGroupId > 0:
             elem = self.__GetOrCreate(elemContainer, self.sPrefix + ':idNo[@type="group"]', 'idNo')
             elem.attrib['type'] = 'group'
-            elem.text = sGroupId
+            elem.text = str(sGroupId)
 
         # Create title element
-        if len(sMainTitle) > 0:
+        if sMainTitle is not None and len(sMainTitle) > 0:
             elem = self.__GetOrCreate(elemContainer, self.sPrefix + ':title[@type="main"]', 'title')
             elem.attrib['type'] = 'main'
             elem.text = sMainTitle
@@ -668,7 +668,7 @@ class CTeiDocument:
 
     # ------------------------------------------------
     # Used by the Topelius project to insert metadata in letters, can be edited to your needs
-    def SetLetterTitleAndStatusAndMeta(self, sTitle, sStatus, sPlaceSent, sPlaceReceived, sSender, sReceiver):
+    def SetLetterTitleAndStatusAndMeta(self, sTitle, sPlaceSent, sPlaceReceived, sSender, sReceiver):
 
         # Get the profileDesc element
         elemProfileDesc = self.xmlRoot.find('.//' + self.sPrefixUrl + 'profileDesc')
@@ -739,7 +739,7 @@ class CTeiDocument:
             try:
                 parser = ET.XMLParser(recover=True)
                 soup = BeautifulSoup(sHtml, "html.parser")
-                xml_doc_in = ET.XML("<note>"+html.escape(str(soup))+"</note>", parser)
+                xml_doc_in = ET.XML("<note>" + html.escape(str(soup)) + "</note>", parser)
                 xml_doc_out = transform(xml_doc_in)
                 result = ET.tostring(xml_doc_out, encoding='unicode')
             except Exception as e:

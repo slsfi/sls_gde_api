@@ -33,9 +33,9 @@ def get_comments_from_database(project, document_note_ids):
     """
     connection = comment_db_engines[project].connect()
 
-    comment_query = text("SELECT documentnote.id, documentnote.shortenedSelection, note.description "
-                         "FROM documentnote INNER JOIN note ON documentnote.note_id = note.id "
-                         "WHERE documentnote.deleted = 0 AND note.deleted = 0 AND documentnote.id IN :docnote_ids")
+    comment_query = text("SELECT documentnote.id, documentnote.shortenedSelection, note.description \
+                         FROM documentnote INNER JOIN note ON documentnote.note_id = note.id \
+                         WHERE documentnote.deleted = 0 AND note.deleted = 0 AND documentnote.id IN :docnote_ids")
     comments = connection.execute(comment_query, docnote_ids=tuple(document_note_ids)).fetchall()
     connection.close()
     if len(comments) <= 0:
@@ -43,7 +43,87 @@ def get_comments_from_database(project, document_note_ids):
     return [dict(comment) for comment in comments]
 
 
-def generate_est_and_com_files(project, est_master_file_path, com_master_file_path, est_target_path, com_target_path, com_xsl_path=None):
+def get_letter_info_from_database(letter_id):
+    logger.info("Getting correspondence info for letter: {}".format(letter_id))
+    if letter_id is None:
+        return []
+    letter = dict()
+    # Get Sender
+    sender = get_letter_person(letter_id, 'avsändare')
+    if sender is not None:
+        letter['sender'] = sender['full_name']
+    else:
+        letter['sender'] = ''
+    # Get Reciever
+    reciever = get_letter_person(letter_id, 'mottagare')
+    if reciever is not None:
+        letter['reciever'] = reciever['full_name']
+    else:
+        letter['reciever'] = ''
+    # Get Sender Location
+    sender_location = get_letter_location(letter_id, 'avsändarort')
+    if sender_location is not None:
+        letter['sender_location'] = sender_location['name']
+    else:
+        letter['sender_location'] = ''
+    # Get Reciever Location
+    reciever_location = get_letter_location(letter_id, 'mottagarort')
+    if reciever_location is not None:
+        letter['reciever_location'] = reciever_location['name']
+    else:
+        letter['reciever_location'] = ''
+    # Get Title and Status
+    title = get_letter_info(letter_id)
+    if title is not None:
+        letter['title'] = title['title']
+    else:
+        letter['title'] = ''
+
+    return letter
+
+
+def get_letter_info(letter_id):
+    if letter_id is None:
+        return []
+    connection = db_engine.connect()
+    statement = text("SELECT c.title from correspondence c \
+                     where c.legacy_id = :letter_id ")
+    data = connection.execute(statement, letter_id=letter_id).fetchone()
+    connection.close()
+    return data
+
+
+def get_letter_person(letter_id, type):
+    if letter_id is None:
+        return []
+    if type not in ['mottagare', 'avsändare']:
+        return []
+    connection = db_engine.connect()
+    statement = text("SELECT s.full_name from correspondence c \
+                     join event_connection ec on ec.correspondence_id = c.id \
+                     join subject s on s.id = ec.subject_id \
+                     where c.legacy_id = :letter_id and ec.type = :type ")
+    data = connection.execute(statement, letter_id=letter_id, type=type).fetchone()
+    connection.close()
+    return data
+
+
+def get_letter_location(letter_id, type):
+    if letter_id is None:
+        return []
+    if type not in ['mottagarort', 'avsändarort']:
+        return []
+    connection = db_engine.connect()
+    statement = text("SELECT l.name from correspondence c \
+                     join event_connection ec on ec.correspondence_id = c.id \
+                     join location l on l.id = ec.location_id \
+                     where c.legacy_id = :letter_id and ec.type = :type ")
+    data = connection.execute(statement, letter_id=letter_id, type=type).fetchone()
+    connection.close()
+    return data
+
+
+def generate_est_and_com_files(publication_info, project, est_master_file_path, com_master_file_path, est_target_path, com_target_path, com_xsl_path=None):
     """
     Given a project name, and paths to valid EST/COM masters and targets, regenerates target files based on source files
     """
@@ -51,6 +131,15 @@ def generate_est_and_com_files(project, est_master_file_path, com_master_file_pa
     est_document = CTeiDocument()
     est_document.Load(est_master_file_path, bRemoveDelSpans=True)
     est_document.PostProcessMainText()
+
+    if publication_info is not None:
+        est_document.SetMetadata(publication_info['original_publication_date'], publication_info['p_id'], publication_info['name'],
+                                 publication_info['genre'], 'est', publication_info['c_id'], publication_info['publication_group_id'])
+        letterId = est_document.GetLetterId()
+        if letterId is not None:
+            letterData = get_letter_info_from_database(letterId)
+            est_document.SetLetterTitleAndStatusAndMeta(letterData['title'], letterData['sender_location'], letterData['reciever_location'], letterData['sender'], letterData['reciever'])
+
     est_document.Save(est_target_path)
 
     # Get all documentnote IDs from the main master file (these are the IDs of the comments for this document)
@@ -77,15 +166,23 @@ def generate_est_and_com_files(project, est_master_file_path, com_master_file_pa
     # process comments and save
     com_document.ProcessCommments(comments, est_document, com_xsl_path)
     com_document.PostProcessOtherText()
+
+    if publication_info is not None:
+        com_document.SetMetadata(publication_info['original_publication_date'], publication_info['p_id'], publication_info['name'],
+                                 publication_info['genre'], 'com', publication_info['c_id'], publication_info['publication_group_id'])
+
     com_document.Save(com_target_path)
 
 
-def process_var_documents_and_generate_files(main_var_doc, main_var_path, var_docs, var_paths):
+def process_var_documents_and_generate_files(main_var_doc, main_var_path, var_docs, var_paths, publication_info):
     """
     Process generated CTeiDocument objects - comparing each var_doc in var_docs to the main_var_doc and saving target files
     """
     # First, compare the main variant against all other variants
     main_var_doc.ProcessVariants(var_docs)
+    if publication_info is not None:
+        main_var_doc.SetMetadata(publication_info['original_publication_date'], publication_info['p_id'], publication_info['name'],
+                                 publication_info['genre'], 'com', publication_info['c_id'], publication_info['publication_group_id'])
     # Then save main variant web XML file
     main_var_doc.Save(main_var_path)
     # lastly, save all other variant web XML files
@@ -93,13 +190,17 @@ def process_var_documents_and_generate_files(main_var_doc, main_var_path, var_do
         var_doc.Save(var_path)
 
 
-def generate_ms_file(master_file_path, target_file_path):
+def generate_ms_file(master_file_path, target_file_path, publication_info):
     """
     Given a project name, and valid master and target file paths for a publication manuscript, regenerates target file based on source file
     """
     ms_document = CTeiDocument()
     ms_document.Load(master_file_path)
     ms_document.PostProcessOtherText()
+
+    if publication_info is not None:
+        ms_document.SetMetadata(publication_info['original_publication_date'], publication_info['p_id'], publication_info['name'],
+                                publication_info['genre'], 'com', publication_info['c_id'], publication_info['publication_group_id'])
     ms_document.Save(target_file_path)
 
 
@@ -124,31 +225,61 @@ def check_publication_mtimes_and_publish_files(project, publication_ids):
             connection = db_engine.connect()
 
             # publication info
-            publication_query = "SELECT publication.id, publication.publication_collection_id, publication.original_filename "\
-                                "FROM publication JOIN publication_collection ON publication.publication_collection_id=publication_collection.id "\
-                                "WHERE publication_collection.project_id = :proj"
+            publication_query = "SELECT \
+                                p.id as p_id, \
+                                p.publication_collection_id as c_id, \
+                                pcol.id as c_id, \
+                                p.original_filename as original_filename, \
+                                p.original_publication_date as original_publication_date, \
+                                p.genre as genre, \
+                                p.publication_group_id as publication_group_id, \
+                                p.publication_comment_id as publication_comment_id, \
+                                p.name as name \
+                                FROM publication p \
+                                JOIN publication_collection pcol ON p.publication_collection_id=pcol.id \
+                                WHERE pcol.project_id = :proj"
 
             # publication_comment info, relating to "general comments" file for each publication
-            comment_query = "SELECT publication.id, publication_comment.original_filename "\
-                            "FROM publication JOIN publication_collection ON publication.publication_collection_id=publication_collection.id "\
-                            "JOIN publication_comment ON publication.publication_comment_id=publication_comment.id "\
-                            "WHERE publication_collection.project_id = :proj"
+            comment_query = "SELECT \
+                            p.id  as p_id, \
+                            p.publication_collection_id as c_id, \
+                            pc.original_filename as original_filename, \
+                            p.original_publication_date as original_publication_date, \
+                            p.genre as genre, \
+                            p.publication_group_id as publication_group_id, \
+                            p.publication_comment_id as publication_comment_id, \
+                            p.name as name \
+                            FROM publication p \
+                            JOIN publication_collection pcol ON p.publication_collection_id = pcol.id \
+                            JOIN publication_comment pc ON p.publication_comment_id = pc.id \
+                            WHERE pcol.project_id = :proj"
 
             # publication_manuscript info
-            manuscript_query = "SELECT publication_manuscript.id as m_id, publication.id as p_id, publication_collection.id as c_id, publication_manuscript.original_filename "\
-                               "FROM publication_manuscript JOIN publication ON publication_manuscript.publication_id=publication.id "\
-                               "JOIN publication_collection ON publication.publication_collection_id=publication_collection.id "\
-                               "WHERE publication_collection.project_id = :proj"
+            manuscript_query = "SELECT \
+                                pm.id as m_id, \
+                                p.id as p_id, \
+                                p.publication_collection_id as c_id, \
+                                pcol.id as c_id, \
+                                pm.original_filename as original_filename, \
+                                p.original_publication_date as original_publication_date, \
+                                p.genre as genre, \
+                                p.publication_group_id as publication_group_id, \
+                                p.publication_comment_id as publication_comment_id, \
+                                p.name as name \
+                                FROM publication_manuscript pm \
+                                JOIN publication p ON pm.publication_id = p.id \
+                                JOIN publication_collection pcol ON p.publication_collection_id = pcol.id \
+                                WHERE pcol.project_id = :proj"
 
             if force_publish:
                 # append publication.id checks if this is a forced (re)publication of certain publication(s)
-                publication_query += " AND publication.id IN :p_ids"
+                publication_query += " AND p.id IN :p_ids"
                 publication_query = text(publication_query).bindparams(proj=project_id, p_ids=publication_ids)
 
-                comment_query += " AND publication.id IN :p_ids"
+                comment_query += " AND p.id IN :p_ids"
                 comment_query = text(comment_query).bindparams(proj=project_id, p_ids=publication_ids)
 
-                manuscript_query += " AND publication.id IN :p_ids"
+                manuscript_query += " AND p.id IN :p_ids"
                 manuscript_query = text(manuscript_query).bindparams(proj=project_id, p_ids=publication_ids)
             else:
                 publication_query = text(publication_query).bindparams(proj=project_id)
@@ -161,7 +292,7 @@ def check_publication_mtimes_and_publish_files(project, publication_ids):
             # comment_filenames can just be a dict of publication.id to publication_comment.original_filename
             comment_filenames = dict()
             for row in connection.execute(comment_query):
-                comment_filenames[row["id"]] = row["original_filename"]
+                comment_filenames[row["p_id"]] = row["original_filename"]
 
             # close DB connection for now, it won't be needed for a while
             connection.close()
@@ -171,8 +302,8 @@ def check_publication_mtimes_and_publish_files(project, publication_ids):
             # logger.debug("Publication query resulting rows: {}".format(publication_info[0].keys()))  TODO: fix IndexError if publication_info has no rows
             # For each publication belonging to this project, check the modification timestamp of its master files and compare them to the generated web XML files
             for row in publication_info:
-                publication_id = row["id"]
-                collection_id = row["publication_collection_id"]
+                publication_id = row["p_id"]
+                collection_id = row["c_id"]
                 if not row["original_filename"]:
                     logger.info("Source file not set for publication {}".format(publication_id))
                     continue
@@ -209,7 +340,7 @@ def check_publication_mtimes_and_publish_files(project, publication_ids):
                     logger.info("Generating new est/com files for publication {}...".format(publication_id))
                     changes.add(est_target_file_path)
                     changes.add(com_target_file_path)
-                    generate_est_and_com_files(project, est_source_file_path, com_source_file_path,
+                    generate_est_and_com_files(row, project, est_source_file_path, com_source_file_path,
                                                est_target_file_path, com_target_file_path)
                 else:
                     # otherwise, check if this publication's files need to be re-generated
@@ -225,7 +356,7 @@ def check_publication_mtimes_and_publish_files(project, publication_ids):
                         logger.info("Generating new est/com files for publication {}...".format(publication_id))
                         changes.add(est_target_file_path)
                         changes.add(com_target_file_path)
-                        generate_est_and_com_files(project, est_source_file_path, com_source_file_path,
+                        generate_est_and_com_files(row, project, est_source_file_path, com_source_file_path,
                                                    est_target_file_path, com_target_file_path)
                     else:
                         if est_target_mtime >= est_source_mtime and com_target_mtime >= com_source_mtime:
@@ -236,7 +367,7 @@ def check_publication_mtimes_and_publish_files(project, publication_ids):
                             changes.add(est_target_file_path)
                             changes.add(com_target_file_path)
                             logger.info("Reading files for publication {} are outdated, generating new est/com files...".format(publication_id))
-                            generate_est_and_com_files(project, est_source_file_path, com_source_file_path,
+                            generate_est_and_com_files(row, project, est_source_file_path, com_source_file_path,
                                                        est_target_file_path, com_target_file_path)
 
                 # Process all variants belonging to this publication
@@ -346,7 +477,7 @@ def check_publication_mtimes_and_publish_files(project, publication_ids):
                                     # If no changes, don't generate CTeiDocument and don't make a new web XML file
                                     continue
                     # lastly, actually process all generated CTeiDocument objects and create web XML files
-                    process_var_documents_and_generate_files(main_variant_doc, main_variant_target, variant_docs, variant_paths)
+                    process_var_documents_and_generate_files(main_variant_doc, main_variant_target, variant_docs, variant_paths, row)
 
             # For each publication_manuscript belonging to this project, check the modification timestamp of its master file and compare it to the generated web XML file
             # logger.debug("Manuscript query resulting rows: {}".format(manuscript_info[0].keys())) TODO: fix IndexError if manuscript_info has no rows
@@ -378,7 +509,7 @@ def check_publication_mtimes_and_publish_files(project, publication_ids):
                 if force_publish:
                     logger.info("Generating new ms file for publication_manuscript {}".format(manuscript_id))
                     changes.add(target_file_path)
-                    generate_ms_file(source_file_path, target_file_path)
+                    generate_ms_file(source_file_path, target_file_path, row)
                 # otherwise, check if this file needs generating
                 else:
                     try:
@@ -390,7 +521,7 @@ def check_publication_mtimes_and_publish_files(project, publication_ids):
                         logger.warning("Error getting time_modified for target or source file for publication_manuscript {}".format(manuscript_id))
                         logger.info("Generating new file...")
                         changes.add(target_file_path)
-                        generate_ms_file(source_file_path, target_file_path)
+                        generate_ms_file(source_file_path, target_file_path, row)
                     else:
                         if target_mtime >= source_mtime:
                             # If the target ms file is newer than the source, continue to the next publication_manuscript
@@ -398,7 +529,7 @@ def check_publication_mtimes_and_publish_files(project, publication_ids):
                         else:
                             changes.add(target_file_path)
                             logger.info("File {} is older than source file {}, generating new file...".format(target_file_path, source_file_path))
-                            generate_ms_file(source_file_path, target_file_path)
+                            generate_ms_file(source_file_path, target_file_path, row)
 
             logger.debug("Changes made in publication script run: {}".format([c for c in changes]))
             if len(changes) > 0:
