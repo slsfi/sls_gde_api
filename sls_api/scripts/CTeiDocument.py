@@ -668,8 +668,7 @@ class CTeiDocument:
 
     # ------------------------------------------------
     # Used by the Topelius project to insert metadata in letters, can be edited to your needs
-    def SetLetterTitleAndStatusAndMeta(self, sTitle, sPlaceSent, sPlaceReceived, sSender, sReceiver):
-
+    def SetLetterTitleAndStatusAndMeta(self, letterData):
         # Get the profileDesc element
         elemProfileDesc = self.xmlRoot.find('.//' + self.sPrefixUrl + 'profileDesc')
         # If no such element, create it
@@ -686,31 +685,36 @@ class CTeiDocument:
         # Create the title element
         elem = ET.SubElement(elemContainer, 'title')
         elem.attrib['type'] = 'readingtext'
-        elem.text = sTitle
+        elem.attrib['id'] = str(letterData['title_id'])
+        elem.text = letterData['title']
 
         # Create element for place sent
-        if len(sPlaceSent) > 0:
+        if len(letterData['sender_location']) > 0:
             elem = ET.SubElement(elemContainer, 'placeName')
             elem.attrib['type'] = 'sender'
-            elem.text = sPlaceSent
+            elem.attrib['id'] = str(letterData['sender_location_id'])
+            elem.text = letterData['sender_location']
 
         # Create element for place received
-        if len(sPlaceReceived) > 0:
+        if len(letterData['reciever_location']) > 0:
             elem = ET.SubElement(elemContainer, 'placeName')
             elem.attrib['type'] = 'adressee'
-            elem.text = sPlaceReceived
+            elem.attrib['id'] = str(letterData['reciever_location_id'])
+            elem.text = letterData['reciever_location']
 
         # Create element for sender
-        if len(sSender) > 0:
+        if len(letterData['sender']) > 0:
             elem = ET.SubElement(elemContainer, 'persName')
             elem.attrib['type'] = 'sender'
-            elem.text = sSender
+            elem.attrib['id'] = str(letterData['sender_id'])
+            elem.text = letterData['sender']
 
         # Create element for receiver
-        if len(sReceiver) > 0:
+        if len(letterData['reciever']) > 0:
             elem = ET.SubElement(elemContainer, 'persName')
             elem.attrib['type'] = 'adressee'
-            elem.text = sReceiver
+            elem.attrib['id'] = str(letterData['reciever_id'])
+            elem.text = letterData['reciever']
 
         # Return success
         return True

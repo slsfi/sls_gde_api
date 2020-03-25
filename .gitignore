@@ -8,3 +8,7 @@ __pycache__
 .DS_Store
 .vs
 configs/digital_editions.yml
+sls_api/scripts/xslt/*
+sls_api/scripts/get-pip.py
+sls_api/scripts/test.py
+sls_api/scripts/templates/*
