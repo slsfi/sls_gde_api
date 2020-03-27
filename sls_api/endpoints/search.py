@@ -1,5 +1,7 @@
-from flask import Blueprint, jsonify
+from flask import Blueprint, jsonify, request
 import logging
+import json
+import requests
 from elasticsearch import Elasticsearch
 
 from sls_api.endpoints.generics import elastic_config, get_project_id_from_name
@@ -344,3 +346,14 @@ def get_search_all(project, search_string, limit):
             return jsonify("")
     else:
         return jsonify("")
+
+
+@search.route("/<project>/search/elastic/<indexes>", methods=["POST"])
+def get_search_elastic(project, indexes):
+    request_data = request.get_json()
+    query = json.dumps(request_data)
+    headers = {'Content-type': 'application/json', 'Accept': 'text/plain'}
+    url = str('http://' + str(elastic_config['host']) + ':' + str(elastic_config['port']) + '/' + str(indexes) + '/_search?')
+    response = requests.get(url, data=query, headers=headers)
+    results = json.loads(response.text)
+    return results
