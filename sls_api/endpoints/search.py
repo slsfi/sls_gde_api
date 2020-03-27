@@ -352,7 +352,7 @@ def get_search_all(project, search_string, limit):
 def get_search_elastic(project, request):
     query = json.dumps(request)
     headers = {'Content-type': 'application/json', 'Accept': 'text/plain'}
-    url = str('http://' + str(elastic_config['host']) + ':' + str(elastic_config['port']), headers=headers)
-    response = requests.get(url, data=query)
+    url = str('http://' + str(elastic_config['host']) + ':' + str(elastic_config['port']))
+    response = requests.post(url, data=query, headers=headers)
     results = json.loads(response.text)
     return results
