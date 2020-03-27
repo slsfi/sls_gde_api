@@ -351,7 +351,8 @@ def get_search_all(project, search_string, limit):
 @search.route("/<project>/search/elastic/<request>", methods=["GET", "POST"])
 def get_search_elastic(project, request):
     query = json.dumps(request)
-    url = str('http://' + str(elastic_config['host']) + ':' + str(elastic_config['port']))
+    headers = {'Content-type': 'application/json', 'Accept': 'text/plain'}
+    url = str('http://' + str(elastic_config['host']) + ':' + str(elastic_config['port']), headers=headers)
     response = requests.get(url, data=query)
     results = json.loads(response.text)
     return results
