@@ -348,12 +348,12 @@ def get_search_all(project, search_string, limit):
         return jsonify("")
 
 
-@search.route("/<project>/search/elastic/", methods=["POST"])
-def get_search_elastic(project):
+@search.route("/<project>/search/elastic/<indexes>", methods=["POST"])
+def get_search_elastic(project, indexes):
     request_data = request.get_json()
     query = json.dumps(request_data)
     headers = {'Content-type': 'application/json', 'Accept': 'text/plain'}
-    url = str('http://' + str(elastic_config['host']) + ':' + str(elastic_config['port']) + '/_search?')
+    url = str('http://' + str(elastic_config['host']) + ':' + str(elastic_config['port']) + '/' + str(indexes) + '/_search?')
     response = requests.get(url, data=query, headers=headers)
     results = json.loads(response.text)
     return results
