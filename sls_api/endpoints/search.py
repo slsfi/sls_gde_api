@@ -1,4 +1,4 @@
-from flask import Blueprint, jsonify
+from flask import Blueprint, jsonify, request
 import logging
 import json
 import requests
@@ -348,9 +348,10 @@ def get_search_all(project, search_string, limit):
         return jsonify("")
 
 
-@search.route("/<project>/search/elastic/<request>", methods=["GET", "POST"])
-def get_search_elastic(project, request):
-    query = json.dumps(request)
+@search.route("/<project>/search/elastic/", methods=["POST"])
+def get_search_elastic(project):
+    request_data = request.get_json()
+    query = json.dumps(request_data)
     headers = {'Content-type': 'application/json', 'Accept': 'text/plain'}
     url = str('http://' + str(elastic_config['host']) + ':' + str(elastic_config['port']) + '/_search?')
     response = requests.get(url, data=query, headers=headers)
