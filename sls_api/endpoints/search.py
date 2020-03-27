@@ -353,6 +353,6 @@ def get_search_elastic(project, request):
     query = json.dumps(request)
     headers = {'Content-type': 'application/json', 'Accept': 'text/plain'}
     url = str('http://' + str(elastic_config['host']) + ':' + str(elastic_config['port']))
-    response = requests.post(url, data=query, headers=headers)
+    response = requests.get(url, data=query, headers=headers)
     results = json.loads(response.text)
     return results
