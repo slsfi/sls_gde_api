@@ -1,5 +1,6 @@
 from flask import Blueprint, jsonify
 import logging
+import json
 import requests
 from elasticsearch import Elasticsearch
 
