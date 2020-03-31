@@ -325,6 +325,23 @@ def get_media_data_pdf(project, pdf_id):
         return Response("Couldn't get media image.", status=404, content_type="text/json")
 
 
+@media.route("/<project>/galleries")
+def get_project_galleries(project):
+    logger.info("Getting project galleries...")
+    try:
+        project_id = get_project_id_from_name(project)
+        connection = db_engine.connect()
+        sql = sqlalchemy.sql.text("SELECT * FROM media_collection WHERE project_id = :p_id").bindparams(p_id=project_id)
+        results = []
+        for row in connection.execute(sql).fetchall():
+            results.append(dict(row))
+        connection.close()
+        return jsonify(results), 200
+    except Exception:
+        logger.exception("Failed to get galleries list from database.")
+        return Response("Failed to get galleries list from database.", status=404, content_type="text/json")
+
+
 @media.route("/<project>/files/<collection_id>/<file_type>/<download_name>/", defaults={'use_download_name': None})
 @media.route("/<project>/files/<collection_id>/<file_type>/<download_name>/<use_download_name>")
 def get_pdf_file(project, collection_id, file_type, download_name, use_download_name):
