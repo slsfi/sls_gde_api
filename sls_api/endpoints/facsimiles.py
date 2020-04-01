@@ -185,9 +185,8 @@ def get_facsimile_pages(project, col_pub):
         connection = db_engine.connect()
         sql = sqlalchemy.sql.text("SELECT pf.*, pf.page_nr as page_number, pfc.number_of_pages, pfc.start_page_number, pfc.id as collection_id\
             FROM publication_facsimile pf\
-            RIGHT JOIN publication_facsimile_collection pfc on pfc.id = pf.publication_facsimile_collection_id\
-            WHERE pfc.id = :col_id\
-            AND pf.publication_id = :pub_id")
+            JOIN publication_facsimile_collection pfc on pfc.id = pf.publication_facsimile_collection_id\
+            WHERE pf.publication_id = :pub_id")
         statement = sql.bindparams(col_id=col_id, pub_id=pub_id)
         result = connection.execute(statement).fetchone()
         facs = dict(result)
