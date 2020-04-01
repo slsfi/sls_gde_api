@@ -176,17 +176,22 @@ def get_facsimile_file(project, collection_id, number, zoom_level):
             }), 404
 
 
-@facsimiles.route("/<project>/facsimile/page/<legacy_id>/")
-def get_facsimile_pages(project, legacy_id):
+@facsimiles.route("/<project>/facsimile/page/<col_pub>/")
+def get_facsimile_pages(project, col_pub):
     logger.info("Getting facsimile page")
     try:
+        col_id = col_pub.split('_')[0]
+        pub_id = col_pub.split('_')[1]
         connection = db_engine.connect()
-        sql = sqlalchemy.sql.text("SELECT * FROM facsimile_pages WHERE id=:l_id")
-        statement = sql.bindparams(l_id=legacy_id)
+        sql = sqlalchemy.sql.text("SELECT pf.*, pf.page_nr as page_number, pfc.number_of_pages, pfc.start_page_number, pfc.id as collection_id\
+            FROM publication_facsimile pf\
+            RIGHT JOIN publication_facsimile_collection pfc on pfc.id = pf.publication_facsimile_collection_id\
+            WHERE pfc.id = :col_id\
+            AND pf.publication_id = :pub_id")
+        statement = sql.bindparams(col_id=col_id, pub_id=pub_id)
         result = connection.execute(statement).fetchone()
         facs = dict(result)
         connection.close()
-
         return jsonify(facs), 200
     except Exception:
         logger.exception("Exception while getting facsimile page from database")
