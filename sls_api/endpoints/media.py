@@ -68,6 +68,36 @@ def get_media_data_image(project, image_id):
         return Response("Couldn't get media image.", status=404, content_type="text/json")
 
 
+@media.route("/<project>/media/image/metadata/<media_id>/<lang>")
+def get_media_image_metadata(project, media_id, lang):
+    logger.info("Getting media metadata...")
+    try:
+        connection = db_engine.connect()
+        sql = sqlalchemy.sql.text("""SELECT
+                                    (select text from translation_text where translation_id = m.description_translation_id and language = :lang) as media_description_translation,
+                                    (select text from translation_text where translation_id = m.title_translation_id and language = :lang) as media_title_translation,
+                                    (select text from translation_text where translation_id = mc.title_translation_id and language = :lang) as media_collection_title_translation,
+                                    (select text from translation_text where translation_id = mc.description_translation_id and language = :lang) as media_collection_description_translation,
+                                    (select text from translation_text where translation_id = l.name_translation_id and language = :lang) as location_name_translation,
+                                    (select text from translation_text where translation_id = m.art_technique_translation_id and language = :lang) as media_art_technique_translation,
+                                    m.*,
+                                    mc.image_path,
+                                    s.full_name, s.description as subject_description, s.date_born, s.id as subject_id, s.date_deceased,
+                                    l.name as location_name, l.country as location_country, l.description as location_description
+                                    FROM media m
+                                    JOIN media_collection mc ON mc.id = m.media_collection_id
+                                    JOIN media_connection mcon ON mcon.media_id = m.id
+                                    JOIN location l ON l.id = mcon.location_id
+                                    JOIN subject s ON s.id = mcon.subject_id
+                                    WHERE m.id = :id or m.legacy_id = :id""").bindparams(id=media_id, lang=lang)
+        result = connection.execute(sql).fetchone()
+        connection.close()
+        return jsonify(dict(result)), 200
+    except Exception:
+        logger.exception("Failed to get media metadata from database.")
+        return Response("Couldn't get media metadata.", status=404, content_type="text/json")
+
+
 @media.route("/<project>/media/connections/<connection_type>/<media_id>")
 def get_media_connections(project, connection_type, media_id):
     logger.info("Getting media connection data...")
@@ -188,8 +218,8 @@ def get_type_gallery_connections(project, connection_type, type_id, limit=None):
         return Response("Couldn't get type gallery connection data.", status=404, content_type="text/json")
 
 
-@media.route("/<project>/gallery/data/<image_id>/<lang>")
-def get_gallery_data(project, image_id, lang=None):
+@media.route("/<project>/gallery/data/<gallery_id>/<lang>")
+def get_gallery_data(project, gallery_id, lang=None):
     logger.info("Getting gallery image data")
     try:
         connection = db_engine.connect()
@@ -204,8 +234,8 @@ def get_gallery_data(project, image_id, lang=None):
                                     JOIN translation t_desc ON t_desc.id = m.description_translation_id\
                                     JOIN translation_text tt_desc ON tt_desc.translation_id = t_desc.id AND tt_desc.language=:lang\
                                     WHERE mc.project_id = :p_id \
-                                    AND mc.id= :image_id\
-                                    AND m.type='image_ref' ").bindparams(image_id=image_id, p_id=project_id, lang=lang)
+                                    AND mc.id= :gallery_id\
+                                    AND m.type='image_ref' ").bindparams(gallery_id=gallery_id, p_id=project_id, lang=lang)
         results = []
         for row in connection.execute(sql).fetchall():
             results.append(dict(row))
