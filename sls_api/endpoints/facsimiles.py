@@ -180,7 +180,6 @@ def get_facsimile_file(project, collection_id, number, zoom_level):
 def get_facsimile_pages(project, col_pub):
     logger.info("Getting facsimile page")
     try:
-        col_id = col_pub.split('_')[0]
         pub_id = col_pub.split('_')[1]
         connection = db_engine.connect()
         sql = sqlalchemy.sql.text("SELECT pf.*, pf.page_nr as page_number, pfc.number_of_pages, pfc.start_page_number, pfc.id as collection_id\
