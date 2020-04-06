@@ -224,18 +224,19 @@ def get_gallery_data(project, gallery_id, lang=None):
     try:
         connection = db_engine.connect()
         project_id = get_project_id_from_name(project)
-        sql = sqlalchemy.sql.text("SELECT mc.id as collection_id, m.image_filename_front AS front, m.image_filename_back AS back,\
-                                    mc.image_path AS folder, (SELECT text \
-                                    FROM translation_text tt \
-                                    JOIN translation t ON t.id = tt.translation_id \
-                                    WHERE t.id = mc.title_translation_id AND tt.language = :lang) AS title, tt_desc.text AS description \
-                                    FROM media m \
-                                    JOIN media_collection mc ON m.media_collection_id = mc.id\
-                                    JOIN translation t_desc ON t_desc.id = m.description_translation_id\
-                                    JOIN translation_text tt_desc ON tt_desc.translation_id = t_desc.id AND tt_desc.language=:lang\
-                                    WHERE mc.project_id = :p_id \
-                                    AND mc.id= :gallery_id\
-                                    AND m.type='image_ref' ").bindparams(gallery_id=gallery_id, p_id=project_id, lang=lang)
+        sql = sqlalchemy.sql.text("""SELECT mc.id as collection_id, m.image_filename_front AS front, m.image_filename_back AS back,
+                                    mc.image_path AS folder,
+                                    (SELECT text FROM translation_text tt JOIN translation t ON t.id = tt.translation_id WHERE t.id = mc.title_translation_id AND tt.language = :lang) AS title,
+                                    tt_desc.text AS description,
+                                    (select text from translation_text where translation_id = m.title_translation_id and language = :lang) as media_title_translation, tt_desc.text AS description,
+                                    (select full_name from subject where id in (select subject_id from media_connection where media_id = m.id )) as subject_name
+                                    FROM media m
+                                    JOIN media_collection mc ON m.media_collection_id = mc.id
+                                    JOIN translation t_desc ON t_desc.id = m.description_translation_id
+                                    JOIN translation_text tt_desc ON tt_desc.translation_id = t_desc.id AND tt_desc.language=:lang
+                                    WHERE mc.project_id = :p_id
+                                    AND mc.id= :gallery_id
+                                    AND m.type='image_ref' """).bindparams(gallery_id=gallery_id, p_id=project_id, lang=lang)
         results = []
         for row in connection.execute(sql).fetchall():
             results.append(dict(row))
