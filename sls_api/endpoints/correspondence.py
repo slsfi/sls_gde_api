@@ -22,12 +22,10 @@ def get_correspondence_metadata_for_publication(project, pub_id):
     corresp_sql = text(corresp_sql).bindparams(pub_id=pub_id)
     corresp = []
     subjects = []
-    result = connection.execute(corresp_sql)
-    row = result.fetchone()
-    while row is not None:
+    for row in connection.execute(corresp_sql).fetchall():
         corresp.append(row)
         subjects.append({row['type']: row['full_name']})
-        row = result.fetchone()
+
     corresp.append({'subjects': subjects})
     connection.close()
     return jsonify(corresp)
