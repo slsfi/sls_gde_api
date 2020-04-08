@@ -25,10 +25,15 @@ def get_correspondence_metadata_for_publication(project, pub_id):
     subjects = []
     for row in connection.execute(corresp_sql).fetchall():
         subject = {}
+        letter = {}
         subject[row['type']] = row['full_name']
+        letter[row['id']] = dict(row)
         subjects.append(dict(subject))
-        corresp.append(dict(row))
+        corresp.append(dict(letter))
 
-    corresp[0] = {'subjects': subjects}
+    data = {
+        'letter': dict(corresp[0]),
+        'subjects': dict(subjects)
+    }
     connection.close()
-    return jsonify(corresp[0])
+    return jsonify(data)
