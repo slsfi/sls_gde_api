@@ -33,7 +33,7 @@ def get_correspondence_metadata_for_publication(project, pub_id):
 
     data = {
         'letter': dict(corresp[0]),
-        'subjects': dict(subjects)
+        'subjects': subjects
     }
     connection.close()
     return jsonify(data)
