@@ -229,7 +229,7 @@ def get_gallery_data(project, gallery_id, lang=None):
                                     (SELECT text FROM translation_text tt JOIN translation t ON t.id = tt.translation_id WHERE t.id = mc.title_translation_id AND tt.language = :lang) AS title,
                                     tt_desc.text AS description,
                                     (select text from translation_text where translation_id = m.title_translation_id and language = :lang) as media_title_translation, tt_desc.text AS description,
-                                    (select full_name from subject where id in (select subject_id from media_connection where media_id = m.id )) as subject_name
+                                    (select full_name from subject where id in (select subject_id from media_connection where media_id = m.id )  limit 1) as subject_name
                                     FROM media m
                                     JOIN media_collection mc ON m.media_collection_id = mc.id
                                     JOIN translation t_desc ON t_desc.id = m.description_translation_id
