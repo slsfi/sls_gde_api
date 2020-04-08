@@ -29,7 +29,6 @@ def get_correspondence_metadata_for_publication(project, pub_id):
         subjects.append(dict(subject))
         corresp.append(dict(row))
 
-    corresp[0].append({'subjects': subjects})
+    corresp[0] = {'subjects': subjects}
     connection.close()
-    # only return the first result, as we join subject duplicates are created
     return jsonify(corresp[0])
