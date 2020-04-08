@@ -14,7 +14,7 @@ logger = logging.getLogger("sls_api.correspondence")
 def get_correspondence_metadata_for_publication(project, pub_id):
     logger.info("Getting results for /correspondence/manifestations/")
     connection = db_engine.connect()
-    corresp_sql = """SELECT c.*, ec.type,s.full_name as full_name from publication p 
+    corresp_sql = """SELECT c.*, ec.type,s.full_name as full_name from publication p
                     join correspondence c on concat('Br', c.legacy_id) = substring(p.original_filename, 'Br[0-9]{1,5}')
                     join event_connection ec on ec.correspondence_id = c.id
                     join subject s on s.id = ec.subject_id
@@ -30,5 +30,4 @@ def get_correspondence_metadata_for_publication(project, pub_id):
         row = result.fetchone()
     corresp.append({'subjects': subjects})
     connection.close()
-    # only reurn the first result, as they are duplicates from joining subject
-    return jsonify(corresp[0])
+    return jsonify(corresp)
