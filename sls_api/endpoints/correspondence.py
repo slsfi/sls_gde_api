@@ -23,8 +23,10 @@ def get_correspondence_metadata_for_publication(project, pub_id):
     corresp = []
     subjects = []
     for row in connection.execute(corresp_sql).fetchall():
-        corresp.append(row)
-        subjects.append({row['type']: row['full_name']})
+        subject = {}
+        subject[row['type']] = row['full_name']
+        subjects.append(dict(subject))
+        corresp.append(dict(row))
 
     corresp.append({'subjects': subjects})
     connection.close()
