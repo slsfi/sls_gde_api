@@ -30,9 +30,12 @@ def get_correspondence_metadata_for_publication(project, pub_id):
         subjects.append(dict(subject))
         corresp.append(dict(row))
 
-    data = {
-        'letter': dict(corresp[0]),
-        'subjects': subjects
-    }
+    if not corresp:
+        data = []
+    else:
+        data = {
+            'letter': dict(corresp[0]),
+            'subjects': subjects
+        }
     connection.close()
-    return jsonify(data)
+    return jsonify(data), 200
