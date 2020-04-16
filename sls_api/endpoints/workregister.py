@@ -22,7 +22,7 @@ def get_work_manifestations_for_project(project):
     result = connection.execute(manifestation_sql)
     row = result.fetchone()
     while row is not None:
-        manifestations.append(row)
+        manifestations.append(dict(row))
         row = result.fetchone()
 
     connection.close()
