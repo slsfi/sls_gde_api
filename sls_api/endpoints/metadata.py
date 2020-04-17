@@ -361,6 +361,30 @@ def get_tag(project, tag_id):
         return jsonify(dict(return_data)), 200
 
 
+@meta.route("/<project>/work/<work_id>")
+def get_work(project, work_id):
+    logger.info("Getting work /{}/work/{}".format(project, work_id))
+    connection = db_engine.connect()
+    work_sql = "SELECT * FROM work "
+
+    # Check if work_id is a number
+    try:
+        work_id = int(work_id)
+        work_sql = work_sql + " WHERE id = :id AND deleted = 0 "
+    except ValueError:
+        work_id = work_id
+        work_sql = work_sql + " WHERE legacy_id = :id AND deleted = 0 "
+
+    statement = sqlalchemy.sql.text(work_sql).bindparams(id=work_id)
+    return_data = connection.execute(statement).fetchone()
+    connection.close()
+
+    if return_data is None:
+        return jsonify({"msg": "Desired work not found in database."}), 404
+    else:
+        return jsonify(dict(return_data)), 200
+
+
 @meta.route("/<project>/location/<location_id>")
 def get_location(project, location_id):
     logger.info("Getting location /{}/location/{}".format(project, location_id))
