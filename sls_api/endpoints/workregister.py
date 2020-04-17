@@ -22,7 +22,7 @@ def get_work_manifestations_for_project(project):
     result = connection.execute(manifestation_sql)
     row = result.fetchone()
     while row is not None:
-        manifestations.append(row)
+        manifestations.append(dict(row))
         row = result.fetchone()
 
     connection.close()
@@ -36,7 +36,7 @@ def get_work_manifestation_authors_for_project(project, manifestation_id):
     connection = db_engine.connect()
     project_id = get_project_id_from_name(project)
     # Only allow int
-    if isinstance(manifestation_id, int) is False:
+    if str(manifestation_id).isnumeric() is False:
         connection.close()
         return jsonify({"msg": "Desired manifestation_id not found in database."}), 404
 
@@ -70,7 +70,7 @@ def get_work_manifestation_occurrences_for_project(project, manifestation_id):
     connection = db_engine.connect()
     project_id = get_project_id_from_name(project)
     # Only allow int
-    if isinstance(manifestation_id, int) is False:
+    if str(manifestation_id).isnumeric() is False:
         connection.close()
         return jsonify({"msg": "Desired manifestation_id not found in database."}), 404
 
@@ -104,7 +104,7 @@ def get_work_manifestations_for_publication(project, publication_id):
     connection = db_engine.connect()
     project_id = get_project_id_from_name(project)
     # Only allow int
-    if isinstance(publication_id, int) is False:
+    if str(publication_id).isnumeric() is False:
         connection.close()
         return jsonify({"msg": "Desired publication_id not found in database."}), 404
 
@@ -137,7 +137,7 @@ def get_work_manifestations_by_author(project, author_id):
     logger.info("Getting results for /workregister/author/manifestations/<author_id>")
     connection = db_engine.connect()
     # Only allow int
-    if isinstance(author_id, int) is False:
+    if str(author_id).isnumeric() is False:
         connection.close()
         return jsonify({"msg": "Desired author_id not found in database."}), 404
 
