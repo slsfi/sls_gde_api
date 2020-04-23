@@ -19,7 +19,7 @@ def get_media_data(project, type, type_id):
         connection = db_engine.connect()
         sql = sqlalchemy.sql.text("SELECT media.id, media.description FROM media \
             JOIN media_connection mc ON mc.media_id = media.id \
-            WHERE mc.{}=:m_id AND type='image' ".format(media_column))
+            WHERE mc.{}=:m_id AND media.type='image' ".format(media_column))
         statement = sql.bindparams(m_id=type_id)
         result = connection.execute(statement).fetchone()
         result = dict(result)
