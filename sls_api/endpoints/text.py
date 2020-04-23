@@ -135,7 +135,8 @@ def get_reading_text(project, collection_id, publication_id, section_id=None):
 
 @text.route("/<project>/text/<collection_id>/<publication_id>/com")
 @text.route("/<project>/text/<collection_id>/<publication_id>/com/<note_id>")
-def get_comments(project, collection_id, publication_id, note_id=None):
+@text.route("/<project>/text/<collection_id>/<publication_id>/com/<note_id>/<section_id>")
+def get_comments(project, collection_id, publication_id, note_id=None, section_id=None):
     """
     Get comments file text for a given publication
     """
@@ -162,13 +163,23 @@ def get_comments(project, collection_id, publication_id, note_id=None):
                 "estDocument": '"file://{}"'.format(safe_join(config["file_root"], "xml", "est", filename.replace("com", "est"))),
                 "bookId": collection_id
             }
-            if note_id is not None:
+
+            if note_id is not None and section_id is None:
                 params["noteId"] = '"{}"'.format(note_id)
                 xsl_file = "notes.xsl"
             else:
                 xsl_file = "com.xsl"
 
-            content = get_content(project, "com", filename, xsl_file, params)
+            if section_id is not None:
+                section_id = '"{}"'.format(section_id)
+                content = get_content(project, "com", filename, xsl_file, {
+                    "sectionId": section_id,
+                    "estDocument": '"file://{}"'.format(safe_join(config["file_root"], "xml", "est", filename.replace("com", "est"))),
+                    "bookId": collection_id
+                })
+            else:
+                content = get_content(project, "com", filename, xsl_file, params)
+
             data = {
                 "id": "{}_{}_com".format(collection_id, publication_id),
                 "content": content
