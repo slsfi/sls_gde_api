@@ -172,7 +172,11 @@ def get_comments(project, collection_id, publication_id, note_id=None, section_i
 
             if section_id is not None:
                 section_id = '"{}"'.format(section_id)
-                content = get_content(project, "com", filename, xsl_file, {"bookId": collection_id, "sectionId": section_id})
+                content = get_content(project, "com", filename, xsl_file, {
+                    "sectionId": section_id,
+                    "estDocument": '"file://{}"'.format(safe_join(config["file_root"], "xml", "est", filename.replace("com", "est"))),
+                    "bookId": collection_id
+                })
             else:
                 content = get_content(project, "com", filename, xsl_file, params)
 
