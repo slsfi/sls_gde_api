@@ -329,11 +329,19 @@ def get_subject(project, subject_id):
 
     statement = sqlalchemy.sql.text(subject_sql).bindparams(id=subject_id)
     return_data = connection.execute(statement).fetchone()
-    connection.close()
 
     if return_data is None:
-        return jsonify({"msg": "Desired subject not found in database."}), 404
+        project_id = get_project_id_from_name(project)
+        subject_sql = subject_sql + " WHERE legacy_id = :id AND deleted = 0 AND project_id = :p_id "
+        statement = sqlalchemy.sql.text(subject_sql).bindparams(id=subject_id, p_id=project_id)
+        return_data = connection.execute(statement).fetchone()
+        connection.close()
+        if return_data is None:
+            return jsonify({"msg": "Desired subject not found in database."}), 404
+        else:
+            return jsonify(dict(return_data)), 200
     else:
+        connection.close()
         return jsonify(dict(return_data)), 200
 
 
