@@ -332,7 +332,7 @@ def get_subject(project, subject_id):
 
     if return_data is None:
         project_id = get_project_id_from_name(project)
-        subject_sql = subject_sql + " WHERE legacy_id = :id AND deleted = 0 AND project_id = :p_id "
+        subject_sql = " SELECT * FROM subject WHERE legacy_id = :id AND deleted = 0 AND project_id = :p_id "
         statement = sqlalchemy.sql.text(subject_sql).bindparams(id=subject_id, p_id=project_id)
         return_data = connection.execute(statement).fetchone()
         connection.close()
@@ -365,7 +365,7 @@ def get_tag(project, tag_id):
 
     if return_data is None:
         project_id = get_project_id_from_name(project)
-        tag_sql = tag_sql + " WHERE legacy_id = :id AND deleted = 0 AND project_id = :p_id "
+        tag_sql = "SELECT * FROM tag WHERE legacy_id = :id AND deleted = 0 AND project_id = :p_id "
         statement = sqlalchemy.sql.text(tag_sql).bindparams(id=tag_id, p_id=project_id)
         return_data = connection.execute(statement).fetchone()
         connection.close()
@@ -421,7 +421,7 @@ def get_location(project, location_id):
 
     if return_data is None:
         project_id = get_project_id_from_name(project)
-        location_sql = location_sql + " WHERE legacy_id = :id AND deleted = 0 AND project_id = :p_id "
+        location_sql = "SELECT * FROM location WHERE legacy_id = :id AND deleted = 0 AND project_id = :p_id "
         statement = sqlalchemy.sql.text(location_sql).bindparams(id=location_id, p_id=project_id)
         return_data = connection.execute(statement).fetchone()
         connection.close()
