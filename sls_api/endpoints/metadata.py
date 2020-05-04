@@ -245,6 +245,7 @@ def get_collection_publications(project, collection_id):
     connection.close()
     return jsonify(results)
 
+
 # Get the collection and publication id for a legacy id
 @meta.route("/<project>/legacy/<legacy_id>")
 def get_collection_publication_by_legacyid(project, legacy_id):
@@ -255,6 +256,66 @@ def get_collection_publication_by_legacyid(project, legacy_id):
                                 JOIN publication_collection pc ON pc.id = p.publication_collection_id \
                                 WHERE p.legacy_id = :l_id AND pc.project_id = :p_id ORDER BY pc.id")
     statement = sql.bindparams(l_id=legacy_id, p_id=project_id)
+    results = []
+    for row in connection.execute(statement).fetchall():
+        results.append(dict(row))
+    connection.close()
+    return jsonify(results)
+
+
+# Get all subjects for a project
+@meta.route("/<project>/subjects")
+def get_project_subjects(project):
+    logger.info("Getting /<project>/subjects".format(project))
+    connection = db_engine.connect()
+    project_id = get_project_id_from_name(project)
+    sql = sqlalchemy.sql.text(""" SELECT * FROM subject WHERE project_id = :p_id """)
+    statement = sql.bindparams(p_id=project_id, )
+    results = []
+    for row in connection.execute(statement).fetchall():
+        results.append(dict(row))
+    connection.close()
+    return jsonify(results)
+
+
+# Get all subjects for a project
+@meta.route("/<project>/locations")
+def get_project_locations(project):
+    logger.info("Getting /<project>/locations".format(project))
+    connection = db_engine.connect()
+    project_id = get_project_id_from_name(project)
+    sql = sqlalchemy.sql.text(""" SELECT * FROM location WHERE project_id = :p_id """)
+    statement = sql.bindparams(p_id=project_id, )
+    results = []
+    for row in connection.execute(statement).fetchall():
+        results.append(dict(row))
+    connection.close()
+    return jsonify(results)
+
+
+# Get all subjects for a project
+@meta.route("/<project>/tags")
+def get_project_tags(project):
+    logger.info("Getting /<project>/tags".format(project))
+    connection = db_engine.connect()
+    project_id = get_project_id_from_name(project)
+    sql = sqlalchemy.sql.text(""" SELECT * FROM tag WHERE project_id = :p_id """)
+    statement = sql.bindparams(p_id=project_id, )
+    results = []
+    for row in connection.execute(statement).fetchall():
+        results.append(dict(row))
+    connection.close()
+    return jsonify(results)
+
+
+# Get all subjects for a project
+@meta.route("/<project>/works")
+def get_project_works(project):
+    logger.info("Getting /<project>/works".format(project))
+    connection = db_engine.connect()
+    project_id = get_project_id_from_name(project)
+    sql = sqlalchemy.sql.text(""" SELECT * FROM work WHERE project_id = :p_id """)
+    statement = sql.bindparams(p_id=project_id, )
     results = []
     for row in connection.execute(statement).fetchall():
         results.append(dict(row))
