@@ -54,7 +54,7 @@ def get_song_by_id(project, song_id):
         connection.close()
         return jsonify(dict(result)), 200
     except Exception:
-        logger.exception(f"Failed to get song by id.")
+        logger.exception(f"Failed to get song by id {song_id}.")
         return Response("Couldn't get song by id.", status=404, content_type="text/json")
 
 
