@@ -249,7 +249,7 @@ def get_collection_publications(project, collection_id):
 # Get the collection and publication id for a legacy id
 @meta.route("/<project>/legacy/<legacy_id>")
 def get_collection_publication_by_legacyid(project, legacy_id):
-    logger.info("Getting /<project>/legacy/<legacy_id>".format(project, legacy_id))
+    logger.info("Getting /<project>/legacy/<legacy_id>")
     connection = db_engine.connect()
     project_id = get_project_id_from_name(project)
     sql = sqlalchemy.sql.text("SELECT p.id as pub_id, pc.id as coll_id FROM publication p \
@@ -266,7 +266,7 @@ def get_collection_publication_by_legacyid(project, legacy_id):
 # Get all subjects for a project
 @meta.route("/<project>/subjects")
 def get_project_subjects(project):
-    logger.info("Getting /<project>/subjects".format(project))
+    logger.info("Getting /<project>/subjects")
     connection = db_engine.connect()
     project_id = get_project_id_from_name(project)
     sql = sqlalchemy.sql.text(""" SELECT * FROM subject WHERE project_id = :p_id """)
@@ -281,7 +281,7 @@ def get_project_subjects(project):
 # Get all subjects for a project
 @meta.route("/<project>/locations")
 def get_project_locations(project):
-    logger.info("Getting /<project>/locations".format(project))
+    logger.info("Getting /<project>/locations")
     connection = db_engine.connect()
     project_id = get_project_id_from_name(project)
     sql = sqlalchemy.sql.text(""" SELECT * FROM location WHERE project_id = :p_id """)
@@ -296,7 +296,7 @@ def get_project_locations(project):
 # Get all subjects for a project
 @meta.route("/<project>/tags")
 def get_project_tags(project):
-    logger.info("Getting /<project>/tags".format(project))
+    logger.info("Getting /<project>/tags")
     connection = db_engine.connect()
     project_id = get_project_id_from_name(project)
     sql = sqlalchemy.sql.text(""" SELECT * FROM tag WHERE project_id = :p_id """)
@@ -311,7 +311,7 @@ def get_project_tags(project):
 # Get all subjects for a project
 @meta.route("/<project>/works")
 def get_project_works(project):
-    logger.info("Getting /<project>/works".format(project))
+    logger.info("Getting /<project>/works")
     connection = db_engine.connect()
     project_id = get_project_id_from_name(project)
     sql = sqlalchemy.sql.text(""" SELECT * FROM work WHERE project_id = :p_id """)

@@ -181,7 +181,7 @@ def get_gallery_connections(project, connection_type, gallery_id=None):
         return jsonify(results), 200
     except Exception as e:
         logger.debug(e)
-        return Response(f"Couldn't get gallery connection data due to error.", status=404, content_type="text/json")
+        return Response("Couldn't get gallery connection data due to error.", status=404, content_type="text/json")
 
 
 @media.route("/<project>/gallery/<connection_type>/connections/<type_id>")

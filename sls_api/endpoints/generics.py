@@ -78,6 +78,18 @@ def get_project_id_from_name(project):
         return None
 
 
+def get_collection_legacy_id(collection_id):
+    publication_collection = Table('publication_collection', metadata, autoload=True, autoload_with=db_engine)
+    connection = db_engine.connect()
+    statement = select([publication_collection.c.legacy_id]).where(publication_collection.c.id == collection_id)
+    collection_legacy_id = connection.execute(statement).fetchone()
+    connection.close()
+    try:
+        return int(collection_legacy_id["legacy_id"])
+    except Exception:
+        return None
+
+
 def select_all_from_table(table_name):
     table = Table(table_name, metadata, autoload=True, autoload_with=db_engine)
     connection = db_engine.connect()

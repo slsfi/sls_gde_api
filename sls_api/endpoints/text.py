@@ -2,7 +2,7 @@ from flask import Blueprint, jsonify, request, safe_join
 import logging
 import sqlalchemy
 
-from sls_api.endpoints.generics import db_engine, get_collection_published_status, get_content, get_project_config, get_published_status
+from sls_api.endpoints.generics import db_engine, get_collection_published_status, get_content, get_project_config, get_published_status, get_collection_legacy_id
 
 text = Blueprint('text', __name__)
 logger = logging.getLogger("sls_api.text")
@@ -115,12 +115,17 @@ def get_reading_text(project, collection_id, publication_id, section_id=None):
             connection.close()
         logger.debug("Filename (est) for {} is {}".format(publication_id, filename))
         xsl_file = "est.xsl"
+
+        bookId = get_collection_legacy_id(collection_id)
+        if bookId is None:
+            bookId = collection_id
+
         if section_id is not None:
             section_id = '"{}"'.format(section_id)
             content = get_content(project, "est", filename, xsl_file,
-                                  {"bookId": collection_id, "sectionId": section_id})
+                                  {"bookId": bookId, "sectionId": section_id})
         else:
-            content = get_content(project, "est", filename, xsl_file, {"bookId": collection_id})
+            content = get_content(project, "est", filename, xsl_file, {"bookId": bookId})
         data = {
             "id": "{}_{}_est".format(collection_id, publication_id),
             "content": content.replace("id=", "data-id=")
@@ -152,6 +157,11 @@ def get_comments(project, collection_id, publication_id, note_id=None, section_i
                         AND legacy_id IS NOT NULL AND original_filename IS NULL"
             statement = sqlalchemy.sql.text(select).bindparams(p_id=publication_id)
             result = connection.execute(statement).fetchone()
+
+            bookId = get_collection_legacy_id(collection_id)
+            if bookId is None:
+                bookId = collection_id
+
             if result is not None:
                 filename = "{}_com.xml".format(result["legacy_id"])
                 connection.close()
@@ -161,7 +171,7 @@ def get_comments(project, collection_id, publication_id, note_id=None, section_i
             logger.debug("Filename (com) for {} is {}".format(publication_id, filename))
             params = {
                 "estDocument": '"file://{}"'.format(safe_join(config["file_root"], "xml", "est", filename.replace("com", "est"))),
-                "bookId": collection_id
+                "bookId": bookId
             }
 
             if note_id is not None and section_id is None:
@@ -175,7 +185,7 @@ def get_comments(project, collection_id, publication_id, note_id=None, section_i
                 content = get_content(project, "com", filename, xsl_file, {
                     "sectionId": section_id,
                     "estDocument": '"file://{}"'.format(safe_join(config["file_root"], "xml", "est", filename.replace("com", "est"))),
-                    "bookId": collection_id
+                    "bookId": bookId
                 })
             else:
                 content = get_content(project, "com", filename, xsl_file, params)
@@ -218,10 +228,14 @@ def get_manuscript(project, collection_id, publication_id, manuscript_id=None):
                 manuscript_info.append(dict(row))
             connection.close()
 
+        bookId = get_collection_legacy_id(collection_id)
+        if bookId is None:
+            bookId = collection_id
+
         for index in range(len(manuscript_info)):
             manuscript = manuscript_info[index]
             params = {
-                "bookId": collection_id
+                "bookId": bookId
             }
             if manuscript["original_filename"] is None and manuscript["legacy_id"] is not None:
                 filename = "{}.xml".format(manuscript["legacy_id"])
@@ -263,10 +277,14 @@ def get_variant(project, collection_id, publication_id, section_id=None):
             variation_info.append(dict(row))
         connection.close()
 
+        bookId = get_collection_legacy_id(collection_id)
+        if bookId is None:
+            bookId = collection_id
+
         for index in range(len(variation_info)):
             variation = variation_info[index]
             params = {
-                "bookId": collection_id
+                "bookId": bookId
             }
 
             if variation["type"] == 1:
