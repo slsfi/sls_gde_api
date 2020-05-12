@@ -148,6 +148,7 @@ def get_songs_filtered(project):
         return_data = []
         for row in result:
             return_data.append(dict(row))
+        connection.close()
         return jsonify(return_data), 200
     except Exception as e:
         return Response("Couldn't get songs filtered." + str(e), status=404, content_type="text/json")

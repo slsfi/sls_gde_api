@@ -22,7 +22,10 @@ config_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file
 with io.open(os.path.join(config_dir, "digital_editions.yml"), encoding="UTF-8") as config:
     yaml = YAML(typ="safe")
     config = yaml.load(config)
-    db_engine = create_engine(config["engine"], pool_pre_ping=True, pool_size=30, max_overflow=60, pool_timeout=15)
+    # connection pool settings - keep a pool of up to 30 connections, but allow spillover to up to 60 if needed.
+    # before using a connection, use an SQL ping (typically SELECT 1) to check if it's valid and recycle transparently if not
+    # automatically recycle unused connections after 15 minutes of not being used, to prevent keeping connections open to postgresql forever
+    db_engine = create_engine(config["engine"], pool_pre_ping=True, pool_size=30, max_overflow=30, pool_recycle=900)
     elastic_config = config["elasticsearch_connection"]
 
 
