@@ -12,7 +12,8 @@ logger = logging.getLogger("sls_api.facsimiles")
 
 
 @facsimiles.route("/<project>/facsimiles/<publication_id>")
-def get_facsimiles(project, publication_id):
+@facsimiles.route("/<project>/facsimiles/<publication_id>/<section_id>")
+def get_facsimiles(project, publication_id, section_id=None):
     config = get_project_config(project)
     if config is None:
         return jsonify({"msg": "No such project."}), 400
@@ -32,11 +33,17 @@ def get_facsimiles(project, publication_id):
         elif config["show_unpublished"]:
             sql = " ".join([sql, "and p.published>2"])
 
+        if section_id is not None:
+            sql = " ".join([sql, "and f.section_id = :section"])
+
         sql = " ".join([sql, "ORDER BY f.priority"])
 
         pub_id = publication_id.split('_')[1]
 
-        statement = sqlalchemy.sql.text(sql).bindparams(p_id=pub_id)
+        if section_id is not None:
+            statement = sqlalchemy.sql.text(sql).bindparams(p_id=pub_id)
+        else:
+            statement = sqlalchemy.sql.text(sql).bindparams(p_id=pub_id, section=section_id)
 
         result = []
         for row in connection.execute(statement).fetchall():
@@ -177,7 +184,8 @@ def get_facsimile_file(project, collection_id, number, zoom_level):
 
 
 @facsimiles.route("/<project>/facsimile/page/<col_pub>/")
-def get_facsimile_pages(project, col_pub):
+@facsimiles.route("/<project>/facsimiles/page/<col_pub>/<section_id>")
+def get_facsimile_pages(project, col_pub, section_id=None):
     logger.info("Getting facsimile page")
     try:
         pub_id = col_pub.split('_')[1]
@@ -186,7 +194,11 @@ def get_facsimile_pages(project, col_pub):
             FROM publication_facsimile pf\
             JOIN publication_facsimile_collection pfc on pfc.id = pf.publication_facsimile_collection_id\
             WHERE pf.publication_id = :pub_id")
-        statement = sql.bindparams(pub_id=pub_id)
+        if section_id is not None:
+            sql = " ".join([sql, "and pf.section_id = :section"])
+            statement = sql.bindparams(pub_id=pub_id, section=section_id)
+        else:
+            statement = sql.bindparams(pub_id=pub_id)
         result = connection.execute(statement).fetchone()
         facs = dict(result)
         connection.close()
