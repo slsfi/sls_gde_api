@@ -196,6 +196,7 @@ def get_facsimile_pages(project, col_pub, section_id=None):
             JOIN publication_facsimile_collection pfc on pfc.id = pf.publication_facsimile_collection_id\
             WHERE pf.publication_id = :pub_id")
         if section_id is not None:
+            section_id = str(section_id).replace('ch', '')
             sql = " ".join([sql, "and pf.section_id = :section"])
             statement = sql.bindparams(pub_id=pub_id, section=section_id)
         else:
