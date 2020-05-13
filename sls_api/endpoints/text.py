@@ -183,7 +183,7 @@ def get_comments(project, collection_id, publication_id, note_id=None, section_i
             if section_id is not None:
                 section_id = '"{}"'.format(section_id)
                 content = get_content(project, "com", filename, xsl_file, {
-                    "sectionId": section_id,
+                    "sectionId": str(section_id),
                     "estDocument": '"file://{}"'.format(safe_join(config["file_root"], "xml", "est", filename.replace("com", "est"))),
                     "bookId": bookId
                 })
@@ -275,16 +275,13 @@ def get_manuscript(project, collection_id, publication_id, manuscript_id=None, s
             if section_id is not None:
                 params = {
                     "bookId": bookId,
-                    "sectionId": section_id
+                    "sectionId": str(section_id)
                 }
-<<<<<<< HEAD
-=======
             elif manuscript_id is not None and 'ch' in str(manuscript_id):
                 params = {
                     "bookId": bookId,
-                    "sectionId": manuscript_id
+                    "sectionId": str(manuscript_id)
                 }
->>>>>>> 313640152bc8bbb6467f0f893e81a90c64835904
             else:
                 params = {
                     "bookId": bookId
