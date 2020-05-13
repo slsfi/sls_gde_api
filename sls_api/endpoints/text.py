@@ -214,16 +214,16 @@ def get_manuscript(project, collection_id, publication_id, manuscript_id=None, s
     if can_show:
         logger.info("Getting XML for {} and transforming...".format(request.full_path))
         connection = db_engine.connect()
-        if manuscript_id is None:
-            select = "SELECT sort_order, name, legacy_id, id, original_filename FROM publication_manuscript WHERE publication_id = :p_id ORDER BY sort_order ASC"
-            statement = sqlalchemy.sql.text(select).bindparams(p_id=publication_id)
+        if manuscript_id is not None and 'ch' not in str(manuscript_id):
+            select = "SELECT sort_order, name, legacy_id, id, original_filename FROM publication_manuscript WHERE id = :m_id ORDER BY sort_order ASC"
+            statement = sqlalchemy.sql.text(select).bindparams(m_id=manuscript_id)
             manuscript_info = []
             for row in connection.execute(statement).fetchall():
                 manuscript_info.append(dict(row))
             connection.close()
         else:
-            select = "SELECT sort_order, name, legacy_id, id, original_filename FROM publication_manuscript WHERE id = :m_id ORDER BY sort_order ASC"
-            statement = sqlalchemy.sql.text(select).bindparams(m_id=manuscript_id)
+            select = "SELECT sort_order, name, legacy_id, id, original_filename FROM publication_manuscript WHERE publication_id = :p_id ORDER BY sort_order ASC"
+            statement = sqlalchemy.sql.text(select).bindparams(p_id=publication_id)
             manuscript_info = []
             for row in connection.execute(statement).fetchall():
                 manuscript_info.append(dict(row))
@@ -239,6 +239,11 @@ def get_manuscript(project, collection_id, publication_id, manuscript_id=None, s
                 params = {
                     "bookId": bookId,
                     "sectionId": section_id
+                }
+            elif manuscript_id is not None and 'ch' in str(manuscript_id):
+                params = {
+                    "bookId": bookId,
+                    "sectionId": manuscript_id
                 }
             else:
                 params = {
