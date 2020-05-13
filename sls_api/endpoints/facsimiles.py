@@ -41,6 +41,7 @@ def get_facsimiles(project, publication_id, section_id=None):
         pub_id = publication_id.split('_')[1]
 
         if section_id is not None:
+            section_id = str(section_id).replace('ch', '')
             statement = sqlalchemy.sql.text(sql).bindparams(p_id=pub_id, section=section_id)
         else:
             statement = sqlalchemy.sql.text(sql).bindparams(p_id=pub_id)
