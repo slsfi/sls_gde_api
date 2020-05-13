@@ -273,14 +273,16 @@ def get_manuscript(project, collection_id, publication_id, manuscript_id=None, s
         for index in range(len(manuscript_info)):
             manuscript = manuscript_info[index]
             if section_id is not None:
+                section_id = '"{}"'.format(section_id)
                 params = {
                     "bookId": bookId,
                     "sectionId": str(section_id)
                 }
             elif manuscript_id is not None and 'ch' in str(manuscript_id):
+                section_id = '"{}"'.format(manuscript_id)
                 params = {
                     "bookId": bookId,
-                    "sectionId": str(manuscript_id)
+                    "sectionId": str(section_id)
                 }
             else:
                 params = {
@@ -342,6 +344,7 @@ def get_variant(project, collection_id, publication_id, section_id=None):
                 xsl_file = "poem_variants_other.xsl"
 
             if section_id is not None:
+                section_id = '"{}"'.format(section_id)
                 params["section_id"] = section_id
 
             if variation["original_filename"] is None and variation["legacy_id"] is not None:
