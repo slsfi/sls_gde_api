@@ -205,7 +205,8 @@ def get_comments(project, collection_id, publication_id, note_id=None, section_i
 
 @text.route("/<project>/text/<collection_id>/<publication_id>/ms/")
 @text.route("/<project>/text/<collection_id>/<publication_id>/ms/<manuscript_id>")
-def get_manuscript(project, collection_id, publication_id, manuscript_id=None):
+@text.route("/<project>/text/<collection_id>/<publication_id>/ms/<manuscript_id>/<section_id>")
+def get_manuscript(project, collection_id, publication_id, manuscript_id=None, section_id=None):
     """
     Get one or all manuscripts for a given publication
     """
@@ -234,9 +235,15 @@ def get_manuscript(project, collection_id, publication_id, manuscript_id=None):
 
         for index in range(len(manuscript_info)):
             manuscript = manuscript_info[index]
-            params = {
-                "bookId": bookId
-            }
+            if section_id is not None:
+                params = {
+                    "bookId": bookId,
+                    "sectionId": section_id
+                }
+            else:
+                params = {
+                    "bookId": bookId
+                }
             if manuscript["original_filename"] is None and manuscript["legacy_id"] is not None:
                 filename = "{}.xml".format(manuscript["legacy_id"])
             else:
