@@ -203,9 +203,47 @@ def get_comments(project, collection_id, publication_id, note_id=None, section_i
             }), 403
 
 
+@text.route("/<project>/text/<collection_id>/<publication_id>/list/ms")
+@text.route("/<project>/text/<collection_id>/<publication_id>/list/ms/<section_id>")
+def get_manuscript_list(project, collection_id, publication_id, section_id=None):
+    """
+    Get all manuscripts for a given publication
+    """
+    can_show, message = get_published_status(project, collection_id, publication_id)
+    if can_show:
+        connection = db_engine.connect()
+        if section_id is not None:
+            section_id = str(section_id).replace('ch', '')
+            select = "SELECT sort_order, name, legacy_id, id, original_filename FROM publication_manuscript WHERE publication_id = :p_id AND section_id = :section ORDER BY sort_order ASC"
+            statement = sqlalchemy.sql.text(select).bindparams(p_id=publication_id, section=section_id)
+            manuscript_info = []
+            for row in connection.execute(statement).fetchall():
+                manuscript_info.append(dict(row))
+            connection.close()
+        else:
+            select = "SELECT sort_order, name, legacy_id, id, original_filename FROM publication_manuscript WHERE publication_id = :p_id ORDER BY sort_order ASC"
+            statement = sqlalchemy.sql.text(select).bindparams(p_id=publication_id)
+            manuscript_info = []
+            for row in connection.execute(statement).fetchall():
+                manuscript_info.append(dict(row))
+            connection.close()
+
+        data = {
+            "id": "{}_{}".format(collection_id, publication_id),
+            "manuscripts": manuscript_info
+        }
+        return jsonify(data), 200
+    else:
+        return jsonify({
+            "id": "{}_{}_ms".format(collection_id, publication_id),
+            "error": message
+        }), 403
+
+
 @text.route("/<project>/text/<collection_id>/<publication_id>/ms/")
 @text.route("/<project>/text/<collection_id>/<publication_id>/ms/<manuscript_id>")
-def get_manuscript(project, collection_id, publication_id, manuscript_id=None):
+@text.route("/<project>/text/<collection_id>/<publication_id>/ms/<manuscript_id>/<section_id>")
+def get_manuscript(project, collection_id, publication_id, manuscript_id=None, section_id=None):
     """
     Get one or all manuscripts for a given publication
     """
@@ -213,16 +251,16 @@ def get_manuscript(project, collection_id, publication_id, manuscript_id=None):
     if can_show:
         logger.info("Getting XML for {} and transforming...".format(request.full_path))
         connection = db_engine.connect()
-        if manuscript_id is None:
-            select = "SELECT sort_order, name, legacy_id, id, original_filename FROM publication_manuscript WHERE publication_id = :p_id ORDER BY sort_order ASC"
-            statement = sqlalchemy.sql.text(select).bindparams(p_id=publication_id)
+        if manuscript_id is not None and 'ch' not in str(manuscript_id):
+            select = "SELECT sort_order, name, legacy_id, id, original_filename FROM publication_manuscript WHERE id = :m_id ORDER BY sort_order ASC"
+            statement = sqlalchemy.sql.text(select).bindparams(m_id=manuscript_id)
             manuscript_info = []
             for row in connection.execute(statement).fetchall():
                 manuscript_info.append(dict(row))
             connection.close()
         else:
-            select = "SELECT sort_order, name, legacy_id, id, original_filename FROM publication_manuscript WHERE id = :m_id ORDER BY sort_order ASC"
-            statement = sqlalchemy.sql.text(select).bindparams(m_id=manuscript_id)
+            select = "SELECT sort_order, name, legacy_id, id, original_filename FROM publication_manuscript WHERE publication_id = :p_id ORDER BY sort_order ASC"
+            statement = sqlalchemy.sql.text(select).bindparams(p_id=publication_id)
             manuscript_info = []
             for row in connection.execute(statement).fetchall():
                 manuscript_info.append(dict(row))
@@ -234,9 +272,20 @@ def get_manuscript(project, collection_id, publication_id, manuscript_id=None):
 
         for index in range(len(manuscript_info)):
             manuscript = manuscript_info[index]
-            params = {
-                "bookId": bookId
-            }
+            if section_id is not None:
+                params = {
+                    "bookId": bookId,
+                    "sectionId": section_id
+                }
+            elif manuscript_id is not None and 'ch' in str(manuscript_id):
+                params = {
+                    "bookId": bookId,
+                    "sectionId": manuscript_id
+                }
+            else:
+                params = {
+                    "bookId": bookId
+                }
             if manuscript["original_filename"] is None and manuscript["legacy_id"] is not None:
                 filename = "{}.xml".format(manuscript["legacy_id"])
             else:
