@@ -203,6 +203,41 @@ def get_comments(project, collection_id, publication_id, note_id=None, section_i
             }), 403
 
 
+@text.route("/<project>/text/<collection_id>/<publication_id>/list/ms/<section_id>")
+def get_manuscript_list(project, collection_id, publication_id, section_id=None):
+    """
+    Get all manuscripts for a given publication
+    """
+    can_show, message = get_published_status(project, collection_id, publication_id)
+    if can_show:
+        connection = db_engine.connect()
+        if section_id is not None:
+            select = "SELECT sort_order, name, legacy_id, id, original_filename FROM publication_manuscript WHERE publication_id = :p_id AND section_id = :section ORDER BY sort_order ASC"
+            statement = sqlalchemy.sql.text(select).bindparams(p_id=publication_id, section=section_id)
+            manuscript_info = []
+            for row in connection.execute(statement).fetchall():
+                manuscript_info.append(dict(row))
+            connection.close()
+        else:
+            select = "SELECT sort_order, name, legacy_id, id, original_filename FROM publication_manuscript WHERE publication_id = :p_id ORDER BY sort_order ASC"
+            statement = sqlalchemy.sql.text(select).bindparams(p_id=publication_id)
+            manuscript_info = []
+            for row in connection.execute(statement).fetchall():
+                manuscript_info.append(dict(row))
+            connection.close()
+
+        data = {
+            "id": "{}_{}".format(collection_id, publication_id),
+            "manuscripts": manuscript_info
+        }
+        return jsonify(data), 200
+    else:
+        return jsonify({
+            "id": "{}_{}_ms".format(collection_id, publication_id),
+            "error": message
+        }), 403
+
+
 @text.route("/<project>/text/<collection_id>/<publication_id>/ms/")
 @text.route("/<project>/text/<collection_id>/<publication_id>/ms/<manuscript_id>")
 @text.route("/<project>/text/<collection_id>/<publication_id>/ms/<manuscript_id>/<section_id>")
