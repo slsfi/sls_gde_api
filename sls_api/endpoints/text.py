@@ -203,6 +203,7 @@ def get_comments(project, collection_id, publication_id, note_id=None, section_i
             }), 403
 
 
+@text.route("/<project>/text/<collection_id>/<publication_id>/list/ms")
 @text.route("/<project>/text/<collection_id>/<publication_id>/list/ms/<section_id>")
 def get_manuscript_list(project, collection_id, publication_id, section_id=None):
     """
@@ -212,6 +213,7 @@ def get_manuscript_list(project, collection_id, publication_id, section_id=None)
     if can_show:
         connection = db_engine.connect()
         if section_id is not None:
+            section_id = str(section_id).replace('ch', '')
             select = "SELECT sort_order, name, legacy_id, id, original_filename FROM publication_manuscript WHERE publication_id = :p_id AND section_id = :section ORDER BY sort_order ASC"
             statement = sqlalchemy.sql.text(select).bindparams(p_id=publication_id, section=section_id)
             manuscript_info = []
