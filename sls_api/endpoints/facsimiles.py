@@ -41,9 +41,16 @@ def get_facsimiles(project, publication_id, section_id=None):
         pub_id = publication_id.split('_')[1]
 
         if section_id is not None:
+<<<<<<< HEAD
             statement = sqlalchemy.sql.text(sql).bindparams(p_id=pub_id)
         else:
             statement = sqlalchemy.sql.text(sql).bindparams(p_id=pub_id, section=section_id)
+=======
+            section_id = str(section_id).replace('ch', '')
+            statement = sqlalchemy.sql.text(sql).bindparams(p_id=pub_id, section=section_id)
+        else:
+            statement = sqlalchemy.sql.text(sql).bindparams(p_id=pub_id)
+>>>>>>> 313640152bc8bbb6467f0f893e81a90c64835904
 
         result = []
         for row in connection.execute(statement).fetchall():
@@ -195,6 +202,10 @@ def get_facsimile_pages(project, col_pub, section_id=None):
             JOIN publication_facsimile_collection pfc on pfc.id = pf.publication_facsimile_collection_id\
             WHERE pf.publication_id = :pub_id")
         if section_id is not None:
+<<<<<<< HEAD
+=======
+            section_id = str(section_id).replace('ch', '')
+>>>>>>> 313640152bc8bbb6467f0f893e81a90c64835904
             sql = " ".join([sql, "and pf.section_id = :section"])
             statement = sql.bindparams(pub_id=pub_id, section=section_id)
         else:
