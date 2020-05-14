@@ -119,6 +119,7 @@ def get_reading_text(project, collection_id, publication_id, section_id=None):
         bookId = get_collection_legacy_id(collection_id)
         if bookId is None:
             bookId = collection_id
+        bookId = '"{}"'.format(bookId)
 
         if section_id is not None:
             section_id = '"{}"'.format(section_id)
