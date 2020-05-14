@@ -163,6 +163,8 @@ def get_comments(project, collection_id, publication_id, note_id=None, section_i
             if bookId is None:
                 bookId = collection_id
 
+            bookId = '"{}"'.format(bookId)
+
             if result is not None:
                 filename = "{}_com.xml".format(result["legacy_id"])
                 connection.close()
@@ -271,6 +273,8 @@ def get_manuscript(project, collection_id, publication_id, manuscript_id=None, s
         if bookId is None:
             bookId = collection_id
 
+        bookId = '"{}"'.format(bookId)
+
         for index in range(len(manuscript_info)):
             manuscript = manuscript_info[index]
             if section_id is not None:
@@ -332,6 +336,8 @@ def get_variant(project, collection_id, publication_id, section_id=None):
         bookId = get_collection_legacy_id(collection_id)
         if bookId is None:
             bookId = collection_id
+
+        bookId = '"{}"'.format(bookId)
 
         for index in range(len(variation_info)):
             variation = variation_info[index]
