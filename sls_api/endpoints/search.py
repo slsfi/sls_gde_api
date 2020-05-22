@@ -358,7 +358,7 @@ def get_search_elastic(project, indexes):
     results = json.loads(response.text)
     return results
 
-@search.route("/<project>/search/mtermvector/elastic/<indexes>", methods=["POST"])
+@search.route("/<project>/search/mtermvector/<indexes>", methods=["POST"])
 def get_terms_elastic(project, indexes):
     request_data = request.get_json()
     query = json.dumps(request_data)
