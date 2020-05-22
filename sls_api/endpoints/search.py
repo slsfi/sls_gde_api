@@ -368,5 +368,5 @@ def get_terms_elastic(project, indexes, term):
     response = requests.get(url, data=query, headers=headers)
     results = json.loads(response.text)
     if results is not None:
-        return results['docs']['term_vectors']['textDataIndexed']['terms'][str(term)]
+        return results['docs'][0]['term_vectors']['textDataIndexed']['terms'][str(term)]
     return results
