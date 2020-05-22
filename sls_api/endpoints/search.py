@@ -358,12 +358,15 @@ def get_search_elastic(project, indexes):
     results = json.loads(response.text)
     return results
 
-@search.route("/<project>/search/mtermvector/<indexes>", methods=["POST"])
-def get_terms_elastic(project, indexes):
+
+@search.route("/<project>/search/mtermvector/<indexes>/<term>", methods=["POST"])
+def get_terms_elastic(project, indexes, term):
     request_data = request.get_json()
     query = json.dumps(request_data)
     headers = {'Content-type': 'application/json', 'Accept': 'text/plain'}
     url = str('http://' + str(elastic_config['host']) + ':' + str(elastic_config['port']) + '/' + str(indexes) + '/_mtermvectors?')
     response = requests.get(url, data=query, headers=headers)
     results = json.loads(response.text)
+    if results is not None:
+        return results['docs']['term_vectors']['textDataIndexed']['terms'][str(term)]
     return results
