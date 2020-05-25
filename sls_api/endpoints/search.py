@@ -367,6 +367,7 @@ def get_terms_elastic(project, indexes, terms):
     url = str('http://' + str(elastic_config['host']) + ':' + str(elastic_config['port']) + '/' + str(indexes) + '/_mtermvectors?')
     response = requests.get(url, data=query, headers=headers)
     results = json.loads(response.text)
+    terms = str(terms).split(',')
     if results is not None:
         data = []
         for term in terms:
