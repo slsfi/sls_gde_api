@@ -369,10 +369,11 @@ def get_terms_elastic(project, indexes, terms):
     results = json.loads(response.text)
     terms = str(terms).split(',')
     if results is not None:
-        data = []
+        data = {}
         for term in terms:
+            data[str(term)] = []
             for doc in results['docs']:
                 if str(term) in doc['term_vectors']['textDataIndexed']['terms']:
-                    data.append({doc['_id']: doc['term_vectors']['textDataIndexed']['terms'][str(term)]})
+                    data[str(term)].append({doc['_id']: doc['term_vectors']['textDataIndexed']['terms'][str(term)]})
         return jsonify(data)
     return results
