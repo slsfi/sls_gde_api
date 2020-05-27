@@ -297,8 +297,8 @@ def get_manuscript(project, collection_id, publication_id, manuscript_id=None, s
                 filename = "{}.xml".format(manuscript["legacy_id"])
             else:
                 filename = "{}_{}_ms_{}.xml".format(collection_id, publication_id, manuscript["id"])
-            manuscript_info[index]["manuscript_changes"] = get_content(project, "ms", filename, "ms_changes.xsl", params)
-            manuscript_info[index]["manuscript_normalized"] = get_content(project, "ms", filename, "ms_normalized.xsl", params)
+            manuscript_info[index]["manuscript_changes"] = get_content(project, "ms", filename, "ms_changes.xsl", params).replace("id=", "data-id=")
+            manuscript_info[index]["manuscript_normalized"] = get_content(project, "ms", filename, "ms_normalized.xsl", params).replace("id=", "data-id=")
 
         data = {
             "id": "{}_{}".format(collection_id, publication_id),
