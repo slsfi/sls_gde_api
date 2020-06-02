@@ -66,7 +66,7 @@ def get_md_contents_as_json(project, fileid):
         pathTmp = fileid
         if len(parts) > 4:
             if "0" in parts[4]:
-                pathTmp = parts[0] + "-" + parts[1] + "-" + parts[2] + "-" + parts[4]
+                pathTmp = parts[0] + "-" + parts[1] + "-" + parts[2] + "-" + parts[3] + "-" + parts[4]
             else:
                 pathTmp = parts[0] + "-" + parts[1] + "-" + parts[2] + "-0" + parts[4]
         path = "*/".join(pathTmp.split("-")) + "*"
