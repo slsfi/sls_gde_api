@@ -65,7 +65,10 @@ def get_md_contents_as_json(project, fileid):
         parts = fileid.split("-")
         pathTmp = fileid
         if len(parts) > 4:
-            pathTmp = parts[0] + "-" + parts[1] + "-" + parts[2] + "-0" + parts[4]
+            if "0" in parts[4]:
+                pathTmp = parts[0] + "-" + parts[1] + "-" + parts[2] + "-" + parts[4]
+            else:
+                pathTmp = parts[0] + "-" + parts[1] + "-" + parts[2] + "-0" + parts[4]
         path = "*/".join(pathTmp.split("-")) + "*"
 
         file_path_query = safe_join(config["file_root"], "md", path)
@@ -73,6 +76,7 @@ def get_md_contents_as_json(project, fileid):
         try:
             file_path_full = [f for f in glob.iglob(file_path_query)]
             if len(file_path_full) <= 0:
+                logger.info("Not found {} (md_contents fetch)".format(file_path_full))
                 abort(404)
             else:
                 file_path = file_path_full[0]
