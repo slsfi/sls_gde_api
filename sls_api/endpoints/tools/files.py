@@ -162,6 +162,80 @@ def is_a_test(project):
         return True
 
 
+def git_commit_and_push_file(project, author, message, file_path, force=False):
+    # verify git config
+    config_okay = check_project_config(project)
+    if not config_okay[0]:
+        logger.error("Error in git config, check project configuration!")
+        return False
+
+    config = get_project_config(project)
+
+    # fetch latest changes from remote
+    if not is_a_test(project):
+        try:
+            run_git_command(project, ["fetch"])
+        except subprocess.CalledProcessError:
+            logger.exception("Git fetch failed to execute properly.")
+            return False
+
+        # check if desired file has changed in remote since last update
+        # if so, fail and return both user file and repo file to user, unless force=True
+        try:
+            output = run_git_command(project, ["show", "--pretty=format:", "--name-only",
+                                               "..origin/{}".format(config["git_branch"])])
+            new_and_changed_files = [s.strip().decode('utf-8', 'ignore') for s in output.splitlines()]
+        except subprocess.CalledProcessError as e:
+            logger.error("Git show failed to execute properly.")
+            logger.error(str(e.output))
+            return False
+
+        if safe_join(config["file_root"], file_path) in new_and_changed_files and not force:
+            logger.error("File {} has been changed in git repository since last update, please manually check file changes.".format(file_path))
+            return False
+
+        # merge in latest changes so that the local repository is updated
+        try:
+            run_git_command(project, ["merge", "origin/{}".format(config["git_branch"])])
+        except subprocess.CalledProcessError as e:
+            logger.error("Git merge failed to execute properly.")
+            logger.error(str(e.output))
+            return False
+
+    # git add file
+    try:
+        run_git_command(project, ["add", file_path])
+    except subprocess.CalledProcessError as e:
+        logger.error("Git add failed to execute properly!")
+        logger.error(str(e.output))
+        return False
+
+    # Commit changes to local repo, noting down user and commit message
+    try:
+        run_git_command(project, ["commit", "--author={}".format(author), "-m", message])
+    except subprocess.CalledProcessError as e:
+        logger.error("Git commit failed to execute properly.")
+        logger.error(str(e.output))
+    else:
+        logger.info("git commit of {} succeeded".format(file_path))
+
+    # push new commit to remote repository
+    if not is_a_test(project):
+        try:
+            if force:
+                run_git_command(project, ["push", "-f"])
+            else:
+                run_git_command(project, ["push"])
+        except subprocess.CalledProcessError as e:
+            logger.error("Git push failed to execute properly.")
+            logger.error(str(e.output))
+            return False
+        else:
+            logger.info("git push of {} succeeded".format(file_path))
+    # if we reach this point, the file has been commited (and possibly pushed)
+    return True
+
+
 @file_tools.route("/<project>/update_file/by_path/<path:file_path>", methods=["PUT"])
 @project_permission_required
 def update_file(project, file_path):

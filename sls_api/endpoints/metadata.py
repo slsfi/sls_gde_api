@@ -10,6 +10,7 @@ import sqlalchemy.sql
 from urllib.parse import unquote
 
 from sls_api.endpoints.generics import db_engine, get_project_config, get_project_id_from_name, path_hierarchy, select_all_from_table
+from sls_api.endpoints.tools.files import git_commit_and_push_file
 
 meta = Blueprint('metadata', __name__)
 
@@ -184,7 +185,21 @@ def handle_toc(project, collection_id):
                         # if we succeed, remove the old file and rename file_path.new to file_path
                         # (could be combined into just os.rename, but some OSes don't like that)
                         os.rename(f"{file_path}.new", file_path)
-                        return jsonify({"msg": f"Saved new toc as {file_path}"})
+
+                        # get author and construct git commit message
+                        author_email = get_jwt_identity()["sub"]
+                        author = "{} <{}>".format(
+                            author_email.split("@")[0],
+                            author_email
+                        )
+                        message = "TOC update by {}".format(author_email)
+
+                        # git commit (and possibly push) file
+                        commit_result = git_commit_and_push_file(project, author, message, file_path)
+                        if commit_result:
+                            return jsonify({"msg": f"Saved new toc as {file_path}"})
+                        else:
+                            return jsonify({"msg": "git commit failed! Possible configuration fault or git conflict."}), 500
 
 
 @meta.route("/<project>/collections")
