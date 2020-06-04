@@ -54,7 +54,7 @@ def get_introduction(project, collection_id, publication_id, lang="swe"):
             content = get_content(project, "inl", filename, xsl_file, None)
             data = {
                 "id": "{}_{}_inl".format(collection_id, publication_id),
-                "content": content
+                "content": content.replace("id=", "data-id=")
             }
             return jsonify(data), 200
         else:
@@ -84,7 +84,7 @@ def get_title(project, collection_id, publication_id, lang="swe"):
             content = get_content(project, "tit", filename, xsl_file, None)
             data = {
                 "id": "{}_{}_tit".format(collection_id, publication_id),
-                "content": content
+                "content": content.replace("id=", "data-id=")
             }
             return jsonify(data), 200
         else:
