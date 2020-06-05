@@ -327,8 +327,8 @@ def check_publication_mtimes_and_publish_files(project, publication_ids):
                 comment_file = comment_filenames.get(publication_id, COMMENTS_TEMPLATE_PATH_IN_FILE_ROOT)
 
                 if comment_file is None:
-                    logger.info("Comment file not set for publication {}".format(publication_id))
-                    continue
+                    logger.info("Comment file not set for publication {}, using template instead.".format(publication_id))
+                    comment_file = COMMENTS_TEMPLATE_PATH_IN_FILE_ROOT
 
                 com_source_file_path = os.path.join(file_root, comment_file)
 
@@ -336,7 +336,7 @@ def check_publication_mtimes_and_publish_files(project, publication_ids):
                     logger.info("Source file not set for publication {}".format(publication_id))
                     continue
                 if not com_source_file_path:
-                    logger.info("Source file not set for publication {} comment".format(publication_id))
+                    logger.info("Source file not found for publication {} comment".format(publication_id))
                 if not os.path.exists(est_source_file_path):
                     logger.warning("Source file {} for publication {} do not exist!".format(est_source_file_path, publication_id))
                     continue
