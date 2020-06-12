@@ -425,6 +425,8 @@ def check_publication_mtimes_and_publish_files(project, publication_ids):
 
                     # If any variants have changed, we need a CTeiDocument for the main variant to ProcessVariants() with
                     main_variant_target = os.path.join(file_root, "xml", "var", target_filename)
+                    # add main variant file to changes, so it is in the commit later
+                    changes.add(main_variant_target)
                     main_variant_doc = CTeiDocument()
                     main_variant_doc.Load(main_variant_source)
 
