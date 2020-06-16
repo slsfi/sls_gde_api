@@ -345,7 +345,6 @@ class CTeiDocument:
 
                 # Create the lemma node
                 soup = BeautifulSoup(comment['shortenedSelection'].replace('[...]', '<seg type="lemmaBreak">[...]</seg>'), "html.parser")
-                soup.contents[0].unwrap()
                 xml_content = ET.fromstring('<seg type="noteLemma">' + str(soup) + '</seg>')
                 oNoteNode.append(xml_content)
 
@@ -744,6 +743,7 @@ class CTeiDocument:
             try:
                 parser = ET.XMLParser(recover=True)
                 soup = BeautifulSoup(sHtml, "html.parser")
+                soup.contents[0].unwrap()
                 xml_doc_in = ET.XML("<note>" + html.escape(str(soup)) + "</note>", parser)
                 xml_doc_out = transform(xml_doc_in)
                 result = ET.tostring(xml_doc_out, encoding='unicode')
