@@ -345,6 +345,7 @@ class CTeiDocument:
 
                 # Create the lemma node
                 soup = BeautifulSoup(comment['shortenedSelection'].replace('[...]', '<seg type="lemmaBreak">[...]</seg>'), "html.parser")
+                soup.contents[0].unwrap()
                 xml_content = ET.fromstring('<seg type="noteLemma">' + str(soup) + '</seg>')
                 oNoteNode.append(xml_content)
 
