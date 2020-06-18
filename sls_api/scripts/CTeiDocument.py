@@ -395,7 +395,7 @@ class CTeiDocument:
                     oParentNode = oAnchorNode[0].xpath('./ancestor::' + cMainText.sPrefix + ':l[@n]',
                                                        namespaces={cMainText.sPrefix: cMainText.sNamespaceUrl})
                     if len(oParentNode) > 0:
-                        sStart = 'l' + oParentNode[0].attrib['n']
+                        sStart = oParentNode[0].attrib['n']
                     else:
                         # Not inside l, check if inside lg
                         oParentNode = oAnchorNode[0].xpath('./ancestor::' + cMainText.sPrefix + ':lg[@xml:id]',
@@ -444,7 +444,7 @@ class CTeiDocument:
                         oParentNode = oAnchorNode[0].xpath('./ancestor::' + cMainText.sPrefix + ':l[@n]',
                                                            namespaces={cMainText.sPrefix: cMainText.sNamespaceUrl})
                         if len(oParentNode) > 0:
-                            sEnd = 'l' + oParentNode[0].attrib['n']
+                            sEnd = oParentNode[0].attrib['n']
                         else:
                             # Not inside l, check if inside list
                             oParentNode = oAnchorNode[0].xpath('./ancestor::' + cMainText.sPrefix + ':list[@xml:id]',
