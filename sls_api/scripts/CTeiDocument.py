@@ -320,6 +320,8 @@ class CTeiDocument:
 
             # Get the position for the note in the main text
             sPosition = self.__GetNotePosition(cMainText, comment['id'])
+            sPosition = sPosition.replace('l', '')
+            sPosition = re.sub(r'/p[0-9]+_/', '', sPosition)
 
             # Position will be None if the note was not found in the main text, then we don't add the note.
             if sPosition is not None:
