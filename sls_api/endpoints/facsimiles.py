@@ -153,7 +153,7 @@ def get_facsimile_file(project, collection_id, number, zoom_level):
                         "msg": "Desired facsimile file not found in database."
                     }), 404
 
-        statement = sqlalchemy.sql.text("SELECT * FROM publication_facsimile_collection WHERE id=:coll_id").bindparams(
+        statement = sqlalchemy.sql.text("SELECT * FROM publication_facsimile_collection WHERE deleted != 1 AND id=:coll_id").bindparams(
             coll_id=collection_id)
         row = connection.execute(statement).fetchone()
         if row is None:
