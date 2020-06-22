@@ -25,7 +25,7 @@ def get_facsimiles(project, publication_id, section_id=None):
         sql = 'select * from publication_facsimile as f \
         left join publication_facsimile_collection as fc on fc.id=f.publication_facsimile_collection_id \
         left join publication p on p.id=f.publication_id \
-        where f.publication_id=:p_id \
+        where f.deleted != 1 and fc.deleted != 1 and f.publication_id=:p_id \
         '
 
         if config["show_internally_published"]:
@@ -62,7 +62,7 @@ def get_facsimiles(project, publication_id, section_id=None):
 
             facsimile["first_page"] = pre_pages + row["page_nr"]
 
-            sql2 = "SELECT * FROM publication_facsimile WHERE publication_facsimile_collection_id=:fc_id AND page_nr>:page_nr ORDER BY page_nr ASC LIMIT 1"
+            sql2 = "SELECT * FROM publication_facsimile WHERE deleted != 1 AND publication_facsimile_collection_id=:fc_id AND page_nr>:page_nr ORDER BY page_nr ASC LIMIT 1"
             statement2 = sqlalchemy.sql.text(sql2).bindparams(fc_id=row["publication_facsimile_collection_id"],
                                                               page_nr=row["page_nr"])
             for row2 in connection.execute(statement2).fetchall():
@@ -88,7 +88,7 @@ def get_project_publication_facsimile_relations(project):
          pc.name as pc_name, p.name as p_name, pf.page_nr FROM publication_collection pc \
          JOIN publication p ON p.publication_collection_id=pc.id \
          JOIN publication_facsimile pf ON pf.publication_id = p.id \
-         WHERE project_id=:p_id ORDER BY pc.id")
+         WHERE p.deleted != 1 AND pf.deleted != 1 AND pc.deleted != 1 AND project_id=:p_id ORDER BY pc.id")
     statement = sql.bindparams(p_id=project_id)
     results = []
     for row in connection.execute(statement).fetchall():
@@ -101,7 +101,7 @@ def get_project_publication_facsimile_relations(project):
 def get_facsimile_collections(project, facsimile_collection_ids):
     logger.info("Getting facsimiles /{}/facsimiles/collections/{}".format(project, facsimile_collection_ids))
     connection = db_engine.connect()
-    sql = """SELECT * FROM publication_facsimile_collection where id in :ids"""
+    sql = """SELECT * FROM publication_facsimile_collection where deleted != 1 and id in :ids"""
     statement = sqlalchemy.sql.text(sql).bindparams(ids=tuple(facsimile_collection_ids.split(',')))
     return_data = []
     for row in connection.execute(statement).fetchall():
@@ -127,7 +127,7 @@ def get_facsimile_file(project, collection_id, number, zoom_level):
         return jsonify({"msg": "No such project."}), 400
     else:
         connection = db_engine.connect()
-        check_statement = sqlalchemy.sql.text("SELECT published FROM publication WHERE id = "
+        check_statement = sqlalchemy.sql.text("SELECT published FROM publication WHERE deleted != 1 AND id = "
                                               "(SELECT publication_id FROM publication_facsimile WHERE publication_facsimile_collection_id=:coll_id LIMIT 1)").bindparams(
             coll_id=collection_id)
         row = connection.execute(check_statement).fetchone()
@@ -194,7 +194,7 @@ def get_facsimile_pages(project, col_pub, section_id=None):
         sql = sqlalchemy.sql.text("SELECT pf.*, pf.page_nr as page_number, pfc.number_of_pages, pfc.start_page_number, pfc.id as collection_id\
             FROM publication_facsimile pf\
             JOIN publication_facsimile_collection pfc on pfc.id = pf.publication_facsimile_collection_id\
-            WHERE pf.publication_id = :pub_id")
+            WHERE pf.deleted != 1 AND pfc.deleted != 1 AND pf.publication_id = :pub_id")
         if section_id is not None:
             section_id = str(section_id).replace('ch', '')
             sql = " ".join([sql, "and pf.section_id = :section"])
