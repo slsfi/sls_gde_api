@@ -213,7 +213,7 @@ def generate_ms_file(master_file_path, target_file_path, publication_info):
     ms_document.Save(target_file_path)
 
 
-def check_publication_mtimes_and_publish_files(project, publication_ids):
+def check_publication_mtimes_and_publish_files(project, publication_ids, no_git=False):
     update_success, result_str = update_files_in_git_repo(project)
     if not update_success:
         logger.error("Git update failed! Reason: {}".format(result_str))
@@ -543,7 +543,7 @@ def check_publication_mtimes_and_publish_files(project, publication_ids):
                             generate_ms_file(source_file_path, target_file_path, row)
 
             logger.debug("Changes made in publication script run: {}".format([c for c in changes]))
-            if len(changes) > 0:
+            if len(changes) > 0 and not no_git:
                 outputs = []
                 # If there are changes, try to commit them to git
                 try:
@@ -565,6 +565,7 @@ if __name__ == "__main__":
                         help="Force re-publication of specific publications (tries to publish all files, est/com/var/ms)")
     parser.add_argument("-l", "--list_projects", action="store_true",
                         help="Print a listing of available projects with seemingly valid configuration and exit")
+    parser.add_argument("--no_git", action="store_true", help="Don't run git commands as part of publishing.")
 
     args = parser.parse_args()
 
@@ -581,10 +582,10 @@ if __name__ == "__main__":
             ids = tuple(args.publication_ids)
         if str(args.project).lower() == "all":
             for p in valid_projects:
-                check_publication_mtimes_and_publish_files(p, ids)
+                check_publication_mtimes_and_publish_files(p, ids, no_git=args.no_git)
         else:
             if args.project in valid_projects:
-                check_publication_mtimes_and_publish_files(args.project, ids)
+                check_publication_mtimes_and_publish_files(args.project, ids, no_git=args.no_git)
             else:
                 logger.error(f"{args.project} is not in the API configuration or lacks 'comments_database' setting, aborting...")
                 sys.exit(1)
