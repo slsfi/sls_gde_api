@@ -332,16 +332,17 @@ def check_publication_mtimes_and_publish_files(project, publication_ids, no_git=
 
                 com_source_file_path = os.path.join(file_root, comment_file)
 
-                if not est_source_file_path:
-                    logger.info("Source file not set for publication {}".format(publication_id))
+                if os.path.isdir(est_source_file_path):
+                    logger.error("Source file {} for publication {} is a directory!".format(est_source_file_path, publication_id))
                     continue
-                if not com_source_file_path:
-                    logger.info("Source file not found for publication {} comment".format(publication_id))
+                if os.path.isdir(com_source_file_path):
+                    logger.error("Source file {} for publication {} comment is a directory!".format(com_source_file_path, publication_id))
+                    continue
                 if not os.path.exists(est_source_file_path):
-                    logger.warning("Source file {} for publication {} do not exist!".format(est_source_file_path, publication_id))
+                    logger.error("Source file {} for publication {} does not exist!".format(est_source_file_path, publication_id))
                     continue
                 if not os.path.exists(com_source_file_path):
-                    logger.warning("Source file {} for publication {} do not exist!".format(com_source_file_path, publication_id))
+                    logger.error("Source file {} for publication {} does not exist!".format(com_source_file_path, publication_id))
                     continue
 
                 if force_publish:
@@ -412,11 +413,15 @@ def check_publication_mtimes_and_publish_files(project, publication_ids, no_git=
                     main_variant_source = os.path.join(file_root, main_variant_info["original_filename"])
 
                     if not main_variant_source:
-                        logger.info("Source file for main variant {} is not set.".format(main_variant_info["id"]))
+                        logger.warning("Source file for main variant {} is not set.".format(main_variant_info["id"]))
+                        continue
+
+                    if os.path.isdir(main_variant_source):
+                        logger.error("Source file {} for main variant {} (type=1) is a directory!".format(main_variant_source, main_variant_info["id"]))
                         continue
 
                     if not os.path.exists(main_variant_source):
-                        logger.warning("Source file {} for main variant {} (type=1) does not exist!".format(main_variant_source, main_variant_info["id"]))
+                        logger.error("Source file {} for main variant {} (type=1) does not exist!".format(main_variant_source, main_variant_info["id"]))
                         continue
 
                     target_filename = "{}_{}_var_{}.xml".format(collection_id,
@@ -442,20 +447,22 @@ def check_publication_mtimes_and_publish_files(project, publication_ids, no_git=
 
                         source_filename = variant["original_filename"]
                         if not source_filename:
-                            logger.info("Source file for variant {} is not set.".format(variant["original_filename"]))
+                            logger.error("Source file for variant {} is not set.".format(variant["id"]))
                             continue
                         target_file_path = os.path.join(file_root, "xml", "var", target_filename)
                         # original_filename should be relative to the project root
                         source_file_path = os.path.join(file_root, source_filename)
 
+                        if os.path.isdir(source_file_path):
+                            logger.error("Source file {} for variant {} is a directory!".format(source_file_path, variant["id"]))
+                            continue
                         if not os.path.exists(source_file_path):
-                            logger.warning("Source file {} for variant {} does not exist!".format(source_file_path, variant["id"]))
+                            logger.error("Source file {} for variant {} does not exist!".format(source_file_path, variant["id"]))
                             continue
 
                         # in a force_publish, just load all variants for generation/processing
                         if force_publish:
-                            logger.info(
-                                "Generating new var file for publication_version {}...".format(variant["id"]))
+                            logger.info("Generating new var file for publication_version {}...".format(variant["id"]))
                             changes.add(target_file_path)
                             variant_doc = CTeiDocument()
                             variant_doc.Load(source_file_path)
@@ -507,13 +514,16 @@ def check_publication_mtimes_and_publish_files(project, publication_ids, no_git=
                     logger.info("Source file not set for manuscript {}".format(manuscript_id))
                     continue
 
-                target_file_path = os.path.join(
-                    file_root, "xml", "ms", target_filename)
+                target_file_path = os.path.join(file_root, "xml", "ms", target_filename)
                 # original_filename should be relative to the project root
                 source_file_path = os.path.join(file_root, source_filename)
 
+                if os.path.isdir(source_file_path):
+                    logger.error("Source file {} for manuscript {} is a directory!".format(source_file_path, manuscript_id))
+                    continue
+
                 if not os.path.exists(source_file_path):
-                    logger.warning("Source file {} for manuscript {} does not exist!".format(source_file_path, manuscript_id))
+                    logger.error("Source file {} for manuscript {} does not exist!".format(source_file_path, manuscript_id))
                     continue
 
                 # in a force_publish, just generate all ms files
