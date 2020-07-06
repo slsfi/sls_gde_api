@@ -138,8 +138,12 @@ def generate_est_and_com_files(publication_info, project, est_master_file_path, 
     """
     # Generate est file for this document
     est_document = CTeiDocument()
-    est_document.Load(est_master_file_path, bRemoveDelSpans=True)
-    est_document.PostProcessMainText()
+    try:
+        est_document.Load(est_master_file_path, bRemoveDelSpans=True)
+        est_document.PostProcessMainText()
+    except Exception as ex:
+        logger.exception("Failed to handle est master file: {}".format(est_master_file_path))
+        raise ex
 
     if publication_info is not None:
         est_document.SetMetadata(publication_info['original_publication_date'], publication_info['p_id'], publication_info['name'],
@@ -165,22 +169,26 @@ def generate_est_and_com_files(publication_info, project, est_master_file_path, 
             config[project]["file_root"], COMMENTS_TEMPLATE_PATH_IN_FILE_ROOT)
 
     # load in com_master file
-    com_document.Load(com_master_file_path)
+    try:
+        com_document.Load(com_master_file_path)
 
-    # if com_xsl_path is invalid or not given, try using COMMENTS_XSL_PATH_IN_FILE_ROOT
-    if com_xsl_path is None or not os.path.exists(com_xsl_path):
-        com_xsl_path = os.path.join(
-            config[project]["file_root"], COMMENTS_XSL_PATH_IN_FILE_ROOT)
+        # if com_xsl_path is invalid or not given, try using COMMENTS_XSL_PATH_IN_FILE_ROOT
+        if com_xsl_path is None or not os.path.exists(com_xsl_path):
+            com_xsl_path = os.path.join(
+                config[project]["file_root"], COMMENTS_XSL_PATH_IN_FILE_ROOT)
 
-    # process comments and save
-    com_document.ProcessCommments(comments, est_document, com_xsl_path)
-    com_document.PostProcessOtherText()
+        # process comments and save
+        com_document.ProcessCommments(comments, est_document, com_xsl_path)
+        com_document.PostProcessOtherText()
 
-    if publication_info is not None:
-        com_document.SetMetadata(publication_info['original_publication_date'], publication_info['p_id'], publication_info['name'],
-                                 publication_info['genre'], 'com', publication_info['c_id'], publication_info['publication_group_id'])
+        if publication_info is not None:
+            com_document.SetMetadata(publication_info['original_publication_date'], publication_info['p_id'], publication_info['name'],
+                                     publication_info['genre'], 'com', publication_info['c_id'], publication_info['publication_group_id'])
 
-    com_document.Save(com_target_path)
+        com_document.Save(com_target_path)
+    except Exception as ex:
+        logger.exception("Failed to handle com master file: {}".format(com_master_file_path))
+        raise ex
 
 
 def process_var_documents_and_generate_files(main_var_doc, main_var_path, var_docs, var_paths, publication_info):
@@ -350,8 +358,11 @@ def check_publication_mtimes_and_publish_files(project, publication_ids, no_git=
                     logger.info("Generating new est/com files for publication {}...".format(publication_id))
                     changes.add(est_target_file_path)
                     changes.add(com_target_file_path)
-                    generate_est_and_com_files(row, project, est_source_file_path, com_source_file_path,
-                                               est_target_file_path, com_target_file_path)
+                    try:
+                        generate_est_and_com_files(row, project, est_source_file_path, com_source_file_path,
+                                                   est_target_file_path, com_target_file_path)
+                    except Exception:
+                        continue
                 else:
                     # otherwise, check if this publication's files need to be re-generated
                     try:
@@ -366,8 +377,11 @@ def check_publication_mtimes_and_publish_files(project, publication_ids, no_git=
                         logger.info("Generating new est/com files for publication {}...".format(publication_id))
                         changes.add(est_target_file_path)
                         changes.add(com_target_file_path)
-                        generate_est_and_com_files(row, project, est_source_file_path, com_source_file_path,
-                                                   est_target_file_path, com_target_file_path)
+                        try:
+                            generate_est_and_com_files(row, project, est_source_file_path, com_source_file_path,
+                                                       est_target_file_path, com_target_file_path)
+                        except Exception:
+                            continue
                     else:
                         if est_target_mtime >= est_source_mtime and com_target_mtime >= com_source_mtime:
                             # If both the est and com files are newer than the source files, just continue to the next publication
@@ -377,8 +391,11 @@ def check_publication_mtimes_and_publish_files(project, publication_ids, no_git=
                             changes.add(est_target_file_path)
                             changes.add(com_target_file_path)
                             logger.info("Reading files for publication {} are outdated, generating new est/com files...".format(publication_id))
-                            generate_est_and_com_files(row, project, est_source_file_path, com_source_file_path,
-                                                       est_target_file_path, com_target_file_path)
+                            try:
+                                generate_est_and_com_files(row, project, est_source_file_path, com_source_file_path,
+                                                           est_target_file_path, com_target_file_path)
+                            except Exception:
+                                continue
 
                 # Process all variants belonging to this publication
                 # publication_version with type=1 is the "main" variant, the others should have type=2 and be versions of that main variant
