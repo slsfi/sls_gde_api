@@ -341,16 +341,16 @@ def check_publication_mtimes_and_publish_files(project, publication_ids, no_git=
                 com_source_file_path = os.path.join(file_root, comment_file)
 
                 if os.path.isdir(est_source_file_path):
-                    logger.error("Source file {} for publication {} is a directory!".format(est_source_file_path, publication_id))
+                    logger.warning("Source file {} for publication {} is a directory!".format(est_source_file_path, publication_id))
                     continue
                 if os.path.isdir(com_source_file_path):
-                    logger.error("Source file {} for publication {} comment is a directory!".format(com_source_file_path, publication_id))
+                    logger.warning("Source file {} for publication {} comment is a directory!".format(com_source_file_path, publication_id))
                     continue
                 if not os.path.exists(est_source_file_path):
-                    logger.error("Source file {} for publication {} does not exist!".format(est_source_file_path, publication_id))
+                    logger.warning("Source file {} for publication {} does not exist!".format(est_source_file_path, publication_id))
                     continue
                 if not os.path.exists(com_source_file_path):
-                    logger.error("Source file {} for publication {} does not exist!".format(com_source_file_path, publication_id))
+                    logger.warning("Source file {} for publication {} does not exist!".format(com_source_file_path, publication_id))
                     continue
 
                 if force_publish:
