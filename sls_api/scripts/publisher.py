@@ -211,9 +211,13 @@ def generate_ms_file(master_file_path, target_file_path, publication_info):
     """
     Given a project name, and valid master and target file paths for a publication manuscript, regenerates target file based on source file
     """
-    ms_document = CTeiDocument()
-    ms_document.Load(master_file_path)
-    ms_document.PostProcessOtherText()
+    try:
+        ms_document = CTeiDocument()
+        ms_document.Load(master_file_path)
+        ms_document.PostProcessOtherText()
+    except Exception as ex:
+        logger.exception("Failed to handle manuscript file: {}".format(master_file_path))
+        raise ex
 
     if publication_info is not None:
         ms_document.SetMetadata(publication_info['original_publication_date'], publication_info['p_id'], publication_info['name'],
@@ -356,13 +360,14 @@ def check_publication_mtimes_and_publish_files(project, publication_ids, no_git=
                 if force_publish:
                     # during force_publish, just generate
                     logger.info("Generating new est/com files for publication {}...".format(publication_id))
-                    changes.add(est_target_file_path)
-                    changes.add(com_target_file_path)
                     try:
                         generate_est_and_com_files(row, project, est_source_file_path, com_source_file_path,
                                                    est_target_file_path, com_target_file_path)
                     except Exception:
                         continue
+                    else:
+                        changes.add(est_target_file_path)
+                        changes.add(com_target_file_path)
                 else:
                     # otherwise, check if this publication's files need to be re-generated
                     try:
@@ -375,27 +380,29 @@ def check_publication_mtimes_and_publish_files(project, publication_ids, no_git=
                         # It is then easiest to just generate new ones
                         logger.warning("Error getting time_modified for target or source files for publication {}".format(publication_id))
                         logger.info("Generating new est/com files for publication {}...".format(publication_id))
-                        changes.add(est_target_file_path)
-                        changes.add(com_target_file_path)
                         try:
                             generate_est_and_com_files(row, project, est_source_file_path, com_source_file_path,
                                                        est_target_file_path, com_target_file_path)
                         except Exception:
                             continue
+                        else:
+                            changes.add(est_target_file_path)
+                            changes.add(com_target_file_path)
                     else:
                         if est_target_mtime >= est_source_mtime and com_target_mtime >= com_source_mtime:
                             # If both the est and com files are newer than the source files, just continue to the next publication
                             continue
                         else:
                             # If one or either is outdated, generate new ones
-                            changes.add(est_target_file_path)
-                            changes.add(com_target_file_path)
                             logger.info("Reading files for publication {} are outdated, generating new est/com files...".format(publication_id))
                             try:
                                 generate_est_and_com_files(row, project, est_source_file_path, com_source_file_path,
                                                            est_target_file_path, com_target_file_path)
                             except Exception:
                                 continue
+                            else:
+                                changes.add(est_target_file_path)
+                                changes.add(com_target_file_path)
 
                 # Process all variants belonging to this publication
                 # publication_version with type=1 is the "main" variant, the others should have type=2 and be versions of that main variant
@@ -536,18 +543,22 @@ def check_publication_mtimes_and_publish_files(project, publication_ids, no_git=
                 source_file_path = os.path.join(file_root, source_filename)
 
                 if os.path.isdir(source_file_path):
-                    logger.error("Source file {} for manuscript {} is a directory!".format(source_file_path, manuscript_id))
+                    logger.warning("Source file {} for manuscript {} is a directory!".format(source_file_path, manuscript_id))
                     continue
 
                 if not os.path.exists(source_file_path):
-                    logger.error("Source file {} for manuscript {} does not exist!".format(source_file_path, manuscript_id))
+                    logger.warning("Source file {} for manuscript {} does not exist!".format(source_file_path, manuscript_id))
                     continue
 
                 # in a force_publish, just generate all ms files
                 if force_publish:
                     logger.info("Generating new ms file for publication_manuscript {}".format(manuscript_id))
-                    changes.add(target_file_path)
-                    generate_ms_file(source_file_path, target_file_path, row)
+                    try:
+                        generate_ms_file(source_file_path, target_file_path, row)
+                    except Exception:
+                        continue
+                    else:
+                        changes.add(target_file_path)
                 # otherwise, check if this file needs generating
                 else:
                     try:
@@ -558,16 +569,24 @@ def check_publication_mtimes_and_publish_files(project, publication_ids, no_git=
                         # It is then easiest to just generate a new one
                         logger.warning("Error getting time_modified for target or source file for publication_manuscript {}".format(manuscript_id))
                         logger.info("Generating new file...")
-                        changes.add(target_file_path)
-                        generate_ms_file(source_file_path, target_file_path, row)
+                        try:
+                            generate_ms_file(source_file_path, target_file_path, row)
+                        except Exception:
+                            continue
+                        else:
+                            changes.add(target_file_path)
                     else:
                         if target_mtime >= source_mtime:
                             # If the target ms file is newer than the source, continue to the next publication_manuscript
                             continue
                         else:
-                            changes.add(target_file_path)
                             logger.info("File {} is older than source file {}, generating new file...".format(target_file_path, source_file_path))
-                            generate_ms_file(source_file_path, target_file_path, row)
+                            try:
+                                generate_ms_file(source_file_path, target_file_path, row)
+                            except Exception:
+                                continue
+                            else:
+                                changes.add(target_file_path)
 
             logger.debug("Changes made in publication script run: {}".format([c for c in changes]))
             if len(changes) > 0 and not no_git:
