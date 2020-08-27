@@ -281,6 +281,52 @@ def add_new_tag(project):
         connection.close()
 
 
+@event_tools.route("/<project>/tags/<tag_id>/edit/", methods=["POST"])
+@project_permission_required
+def edit_tag(project, tag_id):
+    """
+    Update tag object to the database
+
+    POST data MUST be in JSON format.
+
+    POST data SHOULD contain:
+    type: tag type
+    name: tag name
+
+    POST data CAN also contain:
+    description: tag description
+    legacy_id: Legacy id for tag
+    """
+    request_data = request.get_json()
+    if not request_data:
+        return jsonify({"msg": "No data provided."}), 400
+    tags = get_table("tag")
+    connection = db_engine.connect()
+
+    new_tag = {
+        "type": request_data.get("type", None),
+        "name": request_data.get("name", None),
+        "project_id": get_project_id_from_name(project),
+        "description": request_data.get("description", None),
+        "legacy_id": request_data.get("legacy_id", None)
+    }
+    try:
+        update = tags.update().where(tags.c.id == tag_id).values()
+        connection.execute(update, **new_tag)
+        result = {
+            "msg": "Updated tag with ID {}".format(tag_id)
+        }
+        return jsonify(result), 200
+    except Exception as e:
+        result = {
+            "msg": "Failed to update tag.",
+            "reason": str(e)
+        }
+        return jsonify(result), 500
+    finally:
+        connection.close()
+
+
 @event_tools.route("/locations/")
 @jwt_required
 def get_locations():
