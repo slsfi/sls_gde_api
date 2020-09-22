@@ -5,6 +5,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.sql import text
 from subprocess import CalledProcessError
 import sys
+from typing import Union
 
 from sls_api.endpoints.generics import config, db_engine, get_project_id_from_name
 from sls_api.endpoints.tools.files import run_git_command, update_files_in_git_repo
@@ -225,7 +226,7 @@ def generate_ms_file(master_file_path, target_file_path, publication_info):
     ms_document.Save(target_file_path)
 
 
-def check_publication_mtimes_and_publish_files(project, publication_ids, no_git=False):
+def check_publication_mtimes_and_publish_files(project: str, publication_ids: Union[tuple, None], no_git=False, force_publish=False):
     update_success, result_str = update_files_in_git_repo(project)
     if not update_success:
         logger.error("Git update failed! Reason: {}".format(result_str))
@@ -234,10 +235,9 @@ def check_publication_mtimes_and_publish_files(project, publication_ids, no_git=
     project_settings = config.get(project, None)
 
     # if publication_ids is a tuple of ints, we're (re)publishing a certain publication(s)
+    # explicitly set force_publish in this instance, so we force-generate files for publishing (this overrides mtime checks)
     if isinstance(publication_ids, tuple):
         force_publish = True
-    else:
-        force_publish = False
 
     if project_id is not None and project_settings is not None:
         file_root = project_settings.get("file_root", None)
@@ -262,7 +262,7 @@ def check_publication_mtimes_and_publish_files(project, publication_ids, no_git=
 
             # publication_comment info, relating to "general comments" file for each publication
             comment_query = "SELECT \
-                            p.id  as p_id, \
+                            p.id as p_id, \
                             p.publication_collection_id as c_id, \
                             pc.original_filename as original_filename, \
                             p.original_publication_date as original_publication_date, \
@@ -292,7 +292,7 @@ def check_publication_mtimes_and_publish_files(project, publication_ids, no_git=
                                 JOIN publication_collection pcol ON p.publication_collection_id = pcol.id \
                                 WHERE pcol.project_id = :proj"
 
-            if force_publish:
+            if force_publish and isinstance(publication_ids, tuple):
                 # append publication.id checks if this is a forced (re)publication of certain publication(s)
                 publication_query += " AND p.id IN :p_ids"
                 publication_query = text(publication_query).bindparams(proj=project_id, p_ids=publication_ids)
@@ -609,6 +609,8 @@ if __name__ == "__main__":
     parser.add_argument("project", help="Which project to publish, either a project name from --list_projects or 'all' for all valid projects")
     parser.add_argument("-i", "--publication_ids", type=int, nargs="*",
                         help="Force re-publication of specific publications (tries to publish all files, est/com/var/ms)")
+    parser.add_argument("--all_ids", action="store_true",
+                        help="Force re-publication of all publications (tries to publish all files, est/com/var/ms)")
     parser.add_argument("-l", "--list_projects", action="store_true",
                         help="Print a listing of available projects with seemingly valid configuration and exit")
     parser.add_argument("--no_git", action="store_true", help="Don't run git commands as part of publishing.")
@@ -628,10 +630,10 @@ if __name__ == "__main__":
             ids = tuple(args.publication_ids)
         if str(args.project).lower() == "all":
             for p in valid_projects:
-                check_publication_mtimes_and_publish_files(p, ids, no_git=args.no_git)
+                check_publication_mtimes_and_publish_files(p, ids, no_git=args.no_git, force_publish=args.all_ids)
         else:
             if args.project in valid_projects:
-                check_publication_mtimes_and_publish_files(args.project, ids, no_git=args.no_git)
+                check_publication_mtimes_and_publish_files(args.project, ids, no_git=args.no_git, force_publish=args.all_ids)
             else:
                 logger.error(f"{args.project} is not in the API configuration or lacks 'comments_database' setting, aborting...")
                 sys.exit(1)
