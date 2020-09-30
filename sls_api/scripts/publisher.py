@@ -258,7 +258,7 @@ def check_publication_mtimes_and_publish_files(project: str, publication_ids: Un
                                 p.name as name \
                                 FROM publication p \
                                 JOIN publication_collection pcol ON p.publication_collection_id=pcol.id \
-                                WHERE pcol.project_id = :proj"
+                                WHERE pcol.project_id = :proj AND p.deleted != 1 AND pcol.deleted != 1 "
 
             # publication_comment info, relating to "general comments" file for each publication
             comment_query = "SELECT \
@@ -273,7 +273,7 @@ def check_publication_mtimes_and_publish_files(project: str, publication_ids: Un
                             FROM publication p \
                             JOIN publication_collection pcol ON p.publication_collection_id = pcol.id \
                             JOIN publication_comment pc ON p.publication_comment_id = pc.id \
-                            WHERE pcol.project_id = :proj"
+                            WHERE pcol.project_id = :proj AND p.deleted != 1 AND pcol.deleted != 1 AND pc.deleted != 1 "
 
             # publication_manuscript info
             manuscript_query = "SELECT \
@@ -290,7 +290,7 @@ def check_publication_mtimes_and_publish_files(project: str, publication_ids: Un
                                 FROM publication_manuscript pm \
                                 JOIN publication p ON pm.publication_id = p.id \
                                 JOIN publication_collection pcol ON p.publication_collection_id = pcol.id \
-                                WHERE pcol.project_id = :proj"
+                                WHERE pcol.project_id = :proj AND p.deleted != 1 AND pcol.deleted != 1 AND pm.deleted != 1 "
 
             if force_publish and isinstance(publication_ids, tuple):
                 # append publication.id checks if this is a forced (re)publication of certain publication(s)
@@ -408,7 +408,7 @@ def check_publication_mtimes_and_publish_files(project: str, publication_ids: Un
                 # publication_version with type=1 is the "main" variant, the others should have type=2 and be versions of that main variant
                 variant_query = text("SELECT id, original_filename "
                                      "FROM publication_version "
-                                     "WHERE publication_version.publication_id = :pub_id AND publication_version.type = :vers_type")
+                                     "WHERE publication_version.publication_id = :pub_id AND publication_version.type = :vers_type AND publication_version.deleted != 1")
 
                 # open new DB connection for variant data fetch
                 connection = db_engine.connect()
