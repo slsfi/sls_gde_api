@@ -43,7 +43,7 @@ def get_occurrences(object_type, ident):
                         publication.publication_collection_id AS collection_id, event_occurrence.id, event_occurrence.type, description, \
                         event_occurrence.publication_id, event_occurrence.publication_version_id, event_occurrence.publication_facsimile_id, \
         event_occurrence.publication_comment_id, event_occurrence.publication_manuscript_id, publication.published as publication_published, \
-        pc.name as publication_collection_name, publication.name as publication_name,  \
+        pc.name as publication_collection_name, publication.name as publication_name  \
         FROM event_occurrence, publication \
         JOIN publication_collection pc ON pc.id = publication.publication_collection_id \
         LEFT OUTER JOIN publication_song ps ON ps.publication_id = publication.id \
