@@ -16,7 +16,7 @@ def get_occurrences(object_type, ident):
     Get event occurrence info and related publication IDs for a given subject, tag, or location
     Given a numerical or legacy ID for an object, returns a list of events and occurance information for the object
     """
-    if object_type not in ["subject", "tag", "location"]:
+    if object_type not in ["subject", "tag", "location", "work"]:
         abort(404)
     else:
         connection = db_engine.connect()
@@ -71,7 +71,7 @@ def get_all_occurrences_by_type(object_type, project=None):
     Get occurrences for each person
     TODO: refactor and divide into multiple functions
     """
-    if object_type not in ["subject", "tag", "location"]:
+    if object_type not in ["subject", "tag", "location", "work"]:
         abort(404)
     else:
         connection = db_engine.connect()
