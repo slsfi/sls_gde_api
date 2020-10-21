@@ -16,7 +16,7 @@ def get_occurrences(object_type, ident):
     Get event occurrence info and related publication IDs for a given subject, tag, or location
     Given a numerical or legacy ID for an object, returns a list of events and occurance information for the object
     """
-    if object_type not in ["subject", "tag", "location", "work"]:
+    if object_type not in ["subject", "tag", "location", "work_manifestation"]:
         abort(404)
     else:
         connection = db_engine.connect()
@@ -71,7 +71,7 @@ def get_all_occurrences_by_type(object_type, project=None):
     Get occurrences for each person
     TODO: refactor and divide into multiple functions
     """
-    if object_type not in ["subject", "tag", "location", "work"]:
+    if object_type not in ["subject", "tag", "location", "work_manifestation"]:
         abort(404)
     else:
         connection = db_engine.connect()
@@ -144,6 +144,31 @@ def get_all_occurrences_by_type(object_type, project=None):
                     row["source"] = type_object["source"]
                     row["name"] = type_object["name"]
                     row["type"] = type_object["type"]
+                if object_type == "work_manifestation":
+                    type_stmnt = sqlalchemy.sql.text(
+                        """SELECT 
+                        work_manifestation.type::text, work.description::text, work.source::text, work.title::text,
+                        journal::text, publisher::text, published_year::text, volume::text,, total_pages::text, ISBN::text,
+                        publication_location::text, translated_by::text, work_id::text, work_manuscript_id::text, linked_work_manifestation_id::text
+                        FROM work_manifestation WHERE id=:ty_id""").bindparams(
+                        ty_id=object_id)
+                    type_object = connection.execute(type_stmnt).fetchone()
+                    type_object = dict(type_object)
+                    row["description"] = type_object["description"]
+                    row["source"] = type_object["source"]
+                    row["name"] = type_object["title"]
+                    row["type"] = type_object["type"]
+                    row["journal"] = type_object["journal"]
+                    row["publisher"] = type_object["publisher"]
+                    row["published_year"] = type_object["published_year"]
+                    row["volume"] = type_object["volume"]
+                    row["total_pages"] = type_object["total_pages"]
+                    row["ISBN"] = type_object["ISBN"]
+                    row["publication_location"] = type_object["publication_location"]
+                    row["translated_by"] = type_object["translated_by"]
+                    row["work_id"] = type_object["work_id"]
+                    row["work_manuscript_id"] = type_object["work_manuscript_id"]
+                    row["linked_work_manifestation_id"] = type_object["linked_work_manifestation_id"]
                 if object_type == "location":
                     type_stmnt = sqlalchemy.sql.text("SELECT location.description::text, location.source::text, location.name::text, location.country::text, location.city::text, \
                                                         location.latitude::text, location.longitude::text, location.region::text FROM location WHERE id=:ty_id").bindparams(
