@@ -145,9 +145,7 @@ def get_all_occurrences_by_type(object_type, project=None):
                     row["name"] = type_object["name"]
                     row["type"] = type_object["type"]
                 if object_type == "work_manifestation":
-                    type_stmnt = sqlalchemy.sql.text(
-                        """SELECT 
-                        work_manifestation.type::text, work.description::text, work.source::text, work.title::text,
+                    type_stmnt = sqlalchemy.sql.text("""SELECT work_manifestation.type::text, work.description::text, work.source::text, work.title::text,
                         journal::text, publisher::text, published_year::text, volume::text,, total_pages::text, ISBN::text,
                         publication_location::text, translated_by::text, work_id::text, work_manuscript_id::text, linked_work_manifestation_id::text
                         FROM work_manifestation WHERE id=:ty_id""").bindparams(

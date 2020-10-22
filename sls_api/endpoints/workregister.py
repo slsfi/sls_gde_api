@@ -222,6 +222,7 @@ def get_work_manifestation_metadata(project, manifestation_id):
 
     return jsonify(data)
 
+
 @workregister.route("/<project>/workregister/work/manifestations/<work_id>")
 def get_work_manifestations(project, work_id):
     logger.info("Getting results for /workregister/work/manifestations/<work_id>")
