@@ -364,6 +364,7 @@ def check_publication_mtimes_and_publish_files(project: str, publication_ids: Un
                         generate_est_and_com_files(row, project, est_source_file_path, com_source_file_path,
                                                    est_target_file_path, com_target_file_path)
                     except Exception:
+                        logger.exception("Failed to generate est/com files for publication {}!".format(publication_id))
                         continue
                     else:
                         changes.add(est_target_file_path)
@@ -384,6 +385,7 @@ def check_publication_mtimes_and_publish_files(project: str, publication_ids: Un
                             generate_est_and_com_files(row, project, est_source_file_path, com_source_file_path,
                                                        est_target_file_path, com_target_file_path)
                         except Exception:
+                            logger.exception("Failed to generate est/com files for publication {}!".format(publication_id))
                             continue
                         else:
                             changes.add(est_target_file_path)
@@ -399,6 +401,7 @@ def check_publication_mtimes_and_publish_files(project: str, publication_ids: Un
                                 generate_est_and_com_files(row, project, est_source_file_path, com_source_file_path,
                                                            est_target_file_path, com_target_file_path)
                             except Exception:
+                                logger.exception("Failed to generate est/com files for publication {}!".format(publication_id))
                                 continue
                             else:
                                 changes.add(est_target_file_path)
