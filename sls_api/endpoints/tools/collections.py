@@ -271,8 +271,9 @@ def new_publication_collection(project):
 
 
 @collection_tools.route("/<project>/publication_collection/<collection_id>/publications/")
+@collection_tools.route("/<project>/publication_collection/<collection_id>/publications/<order_by>/")
 @project_permission_required
-def list_publications(project, collection_id):
+def list_publications(project, collection_id, order_by="id"):
     """
     List all publications in a given collection
     """
@@ -280,7 +281,7 @@ def list_publications(project, collection_id):
     connection = db_engine.connect()
     collections = get_table("publication_collection")
     publications = get_table("publication")
-    statement = select([collections]).where(collections.c.id == int_or_none(collection_id))
+    statement = select([collections]).where(collections.c.id == int_or_none(collection_id)).order_by(str(order_by))
     rows = connection.execute(statement).fetchall()
     if len(rows) != 1:
         return jsonify(
