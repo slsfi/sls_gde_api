@@ -295,7 +295,7 @@ def list_publications(project, collection_id, order_by="id"):
                 "msg": "Found collection not part of project {!r} with ID {}.".format(project, project_id)
             }
         ), 400
-    statement = select([publications]).where(publications.c.publication_collection_id == int_or_none(collection_id))
+    statement = select([publications]).where(publications.c.publication_collection_id == int_or_none(collection_id)).order_by(str(order_by))
     rows = connection.execute(statement).fetchall()
     result = []
     for row in rows:
