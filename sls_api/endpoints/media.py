@@ -236,7 +236,7 @@ def get_gallery_data(project, gallery_id, lang=None):
                                     JOIN translation_text tt_desc ON tt_desc.translation_id = t_desc.id AND tt_desc.language=:lang
                                     WHERE mc.project_id = :p_id
                                     AND mc.id= :gallery_id
-                                    AND m.type='image_ref' """).bindparams(gallery_id=gallery_id, p_id=project_id, lang=lang)
+                                    AND m.type='image_ref' AND m.deleted != 1 """).bindparams(gallery_id=gallery_id, p_id=project_id, lang=lang)
         results = []
         for row in connection.execute(sql).fetchall():
             results.append(dict(row))
