@@ -401,14 +401,16 @@ def get_subjects():
     """
     connection = db_engine.connect()
     subject = get_table("subject")
-    columns = [subject.c.id, [cast(subject.c.date_created, Text), subject.c.date_created.label('date_created')],
-               [cast(subject.c.date_modified, Text), subject.c.date_modified.label('date_modified')],
-               subject.c.deleted, subject.c.type, subject.c.first_name, subject.c.last_name,
-               subject.c.place_of_birth, subject.c.occupation, subject.c.preposition,
-               subject.c.full_name, subject.c.description, subject.c.legacy_id,
-               [cast(subject.c.date_born, Text), subject.c.date_born.label('date_born')],
-               [cast(subject.c.date_deceased, Text), subject.c.date_deceased.label('date_deceased')],
-               subject.c.project_id, subject.c.source]
+    columns = [
+        subject.c.id, cast(subject.c.date_created, Text), subject.c.date_created.label('date_created'),
+        cast(subject.c.date_modified, Text), subject.c.date_modified.label('date_modified'),
+        subject.c.deleted, subject.c.type, subject.c.first_name, subject.c.last_name,
+        subject.c.place_of_birth, subject.c.occupation, subject.c.preposition,
+        subject.c.full_name, subject.c.description, subject.c.legacy_id,
+        cast(subject.c.date_born, Text), subject.c.date_born.label('date_born'),
+        cast(subject.c.date_deceased, Text), subject.c.date_deceased.label('date_deceased'),
+        subject.c.project_id, subject.c.source
+    ]
     stmt = select(columns)
     rows = connection.execute(stmt).fetchall()
     result = []
