@@ -384,6 +384,97 @@ def edit_tag(project, tag_id):
         return jsonify("No valid update values given."), 400
 
 
+@event_tools.route("/<project>/work_manifestations/<man_id>/edit/", methods=["POST"])
+@project_permission_required
+def edit_work_manifestation(project, man_id):
+    """
+    Update work_manifestation object to the database
+
+    POST data MUST be in JSON format.
+
+    POST data SHOULD contain:
+    type: manifestation type
+    title: manifestation title
+
+    POST data CAN also contain:
+    description: tag description
+    legacy_id: Legacy id for tag
+    """
+    request_data = request.get_json()
+    if not request_data:
+        return jsonify({"msg": "No data provided."}), 400
+
+    manifestations = get_table("work_manifestation")
+
+    connection = db_engine.connect()
+    query = select([manifestations.c.id]).where(manifestations.c.id == int_or_none(man_id))
+    row = connection.execute(query).fetchone()
+    if row is None:
+        return jsonify({"msg": "No manifestation with an ID of {} exists.".format(man_id)}), 404
+
+    type = request_data.get("type", None)
+    title = request_data.get("title", None)
+    description = request_data.get("description", None)
+    legacy_id = request_data.get("legacy_id", None)
+    source = request_data.get("source", None)
+    translated_by = request_data.get("translated_by", None)
+    journal = request_data.get("journal", None)
+    publication_location = request_data.get("publication_location", None)
+    publisher = request_data.get("publisher", None)
+    published_year = request_data.get("published_year", None)
+    volume = request_data.get("volume", None)
+    total_pages = request_data.get("total_pages", None)
+    isbn = request_data.get("isbn", None)
+
+    values = {}
+    if type is not None:
+        values["type"] = type
+    if title is not None:
+        values["title"] = title
+    if description is not None:
+        values["description"] = description
+    if legacy_id is not None:
+        values["legacy_id"] = legacy_id
+    if source is not None:
+        values["source"] = source
+    if translated_by is not None:
+        values["translated_by"] = translated_by
+    if journal is not None:
+        values["journal"] = journal
+    if publication_location is not None:
+        values["publication_location"] = publication_location
+    if publisher is not None:
+        values["publisher"] = publisher
+    if published_year is not None:
+        values["published_year"] = published_year
+    if volume is not None:
+        values["volume"] = volume
+    if total_pages is not None:
+        values["total_pages"] = total_pages
+    if isbn is not None:
+        values["isbn"] = isbn
+
+    if len(values) > 0:
+        try:
+            update = manifestations.update().where(manifestations.c.id == int(man_id)).values(**values)
+            connection.execute(update)
+            return jsonify({
+                "msg": "Updated manifestation {} with values {}".format(int(man_id), str(values)),
+                "man_id": int(man_id)
+            })
+        except Exception as e:
+            result = {
+                "msg": "Failed to update manifestation.",
+                "reason": str(e)
+            }
+            return jsonify(result), 500
+        finally:
+            connection.close()
+    else:
+        connection.close()
+        return jsonify("No valid update values given."), 400
+
+
 @event_tools.route("/locations/")
 @jwt_required
 def get_locations():
@@ -427,6 +518,14 @@ def get_tags():
     Get all tags from the database
     """
     return select_all_from_table("tag")
+
+@event_tools.route("/work_manifestations/")
+@jwt_required
+def get_work_manigestations():
+    """
+    Get all tags from the database
+    """
+    return select_all_from_table("work_manifestation")
 
 
 @event_tools.route("/events/")
