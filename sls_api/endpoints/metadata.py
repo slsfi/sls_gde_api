@@ -398,20 +398,19 @@ def get_subject(project, subject_id):
     logger.info("Getting subject /{}/subject/{}".format(project, subject_id))
     connection = db_engine.connect()
     subject_sql = "SELECT * FROM subject "
-
+    project_id = get_project_id_from_name(project)
     # Check if subject_id is a number
     try:
         subject_id = int(subject_id)
-        subject_sql = subject_sql + " WHERE id = :id AND deleted = 0 "
+        subject_sql = subject_sql + " WHERE id = :id AND deleted = 0 AND project_id = :p_id "
     except ValueError:
         subject_id = subject_id
-        subject_sql = subject_sql + " WHERE legacy_id = :id AND deleted = 0 "
+        subject_sql = subject_sql + " WHERE legacy_id = :id AND deleted = 0 AND project_id = :p_id "
 
-    statement = sqlalchemy.sql.text(subject_sql).bindparams(id=subject_id)
+    statement = sqlalchemy.sql.text(subject_sql).bindparams(id=subject_id, p_id=project_id)
     return_data = connection.execute(statement).fetchone()
 
     if return_data is None:
-        project_id = get_project_id_from_name(project)
         subject_sql = " SELECT * FROM subject WHERE legacy_id = :id AND deleted = 0 AND project_id = :p_id "
         statement = sqlalchemy.sql.text(subject_sql).bindparams(id=str(subject_id), p_id=project_id)
         return_data = connection.execute(statement).fetchone()
@@ -431,18 +430,18 @@ def get_tag(project, tag_id):
     connection = db_engine.connect()
     tag_sql = "SELECT * FROM tag "
 
+    project_id = get_project_id_from_name(project)
     # Check if tag_id is a number
     try:
         tag_id = int(tag_id)
-        tag_sql = tag_sql + " WHERE id = :id AND deleted = 0 "
+        tag_sql = tag_sql + " WHERE id = :id AND deleted = 0 AND project_id = :p_id "
     except ValueError:
         tag_id = tag_id
-        tag_sql = tag_sql + " WHERE legacy_id = :id AND deleted = 0 "
+        tag_sql = tag_sql + " WHERE legacy_id = :id AND deleted = 0 AND project_id = :p_id "
 
-    statement = sqlalchemy.sql.text(tag_sql).bindparams(id=tag_id)
+    statement = sqlalchemy.sql.text(tag_sql).bindparams(id=tag_id, p_id=project_id)
     return_data = connection.execute(statement).fetchone()
-    connection.close()
-
+    
     if return_data is None:
         project_id = get_project_id_from_name(project)
         tag_sql = "SELECT * FROM tag WHERE legacy_id = :id AND deleted = 0 AND project_id = :p_id "
@@ -454,6 +453,7 @@ def get_tag(project, tag_id):
         else:
             return jsonify(dict(return_data)), 200
     else:
+        connection.close()
         return jsonify(dict(return_data)), 200
 
 
@@ -487,20 +487,19 @@ def get_location(project, location_id):
     connection = db_engine.connect()
     location_sql = "SELECT * FROM location "
 
+    project_id = get_project_id_from_name(project)
     # Check if location_id is a number
     try:
         location_id = int(location_id)
-        location_sql = location_sql + " WHERE id = :id AND deleted = 0 "
+        location_sql = location_sql + " WHERE id = :id AND deleted = 0 AND project_id = :p_id "
     except ValueError:
         location_id = location_id
-        location_sql = location_sql + " WHERE legacy_id = :id AND deleted = 0 "
+        location_sql = location_sql + " WHERE legacy_id = :id AND deleted = 0 AND project_id = :p_id "
 
-    statement = sqlalchemy.sql.text(location_sql).bindparams(id=location_id)
+    statement = sqlalchemy.sql.text(location_sql).bindparams(id=location_id, p_id=project_id)
     return_data = connection.execute(statement).fetchone()
-    connection.close()
 
     if return_data is None:
-        project_id = get_project_id_from_name(project)
         location_sql = "SELECT * FROM location WHERE legacy_id = :id AND deleted = 0 AND project_id = :p_id "
         statement = sqlalchemy.sql.text(location_sql).bindparams(id=str(location_id), p_id=project_id)
         return_data = connection.execute(statement).fetchone()
@@ -510,6 +509,7 @@ def get_location(project, location_id):
         else:
             return jsonify(dict(return_data)), 200
     else:
+        connection.close()
         return jsonify(dict(return_data)), 200
 
 
