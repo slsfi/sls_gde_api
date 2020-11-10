@@ -384,6 +384,80 @@ def edit_tag(project, tag_id):
         return jsonify("No valid update values given."), 400
 
 
+@event_tools.route("/<project>/work_manifestation/new/", methods=["POST"])
+@project_permission_required
+def add_new_work_manifestation(project):
+    """
+    Add a new work, work_manifestation and work_reference object to the database
+    """
+    request_data = request.get_json()
+    if not request_data:
+        return jsonify({"msg": "No data provided."}), 400
+    if "title" not in request_data:
+        return jsonify({"msg": "No name in POST data"}), 400
+
+    works = get_table("work")
+    work_manifestations = get_table("work_manifestation")
+    work_references = get_table("work_reference")
+    connection = db_engine.connect()
+
+    new_work = {
+        "title": request_data.get("title", None),
+        "description": request_data.get("description", None)
+    }
+
+    new_work_manifestation = {
+        "title": request_data.get("title", None),
+        "description": request_data.get("description", None),
+        "type": request_data.get("type", None),
+        "legacy_id": request_data.get("legacy_id", None),
+        "source": request_data.get("source", None),
+        "translated_by": request_data.get("translated_by", None),
+        "journal": request_data.get("journal", None),
+        "publication_location": request_data.get("publication_location", None),
+        "publisher": request_data.get("publisher", None),
+        "published_year": request_data.get("published_year", None),
+        "volume": request_data.get("volume", None),
+        "total_pages": request_data.get("total_pages", None),
+        "isbn": request_data.get("isbn", None)
+    }
+
+    new_work_reference = {
+        "reference": request_data["reference"],
+        "project_id": get_project_id_from_name(project),
+    }
+
+    try:
+        insert = works.insert()
+        result = connection.execute(insert, **new_work)
+
+        work_id = result.inserted_primary_key[0]
+        new_work_manifestation["work_id"] = work_id
+        insert = work_manifestations.insert()
+        result = connection.execute(insert, **new_work_manifestation)
+
+        work_manifestation_id = result.inserted_primary_key[0]
+        new_work_reference["work_manifestation_id"] = work_manifestation_id
+        insert = work_references.insert()
+        result = connection.execute(insert, **new_work_reference)
+
+        new_row = select([work_manifestations]).where(work_manifestations.c.id == work_manifestation_id)
+        new_row = dict(connection.execute(new_row).fetchone())
+        result = {
+            "msg": "Created new work_manifestation with ID {}".format(work_manifestation_id),
+            "row": new_row
+        }
+        return jsonify(result), 201
+    except Exception as e:
+        result = {
+            "msg": "Failed to create new work_manifestation",
+            "reason": str(e)
+        }
+        return jsonify(result), 500
+    finally:
+        connection.close()
+
+
 @event_tools.route("/<project>/work_manifestations/<man_id>/edit/", methods=["POST"])
 @project_permission_required
 def edit_work_manifestation(project, man_id):
@@ -405,12 +479,19 @@ def edit_work_manifestation(project, man_id):
         return jsonify({"msg": "No data provided."}), 400
 
     manifestations = get_table("work_manifestation")
+    references = get_table("work_reference")
 
     connection = db_engine.connect()
+
+    # get manifestation data
     query = select([manifestations.c.id]).where(manifestations.c.id == int_or_none(man_id))
     row = connection.execute(query).fetchone()
     if row is None:
         return jsonify({"msg": "No manifestation with an ID of {} exists.".format(man_id)}), 404
+
+    # get reference data
+    reference = request_data.get("reference", None)
+    reference_id = request_data.get("reference_id", None)
 
     type = request_data.get("type", None)
     title = request_data.get("title", None)
@@ -454,10 +535,17 @@ def edit_work_manifestation(project, man_id):
     if isbn is not None:
         values["isbn"] = isbn
 
+    reference_values = {}
+    if reference is not None:
+        reference_values["reference"] = reference
+
     if len(values) > 0:
         try:
             update = manifestations.update().where(manifestations.c.id == int(man_id)).values(**values)
             connection.execute(update)
+            if len(reference_values) > 0:
+                update_ref = references.update().where(references.c.id == int(reference_id)).values(**reference_values)
+                connection.execute(update_ref)
             return jsonify({
                 "msg": "Updated manifestation {} with values {}".format(int(man_id), str(values)),
                 "man_id": int(man_id)
@@ -547,7 +635,8 @@ def get_work_manigestations():
                 w_m.total_pages,
                 w_m."ISBN",
                 w_r.project_id,
-                w_r.reference
+                w_r.reference,
+                w_r.id as reference_id
                 FROM work_manifestation w_m
                 JOIN work_reference w_r ON w_r.work_manifestation_id = w_m.id
                 ORDER BY w_m.title """
