@@ -519,13 +519,44 @@ def get_tags():
     """
     return select_all_from_table("tag")
 
+
 @event_tools.route("/work_manifestations/")
 @jwt_required
 def get_work_manigestations():
     """
-    Get all tags from the database
+    Get all work_manifestations from the database
     """
-    return select_all_from_table("work_manifestation")
+    connection = db_engine.connect()
+    stmt = """ SELECT w_m.id as id,
+                w_m.date_created,
+                w_m.date_modified,
+                w_m.deleted,
+                w_m.title,
+                w_m.type,
+                w_m.description,
+                w_m.source,
+                w_m.linked_work_manifestation_id,
+                w_m.work_id,
+                w_m.work_manuscript_id,
+                w_m.translated_by,
+                w_m.journal,
+                w_m.publication_location,
+                w_m.publisher,
+                w_m.published_year,
+                w_m.volume,
+                w_m.total_pages,
+                w_m."ISBN",
+                w_r.project_id,
+                w_r.reference
+                FROM work_manifestation w_m
+                JOIN work_reference w_r ON w_r.work_manifestation_id = w_m.id
+                ORDER BY w_m.title """
+    rows = connection.execute(stmt).fetchall()
+    result = []
+    for row in rows:
+        result.append(dict(row))
+    connection.close()
+    return jsonify(result)
 
 
 @event_tools.route("/events/")
