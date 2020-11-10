@@ -419,7 +419,7 @@ def add_new_work_manifestation(project):
         "published_year": request_data.get("published_year", None),
         "volume": request_data.get("volume", None),
         "total_pages": request_data.get("total_pages", None),
-        "isbn": request_data.get("isbn", None)
+        "ISBN": request_data.get("ISBN", None)
     }
 
     new_work_reference = {
