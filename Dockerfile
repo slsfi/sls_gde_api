@@ -2,7 +2,7 @@ FROM python:3.6-slim-stretch
 
 # build-essential is needed to build some libraries (mainly uwsgi and the various database support ones)
 # libmariadbclient-dev is needed to build mysqlclient for mysql/mariadb support
-RUN apt update && apt install -y build-essential libmariadbclient-dev libpq-dev
+RUN apt update && apt install -y build-essential libmariadbclient-dev libpq-dev git
 
 # create uwsgi user for uWSGI to run as (running as root is a Bad Idea, generally)
 RUN useradd -ms /bin/bash uwsgi
