@@ -33,7 +33,7 @@ def get_occurrences(object_type, ident):
                 return jsonify([])
 
         events_sql = "SELECT id, type, description FROM event WHERE id IN " \
-                     "(SELECT event_id FROM event_connection WHERE {}_id=:o_id)".format(object_type)
+                     "(SELECT event_id FROM event_connection WHERE deleted != 1 AND {}_id=:o_id)".format(object_type)
         occurrence_sql = "SELECT original_id as song_original_id, ps.name as song_name, ps.type as song_type, number as song_number, \
                         variant as song_variant, landscape as song_landscape, place as song_place, recorder_firstname as song_recorder_firstname, \
                         recorder_lastname as song_recorder_lastname, recorder_born_name as song_recorder_born_name, performer_firstname as song_performer_firstname,\
@@ -103,7 +103,7 @@ def get_all_occurrences_by_type(object_type, project=None):
             try:
                 object_id = int(ident)
             except ValueError:
-                object_sql = "SELECT id FROM {} WHERE legacy_id=:l_id".format(object_type)
+                object_sql = "SELECT id FROM {} WHERE legacy_id=:l_id and deleted != 1 ".format(object_type)
                 stmt = sqlalchemy.sql.text(object_sql).bindparams(l_id=ident)
                 row = connection.execute(stmt).fetchone()
                 object_id = row.id
