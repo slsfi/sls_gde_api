@@ -423,7 +423,7 @@ def add_new_work_manifestation(project):
     }
 
     new_work_reference = {
-        "reference": request_data["reference"],
+        "reference": request_data.get("reference", None),
         "project_id": get_project_id_from_name(project),
     }
 
