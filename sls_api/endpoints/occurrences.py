@@ -281,7 +281,8 @@ def get_subject_occurrences(project=None, subject_id=None):
                             publication_facsimile_id, publication_facsimile_page, \
                             publication_manuscript_id, publication_version_id, ev.type, \
                             pub.id as publication_id, pub.name as publication_name, pub.original_filename as original_filename, \
-                            ev_o.publication_song_id as publication_song_id \
+                            ev_o.publication_song_id as publication_song_id, \
+                            ev_c.id as ev_c_id \
                             FROM event_connection ev_c \
                             JOIN event ev ON ev.id = ev_c.event_id \
                             JOIN event_occurrence ev_o ON ev_o.event_id = ev_c.event_id \
@@ -359,7 +360,8 @@ def get_location_occurrences(project=None, location_id=None):
                             publication_facsimile_id, publication_facsimile_page, \
                             publication_manuscript_id, publication_version_id, ev.type, \
                             pub.id as publication_id, pub.name as publication_name, pub.original_filename as original_filename, \
-                            ev_o.publication_song_id as publication_song_id \
+                            ev_o.publication_song_id as publication_song_id, \
+                            ev_c.id as ev_c_id \
                             FROM event_connection ev_c \
                             JOIN event ev ON ev.id = ev_c.event_id \
                             JOIN event_occurrence ev_o ON ev_o.event_id = ev_c.event_id \
@@ -436,7 +438,8 @@ def get_tag_occurrences(project=None, tag_id=None):
                             publication_facsimile_id, publication_facsimile_page, \
                             publication_manuscript_id, publication_version_id, ev.type, \
                             pub.id as publication_id, pub.name as publication_name, pub.original_filename as original_filename, \
-                            ev_o.publication_song_id as publication_song_id \
+                            ev_o.publication_song_id as publication_song_id, \
+                            ev_c.id as ev_c_id \
                             FROM event_connection ev_c \
                             JOIN event ev ON ev.id = ev_c.event_id \
                             JOIN event_occurrence ev_o ON ev_o.event_id = ev_c.event_id \
@@ -480,6 +483,59 @@ def get_tag_occurrences(project=None, tag_id=None):
     connection.close()
 
     return jsonify(tags)
+
+
+@occurrences.route("/<project>/work_manifestation/occurrences/<work_manifestation_id>/")
+@occurrences.route("/<project>/work_manifestation/occurrences/")
+def get_work_manifestation_occurrences(project=None, work_manifestation_id=None):
+
+    work_sql = """ SELECT id, title \
+                    FROM work_manifestation WHERE deleted != 1 """
+    if work_manifestation_id is not None:
+        work_sql = work_sql + " AND id = :work_manifestation_id "
+        statement = sqlalchemy.sql.text(work_sql).bindparams(work_manifestation_id=work_manifestation_id)
+    else:
+        statement = sqlalchemy.sql.text(work_sql)
+
+    connection = db_engine.connect()
+    work_manifestations = []
+    result = connection.execute(statement)
+    work_manifestation = result.fetchone()
+    while work_manifestation is not None:
+        work_manifestation = dict(work_manifestations)
+        occurrence_sql = "SELECT \
+                            pub_c.name as collection_name, pub_c.id as collection_id, ev.description, ev.id, ev_o.publication_comment_id, \
+                            publication_facsimile_id, publication_facsimile_page, \
+                            publication_manuscript_id, publication_version_id, ev.type, \
+                            pub.id as publication_id, pub.name as publication_name, pub.original_filename as original_filename, \
+                            ev_o.publication_song_id as publication_song_id, \
+                            ev_c.id as ev_c_id \
+                            FROM event_connection ev_c \
+                            JOIN event ev ON ev.id = ev_c.event_id \
+                            JOIN event_occurrence ev_o ON ev_o.event_id = ev_c.event_id \
+                            JOIN publication pub ON pub.id = ev_o.publication_id \
+                            JOIN publication_collection pub_c ON pub_c.id = pub.publication_collection_id \
+                            JOIN work_manifestation ON ev_c.work_manifestation_id = work_manifestation.id \
+                            WHERE ev.deleted != 1 AND ev_o.deleted != 1 AND ev_c.deleted != 1 AND work_manifestation.id = :work_manifestation_id ORDER BY pub_c.name ASC"
+        statement_occ = sqlalchemy.sql.text(occurrence_sql).bindparams(work_manifestation=work_manifestation['id'])
+        work_manifestation['occurrences'] = []
+        connection_2 = db_engine.connect()
+        result_2 = connection_2.execute(statement_occ)
+        occurrence = result_2.fetchone()
+        while occurrence is not None:
+            occurrenceData = dict(occurrence)
+            work_manifestation['occurrences'].append(occurrenceData)
+            occurrence = result_2.fetchone()
+
+        if len(work_manifestation['occurrences']) > 0:
+            work_manifestations.append(work_manifestation)
+
+        connection_2.close()
+        work_manifestation = result.fetchone()
+
+    connection.close()
+
+    return jsonify(work_manifestations)
 
 
 @occurrences.route("/<project>/occurrences/collection/<object_type>/<collection_id>")
