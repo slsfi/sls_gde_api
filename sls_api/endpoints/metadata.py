@@ -441,7 +441,7 @@ def get_tag(project, tag_id):
 
     statement = sqlalchemy.sql.text(tag_sql).bindparams(id=tag_id, p_id=project_id)
     return_data = connection.execute(statement).fetchone()
-    
+
     if return_data is None:
         project_id = get_project_id_from_name(project)
         tag_sql = "SELECT * FROM tag WHERE legacy_id = :id AND deleted = 0 AND project_id = :p_id "
