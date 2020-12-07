@@ -1,6 +1,6 @@
 # The secret key should be unique and secret for each application, as it's used to sign tokens and control API access.
-secret_key: 'SECRET_KEY_HERE'
+secret_key: ${GDE_SECURITY_KEY}
 
 # This is an SQLAlchemy database URL, into which all user and role information is stored.
 # http://docs.sqlalchemy.org/en/latest/core/engines.html
-user_database: 'sqlite:///users.db'
+user_database: 'mysql://${MYSQL_USER}:${MYSQL_PASSWORD}@mysql_server.example.com:3306?charset=utf8mb4/users'

@@ -22,6 +22,18 @@ config_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file
 with io.open(os.path.join(config_dir, "digital_editions.yml"), encoding="UTF-8") as config:
     yaml = YAML(typ="safe")
     config = yaml.load(config)
+
+    # handle environment variables in the configuration file
+    for setting, value in config.items():
+        if isinstance(value, str):
+            # handle strings that are or contain environment variables
+            config[setting] = os.path.expandvars(value)
+        elif isinstance(value, dict):
+            # handle project settings that are or contain environment variables
+            for project_setting, project_value in value.items():
+                if isinstance(project_value, str):
+                    value[project_setting] = os.path.expandvars(project_value)
+
     # connection pool settings - keep a pool of up to 30 connections, but allow spillover to up to 60 if needed.
     # before using a connection, use an SQL ping (typically SELECT 1) to check if it's valid and recycle transparently if not
     # automatically recycle unused connections after 15 minutes of not being used, to prevent keeping connections open to postgresql forever

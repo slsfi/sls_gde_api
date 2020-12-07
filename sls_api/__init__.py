@@ -29,6 +29,9 @@ logger = logging.getLogger("sls_api")
 if os.path.exists(os.path.join("sls_api", "configs", "sentry.yml")):
     with open(os.path.join("sls_api", "configs", "sentry.yml")) as config_file:
         sentry_config = yaml.load(config_file.read())
+        # handle environment variables in the YAML file
+        for setting, value in sentry_config.items():
+            sentry_config[setting] = os.path.expandvars(value)
     if "sentry_dsn" in sentry_config and sentry_config["sentry_dsn"] != "":
         logger.info("Enabled sentry.io error tracking with settings from 'sentry.yml'")
         sentry = Sentry(app, dsn=sentry_config["sentry_dsn"], logging=True, level=logging.ERROR)
@@ -84,6 +87,9 @@ if security_config_exists:
     from sls_api.models import db, User
     with open(os.path.join("sls_api", "configs", "security.yml")) as config_file:
         security_config = yaml.load(config_file.read())
+        # handle environment variables in the YAML file
+        for setting, value in security_config.items():
+            security_config[setting] = os.path.expandvars(value)
     app.config["JWT_SECRET_KEY"] = security_config["secret_key"]
     app.config["JWT_TOKEN_LOCATION"] = 'headers'
     app.config["SQLALCHEMY_DATABASE_URI"] = security_config["user_database"]

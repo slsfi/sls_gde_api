@@ -20,6 +20,7 @@ limitations under the License.
 
 - Installation details:
     - Create config files from _example files in `config` folder
+      - Note that environment variables may be used in the YAML files if desired, they are parsed during startup.
     - Ensure volume paths in `docker-compose.yml` point at the correct host and container folders
     - Production-ready steps:
         - Configure SSH for Git repositories in `ssh_config` and add identity files matching it into `ssh` folder.
