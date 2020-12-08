@@ -200,6 +200,23 @@ def list_facsimile_collection_links(project, collection_id):
     return jsonify(result)
 
 
+@collection_tools.route("/<project>/facsimile_publication/<f_pub_id>/", methods=["DELETE"])
+@project_permission_required
+def delete_facsimile_collection_link(project, f_pub_id):
+    """
+    List all publication_facsimile objects in the given publication_facsimile_collection
+    """
+    connection = db_engine.connect()
+    sql = """ UPDATE publication_facsimile SET deleted = 1, date_modified=now() WHERE id = :id """
+    statement = text(sql).bindparams(id=f_pub_id)
+    rows = connection.execute(statement).fetchall()
+    result = []
+    for row in rows:
+        result.append(dict(row))
+    connection.close()
+    return jsonify(result)
+
+
 @collection_tools.route("/<project>/publication_collection/list/")
 @project_permission_required
 def list_publication_collections(project):
