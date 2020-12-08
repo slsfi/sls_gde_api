@@ -1,5 +1,6 @@
 from flask import Blueprint, jsonify, request
 from sqlalchemy import select, text
+from datetime import datetime
 
 from sls_api.endpoints.generics import db_engine, get_project_id_from_name, get_table, int_or_none, \
     project_permission_required, select_all_from_table
@@ -207,14 +208,17 @@ def delete_facsimile_collection_link(project, f_pub_id):
     List all publication_facsimile objects in the given publication_facsimile_collection
     """
     connection = db_engine.connect()
-    sql = """ UPDATE publication_facsimile SET deleted = 1, date_modified=now() WHERE id = :id """
-    statement = text(sql).bindparams(id=f_pub_id)
-    rows = connection.execute(statement).fetchall()
-    result = []
-    for row in rows:
-        result.append(dict(row))
+    publication_facsimile = get_table("publication_facsimile")
+    values = {}
+    values['deleted'] = 1
+    values["date_modified"] = datetime.now()
+    update = publication_facsimile.update().where(publication_facsimile.c.id == int(f_pub_id)).values(**values)
+    connection.execute(update)
     connection.close()
-    return jsonify(result)
+    result = {
+        "msg": "Deleted publication_facsimile"
+    }
+    return jsonify(result), 201
 
 
 @collection_tools.route("/<project>/publication_collection/list/")
