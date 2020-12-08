@@ -1,5 +1,5 @@
 from flask import Blueprint, jsonify, request
-from sqlalchemy import select
+from sqlalchemy import select, text
 
 from sls_api.endpoints.generics import db_engine, get_project_id_from_name, get_table, int_or_none, \
     project_permission_required, select_all_from_table
@@ -64,9 +64,25 @@ def create_facsimile_collection(project):
 @project_permission_required
 def list_facsimile_collections(project):
     """
-    List all available publication_facsimile_collections
+    List all publication_collection objects for a given project
     """
-    return select_all_from_table("publication_facsimile_collection")
+    project_id = get_project_id_from_name(project)
+    connection = db_engine.connect()
+    statement = """ select * from publication_facsimile_collection where id in
+                    (
+                        select publication_facsimile_collection_id from publication_facsimile where publication_id in (
+                            select id from publication where publication_collection_id in (
+                                select id from publication_collection where project_id = :project_id
+                            )
+                        )
+                    ) """
+    statement = text(statement).bindparams(project_id=project_id)
+    rows = connection.execute(statement).fetchall()
+    result = []
+    for row in rows:
+        result.append(dict(row))
+    connection.close()
+    return jsonify(result)
 
 
 @collection_tools.route("/<project>/facsimile_collection/<collection_id>/link/", methods=["POST"])
