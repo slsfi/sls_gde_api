@@ -128,7 +128,8 @@ def get_publication_facsimiles(project, publication_id):
     tables = join(publication_facsimiles, facsimile_collections, publication_facsimiles.c.publication_facsimile_collection_id == facsimile_collections.c.id)
 
     statement = select([publication_facsimiles, facsimile_collections.c.title])\
-        .where(publication_facsimiles.c.publication_id == int_or_none(publication_id), publication_facsimiles.c.deleted != 1)\
+        .where(publication_facsimiles.c.publication_id == int_or_none(publication_id))\
+        .where(publication_facsimiles.c.deleted != 1)\
         .select_from(tables)
 
     rows = connection.execute(statement).fetchall()
