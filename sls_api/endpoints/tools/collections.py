@@ -218,7 +218,7 @@ def delete_facsimile_collection_link(project, f_pub_id):
     result = {
         "msg": "Deleted publication_facsimile"
     }
-    return jsonify(result), 201
+    return jsonify(result), 200
 
 
 @collection_tools.route("/<project>/publication_collection/list/")
