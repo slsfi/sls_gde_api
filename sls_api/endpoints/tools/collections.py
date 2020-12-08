@@ -201,7 +201,7 @@ def list_facsimile_collection_links(project, collection_id):
     return jsonify(result)
 
 
-@collection_tools.route("/<project>/facsimile_publication/<f_pub_id>/delete/", methods=["DELETE"])
+@collection_tools.route("/<project>/facsimile_publication/delete/<f_pub_id>", methods=["DELETE"])
 @project_permission_required
 def delete_facsimile_collection_link(project, f_pub_id):
     """
