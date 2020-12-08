@@ -56,7 +56,9 @@ def get_publication_manuscript(project, publication_id):
     publication_ms = get_table("publication_manuscript")
     statement = select([publication_ms]).where(publication_ms.c.publication_id == int_or_none(publication_id))
     rows = connection.execute(statement).fetchall()
-    result = dict(rows[0])
+    result = []
+    for row in rows:
+        result.append(dict(row))
     connection.close()
     return jsonify(result)
 
@@ -71,7 +73,9 @@ def get_publication_version(project, publication_id):
     publication_v = get_table("publication_version")
     statement = select([publication_v]).where(publication_v.c.publication_id == int_or_none(publication_id))
     rows = connection.execute(statement).fetchall()
-    result = dict(rows[0])
+    result = []
+    for row in rows:
+        result.append(dict(row))
     connection.close()
     return jsonify(result)
 
