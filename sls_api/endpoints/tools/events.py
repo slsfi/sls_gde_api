@@ -109,6 +109,8 @@ def edit_location(project, location_id):
     if longitude is not None:
         values["longitude"] = longitude
 
+    values["date_modified"] = "now()"
+
     if len(values) > 0:
         try:
             update = locations.update().where(locations.c.id == int(location_id)).values(**values)

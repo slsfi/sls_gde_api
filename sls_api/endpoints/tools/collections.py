@@ -158,7 +158,11 @@ def link_facsimile_collection_to_publication(project, collection_id):
         "publication_facsimile_collection_id": collection_id,
         "publication_id": publication_id,
         "publication_manuscript_id": request_data.get("publication_manuscript_id", None),
-        "publication_version_id": request_data.get("publication_version_id", None)
+        "publication_version_id": request_data.get("publication_version_id", None),
+        "page_nr": request_data.get("page", 0),
+        "section_id": request_data.get("section_id", 0),
+        "priority": request_data.get("priority", 0),
+        "type": request_data.get("type", 0)
     }
     try:
         result = connection.execute(insert, **new_facsimile)
