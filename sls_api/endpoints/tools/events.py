@@ -1,6 +1,7 @@
 from flask import Blueprint, jsonify, request
 from flask_jwt_extended import jwt_required
 from sqlalchemy import cast, select, Text
+from datetime import datetime
 
 from sls_api.endpoints.generics import db_engine, get_project_id_from_name, get_table, int_or_none, \
     project_permission_required, select_all_from_table
@@ -109,7 +110,7 @@ def edit_location(project, location_id):
     if longitude is not None:
         values["longitude"] = longitude
 
-    values["date_modified"] = "now()"
+    values["date_modified"] = datetime.now()
 
     if len(values) > 0:
         try:
@@ -252,6 +253,8 @@ def edit_subject(project, subject_id):
     if date_deceased is not None:
         values["date_deceased"] = date_deceased
 
+    values["date_modified"] = datetime.now()
+
     if len(values) > 0:
         try:
             update = subjects.update().where(subjects.c.id == int(subject_id)).values(**values)
@@ -364,6 +367,8 @@ def edit_tag(project, tag_id):
         values["description"] = description
     if legacy_id is not None:
         values["legacy_id"] = legacy_id
+
+    values["date_modified"] = datetime.now()
 
     if len(values) > 0:
         try:
@@ -536,6 +541,8 @@ def edit_work_manifestation(project, man_id):
         values["total_pages"] = total_pages
     if isbn is not None:
         values["isbn"] = isbn
+
+    values["date_modified"] = datetime.now()
 
     reference_values = {}
     if reference is not None:

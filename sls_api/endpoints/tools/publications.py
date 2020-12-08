@@ -46,7 +46,7 @@ def get_publication(project, publication_id):
     return jsonify(result)
 
 
-@publication_tools.route("/<project>/manuscript/<publication_id>/")
+@publication_tools.route("/<project>/publication/manuscript/<publication_id>/")
 @project_permission_required
 def get_publication_manuscript(project, publication_id):
     """
@@ -61,7 +61,7 @@ def get_publication_manuscript(project, publication_id):
     return jsonify(result)
 
 
-@publication_tools.route("/<project>/version/<publication_id>/")
+@publication_tools.route("/<project>/publication/version/<publication_id>/")
 @project_permission_required
 def get_publication_version(project, publication_id):
     """

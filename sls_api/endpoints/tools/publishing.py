@@ -2,6 +2,7 @@ import logging
 from flask import Blueprint, jsonify, request
 from flask_jwt_extended import jwt_required
 from sqlalchemy import select
+from datetime import datetime
 
 from sls_api.endpoints.generics import db_engine, get_table, int_or_none, project_permission_required
 
@@ -63,6 +64,8 @@ def edit_project(project_id):
     if published is not None:
         values["published"] = published
 
+    values["date_modified"] = datetime.now()
+
     if len(values) > 0:
         update = projects.update().where(projects.c.id == int(project_id)).values(**values)
         connection.execute(update)
@@ -103,6 +106,8 @@ def edit_publication_collection(project, collection_id):
         values["name"] = name
     if published is not None:
         values["published"] = published
+
+    values["date_modified"] = datetime.now()
 
     if len(values) > 0:
         update = collections.update().where(collections.c.id == int(collection_id)).values(**values)
@@ -165,6 +170,8 @@ def edit_intro(project, collection_id):
     if published is not None:
         values["published"] = published
 
+    values["date_modified"] = datetime.now()
+
     if len(values) > 0:
         intro_id = int(result[0])
         update = introductions.update().where(introductions.c.id == intro_id).values(**values)
@@ -226,6 +233,8 @@ def edit_title(project, collection_id):
     if published is not None:
         values["published"] = published
 
+    values["date_modified"] = datetime.now()
+
     if len(values) > 0:
         title_id = int(result[0])
         update = titles.update().where(titles.c.id == title_id).values(**values)
@@ -274,6 +283,8 @@ def edit_publication(project, publication_id):
     if published is not None:
         values["published"] = published
 
+    values["date_modified"] = datetime.now()
+
     if len(values) > 0:
         update = publications.update().where(publications.c.id == int(publication_id)).values(**values)
         connection.execute(update)
@@ -318,6 +329,8 @@ def edit_comment(project, publication_id):
         values["original_filename"] = filename
     if published is not None:
         values["published"] = published
+
+    values["date_modified"] = datetime.now()
 
     if len(values) > 0:
         if comment_id is not None:
@@ -421,6 +434,8 @@ def edit_manuscript(project, manuscript_id):
     if sort_order is not None:
         values["sort_order"] = sort_order
 
+    values["date_modified"] = datetime.now()
+
     if len(values) > 0:
         update = manuscripts.update().where(manuscripts.c.id == int(manuscript_id)).values(**values)
         connection.execute(update)
@@ -519,6 +534,8 @@ def edit_version(project, version_id):
     if version_type is not None:
         values["type"] = version_type
 
+    values["date_modified"] = datetime.now()
+
     if len(values) > 0:
         update = versions.update().where(versions.c.id == int(version_id)).values(**values)
         connection.execute(update)
@@ -565,6 +582,8 @@ def edit_facsimile_collection(project, collection_id):
         values["start_page_number"] = start_page
     if description is not None:
         values["description"] = description
+
+    values["date_modified"] = datetime.now()
 
     if len(values) > 0:
         update = collections.update().where(collections.c.id == int(collection_id)).values(**values)
