@@ -3,7 +3,7 @@ from sqlalchemy import select, text
 from datetime import datetime
 
 from sls_api.endpoints.generics import db_engine, get_project_id_from_name, get_table, int_or_none, \
-    project_permission_required, select_all_from_table
+    project_permission_required
 
 
 collection_tools = Blueprint("collection_tools", __name__)
