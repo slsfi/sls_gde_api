@@ -68,14 +68,24 @@ def list_facsimile_collections(project):
     """
     project_id = get_project_id_from_name(project)
     connection = db_engine.connect()
-    statement = """ select * from publication_facsimile_collection where id in
+    statement = """ select * from publication_facsimile_collection where deleted != 1 AND (
+                    id in
                     (
                         select publication_facsimile_collection_id from publication_facsimile where publication_id in (
                             select id from publication where publication_collection_id in (
-                                select id from publication_collection where project_id = :project_id
+                                select id from publication_collection where project_id = :project_id and deleted != 1
                             )
                         )
-                    ) """
+                    ) or
+                    id not in
+                    (
+                        select publication_facsimile_collection_id from publication_facsimile where publication_id in (
+                            select id from publication where publication_collection_id in (
+                                select id from publication_collection where deleted != 1
+                            )
+                        )
+                    )
+                )"""
     statement = text(statement).bindparams(project_id=project_id)
     rows = connection.execute(statement).fetchall()
     result = []
