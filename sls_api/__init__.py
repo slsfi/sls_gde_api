@@ -135,7 +135,7 @@ def set_access_control_headers(response):
     if "Access-Control-Allow-Origin" not in response.headers:
         response.headers["Access-Control-Allow-Origin"] = "*"
     response.headers["Access-Control-Allow-Headers"] = "X-Requested-With, Content-Type, Accept, Origin, Authorization"
-    response.headers["Access-Control-Allow-Methods"] = "GET, PUT"
+    response.headers["Access-Control-Allow-Methods"] = "DELETE, GET, HEAD, OPTIONS, PATCH, POST, PUT"
 
     if response.headers.get("Content-Type") == "application/json":
         response.headers["Content-Type"] = "application/json;charset=utf-8"
