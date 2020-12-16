@@ -15,6 +15,8 @@ logger = logging.getLogger("sls_api.facsimiles")
 @facsimiles.route("/<project>/facsimiles/<publication_id>/<section_id>")
 def get_facsimiles(project, publication_id, section_id=None):
     config = get_project_config(project)
+    if publication_id is None or str(publication_id) == "undefined":
+        return False, "No such publication_id."
     if config is None:
         return jsonify({"msg": "No such project."}), 400
     else:

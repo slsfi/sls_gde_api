@@ -203,6 +203,10 @@ def get_published_status(project, collection_id, publication_id):
     project_config = get_project_config(project)
     if project_config is None:
         return False, "No such project."
+
+    if publication_id is None or str(publication_id) == "undefined":
+        return False, "No such publication_id."
+
     connection = db_engine.connect()
     stmt = """SELECT project.published AS proj_pub, publication_collection.published AS col_pub, publication.published as pub
     FROM project
