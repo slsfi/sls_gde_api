@@ -208,14 +208,11 @@ def edit_facsimile(project):
 
     facsimile_collection_id = request_data.get("facsimile_collection_id", None)
     page = request_data.get("page", None)
-    title = request_data.get("title", None)
     type = request_data.get("type", None)
 
     values = {}
     if page is not None:
         values["page_nr"] = page
-    if title is not None:
-        values["title"] = title
     if type is not None:
         values["type"] = type
 
