@@ -184,7 +184,7 @@ def link_facsimile_collection_to_publication(project, collection_id):
         connection.close()
 
 
-@event_tools.route("/<project>/facsimile_collection/facsimile/edit/", methods=["POST"])
+@collection_tools.route("/<project>/facsimile_collection/facsimile/edit/", methods=["POST"])
 @project_permission_required
 def edit_facsimile(project):
     """
