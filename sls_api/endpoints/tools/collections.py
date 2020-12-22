@@ -184,6 +184,64 @@ def link_facsimile_collection_to_publication(project, collection_id):
         connection.close()
 
 
+@event_tools.route("/<project>/facsimile_collection/facsimile/edit/", methods=["POST"])
+@project_permission_required
+def edit_facsimile(project):
+    """
+    Edit a facsimile object in the database
+
+    POST data MUST be in JSON format.
+
+    """
+    request_data = request.get_json()
+    if not request_data:
+        return jsonify({"msg": "No data provided."}), 400
+
+    facsimile_id = request_data.get("id", None)
+    facsimile = get_table("publication_facsimile")
+
+    connection = db_engine.connect()
+    facsimile_query = select([facsimile.c.id]).where(facsimile.c.id == int_or_none(facsimile_id))
+    facsimile_row = connection.execute(facsimile_query).fetchone()
+    if facsimile is None:
+        return jsonify({"msg": "No facsimile with an ID of {} exists.".format(facsimile_id)}), 404
+
+    facsimile_collection_id = request_data.get("facsimile_collection_id", None)
+    page = request_data.get("page", None)
+    title = request_data.get("title", None)
+    type = request_data.get("type", None)
+
+    values = {}
+    if page is not None:
+        values["page_nr"] = page
+    if title is not None:
+        values["title"] = title
+    if type is not None:
+        values["type"] = type
+
+    values["date_modified"] = datetime.now()
+
+    if len(values) > 0:
+        try:
+            update = facsimile.update().where(facsimile.c.id == int(facsimile_id)).values(**values)
+            connection.execute(update)
+            return jsonify({
+                "msg": "Updated facsimile {} with values {}".format(int(facsimile_id), str(values)),
+                "facsimile_id": int(facsimile_id)
+            })
+        except Exception as e:
+            result = {
+                "msg": "Failed to update facsimile.",
+                "reason": str(e)
+            }
+            return jsonify(result), 500
+        finally:
+            connection.close()
+    else:
+        connection.close()
+        return jsonify("No valid update values given."), 400
+
+
 @collection_tools.route("/<project>/facsimile_collection/<collection_id>/list_links/")
 @project_permission_required
 def list_facsimile_collection_links(project, collection_id):
