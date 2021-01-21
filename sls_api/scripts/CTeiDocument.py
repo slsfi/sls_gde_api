@@ -3,6 +3,7 @@ from lxml import etree as ET
 import re
 import io
 import html
+from io import StringIO
 from bs4 import BeautifulSoup
 
 # Configuration
@@ -744,12 +745,11 @@ class CTeiDocument:
         # Do the transformation
         if len(sHtml) > 0 and transform is not None:
             try:
-                parser = ET.XMLParser(recover=True)
                 soup = BeautifulSoup(sHtml, "html.parser")
                 soup.contents[0].unwrap()
-                xml_doc_in = ET.XML("<note>" + html.escape(str(soup)) + "</note>", parser)
-                xml_doc_out = transform(xml_doc_in)
-                result = ET.tostring(xml_doc_out, encoding='unicode')
+                dom = ET.parse(StringIO("<note>" + str(soup) + "</note>"))
+                newdom = transform(dom)
+                result = ET.tostring(newdom, encoding='unicode')                
             except Exception as e:
                 print(e)
         # Return as TEI xml
