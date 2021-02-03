@@ -40,7 +40,7 @@ def get_occurrences(object_type, ident):
                         performer_lastname as song_performer_lastname, performer_born_name as song_performer_born_name, note as song_note, comment as song_comment, \
                         lyrics as song_lyrics, original_collection_location as song_original_collection_location, original_collection_signature as song_original_collection_signature,\
                         ps.original_publication_date as song_original_publication_date, page_number as song_page_number, subtype as song_subtype, event_occurrence.id,\
-                        publication.publication_facsimile_page AS publication_facsimile_page, publication.publication_collection_id AS collection_id, event_occurrence.id, event_occurrence.type, description, \
+                        event_occurrence.publication_facsimile_page AS publication_facsimile_page, publication.publication_collection_id AS collection_id, event_occurrence.id, event_occurrence.type, description, \
                         event_occurrence.publication_id, event_occurrence.publication_version_id, event_occurrence.publication_facsimile_id, \
         event_occurrence.publication_comment_id, event_occurrence.publication_manuscript_id, publication.published as publication_published, \
         pc.name as publication_collection_name, publication.name as publication_name  \
