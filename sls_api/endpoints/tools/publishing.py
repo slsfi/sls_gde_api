@@ -12,7 +12,7 @@ publishing_tools = Blueprint("publishing_tools", __name__)
 logger = logging.getLogger("sls_api.tools.publishing")
 
 
-@publishing_tools.route("/projects/new/", methods=["POST"])
+@publishing_tools.route("/projects/new/", methods=["POST"], endpoint='add_new_project')
 @jwt_required
 def add_new_project():
     """
@@ -36,7 +36,7 @@ def add_new_project():
     }), 201
 
 
-@publishing_tools.route("/projects/<project_id>/edit/", methods=["POST"])
+@publishing_tools.route("/projects/<project_id>/edit/", methods=["POST"], endpoint='edit_project')
 @jwt_required
 def edit_project(project_id):
     """
@@ -79,7 +79,7 @@ def edit_project(project_id):
         return jsonify("No valid update values given."), 400
 
 
-@publishing_tools.route("/<project>/publication_collection/<collection_id>/edit/", methods=["POST"])
+@publishing_tools.route("/<project>/publication_collection/<collection_id>/edit/", methods=["POST"], endpoint='edit_publication_collection')
 @project_permission_required
 def edit_publication_collection(project, collection_id):
     """
@@ -122,7 +122,7 @@ def edit_publication_collection(project, collection_id):
         return jsonify("No valid update values given."), 400
 
 
-@publishing_tools.route("<project>/publication_collection/<collection_id>/intro/")
+@publishing_tools.route("<project>/publication_collection/<collection_id>/intro/", endpoint='get_intro')
 @project_permission_required
 def get_intro(project, collection_id):
     collections = get_table("publication_collection")
@@ -142,7 +142,7 @@ def get_intro(project, collection_id):
     return jsonify(row)
 
 
-@publishing_tools.route("<project>/publication_collection/<collection_id>/intro/edit/", methods=["POST"])
+@publishing_tools.route("<project>/publication_collection/<collection_id>/intro/edit/", methods=["POST"], endpoint='edit_intro')
 @project_permission_required
 def edit_intro(project, collection_id):
     """
@@ -186,7 +186,7 @@ def edit_intro(project, collection_id):
         return jsonify("No valid update values given."), 400
 
 
-@publishing_tools.route("<project>/publication_collection/<collection_id>/title/")
+@publishing_tools.route("<project>/publication_collection/<collection_id>/title/", endpoint='get_title')
 @project_permission_required
 def get_title(project, collection_id):
     collections = get_table("publication_collection")
@@ -205,7 +205,7 @@ def get_title(project, collection_id):
     return jsonify(row)
 
 
-@publishing_tools.route("<project>/publication_collection/<collection_id>/title/edit/", methods=["POST"])
+@publishing_tools.route("<project>/publication_collection/<collection_id>/title/edit/", methods=["POST"], endpoint='edit_title')
 @project_permission_required
 def edit_title(project, collection_id):
     """
@@ -249,7 +249,7 @@ def edit_title(project, collection_id):
         return jsonify("No valid update values given."), 400
 
 
-@publishing_tools.route("/<project>/publication/<publication_id>/edit/", methods=["POST"])
+@publishing_tools.route("/<project>/publication/<publication_id>/edit/", methods=["POST"], endpoint='edit_publication')
 @project_permission_required
 def edit_publication(project, publication_id):
     """
@@ -298,7 +298,7 @@ def edit_publication(project, publication_id):
         return jsonify("No valid update values given."), 400
 
 
-@publishing_tools.route("/<project>/publication/<publication_id>/comment/edit/", methods=["POST"])
+@publishing_tools.route("/<project>/publication/<publication_id>/comment/edit/", methods=["POST"], endpoint='edit_comment')
 @project_permission_required
 def edit_comment(project, publication_id):
     """
@@ -357,7 +357,7 @@ def edit_comment(project, publication_id):
         return jsonify("No valid update values given."), 400
 
 
-@publishing_tools.route("/<project>/publication/<publication_id>/manuscripts/new/", methods=["POST"])
+@publishing_tools.route("/<project>/publication/<publication_id>/manuscripts/new/", methods=["POST"], endpoint='add_manuscript')
 @project_permission_required
 def add_manuscript(project, publication_id):
     """
@@ -400,7 +400,7 @@ def add_manuscript(project, publication_id):
     }), 201
 
 
-@publishing_tools.route("/<project>/manuscripts/<manuscript_id>/edit/", methods=["POST"])
+@publishing_tools.route("/<project>/manuscripts/<manuscript_id>/edit/", methods=["POST"], endpoint='edit_manuscript')
 @project_permission_required
 def edit_manuscript(project, manuscript_id):
     """
@@ -449,7 +449,7 @@ def edit_manuscript(project, manuscript_id):
         return jsonify("No valid update values given."), 400
 
 
-@publishing_tools.route("/<project>/publication/<publication_id>/versions/new/", methods=["POST"])
+@publishing_tools.route("/<project>/publication/<publication_id>/versions/new/", methods=["POST"], endpoint='add_version')
 @project_permission_required
 def add_version(project, publication_id):
     """
@@ -496,7 +496,7 @@ def add_version(project, publication_id):
     }), 201
 
 
-@publishing_tools.route("/<project>/versions/<version_id>/edit/", methods=["POST"])
+@publishing_tools.route("/<project>/versions/<version_id>/edit/", methods=["POST"], endpoint='edit_version')
 @project_permission_required
 def edit_version(project, version_id):
     """
@@ -549,7 +549,7 @@ def edit_version(project, version_id):
         return jsonify("No valid update values given."), 400
 
 
-@publishing_tools.route("/<project>/facsimile_collection/<collection_id>/edit/", methods=["POST"])
+@publishing_tools.route("/<project>/facsimile_collection/<collection_id>/edit/", methods=["POST"], endpoint='edit_facsimile_collection')
 @project_permission_required
 def edit_facsimile_collection(project, collection_id):
     """
@@ -598,7 +598,7 @@ def edit_facsimile_collection(project, collection_id):
         return jsonify("No valid update values given."), 400
 
 
-@publishing_tools.route("/<project>/publication_collection/<collection_id>/info")
+@publishing_tools.route("/<project>/publication_collection/<collection_id>/info", endpoint='get_publication_collection_info')
 @project_permission_required
 def get_publication_collection_info(project, collection_id):
     """

@@ -9,7 +9,7 @@ from sls_api.endpoints.generics import db_engine, get_project_id_from_name, get_
 collection_tools = Blueprint("collection_tools", __name__)
 
 
-@collection_tools.route("/<project>/facsimile_collection/new/", methods=["POST"])
+@collection_tools.route("/<project>/facsimile_collection/new/", methods=["POST"], endpoint='create_facsimile_collection')
 @project_permission_required
 def create_facsimile_collection(project):
     """
@@ -61,7 +61,7 @@ def create_facsimile_collection(project):
         connection.close()
 
 
-@collection_tools.route("/<project>/facsimile_collection/list/")
+@collection_tools.route("/<project>/facsimile_collection/list/", endpoint='list_facsimile_collections')
 @project_permission_required
 def list_facsimile_collections(project):
     """
@@ -96,7 +96,7 @@ def list_facsimile_collections(project):
     return jsonify(result)
 
 
-@collection_tools.route("/<project>/facsimile_collection/<collection_id>/link/", methods=["POST"])
+@collection_tools.route("/<project>/facsimile_collection/<collection_id>/link/", methods=["POST"], endpoint='link_facsimile_collection_to_publication')
 @project_permission_required
 def link_facsimile_collection_to_publication(project, collection_id):
     """
@@ -184,7 +184,7 @@ def link_facsimile_collection_to_publication(project, collection_id):
         connection.close()
 
 
-@collection_tools.route("/<project>/facsimile_collection/facsimile/edit/", methods=["POST"])
+@collection_tools.route("/<project>/facsimile_collection/facsimile/edit/", methods=["POST"], endpoint='edit_facsimile')
 @project_permission_required
 def edit_facsimile(project):
     """
@@ -239,7 +239,7 @@ def edit_facsimile(project):
         return jsonify("No valid update values given."), 400
 
 
-@collection_tools.route("/<project>/facsimile_collection/<collection_id>/list_links/")
+@collection_tools.route("/<project>/facsimile_collection/<collection_id>/list_links/", endpoint='list_facsimile_collection_links')
 @project_permission_required
 def list_facsimile_collection_links(project, collection_id):
     """
@@ -256,7 +256,7 @@ def list_facsimile_collection_links(project, collection_id):
     return jsonify(result)
 
 
-@collection_tools.route("/<project>/facsimile_publication/delete/<f_pub_id>", methods=["DELETE"])
+@collection_tools.route("/<project>/facsimile_publication/delete/<f_pub_id>", methods=["DELETE"], endpoint='delete_facsimile_collection_link')
 @project_permission_required
 def delete_facsimile_collection_link(project, f_pub_id):
     """
@@ -276,7 +276,7 @@ def delete_facsimile_collection_link(project, f_pub_id):
     return jsonify(result), 200
 
 
-@collection_tools.route("/<project>/publication_collection/list/")
+@collection_tools.route("/<project>/publication_collection/list/", endpoint='list_publication_collections')
 @project_permission_required
 def list_publication_collections(project):
     """
@@ -294,7 +294,7 @@ def list_publication_collections(project):
     return jsonify(result)
 
 
-@collection_tools.route("/<project>/publication_collection/new/", methods=["POST"])
+@collection_tools.route("/<project>/publication_collection/new/", methods=["POST"], endpoint='new_publication_collection')
 @project_permission_required
 def new_publication_collection(project):
     """
@@ -376,8 +376,8 @@ def new_publication_collection(project):
         connection.close()
 
 
-@collection_tools.route("/<project>/publication_collection/<collection_id>/publications/")
-@collection_tools.route("/<project>/publication_collection/<collection_id>/publications/<order_by>/")
+@collection_tools.route("/<project>/publication_collection/<collection_id>/publications/", endpoint='list_publications')
+@collection_tools.route("/<project>/publication_collection/<collection_id>/publications/<order_by>/", endpoint='list_publications')
 @project_permission_required
 def list_publications(project, collection_id, order_by="id"):
     """
@@ -410,7 +410,7 @@ def list_publications(project, collection_id, order_by="id"):
     return jsonify(result)
 
 
-@collection_tools.route("/<project>/publication_collection/<collection_id>/publications/new/", methods=["POST"])
+@collection_tools.route("/<project>/publication_collection/<collection_id>/publications/new/", methods=["POST"], endpoint='new_publication')
 @project_permission_required
 def new_publication(project, collection_id):
     """

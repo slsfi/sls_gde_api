@@ -74,7 +74,7 @@ def project_permission_required(fn):
     The project the method concerns should be the first positional argument or a keyword argument.
     """
     @wraps(fn)
-    def wrapper(*args, **kwargs):
+    def decorated_function(*args, **kwargs):
         verify_jwt_in_request()
         identity = get_jwt_identity()
         if int(os.environ.get("FLASK_DEBUG", 0)) == 1 and identity["sub"] == "test@test.com":
@@ -89,9 +89,7 @@ def project_permission_required(fn):
                     return fn(*args, **kwargs)
             else:
                 return jsonify({"msg": "No access to this project."}), 403
-    # rename function name to avoid flask assertionerror
-    wrapper.__name__ = fn.__name__
-    return wrapper
+    return decorated_function
 
 
 def get_project_id_from_name(project):

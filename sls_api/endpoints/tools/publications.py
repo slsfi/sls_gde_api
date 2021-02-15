@@ -9,7 +9,7 @@ from sls_api.endpoints.generics import db_engine, get_project_id_from_name, get_
 publication_tools = Blueprint("publication_tools", __name__)
 
 
-@publication_tools.route("/<project>/publications/")
+@publication_tools.route("/<project>/publications/", endpoint='get_publications')
 @jwt_required
 def get_publications(project):
     """
@@ -31,7 +31,7 @@ def get_publications(project):
     return jsonify(result)
 
 
-@publication_tools.route("/<project>/publication/<publication_id>/")
+@publication_tools.route("/<project>/publication/<publication_id>/", endpoint='get_publication')
 @project_permission_required
 def get_publication(project, publication_id):
     """
@@ -46,7 +46,7 @@ def get_publication(project, publication_id):
     return jsonify(result)
 
 
-@publication_tools.route("/<project>/publication/manuscript/<publication_id>/")
+@publication_tools.route("/<project>/publication/manuscript/<publication_id>/", endpoint='get_publication_manuscript')
 @project_permission_required
 def get_publication_manuscript(project, publication_id):
     """
@@ -63,7 +63,7 @@ def get_publication_manuscript(project, publication_id):
     return jsonify(result)
 
 
-@publication_tools.route("/<project>/publication/version/<publication_id>/")
+@publication_tools.route("/<project>/publication/version/<publication_id>/", endpoint='get_publication_version')
 @project_permission_required
 def get_publication_version(project, publication_id):
     """
@@ -80,7 +80,7 @@ def get_publication_version(project, publication_id):
     return jsonify(result)
 
 
-@publication_tools.route("/<project>/publication/<publication_id>/versions/")
+@publication_tools.route("/<project>/publication/<publication_id>/versions/", endpoint='get_publication_versions')
 @jwt_required
 def get_publication_versions(project, publication_id):
     """
@@ -97,7 +97,7 @@ def get_publication_versions(project, publication_id):
     return jsonify(result)
 
 
-@publication_tools.route("/<project>/publication/<publication_id>/manuscripts/")
+@publication_tools.route("/<project>/publication/<publication_id>/manuscripts/", endpoint='get_publication_manuscripts')
 @jwt_required
 def get_publication_manuscripts(project, publication_id):
     """
@@ -114,7 +114,7 @@ def get_publication_manuscripts(project, publication_id):
     return jsonify(result)
 
 
-@publication_tools.route("/<project>/publication/<publication_id>/facsimiles/")
+@publication_tools.route("/<project>/publication/<publication_id>/facsimiles/", endpoint='get_publication_facsimiles')
 @jwt_required
 def get_publication_facsimiles(project, publication_id):
     """
@@ -140,7 +140,7 @@ def get_publication_facsimiles(project, publication_id):
     return jsonify(result)
 
 
-@publication_tools.route("/<project>/publication/<publication_id>/comments/")
+@publication_tools.route("/<project>/publication/<publication_id>/comments/", endpoint='get_publication_comments')
 @jwt_required
 def get_publication_comments(project, publication_id):
     """
@@ -161,7 +161,7 @@ def get_publication_comments(project, publication_id):
     return jsonify(result)
 
 
-@publication_tools.route("/<project>/publication/<publication_id>/link_file/", methods=["POST"])
+@publication_tools.route("/<project>/publication/<publication_id>/link_file/", methods=["POST"], endpoint='link_file_to_publication')
 @project_permission_required
 def link_file_to_publication(project, publication_id):
     """
