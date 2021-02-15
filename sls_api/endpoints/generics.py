@@ -89,6 +89,8 @@ def project_permission_required(fn):
                     return fn(*args, **kwargs)
             else:
                 return jsonify({"msg": "No access to this project."}), 403
+    # rename function name to avoid flask assertionerror
+    wrapper.__name__ = fn.__name__
     return wrapper
 
 
