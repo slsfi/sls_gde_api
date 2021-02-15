@@ -9,7 +9,7 @@ setup(
         'argon2_cffi',
         'beautifulsoup4',
         'flask',
-        'flask-jwt-extended',
+        'flask-jwt-extended==4.*',
         'flask-sqlalchemy',
         'flask-cors',
         'flasgger',
