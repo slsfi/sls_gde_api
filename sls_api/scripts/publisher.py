@@ -7,7 +7,7 @@ from subprocess import CalledProcessError
 import sys
 from typing import Union
 
-from sls_api.endpoints.generics import config, db_engine, get_project_id_from_name
+from sls_api.endpoints.generics import calculate_checksum, config, db_engine, get_project_id_from_name
 from sls_api.endpoints.tools.files import run_git_command, update_files_in_git_repo
 from sls_api.scripts.CTeiDocument import CTeiDocument
 
@@ -361,14 +361,27 @@ def check_publication_mtimes_and_publish_files(project: str, publication_ids: Un
                     # during force_publish, just generate
                     logger.info("Generating new est/com files for publication {}...".format(publication_id))
                     try:
+                        # calculate md5sum for existing files
+                        md5sums = []
+                        if os.path.exists(est_target_file_path):
+                            md5sums.append(calculate_checksum(est_target_file_path))
+                        else:
+                            md5sums.append("SKIP")
+                        if os.path.exists(com_target_file_path):
+                            md5sums.append(calculate_checksum(com_target_file_path))
+                        else:
+                            md5sums.append("SKIP")
                         generate_est_and_com_files(row, project, est_source_file_path, com_source_file_path,
                                                    est_target_file_path, com_target_file_path)
                     except Exception:
                         logger.exception("Failed to generate est/com files for publication {}!".format(publication_id))
                         continue
                     else:
-                        changes.add(est_target_file_path)
-                        changes.add(com_target_file_path)
+                        # only add files to change set if they actually changed
+                        if md5sums[0] == "SKIP" or md5sums[0] != calculate_checksum(est_target_file_path):
+                            changes.add(est_target_file_path)
+                        if md5sums[1] == "SKIP" or md5sums[1] != calculate_checksum(com_target_file_path):
+                            changes.add(com_target_file_path)
                 else:
                     # otherwise, check if this publication's files need to be re-generated
                     try:
@@ -382,14 +395,27 @@ def check_publication_mtimes_and_publish_files(project: str, publication_ids: Un
                         logger.warning("Error getting time_modified for target or source files for publication {}".format(publication_id))
                         logger.info("Generating new est/com files for publication {}...".format(publication_id))
                         try:
+                            # calculate md5sum for existing files
+                            md5sums = []
+                            if os.path.exists(est_target_file_path):
+                                md5sums.append(calculate_checksum(est_target_file_path))
+                            else:
+                                md5sums.append("SKIP")
+                            if os.path.exists(com_target_file_path):
+                                md5sums.append(calculate_checksum(com_target_file_path))
+                            else:
+                                md5sums.append("SKIP")
                             generate_est_and_com_files(row, project, est_source_file_path, com_source_file_path,
                                                        est_target_file_path, com_target_file_path)
                         except Exception:
                             logger.exception("Failed to generate est/com files for publication {}!".format(publication_id))
                             continue
                         else:
-                            changes.add(est_target_file_path)
-                            changes.add(com_target_file_path)
+                            # only add files to change set if they actually changed
+                            if md5sums[0] == "SKIP" or md5sums[0] != calculate_checksum(est_target_file_path):
+                                changes.add(est_target_file_path)
+                            if md5sums[1] == "SKIP" or md5sums[1] != calculate_checksum(com_target_file_path):
+                                changes.add(com_target_file_path)
                     else:
                         if est_target_mtime >= est_source_mtime and com_target_mtime >= com_source_mtime:
                             # If both the est and com files are newer than the source files, just continue to the next publication
@@ -398,14 +424,27 @@ def check_publication_mtimes_and_publish_files(project: str, publication_ids: Un
                             # If one or either is outdated, generate new ones
                             logger.info("Reading files for publication {} are outdated, generating new est/com files...".format(publication_id))
                             try:
+                                # calculate md5sum for existing files
+                                md5sums = []
+                                if os.path.exists(est_target_file_path):
+                                    md5sums.append(calculate_checksum(est_target_file_path))
+                                else:
+                                    md5sums.append("SKIP")
+                                if os.path.exists(com_target_file_path):
+                                    md5sums.append(calculate_checksum(com_target_file_path))
+                                else:
+                                    md5sums.append("SKIP")
                                 generate_est_and_com_files(row, project, est_source_file_path, com_source_file_path,
                                                            est_target_file_path, com_target_file_path)
                             except Exception:
                                 logger.exception("Failed to generate est/com files for publication {}!".format(publication_id))
                                 continue
                             else:
-                                changes.add(est_target_file_path)
-                                changes.add(com_target_file_path)
+                                # only add files to change set if they actually changed
+                                if md5sums[0] == "SKIP" or md5sums[0] != calculate_checksum(est_target_file_path):
+                                    changes.add(est_target_file_path)
+                                if md5sums[1] == "SKIP" or md5sums[1] != calculate_checksum(com_target_file_path):
+                                    changes.add(com_target_file_path)
 
                 # Process all variants belonging to this publication
                 # publication_version with type=1 is the "main" variant, the others should have type=2 and be versions of that main variant
@@ -457,8 +496,11 @@ def check_publication_mtimes_and_publish_files(project: str, publication_ids: Un
 
                     # If any variants have changed, we need a CTeiDocument for the main variant to ProcessVariants() with
                     main_variant_target = os.path.join(file_root, "xml", "var", target_filename)
-                    # add main variant file to changes, so it is in the commit later
-                    changes.add(main_variant_target)
+                    # check current md5sum for main variant file
+                    if os.path.exists(main_variant_target):
+                        main_variant_md5 = calculate_checksum(main_variant_target)
+                    else:
+                        main_variant_md5 = "SKIP"
                     main_variant_doc = CTeiDocument()
                     main_variant_doc.Load(main_variant_source)
 
@@ -490,7 +532,6 @@ def check_publication_mtimes_and_publish_files(project: str, publication_ids: Un
                         # in a force_publish, just load all variants for generation/processing
                         if force_publish:
                             logger.info("Generating new var file for publication_version {}...".format(variant["id"]))
-                            changes.add(target_file_path)
                             variant_doc = CTeiDocument()
                             variant_doc.Load(source_file_path)
                             variant_docs.append(variant_doc)
@@ -505,7 +546,6 @@ def check_publication_mtimes_and_publish_files(project: str, publication_ids: Un
                                 # It is then easiest to just generate a new one
                                 logger.warning("Error getting time_modified for target or source files for publication_version {}".format(variant["id"]))
                                 logger.info("Generating new file...")
-                                changes.add(target_file_path)
                                 variant_doc = CTeiDocument()
                                 variant_doc.Load(source_file_path)
                                 variant_docs.append(variant_doc)
@@ -513,7 +553,6 @@ def check_publication_mtimes_and_publish_files(project: str, publication_ids: Un
                             else:
                                 if target_mtime < source_mtime:
                                     logger.info("File {} is older than source file {}, generating new file...".format(target_file_path, source_file_path))
-                                    changes.add(target_file_path)
                                     variant_doc = CTeiDocument()
                                     variant_doc.Load(source_file_path)
                                     variant_docs.append(variant_doc)
@@ -521,8 +560,20 @@ def check_publication_mtimes_and_publish_files(project: str, publication_ids: Un
                                 else:
                                     # If no changes, don't generate CTeiDocument and don't make a new web XML file
                                     continue
+                    # check current md5sum for variant files
+                    variant_md5_sums = {}
+                    for path in variant_paths:
+                        variant_md5_sums[path] == "SKIP" if not os.path.exists(path) else calculate_checksum(path)
                     # lastly, actually process all generated CTeiDocument objects and create web XML files
                     process_var_documents_and_generate_files(main_variant_doc, main_variant_target, variant_docs, variant_paths, row)
+
+                    # only add main variant file to change set if file actually changed
+                    if main_variant_md5 == "SKIP" or main_variant_md5 != calculate_checksum(main_variant_target):
+                        changes.add(main_variant_target)
+                    # only add variant files to change set if their file actually changed
+                    for path, md5sum in variant_md5_sums.items():
+                        if md5sum == "SKIP" or md5sum != calculate_checksum(path):
+                            changes.add(path)
 
             # For each publication_manuscript belonging to this project, check the modification timestamp of its master file and compare it to the generated web XML file
             # logger.debug("Manuscript query resulting rows: {}".format(manuscript_info[0].keys())) TODO: fix IndexError if manuscript_info has no rows
@@ -557,11 +608,18 @@ def check_publication_mtimes_and_publish_files(project: str, publication_ids: Un
                 if force_publish:
                     logger.info("Generating new ms file for publication_manuscript {}".format(manuscript_id))
                     try:
+                        # calculate md5sum for existing file
+                        if os.path.exists(target_file_path):
+                            md5sum = calculate_checksum(target_file_path)
+                        else:
+                            md5sum = "SKIP"
                         generate_ms_file(source_file_path, target_file_path, row)
                     except Exception:
                         continue
                     else:
-                        changes.add(target_file_path)
+                        # only add to changes if file has actually changed
+                        if md5sum == "SKIP" or md5sum != calculate_checksum(target_file_path):
+                            changes.add(target_file_path)
                 # otherwise, check if this file needs generating
                 else:
                     try:
@@ -573,11 +631,18 @@ def check_publication_mtimes_and_publish_files(project: str, publication_ids: Un
                         logger.warning("Error getting time_modified for target or source file for publication_manuscript {}".format(manuscript_id))
                         logger.info("Generating new file...")
                         try:
+                            # calculate md5sum for existing file
+                            if os.path.exists(target_file_path):
+                                md5sum = calculate_checksum(target_file_path)
+                            else:
+                                md5sum = "SKIP"
                             generate_ms_file(source_file_path, target_file_path, row)
                         except Exception:
                             continue
                         else:
-                            changes.add(target_file_path)
+                            # only add to changes if file has actually changed
+                            if md5sum == "SKIP" or md5sum != calculate_checksum(target_file_path):
+                                changes.add(target_file_path)
                     else:
                         if target_mtime >= source_mtime:
                             # If the target ms file is newer than the source, continue to the next publication_manuscript
@@ -585,11 +650,18 @@ def check_publication_mtimes_and_publish_files(project: str, publication_ids: Un
                         else:
                             logger.info("File {} is older than source file {}, generating new file...".format(target_file_path, source_file_path))
                             try:
+                                # calculate md5sum for existing file
+                                if os.path.exists(target_file_path):
+                                    md5sum = calculate_checksum(target_file_path)
+                                else:
+                                    md5sum = "SKIP"
                                 generate_ms_file(source_file_path, target_file_path, row)
                             except Exception:
                                 continue
                             else:
-                                changes.add(target_file_path)
+                                # only add to changes if file has actually changed
+                                if md5sum == "SKIP" or md5sum != calculate_checksum(target_file_path):
+                                    changes.add(target_file_path)
 
             logger.debug("Changes made in publication script run: {}".format([c for c in changes]))
             if len(changes) > 0 and not no_git:

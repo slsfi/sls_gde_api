@@ -4,6 +4,7 @@ from flask import jsonify, safe_join
 from flask_jwt_extended import get_jwt_identity, verify_jwt_in_request
 from functools import wraps
 import glob
+import hashlib
 import io
 import logging
 from lxml import etree
@@ -52,6 +53,19 @@ def int_or_none(var):
         return int(var)
     except Exception:
         return None
+
+
+def calculate_checksum(full_file_path) -> str:
+    """
+    Read 'full_file_path' in chunks and generate an MD5 checksum for the file, returning as string
+    """
+    hash_md5 = hashlib.md5()
+    with open(full_file_path, "rb") as f:
+        logger.info(f"Calculating MD5 checksum for {full_file_path}...")
+        # read in chunks to prevent having to load entire file into memory at once
+        for chunk in iter(lambda: f.read(8 * hash_md5.block_size), b""):
+            hash_md5.update(chunk)
+    return hash_md5.hexdigest()
 
 
 def project_permission_required(fn):
