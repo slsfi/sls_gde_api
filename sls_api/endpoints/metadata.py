@@ -1,6 +1,6 @@
 from flask import abort, Blueprint, request, Response, safe_join
 from flask.json import jsonify
-from flask_jwt_extended import get_jwt_identity, jwt_required
+from flask_jwt_extended import get_jwt_identity, jwt_required, jwt_optional
 import glob
 import io
 import json
@@ -20,7 +20,7 @@ logger = logging.getLogger("sls_api.metadata")
 
 
 @meta.route("/projects/")
-@jwt_required(optional=True)
+@jwt_optional
 def get_projects():
     """
     List all GDE projects
@@ -128,7 +128,7 @@ def get_manuscripts(project, publication_id):
 
 
 @meta.route("/<project>/toc/<collection_id>", methods=["GET", "PUT"])
-@jwt_required(optional=True)
+@jwt_optional
 def handle_toc(project, collection_id):
     config = get_project_config(project)
     if config is None:

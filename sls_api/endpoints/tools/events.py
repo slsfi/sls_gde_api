@@ -9,7 +9,7 @@ from sls_api.endpoints.generics import db_engine, get_project_id_from_name, get_
 event_tools = Blueprint("event_tools", __name__)
 
 
-@event_tools.route("/<project>/locations/new/", methods=["POST"], endpoint='add_new_location')
+@event_tools.route("/<project>/locations/new/", methods=["POST"])
 @project_permission_required
 def add_new_location(project):
     """
@@ -65,7 +65,7 @@ def add_new_location(project):
         connection.close()
 
 
-@event_tools.route("/<project>/locations/<location_id>/edit/", methods=["POST"], endpoint='edit_location')
+@event_tools.route("/<project>/locations/<location_id>/edit/", methods=["POST"])
 @project_permission_required
 def edit_location(project, location_id):
     """
@@ -133,7 +133,7 @@ def edit_location(project, location_id):
         return jsonify("No valid update values given."), 400
 
 
-@event_tools.route("/<project>/subjects/new/", methods=["POST"], endpoint='add_new_subject')
+@event_tools.route("/<project>/subjects/new/", methods=["POST"])
 @project_permission_required
 def add_new_subject(project):
     """
@@ -192,7 +192,7 @@ def add_new_subject(project):
         connection.close()
 
 
-@event_tools.route("/<project>/subjects/<subject_id>/edit/", methods=["POST"], endpoint='edit_subject')
+@event_tools.route("/<project>/subjects/<subject_id>/edit/", methods=["POST"])
 @project_permission_required
 def edit_subject(project, subject_id):
     """
@@ -276,7 +276,7 @@ def edit_subject(project, subject_id):
         return jsonify("No valid update values given."), 400
 
 
-@event_tools.route("/<project>/tags/new/", methods=["POST"], endpoint='add_new_tag')
+@event_tools.route("/<project>/tags/new/", methods=["POST"])
 @project_permission_required
 def add_new_tag(project):
     """
@@ -325,7 +325,7 @@ def add_new_tag(project):
         connection.close()
 
 
-@event_tools.route("/<project>/tags/<tag_id>/edit/", methods=["POST"], endpoint='edit_tag')
+@event_tools.route("/<project>/tags/<tag_id>/edit/", methods=["POST"])
 @project_permission_required
 def edit_tag(project, tag_id):
     """
@@ -391,7 +391,7 @@ def edit_tag(project, tag_id):
         return jsonify("No valid update values given."), 400
 
 
-@event_tools.route("/<project>/work_manifestation/new/", methods=["POST"], endpoint='add_new_work_manifestation')
+@event_tools.route("/<project>/work_manifestation/new/", methods=["POST"])
 @project_permission_required
 def add_new_work_manifestation(project):
     """
@@ -465,7 +465,7 @@ def add_new_work_manifestation(project):
         connection.close()
 
 
-@event_tools.route("/<project>/work_manifestations/<man_id>/edit/", methods=["POST"], endpoint='edit_work_manifestation')
+@event_tools.route("/<project>/work_manifestations/<man_id>/edit/", methods=["POST"])
 @project_permission_required
 def edit_work_manifestation(project, man_id):
     """
@@ -572,7 +572,7 @@ def edit_work_manifestation(project, man_id):
         return jsonify("No valid update values given."), 400
 
 
-@event_tools.route("/locations/", endpoint='get_locations')
+@event_tools.route("/locations/")
 @jwt_required
 def get_locations():
     """
@@ -581,7 +581,7 @@ def get_locations():
     return select_all_from_table("location")
 
 
-@event_tools.route("/subjects/", endpoint='get_subjects')
+@event_tools.route("/subjects/")
 @jwt_required
 def get_subjects():
     """
@@ -608,7 +608,7 @@ def get_subjects():
     return jsonify(result)
 
 
-@event_tools.route("/tags/", endpoint='get_tags')
+@event_tools.route("/tags/")
 @jwt_required
 def get_tags():
     """
@@ -617,7 +617,7 @@ def get_tags():
     return select_all_from_table("tag")
 
 
-@event_tools.route("/work_manifestations/", endpoint='get_work_manifestations')
+@event_tools.route("/work_manifestations/")
 @jwt_required
 def get_work_manifestations():
     """
@@ -657,7 +657,7 @@ def get_work_manifestations():
     return jsonify(result)
 
 
-@event_tools.route("/events/", endpoint='get_events')
+@event_tools.route("/events/")
 @jwt_required
 def get_events():
     """
@@ -666,7 +666,7 @@ def get_events():
     return select_all_from_table("event")
 
 
-@event_tools.route("/events/search/", methods=["POST"], endpoint='find_event_by_description')
+@event_tools.route("/events/search/", methods=["POST"])
 @jwt_required
 def find_event_by_description():
     """
@@ -696,7 +696,7 @@ def find_event_by_description():
     return jsonify(result)
 
 
-@event_tools.route("/events/new/", methods=["POST"], endpoint='add_new_event')
+@event_tools.route("/events/new/", methods=["POST"])
 @jwt_required
 def add_new_event():
     """
@@ -738,7 +738,7 @@ def add_new_event():
         connection.close()
 
 
-@event_tools.route("/event/<event_id>/connections/new/", methods=["POST"], endpoint='connect_event')
+@event_tools.route("/event/<event_id>/connections/new/", methods=["POST"])
 @jwt_required
 def connect_event(event_id):
     """
@@ -791,7 +791,7 @@ def connect_event(event_id):
         connection.close()
 
 
-@event_tools.route("/event/<event_id>/connections/", endpoint='get_event_connections')
+@event_tools.route("/event/<event_id>/connections/")
 @jwt_required
 def get_event_connections(event_id):
     """
@@ -808,7 +808,7 @@ def get_event_connections(event_id):
     return jsonify(result)
 
 
-@event_tools.route("/event/<event_id>/occurrences/", endpoint='get_event_occurrences')
+@event_tools.route("/event/<event_id>/occurrences/")
 @jwt_required
 def get_event_occurrences(event_id):
     """
@@ -825,7 +825,7 @@ def get_event_occurrences(event_id):
     return jsonify(result)
 
 
-@event_tools.route("/event/<event_id>/occurrences/new/", methods=["POST"], endpoint='new_event_occurrence')
+@event_tools.route("/event/<event_id>/occurrences/new/", methods=["POST"])
 @jwt_required
 def new_event_occurrence(event_id):
     """

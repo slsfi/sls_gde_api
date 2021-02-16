@@ -93,7 +93,7 @@ def update_files_in_git_repo(project, specific_file=False):
         return True, specific_file
 
 
-@file_tools.route("/<project>/config/get", endpoint='get_config_file')
+@file_tools.route("/<project>/config/get")
 def get_config_file(project):
     config = get_project_config(project)
     if config is None:
@@ -107,7 +107,7 @@ def get_config_file(project):
         return jsonify(json_data)
 
 
-@file_tools.route("/<project>/config/update", methods=["POST"], endpoint='update_config')
+@file_tools.route("/<project>/config/update", methods=["POST"])
 @project_permission_required
 def update_config(project):
     config = get_project_config(project)
@@ -121,7 +121,7 @@ def update_config(project):
         return jsonify({"msg": "received"})
 
 
-@file_tools.route("/<project>/sync_files/", methods=["POST"], endpoint='pull_changes_from_git_remote')
+@file_tools.route("/<project>/sync_files/", methods=["POST"])
 @project_permission_required
 def pull_changes_from_git_remote(project):
     """
@@ -236,7 +236,7 @@ def git_commit_and_push_file(project, author, message, file_path, force=False):
     return True
 
 
-@file_tools.route("/<project>/update_file/by_path/<path:file_path>", methods=["PUT"], endpoint='update_file')
+@file_tools.route("/<project>/update_file/by_path/<path:file_path>", methods=["PUT"])
 @project_permission_required
 def update_file(project, file_path):
     """
@@ -376,7 +376,7 @@ def update_file(project, file_path):
     })
 
 
-@file_tools.route("/<project>/get_file/by_path/<path:file_path>", endpoint='get_file')
+@file_tools.route("/<project>/get_file/by_path/<path:file_path>")
 @project_permission_required
 def get_file(project, file_path):
     """
@@ -414,8 +414,8 @@ def get_file(project, file_path):
         return jsonify({"msg": "The requested file was not found in the git repository."}), 404
 
 
-@file_tools.route("/<project>/get_tree/", endpoint='get_file_tree')
-@file_tools.route("/<project>/get_tree/<path:file_path>", endpoint='get_file_tree')
+@file_tools.route("/<project>/get_tree/")
+@file_tools.route("/<project>/get_tree/<path:file_path>")
 @project_permission_required
 def get_file_tree(project, file_path=None):
     """
