@@ -114,6 +114,29 @@ def get_publication_manuscripts(project, publication_id):
     return jsonify(result)
 
 
+@publication_tools.route("/<project>/publication/<publication_id>/tags/")
+@jwt_required
+def get_publication_tags(project, publication_id):
+    """
+    List all manuscripts for the given publication
+    """
+    connection = db_engine.connect()
+    sql = """ select t.*, e_o.* from event_occurrence e_o
+    join event_connection e_c on e_o.event_id = e_c.event_id
+    join tag t on t.id = e_c.tag_id
+    where e_o.publication_id = :pub_id
+    and e_c.tag_id is not null
+    and e_c.deleted != 1 and e_o.deleted != 1
+    and t.deleted != 1 """
+    statement = sql.bindparams(pub_id=publication_id)
+    rows = connection.execute(statement).fetchall()
+    result = []
+    for row in rows:
+        result.append(dict(row))
+    connection.close()
+    return jsonify(result)
+
+
 @publication_tools.route("/<project>/publication/<publication_id>/facsimiles/")
 @jwt_required
 def get_publication_facsimiles(project, publication_id):
