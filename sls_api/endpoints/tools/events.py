@@ -910,8 +910,7 @@ def new_publication_event_occurrence(publication_id):
         return jsonify({"msg": "No data provided."}), 400
     event_occ = get_table("event_occurrence")
     connection = db_engine.connect()
-    select_event = select([event_occ.c.event_id]).where(event_occ.c.publication_id == int_or_none(publication_id))\
-    .where(event_occ.c.deleted != 1)
+    select_event = select([event_occ.c.event_id]).where(event_occ.c.publication_id == int_or_none(publication_id)).where(event_occ.c.deleted != 1)
     result = connection.execute(select_event).fetchone()
     if int_or_none(result["event_id"]) is None:
         event_id = int_or_none(result)
