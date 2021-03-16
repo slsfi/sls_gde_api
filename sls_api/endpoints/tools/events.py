@@ -1021,7 +1021,7 @@ def delete_event_occurrence(occ_id):
     connection = db_engine.connect()
     event_occurrences = get_table("event_occurrence")
     try:
-        update = event_occurrences.update().where(event_occurrences.c.id == int(id)).values(**values)
+        update = event_occurrences.update().where(event_occurrences.c.id == int(occ_id)).values(**values)
         connection.execute(update)
         return jsonify({
             "msg": "Delete event_occurrences {} with values {}".format(int(occ_id), str(values)),
