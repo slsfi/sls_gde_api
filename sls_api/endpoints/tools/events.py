@@ -843,6 +843,7 @@ def new_event_occurrence(event_id):
     publicationManuscript_id: ID for publication manuscript the event occurs in
     publicationFacsimile_id: ID for publication facsimile the event occurs in
     publicationComment_id: ID for publication comment the event occurs in
+    publicationFacsimile_page: Number for publication facsimile page the event occurs in
     """
     request_data = request.get_json()
     if not request_data:
@@ -869,6 +870,7 @@ def new_event_occurrence(event_id):
         "publication_manuscript_id": int(request_data["publicationManuscript_id"]) if request_data.get("publicationManuscript_id", None) else None,
         "publication_facsimile_id": int(request_data["publicationFacsimile_id"]) if request_data.get("publicationFacsimile_id", None) else None,
         "publication_comment_id": int(request_data["publicationComment_id"]) if request_data.get("publicationComment_id", None) else None,
+        "publication_facsimile_page": int(request_data["publicationFacsimile_page"]) if request_data.get("publicationFacsimile_page", None) else None,
     }
     try:
         result = connection.execute(insert, **new_occurrence)
@@ -882,6 +884,152 @@ def new_event_occurrence(event_id):
     except Exception as e:
         result = {
             "msg": "Failed to create new event_occurrence",
+            "reason": str(e)
+        }
+        return jsonify(result), 500
+    finally:
+        connection.close()
+
+
+@event_tools.route("/event/<publication_id>/occurrences/add/", methods=["POST"])
+@jwt_required
+def new_publication_event_occurrence(publication_id):
+    """
+    Add a new event_occurrence to the publication
+
+    POST data MUST be in JSON format.
+
+    POST data MUST contain the following:
+    publication_id: ID for publication the event occurs in
+
+    POST data MAY contain the following:
+    publicationFacsimile_page: Number for publication facsimile page the event occurs in
+    """
+    request_data = request.get_json()
+    if not request_data:
+        return jsonify({"msg": "No data provided."}), 400
+    event_occ = get_table("event_occurrence")
+    connection = db_engine.connect()
+    select_event = select([event_occ.event_id]).where(event_occ.c.publication_id == int_or_none(publication_id))
+    event_id = connection.execute(select_event).fetchOne()
+
+    # No existing connection between publication and event, we need to create an event
+    if event_id is None:
+        # create event
+        events = get_table("event")
+        new_event = {
+            "type": "publication",
+            "description": "publication->tag",
+        }
+        try:
+            insert = events.insert()
+            result = connection.execute(insert, **new_event)
+            event_id = result.inserted_primary_key[0]
+        except Exception as e:
+            result = {
+                "msg": "Failed to create new event",
+                "reason": str(e)
+            }
+            return jsonify(result), 500
+        finally:
+            connection.close()
+
+    insert = event_occ.insert()
+    new_occurrence = {
+        "event_id": int(event_id),
+        "type": request_data.get("type", None),
+        "description": request_data.get("description", None),
+        "publication_id": int(request_data["publication_id"]) if request_data.get("publication_id", None) else None,
+        "publication_version_id": int(request_data["publicationVersion_id"]) if request_data.get("publicationVersion_id", None) else None,
+        "publication_manuscript_id": int(request_data["publicationManuscript_id"]) if request_data.get("publicationManuscript_id", None) else None,
+        "publication_facsimile_id": int(request_data["publicationFacsimile_id"]) if request_data.get("publicationFacsimile_id", None) else None,
+        "publication_comment_id": int(request_data["publicationComment_id"]) if request_data.get("publicationComment_id", None) else None,
+        "publication_facsimile_page": int(request_data["publicationFacsimile_page"]) if request_data.get("publicationFacsimile_page", None) else None,
+    }
+    try:
+        result = connection.execute(insert, **new_occurrence)
+        new_row = select([event_occ]).where(event_occ.c.id == result.inserted_primary_key[0])
+        new_row = dict(connection.execute(new_row).fetchone())
+        result = {
+            "msg": "Created new event_occurrence with ID {}".format(result.inserted_primary_key[0]),
+            "row": new_row
+        }
+        return jsonify(result), 201
+    except Exception as e:
+        result = {
+            "msg": "Failed to create new event_occurrence",
+            "reason": str(e)
+        }
+        return jsonify(result), 500
+    finally:
+        connection.close()
+
+
+@event_tools.route("/event/<occ_id>/occurrences/edit/", methods=["POST"])
+@jwt_required
+def edit_event_occurrence(occ_id):
+    """
+    Edit a event_occurrence
+    id of the event_occurrence: Number for publication facsimile page the event occurs in
+    publication_facsimile_page: Number for publication facsimile page the event occurs in
+    """
+    request_data = request.get_json()
+    if not request_data:
+        return jsonify({"msg": "No data provided."}), 400
+
+    publication_facsimile_page = request_data.get("publication_facsimile_page", None)
+
+    values = {}
+    if publication_facsimile_page is not None:
+        values["publication_facsimile_page"] = publication_facsimile_page
+
+    values["date_modified"] = datetime.now()
+    connection = db_engine.connect()
+    event_occurrences = get_table("event_occurrence")
+    try:
+        update = event_occurrences.update().where(event_occurrences.c.id == int(id)).values(**values)
+        connection.execute(update)
+        return jsonify({
+            "msg": "Updated event_occurrences {} with values {}".format(int(occ_id), str(values)),
+            "occ_id": int(occ_id)
+        })
+    except Exception as e:
+        result = {
+            "msg": "Failed to update event_occurrences.",
+            "reason": str(e)
+        }
+        return jsonify(result), 500
+    finally:
+        connection.close()
+
+
+@event_tools.route("/event/<occ_id>/occurrences/delete/", methods=["POST"])
+@jwt_required
+def delete_event_occurrence(occ_id):
+    """
+    Logical delete a event_occurrence
+    id of the event_occurrence: Number for publication facsimile page the event occurs in
+    """
+    request_data = request.get_json()
+    if not request_data:
+        return jsonify({"msg": "No data provided."}), 400
+
+    values = {}
+    values["date_modified"] = datetime.now()
+    values["deleted"] = 1
+
+    connection = db_engine.connect()
+    event_occurrences = get_table("event_occurrence")
+    try:
+        update = event_occurrences.update().where(event_occurrences.c.id == int(id)).values(**values)
+        connection.execute(update)
+        return jsonify({
+            "msg": "Delete event_occurrences {} with values {}".format(int(occ_id), str(values)),
+            "occ_id": int(occ_id)
+        })
+    except Exception as e:
+        result = {
+            "msg": "Failed to delete event_occurrences.",
             "reason": str(e)
         }
         return jsonify(result), 500
