@@ -910,7 +910,8 @@ def new_publication_event_occurrence(publication_id):
         return jsonify({"msg": "No data provided."}), 400
     event_occ = get_table("event_occurrence")
     connection = db_engine.connect()
-    select_event = select([event_occ.c.event_id]).where(event_occ.c.publication_id == int_or_none(publication_id))
+    select_event = select([event_occ.c.event_id]).where(event_occ.c.publication_id == int_or_none(publication_id))\
+    .where(event_occ.c.deleted != 1)
     result = connection.execute(select_event).fetchone()
     if int_or_none(result["event_id"]) is None:
         event_id = int_or_none(result)
@@ -934,38 +935,70 @@ def new_publication_event_occurrence(publication_id):
                 "reason": str(e)
             }
             return jsonify(result), 500
+
+        # Create the occurrence, connection between publication and event
+        insert = event_occ.insert()
+        new_occurrence = {
+            "event_id": int(event_id),
+            "type": request_data.get("type", None),
+            "description": request_data.get("description", None),
+            "publication_id": int(request_data["publication_id"]) if request_data.get("publication_id", None) else None,
+            "publication_facsimile_page": int(request_data["publication_facsimile_page"]) if request_data.get("publication_facsimile_page", None) else None,
+        }
+        try:
+            result = connection.execute(insert, **new_occurrence)
+            new_row = select([event_occ]).where(event_occ.c.id == result.inserted_primary_key[0])
+            new_row = dict(connection.execute(new_row).fetchone())
+        except Exception as e:
+            result = {
+                "msg": "Failed to create new event_occurrence",
+                "reason": str(e)
+            }
+            return jsonify(result), 500
+
+        # Create the connection between tag and event
+        event_conn = get_table("event_connection")
+        insert = event_conn.insert()
+        new_connection = {
+            "event_id": int(event_id),
+            "tag_id": int(event_id)
+        }
+        try:
+            result = connection.execute(insert, **new_connection)
+            new_row = select([event_conn]).where(event_conn.c.id == result.inserted_primary_key[0])
+            new_row = dict(connection.execute(new_row).fetchone())
+        except Exception as e:
+            result = {
+                "msg": "Failed to create new event_connection",
+                "reason": str(e)
+            }
+            return jsonify(result), 500
         finally:
             connection.close()
-
-    insert = event_occ.insert()
-    new_occurrence = {
-        "event_id": int(event_id),
-        "type": request_data.get("type", None),
-        "description": request_data.get("description", None),
-        "publication_id": int(request_data["publication_id"]) if request_data.get("publication_id", None) else None,
-        "publication_version_id": int(request_data["publicationVersion_id"]) if request_data.get("publicationVersion_id", None) else None,
-        "publication_manuscript_id": int(request_data["publicationManuscript_id"]) if request_data.get("publicationManuscript_id", None) else None,
-        "publication_facsimile_id": int(request_data["publicationFacsimile_id"]) if request_data.get("publicationFacsimile_id", None) else None,
-        "publication_comment_id": int(request_data["publicationComment_id"]) if request_data.get("publicationComment_id", None) else None,
-        "publication_facsimile_page": int(request_data["publicationFacsimile_page"]) if request_data.get("publicationFacsimile_page", None) else None,
-    }
-    try:
-        result = connection.execute(insert, **new_occurrence)
-        new_row = select([event_occ]).where(event_occ.c.id == result.inserted_primary_key[0])
-        new_row = dict(connection.execute(new_row).fetchone())
-        result = {
-            "msg": "Created new event_occurrence with ID {}".format(result.inserted_primary_key[0]),
-            "row": new_row
-        }
-        return jsonify(result), 201
-    except Exception as e:
-        result = {
-            "msg": "Failed to create new event_occurrence",
-            "reason": str(e)
-        }
-        return jsonify(result), 500
-    finally:
-        connection.close()
+    else:
+        try:
+            new_connection = {
+                "event_id": int(event_id),
+                "tag_id": int(event_id)
+            }
+            event_conn = get_table("event_connection")
+            insert = event_conn.insert()
+            result = connection.execute(insert, **new_connection)
+            new_row = select([event_conn]).where(event_conn.c.id == result.inserted_primary_key[0])
+            new_row = dict(connection.execute(new_row).fetchone())
+            result = {
+                "msg": "Created new event_connection with ID {}".format(result.inserted_primary_key[0]),
+                "row": new_row
+            }
+            return jsonify(result), 201
+        except Exception as e:
+            result = {
+                "msg": "Failed to create new event_connection",
+                "reason": str(e)
+            }
+            return jsonify(result), 500
+        finally:
+            connection.close()
 
 
 @event_tools.route("/event/<occ_id>/occurrences/edit/", methods=["POST"])
