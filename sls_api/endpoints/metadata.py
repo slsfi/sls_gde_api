@@ -282,6 +282,34 @@ def get_collection_publication_by_legacyid(project, legacy_id):
     return jsonify(results)
 
 
+# Get the legacy id by publication id
+@meta.route("/<project>/legacy/publication/<publication_id>")
+def get_legacyid_by_publication_id(project, publication_id):
+    logger.info("Getting /<project>/legacy/publication/<publication_id>")
+    connection = db_engine.connect()
+    sql = sqlalchemy.sql.text("SELECT p.legacy_id FROM publication p WHERE p.id = :p_id AND deleted != 1 ")
+    statement = sql.bindparams(p_id=publication_id, )
+    results = []
+    for row in connection.execute(statement).fetchall():
+        results.append(dict(row))
+    connection.close()
+    return jsonify(results)
+
+
+# Get the legacy id by collection id
+@meta.route("/<project>/legacy/collection/<collection_id>")
+def get_legacyid_by_collection_id(project, collection_id):
+    logger.info("Getting /<project>/legacy/collection/<collection_id>")
+    connection = db_engine.connect()
+    sql = sqlalchemy.sql.text("SELECT pc.legacy_id FROM publication_collection pc WHERE pc.id = :pc_id AND deleted != 1 ")
+    statement = sql.bindparams(pc_id=collection_id, )
+    results = []
+    for row in connection.execute(statement).fetchall():
+        results.append(dict(row))
+    connection.close()
+    return jsonify(results)
+
+
 # Get all subjects for a project
 @meta.route("/<project>/subjects")
 def get_project_subjects(project):
