@@ -208,6 +208,7 @@ def edit_facsimile(project):
 
     facsimile_collection_id = request_data.get("facsimile_collection_id", None)
     page = request_data.get("page", None)
+    priority = request_data.get("priority", None)
     type = request_data.get("type", None)
 
     values = {}
@@ -215,6 +216,8 @@ def edit_facsimile(project):
         values["page_nr"] = page
     if type is not None:
         values["type"] = type
+    if priority is not None:
+        values["priority"] = priority
 
     values["date_modified"] = datetime.now()
 

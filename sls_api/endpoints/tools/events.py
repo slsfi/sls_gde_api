@@ -901,6 +901,7 @@ def new_publication_event_occurrence(publication_id):
 
     POST data MUST contain the following:
     publication_id: ID for publication the event occurs in
+    tag_id: ID for publication the event occurs in
 
     POST data MAY contain the following:
     publicationFacsimile_page: Number for publication facsimile page the event occurs in
@@ -960,7 +961,7 @@ def new_publication_event_occurrence(publication_id):
         insert = event_conn.insert()
         new_connection = {
             "event_id": int(event_id),
-            "tag_id": int(event_id)
+            "tag_id": request_data.get("tag_id", None)
         }
         try:
             result = connection.execute(insert, **new_connection)
@@ -978,7 +979,7 @@ def new_publication_event_occurrence(publication_id):
         try:
             new_connection = {
                 "event_id": int(event_id),
-                "tag_id": int(event_id)
+                "tag_id": request_data.get("tag_id", None)
             }
             event_conn = get_table("event_connection")
             insert = event_conn.insert()
