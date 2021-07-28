@@ -331,7 +331,14 @@ def get_project_locations(project):
     logger.info("Getting /<project>/locations")
     connection = db_engine.connect()
     project_id = get_project_id_from_name(project)
-    sql = sqlalchemy.sql.text(""" SELECT * FROM location WHERE project_id = :p_id """)
+    # Get both locations and their translations
+    sql = sqlalchemy.sql.text(""" SELECT *, 
+	( SELECT array_to_json(array_agg(row_to_json(d.*))) AS array_to_json
+                   FROM ( SELECT tt.id, tt.text, tt."language", t.neutral_text, tt.field_name, tt.table_name
+                           FROM (translation t
+                             JOIN translation_text tt ON ((tt.translation_id = t.id)))
+                          WHERE ((t.id = l.translation_id AND tt.table_name = 'location') )) d) AS translations
+        FROM location l WHERE l.project_id = :p_id """)    
     statement = sql.bindparams(p_id=project_id, )
     results = []
     for row in connection.execute(statement).fetchall():
