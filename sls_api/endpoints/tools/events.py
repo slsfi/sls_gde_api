@@ -290,8 +290,16 @@ def add_new_translation(project):
     connection = db_engine.connect()
     
     # create a new translation if not supplied
-    if request_data.get("translation_id", None) is None:
+    if request_data.get("translation_id", None) is None and request_data.get("parent_id", None) is not None:
         translation_id = create_translation(request_data.get("table_name", None))
+        # need to add the new id to the location, subject ... table
+        # update table_name set translation_id = translation_id where id = ?
+        target_table = get_table(request_data.get("table_name", None))
+        values = {}
+        if translation_id is not None:
+            values["translation_id"] = translation_id
+        update = target_table.update().where(target_table.c.id == int(request_data.get("parent_id", None))).values(**values)
+        connection.execute(update)
     else:
         translation_id = request_data.get("translation_id", None)
         
