@@ -277,6 +277,52 @@ def edit_subject(project, subject_id):
         return jsonify("No valid update values given."), 400
 
 
+@event_tools.route("/<project>/translation/new/", methods=["POST"])
+@project_permission_required
+def add_new_translation(project):
+    """
+    Add a new transaltion 
+    """
+    request_data = request.get_json()
+    if not request_data:
+        return jsonify({"msg": "No data provided."}), 400
+    transaltion = get_table("translation_text")
+    connection = db_engine.connect()
+    
+    # create a new translation if not supplied
+    if request_data.get("translation_id", None) is None:
+        translation_id = create_translation(request_data.get("table_name", None))
+    else:
+        translation_id = request_data.get("translation_id", None)
+        
+    new_translation = {
+        "table_name": request_data.get("table_name", None),
+        "field_name": request_data.get("field_name", None),
+        "project_id": get_project_id_from_name(project),
+        "text": request_data.get("text", None),
+        "language": request_data.get("language", None),
+        "translation_id": translation_id
+    }
+    try:
+        insert = transaltion.insert()
+        result = connection.execute(insert, **new_translation)
+        new_row = select([transaltion]).where(transaltion.c.id == result.inserted_primary_key[0])
+        new_row = dict(connection.execute(new_row).fetchone())
+        result = {
+            "msg": "Created new translation with ID {}".format(result.inserted_primary_key[0]),
+            "row": new_row
+        }
+        return jsonify(result), 201
+    except Exception as e:
+        result = {
+            "msg": "Failed to create new translation.",
+            "reason": str(e)
+        }
+        return jsonify(result), 500
+    finally:
+        connection.close()
+
+
 @event_tools.route("/<project>/tags/new/", methods=["POST"])
 @project_permission_required
 def add_new_tag(project):
