@@ -334,7 +334,7 @@ def get_project_locations(project):
     # Get both locations and their translations
     sql = sqlalchemy.sql.text(""" SELECT *, 
 	( SELECT array_to_json(array_agg(row_to_json(d.*))) AS array_to_json
-                   FROM ( SELECT tt.id, tt.text, tt."language", t.neutral_text, tt.field_name, tt.table_name
+                   FROM ( SELECT tt.id, tt.text, tt."language", t.neutral_text, tt.field_name, tt.table_name, t.id as translation_id
                            FROM (translation t
                              JOIN translation_text tt ON ((tt.translation_id = t.id)))
                           WHERE ((t.id = l.translation_id AND tt.table_name = 'location') )) d) AS translations
