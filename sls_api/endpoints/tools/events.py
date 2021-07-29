@@ -4,7 +4,7 @@ from sqlalchemy import cast, select, Text
 from datetime import datetime
 
 from sls_api.endpoints.generics import db_engine, get_project_id_from_name, get_table, int_or_none, \
-    project_permission_required, select_all_from_table
+    project_permission_required, select_all_from_table, create_translation
 
 event_tools = Blueprint("event_tools", __name__)
 
@@ -43,7 +43,8 @@ def add_new_location(project):
         "project_id": get_project_id_from_name(project),
         "legacy_id": request_data.get("legacy_id", None),
         "latitude": request_data.get("latitude", None),
-        "longitude": request_data.get("longitude", None)
+        "longitude": request_data.get("longitude", None),
+        "translation_id": create_translation('location')
     }
     try:
         insert = locations.insert()

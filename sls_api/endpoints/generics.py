@@ -398,3 +398,19 @@ def get_content(project, folder, xml_filename, xsl_filename, parameters):
         content = "File not found"
 
     return content
+
+# Create a stub for a translation
+def create_translation(table_name):
+    connection = db_engine.connect()
+    stmt = """ INSERT INTO translation (neutral_text) VALUES('placeholder') RETURNING id """
+    statement = text(stmt)
+    result = connection.execute(statement)
+    row = result.fetchone()
+    if row is not None:
+        stmt = """ INSERT INTO translation_text (translation_id, text, table_name) VALUES(:t_id, 'placeholder', :table_name) RETURNING id """
+        statement = text(stmt).bindparams(t_id=row['id'], table_name=table_name)
+        result = connection.execute(statement)
+        row = result.fetchone()
+    connection.close()
+    
+    return row['id']
