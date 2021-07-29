@@ -298,7 +298,6 @@ def add_new_translation(project):
     new_translation = {
         "table_name": request_data.get("table_name", None),
         "field_name": request_data.get("field_name", None),
-        "project_id": get_project_id_from_name(project),
         "text": request_data.get("text", None),
         "language": request_data.get("language", None),
         "translation_id": translation_id
