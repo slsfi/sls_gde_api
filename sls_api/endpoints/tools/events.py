@@ -4,7 +4,7 @@ from sqlalchemy import cast, select, Text
 from datetime import datetime
 
 from sls_api.endpoints.generics import db_engine, get_project_id_from_name, get_table, int_or_none, \
-    project_permission_required, select_all_from_table, create_translation
+    project_permission_required, select_all_from_table, create_translation, create_translation_text
 
 event_tools = Blueprint("event_tools", __name__)
 
@@ -44,7 +44,7 @@ def add_new_location(project):
         "legacy_id": request_data.get("legacy_id", None),
         "latitude": request_data.get("latitude", None),
         "longitude": request_data.get("longitude", None),
-        "translation_id": create_translation('location')
+        "translation_id": create_translation_text(create_translation(), "location")
     }
     try:
         insert = locations.insert()
@@ -291,7 +291,7 @@ def add_new_translation(project):
     
     # create a new translation if not supplied
     if request_data.get("translation_id", None) is None and request_data.get("parent_id", None) is not None:
-        translation_id = create_translation(request_data.get("table_name", None))
+        translation_id = create_translation()
         # need to add the new id to the location, subject ... table
         # update table_name set translation_id = translation_id where id = ?
         target_table = get_table(request_data.get("table_name", None))
@@ -303,31 +303,32 @@ def add_new_translation(project):
     else:
         translation_id = request_data.get("translation_id", None)
         
-    new_translation = {
-        "table_name": request_data.get("table_name", None),
-        "field_name": request_data.get("field_name", None),
-        "text": request_data.get("text", None),
-        "language": request_data.get("language", None),
-        "translation_id": translation_id
-    }
-    try:
-        insert = transaltion.insert()
-        result = connection.execute(insert, **new_translation)
-        new_row = select([transaltion]).where(transaltion.c.id == result.inserted_primary_key[0])
-        new_row = dict(connection.execute(new_row).fetchone())
-        result = {
-            "msg": "Created new translation with ID {}".format(result.inserted_primary_key[0]),
-            "row": new_row
+        new_translation = {
+            "table_name": request_data.get("table_name", None),
+            "field_name": request_data.get("field_name", None),
+            "text": request_data.get("text", None),
+            "language": request_data.get("language", None),
+            "translation_id": translation_id
         }
-        return jsonify(result), 201
-    except Exception as e:
-        result = {
-            "msg": "Failed to create new translation.",
-            "reason": str(e)
-        }
-        return jsonify(result), 500
-    finally:
-        connection.close()
+        try:
+            insert = transaltion.insert()
+            result = connection.execute(insert, **new_translation)
+            new_row = select([transaltion]).where(transaltion.c.id == result.inserted_primary_key[0])
+            new_row = dict(connection.execute(new_row).fetchone())
+            result = {
+                "msg": "Created new translation with ID {}".format(result.inserted_primary_key[0]),
+                "row": new_row
+            }
+            return jsonify(result), 201
+        except Exception as e:
+            result = {
+                "msg": "Failed to create new translation.",
+                "reason": str(e)
+            }
+            return jsonify(result), 500
+        finally:
+            connection.close()
+    return result
 
 
 @event_tools.route("/<project>/tags/new/", methods=["POST"])
