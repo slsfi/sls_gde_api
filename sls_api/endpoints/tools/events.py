@@ -37,6 +37,10 @@ def add_new_location(project):
     locations = get_table("location")
     connection = db_engine.connect()
 
+    # Create the translation id
+    translation_id = create_translation()
+    # Add a default translation for the location
+    create_translation_text(translation_id, "location")
     new_location = {
         "name": request_data["name"],
         "description": request_data.get("description", None),
@@ -44,7 +48,7 @@ def add_new_location(project):
         "legacy_id": request_data.get("legacy_id", None),
         "latitude": request_data.get("latitude", None),
         "longitude": request_data.get("longitude", None),
-        "translation_id": create_translation_text(create_translation(), "location")
+        "translation_id": translation_id
     }
     try:
         insert = locations.insert()
