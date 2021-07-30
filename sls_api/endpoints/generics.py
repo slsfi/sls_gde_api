@@ -400,10 +400,10 @@ def get_content(project, folder, xml_filename, xsl_filename, parameters):
     return content
 
 # Create a stub for a translation
-def create_translation():
+def create_translation(neutral):
     connection = db_engine.connect()
-    stmt = """ INSERT INTO translation (neutral_text) VALUES('placeholder') RETURNING id """
-    statement = text(stmt)
+    stmt = """ INSERT INTO translation (neutral_text) VALUES(:neutral) RETURNING id """
+    statement = text(stmt).bindparams(neutral=neutral, )
     result = connection.execute(statement)
     row = result.fetchone()
     connection.close()

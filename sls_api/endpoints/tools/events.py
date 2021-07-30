@@ -35,7 +35,7 @@ def add_new_location(project):
         return jsonify({"msg": "No name in POST data"}), 400
 
     # Create the translation id
-    translation_id = create_translation()
+    translation_id = create_translation(request_data["name"])
     # Add a default translation for the location
     create_translation_text(translation_id, "location")
     
@@ -304,7 +304,7 @@ def edit_subject(project, subject_id):
 @project_permission_required
 def add_new_translation(project):
     """
-    Add a new transaltion 
+    Add a new translation 
     """
     request_data = request.get_json()
     if not request_data:
@@ -315,7 +315,7 @@ def add_new_translation(project):
     translation_id = request_data.get("translation_id", None)
     # create a new translation if not supplied
     if translation_id is None and request_data.get("parent_id", None) is not None:
-        translation_id = create_translation()
+        translation_id = create_translation(request_data.get("text", None))
         # need to add the new id to the location, subject ... table
         # update table_name set translation_id = translation_id where id = ?
         target_table = get_table(request_data.get("table_name", None))
@@ -351,6 +351,68 @@ def add_new_translation(project):
     finally:
         connection.close()
         return result
+
+
+@event_tools.route("/<project>/translations/<translation_text_id>/edit/", methods=["POST"])
+@project_permission_required
+def edit_translation(project, translation_text_id):
+    """
+    Edit a translation objects in the database
+
+    POST data MUST be in JSON format.
+
+    """
+    request_data = request.get_json()
+    if not request_data:
+        return jsonify({"msg": "No data provided."}), 400
+
+    translation_text = get_table("translation_text")
+
+    connection = db_engine.connect()
+    translation_text_query = select([translation_text.c.id]).where(translation_text.c.id == int_or_none(translation_text_id))
+    translation_text_row = connection.execute(translation_text_query).fetchone()
+    if translation_text_row is None:
+        return jsonify({"msg": "No translation_text with an ID of {} exists.".format(translation_text_id)}), 404
+
+    text = request_data.get("text", None)
+    language = request_data.get("language", None)
+    field_name = request_data.get("field_name", None)
+    table_name = request_data.get("table_name", None)
+    deleted = request_data.get("deleted", 0)
+
+    values = {}
+    if text is not None:
+        values["text"] = text
+    if language is not None:
+        values["language"] = language
+    if field_name is not None:
+        values["field_name"] = field_name
+    if table_name is not None:
+        values["table_name"] = table_name
+    if deleted is not None:
+        values["deleted"] = deleted
+
+    values["date_modified"] = datetime.now()
+
+    if len(values) > 0:
+        try:
+            update = translation_text.update().where(translation_text.c.id == int(translation_text_id)).values(**values)
+            connection.execute(update)
+            return jsonify({
+                "msg": "Updated translation_text {} with values {}".format(int(translation_text_id), str(values)),
+                "location_id": int(translation_text_id)
+            })
+        except Exception as e:
+            result = {
+                "msg": "Failed to update translation_text.",
+                "reason": str(e)
+            }
+            return jsonify(result), 500
+        finally:
+            connection.close()
+    else:
+        connection.close()
+        return jsonify("No valid update values given."), 400
 
 
 @event_tools.route("/<project>/tags/new/", methods=["POST"])
