@@ -415,6 +415,7 @@ def create_translation():
 # Create a stub for a translation
 def create_translation_text(translation_id, table_name):
     connection = db_engine.connect()
+    result = None
     if translation_id is not None:
         stmt = """ INSERT INTO translation_text (translation_id, text, table_name) VALUES(:t_id, 'placeholder', :table_name) RETURNING id """
         statement = text(stmt).bindparams(t_id=translation_id, table_name=table_name)
