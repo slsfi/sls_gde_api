@@ -410,7 +410,6 @@ def create_translation(table_name):
         stmt = """ INSERT INTO translation_text (translation_id, text, table_name) VALUES(:t_id, 'placeholder', :table_name) RETURNING id """
         statement = text(stmt).bindparams(t_id=row['id'], table_name=table_name)
         result = connection.execute(statement)
-        row = result.fetchone()
     connection.close()
     
     return row['id']
