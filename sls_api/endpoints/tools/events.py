@@ -34,13 +34,14 @@ def add_new_location(project):
     if "name" not in request_data:
         return jsonify({"msg": "No name in POST data"}), 400
 
-    locations = get_table("location")
-    connection = db_engine.connect()
-
     # Create the translation id
     translation_id = create_translation()
     # Add a default translation for the location
     create_translation_text(translation_id, "location")
+    
+    locations = get_table("location")
+    connection = db_engine.connect()
+    
     new_location = {
         "name": request_data["name"],
         "description": request_data.get("description", None),
@@ -102,7 +103,13 @@ def edit_location(project, location_id):
     legacy_id = request_data.get("legacy_id", None)
     latitude = request_data.get("latitude", None)
     longitude = request_data.get("longitude", None)
-
+    city = request_data.get("city", None)
+    region = request_data.get("region", None)
+    source = request_data.get("source", None)
+    alias = request_data.get("alias", None)
+    deleted = request_data.get("deleted", 0)
+    country = request_data.get("country", None)
+    
     values = {}
     if name is not None:
         values["name"] = name
@@ -114,6 +121,18 @@ def edit_location(project, location_id):
         values["latitude"] = latitude
     if longitude is not None:
         values["longitude"] = longitude
+    if city is not None:
+        values["city"] = city
+    if country is not None:
+        values["country"] = country
+    if region is not None:
+        values["region"] = region
+    if source is not None:
+        values["source"] = source
+    if alias is not None:
+        values["alias"] = alias
+    if deleted is not None:
+        values["deleted"] = deleted
 
     values["date_modified"] = datetime.now()
 
