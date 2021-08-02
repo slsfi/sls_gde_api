@@ -418,7 +418,7 @@ def create_translation(neutral):
 def create_translation_text(translation_id, table_name):
     connection = db_engine.connect()
     if translation_id is not None:
-        stmt = """ INSERT INTO translation_text (translation_id, text, table_name, language) VALUES(:t_id, 'placeholder', :table_name, 'not set') RETURNING id """
+        stmt = """ INSERT INTO translation_text (translation_id, text, table_name, field_name, language) VALUES(:t_id, 'placeholder', :table_name, 'language', 'not set') RETURNING id """
         statement = text(stmt).bindparams(t_id=translation_id, table_name=table_name)
         connection.execute(statement)
     connection.close()
@@ -429,8 +429,8 @@ def get_translation_text_id(translation_id, table_name, field_name, language):
     connection = db_engine.connect()
     if translation_id is not None:
         stmt = """ SELECT id FROM translation_text WHERE 
-                            (translation_id = :t_id AND language = :language AND table_name = :table_name AND field_name = :field_name AND language != 'not set' AND deleted = 0)
-                            OR (translation_id = :t_id AND (language is NULL OR language = 'not set') AND table_name = :table_name AND field_name = :field_name AND deleted = 0)
+                            (translation_id = :t_id AND (language is NULL OR language = 'not set') AND table_name = :table_name AND field_name = :field_name AND deleted = 0)
+                            OR (translation_id = :t_id AND language = :language AND table_name = :table_name AND field_name = :field_name AND language != 'not set' AND deleted = 0)
                     LIMIT 1
                 """
         statement = text(stmt).bindparams(t_id=translation_id, table_name=table_name, field_name=field_name, language=language)
