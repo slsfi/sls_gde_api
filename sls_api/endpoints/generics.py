@@ -418,7 +418,7 @@ def create_translation(neutral):
 def create_translation_text(translation_id, table_name):
     connection = db_engine.connect()
     if translation_id is not None:
-        stmt = """ INSERT INTO translation_text (translation_id, text, table_name) VALUES(:t_id, 'placeholder', :table_name) RETURNING id """
+        stmt = """ INSERT INTO translation_text (translation_id, text, table_name, language) VALUES(:t_id, 'placeholder', :table_name, 'not set') RETURNING id """
         statement = text(stmt).bindparams(t_id=translation_id, table_name=table_name)
         connection.execute(statement)
     connection.close()
@@ -428,9 +428,14 @@ def create_translation_text(translation_id, table_name):
 def get_translation_text_id(translation_id, table_name, field_name, language):
     connection = db_engine.connect()
     if translation_id is not None:
-        stmt = """ SELECT id FROM translation_text WHERE translation_id = :t_id AND language = :lang AND table_name = :table_name AND field_name = :field_name AND deleted = 0 """
+        stmt = """ SELECT id FROM translation_text WHERE 
+                            (translation_id = :t_id AND language = :language AND table_name = :table_name AND field_name = :field_name AND deleted = 0)
+                            OR (translation_id = :t_id AND language is NULL AND table_name = :table_name AND field_name = :field_name AND deleted = 0)
+                    LIMIT 1
+                """
         statement = text(stmt).bindparams(t_id=translation_id, table_name=table_name, field_name=field_name, language=language)
-        row = connection.execute(statement)
+        result = connection.execute(statement)
+        row = result.fetchone()
         connection.close()
         if row is not None:
             return row['id']
