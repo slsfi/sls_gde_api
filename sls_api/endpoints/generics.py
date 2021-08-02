@@ -399,6 +399,7 @@ def get_content(project, folder, xml_filename, xsl_filename, parameters):
 
     return content
 
+
 # Create a stub for a translation
 def create_translation(neutral):
     connection = db_engine.connect()
@@ -412,6 +413,7 @@ def create_translation(neutral):
     else:
         return None
 
+
 # Create a stub for a translation
 def create_translation_text(translation_id, table_name):
     connection = db_engine.connect()
@@ -420,3 +422,21 @@ def create_translation_text(translation_id, table_name):
         statement = text(stmt).bindparams(t_id=translation_id, table_name=table_name)
         connection.execute(statement)
     connection.close()
+    
+
+# Get a translation_text_id based on translation_id, table_name, field_name, language
+def get_translation_text_id(translation_id, table_name, field_name, language):
+    connection = db_engine.connect()
+    if translation_id is not None:
+        stmt = """ SELECT id FROM translation_text WHERE translation_id = :t_id AND language = :lang AND table_name = :table_name AND field_name = :field_name AND deleted = 0 """
+        statement = text(stmt).bindparams(t_id=translation_id, table_name=table_name, field_name=field_name, language=language)
+        row = connection.execute(statement)
+        connection.close()
+        if row is not None:
+            return row['id']
+        else:
+            return None
+    else:
+        connection = db_engine.connect()
+        return None
+    

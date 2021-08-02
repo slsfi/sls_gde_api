@@ -4,7 +4,7 @@ from sqlalchemy import cast, select, Text
 from datetime import datetime
 
 from sls_api.endpoints.generics import db_engine, get_project_id_from_name, get_table, int_or_none, \
-    project_permission_required, select_all_from_table, create_translation, create_translation_text
+    project_permission_required, select_all_from_table, create_translation, create_translation_text, get_translation_text_id
 
 event_tools = Blueprint("event_tools", __name__)
 
@@ -353,13 +353,19 @@ def add_new_translation(project):
         return result
 
 
-@event_tools.route("/<project>/translations/<translation_text_id>/edit/", methods=["POST"])
+@event_tools.route("/<project>/translations/<translation_id>/edit/", methods=["POST"])
 @project_permission_required
-def edit_translation(project, translation_text_id):
+def edit_translation(project, translation_id):
     """
     Edit a translation objects in the database
 
     POST data MUST be in JSON format.
+    
+    NB! We need to check if the combination of table_name & field_name already exists or not.
+    If it does not consist, add, otherwise update.
+    
+    SELECT the translation_text rows with the translation_id
+    Chekc if we have matches to language & table_name & field_name
 
     """
     request_data = request.get_json()
@@ -368,51 +374,61 @@ def edit_translation(project, translation_text_id):
 
     translation_text = get_table("translation_text")
 
+    new_translation = {
+        "table_name": request_data.get("table_name", None),
+        "field_name": request_data.get("field_name", None),
+        "text": request_data.get("text", None),
+        "language": request_data.get("language", None),
+        "translation_id": translation_id
+    }
+
+    translation_text_id = get_translation_text_id(translation_id, new_translation["table_name"], new_translation["field_name"], new_translation["language"])
+    
     connection = db_engine.connect()
-    translation_text_query = select([translation_text.c.id]).where(translation_text.c.id == int_or_none(translation_text_id))
-    translation_text_row = connection.execute(translation_text_query).fetchone()
-    if translation_text_row is None:
-        return jsonify({"msg": "No translation_text with an ID of {} exists.".format(translation_text_id)}), 404
-
-    text = request_data.get("text", None)
-    language = request_data.get("language", None)
-    field_name = request_data.get("field_name", None)
-    table_name = request_data.get("table_name", None)
-    deleted = request_data.get("deleted", 0)
-
-    values = {}
-    if text is not None:
-        values["text"] = text
-    if language is not None:
-        values["language"] = language
-    if field_name is not None:
-        values["field_name"] = field_name
-    if table_name is not None:
-        values["table_name"] = table_name
-    if deleted is not None:
-        values["deleted"] = deleted
-
-    values["date_modified"] = datetime.now()
-
-    if len(values) > 0:
+    
+    # if translation_text_id is None we should add a new row to the translation_text table
+    if translation_text_id is None:
         try:
-            update = translation_text.update().where(translation_text.c.id == int(translation_text_id)).values(**values)
-            connection.execute(update)
-            return jsonify({
-                "msg": "Updated translation_text {} with values {}".format(int(translation_text_id), str(values)),
-                "location_id": int(translation_text_id)
-            })
+            insert = translation_text.insert()
+            result = connection.execute(insert, **new_translation)
+            new_row = select([translation_text]).where(translation_text.c.id == result.inserted_primary_key[0])
+            new_row = dict(connection.execute(new_row).fetchone())
+            result = {
+                "msg": "Created new translation_text with ID {}".format(result.inserted_primary_key[0]),
+                "row": new_row
+            }
+            return jsonify(result), 201
         except Exception as e:
             result = {
-                "msg": "Failed to update translation_text.",
+                "msg": "Failed to create new translation_text.",
                 "reason": str(e)
             }
             return jsonify(result), 500
         finally:
             connection.close()
+            return result
+    # if translation_text_id is not None, we should update the data
     else:
-        connection.close()
-        return jsonify("No valid update values given."), 400
+        new_translation["date_modified"] = datetime.now()
+        if len(new_translation) > 0:
+            try:
+                update = translation_text.update().where(translation_text.c.id == int(translation_text_id)).values(**new_translation)
+                connection.execute(update)
+                return jsonify({
+                    "msg": "Updated translation_text {} with values {}".format(int(translation_text_id), str(new_translation)),
+                    "location_id": int(translation_text_id)
+                })
+            except Exception as e:
+                result = {
+                    "msg": "Failed to update translation_text.",
+                    "reason": str(e)
+                }
+                return jsonify(result), 500
+            finally:
+                connection.close()
+        else:
+            connection.close()
+            return jsonify("No valid update values given."), 400
 
 
 @event_tools.route("/<project>/tags/new/", methods=["POST"])
