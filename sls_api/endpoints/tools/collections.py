@@ -288,8 +288,7 @@ def list_publication_collections(project):
     project_id = get_project_id_from_name(project)
     connection = db_engine.connect()
     # collections = get_table("publication_collection")
-    statement = """
-        SELECT pc.id, pc.name as title, pc.published, pc.date_created, pc.date_modified, pc.date_published_externally, pc.legacy_id,
+    statement = """ SELECT pc.id, pc.name as title, pc.published, pc.date_created, pc.date_modified, pc.date_published_externally, pc.legacy_id,
         pc.project_id, pc.publication_collection_title_id, pc.publication_collection_introduction_id, pc.name,
         pct.original_filename AS collection_title_filename, pci.original_filename AS collection_intro_filename,
         pct.id AS collection_title_id, pci.id AS collection_intro_id
