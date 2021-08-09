@@ -295,8 +295,7 @@ def list_publication_collections(project):
         FROM publication_collection pc
         LEFT JOIN publication_collection_title pct ON pct.id = pc.publication_collection_title_id
         LEFT JOIN publication_collection_introduction pci ON pci.id = pc.publication_collection_introduction_id
-        WHERE pc.project_id=:project_id AND pc.published>=1 ORDER BY pc.id
-    """
+        WHERE pc.project_id=:project_id AND pc.published>=1 ORDER BY pc.id """
     text(statement).bindparams(project_id=int_or_none(project_id))
     # statement = select([collections]).where(collections.c.project_id == int_or_none(project_id))
     rows = connection.execute(statement).fetchall()
