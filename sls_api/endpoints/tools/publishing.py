@@ -91,7 +91,12 @@ def edit_publication_collection(project, collection_id):
         return jsonify({"msg": "No data provided."}), 400
     name = request_data.get("name", None)
     published = request_data.get("published", None)
-
+    
+    collection_title_id = request_data.get("collection_title_id", None)
+    collection_title_filename = request_data.get("collection_title_filename", None)
+    collection_intro_id = request_data.get("collection_intro_id", None)    
+    collection_intro_filename = request_data.get("collection_intro_filename", None)
+    
     collections = get_table("publication_collection")
     query = select([collections.c.id]).where(collections.c.id == int_or_none(collection_id))
     connection = db_engine.connect()
@@ -101,11 +106,55 @@ def edit_publication_collection(project, collection_id):
         connection.close()
         return jsonify("No such publication collection exists."), 404
 
+    introductions = get_table("publication_collection_introduction")
+    titles = get_table("publication_collection_title")
+    
+    new_intro = {
+        "published": request_data.get("intro_published", 1),
+        "original_filename": request_data.get("original_filename", 1)
+    }
+
+    new_title = {
+        "published": request_data.get("title_published", 1),
+        "original_filename": request_data.get("original_filename", 1)
+    }
+
+    if collection_title_id is None and collection_title_filename is not None:
+        # Create a new title and add the id to the Collection
+        ins = titles.insert()
+        result = connection.execute(ins, **new_title)
+        new_title_row = select([titles]).where(titles.c.id == result.inserted_primary_key[0])
+        new_title_row = dict(connection.execute(new_title_row).fetchone())
+        collection_title_id = new_title_row["id"];
+
+    if collection_intro_id is None and collection_intro_filename is not None:
+        # Create a new intro and add the id to the Collection
+        ins = introductions.insert()
+        result = connection.execute(ins, **new_intro)
+        new_intro_row = select([introductions]).where(introductions.c.id == result.inserted_primary_key[0])
+        new_intro_row = dict(connection.execute(new_intro_row).fetchone())
+        collection_intro_id = new_intro_row["id"];
+        
+        
+    if  collection_title_id is not None:
+        # Update the Title data
+        update = introductions.update().where(titles.c.id == collection_title_id).values(**new_title)
+        connection.execute(update)
+        
+    if  collection_intro_id is not None:
+        # Update the Intro data
+        update = introductions.update().where(introductions.c.id == collection_intro_id).values(**new_intro)
+        connection.execute(update)
+
     values = {}
     if name is not None:
         values["name"] = name
     if published is not None:
         values["published"] = published
+    if collection_intro_id is not None:
+        values["publication_collection_introduction_id"] = collection_intro_id
+    if collection_title_id is not None:
+        values["publication_collection_title_id"] = collection_title_id
 
     values["date_modified"] = datetime.now()
 
