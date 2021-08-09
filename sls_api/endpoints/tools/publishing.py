@@ -92,9 +92,9 @@ def edit_publication_collection(project, collection_id):
     name = request_data.get("name", None)
     published = request_data.get("published", None)
     
-    collection_title_id = request_data.get("collection_title_id", None)
+    collection_title_id = request_data.get("publication_collection_title_id", None)
     collection_title_filename = request_data.get("collection_title_filename", None)
-    collection_intro_id = request_data.get("collection_intro_id", None)    
+    collection_intro_id = request_data.get("publication_collection_introduction_id", None)    
     collection_intro_filename = request_data.get("collection_intro_filename", None)
     
     collections = get_table("publication_collection")
@@ -111,12 +111,12 @@ def edit_publication_collection(project, collection_id):
     
     new_intro = {
         "published": request_data.get("intro_published", 1),
-        "original_filename": request_data.get("original_filename", 1)
+        "original_filename": request_data.get("collection_intro_filename", 1)
     }
 
     new_title = {
         "published": request_data.get("title_published", 1),
-        "original_filename": request_data.get("original_filename", 1)
+        "original_filename": request_data.get("collection_title_filename", 1)
     }
 
     if collection_title_id is None and collection_title_filename is not None:
