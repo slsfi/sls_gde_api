@@ -379,10 +379,14 @@ def edit_translation(project, translation_id):
         "field_name": request_data.get("field_name", None),
         "text": request_data.get("text", None),
         "language": request_data.get("language", None),
+        "translation_text_id": request_data.get("translation_text_id", None),
         "translation_id": translation_id
     }
 
-    translation_text_id = get_translation_text_id(translation_id, new_translation["table_name"], new_translation["field_name"], new_translation["language"])
+    if new_translation["translation_text_id"] is None:
+        translation_text_id = get_translation_text_id(translation_id, new_translation["table_name"], new_translation["field_name"], new_translation["language"])
+    else:
+        translation_text_id = new_translation["translation_text_id"]
     
     connection = db_engine.connect()
     
