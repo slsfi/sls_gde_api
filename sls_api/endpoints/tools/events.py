@@ -395,6 +395,8 @@ def edit_translation(project, translation_id):
     # if translation_text_id is None we should add a new row to the translation_text table
     if translation_text_id is None:
         try:
+            # Make sure we add a new ID
+            new_translation["id"] = None
             insert = translation_text.insert()
             result = connection.execute(insert, **new_translation)
             new_row = select([translation_text]).where(translation_text.c.id == result.inserted_primary_key[0])
