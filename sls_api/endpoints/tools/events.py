@@ -383,10 +383,12 @@ def edit_translation(project, translation_id):
         "translation_id": translation_id
     }
 
-    if new_translation["id"] is None:
-        translation_text_id = get_translation_text_id(translation_id, new_translation["table_name"], new_translation["field_name"], new_translation["language"])
-    else:
+    if new_translation["id"] is not None and new_translation["field_name"] == 'language':
+        # We are updating the language
         translation_text_id = new_translation["id"]
+    else:
+        # We are updating or creating a new translation
+        translation_text_id = get_translation_text_id(translation_id, new_translation["table_name"], new_translation["field_name"], new_translation["language"])
     
     connection = db_engine.connect()
     
