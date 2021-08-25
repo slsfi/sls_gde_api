@@ -1,6 +1,6 @@
 from flask import abort, Blueprint, request, Response, safe_join
 from flask.json import jsonify
-from flask_jwt_extended import get_jwt_identity, jwt_required, jwt_optional
+from flask_jwt_extended import get_jwt_identity, jwt_optional
 import glob
 import io
 import json
@@ -332,14 +332,14 @@ def get_project_locations(project):
     connection = db_engine.connect()
     project_id = get_project_id_from_name(project)
     # Get both locations and their translations
-    sql = sqlalchemy.sql.text(""" SELECT *, 
-	( SELECT array_to_json(array_agg(row_to_json(d.*))) AS array_to_json
+    sql = sqlalchemy.sql.text(""" SELECT *,
+    ( SELECT array_to_json(array_agg(row_to_json(d.*))) AS array_to_json
                    FROM ( SELECT tt.id, tt.text, tt."language", t.neutral_text, tt.field_name, tt.table_name, t.id as translation_id,
                             tt.date_modified, tt.date_created
                            FROM (translation t
                              JOIN translation_text tt ON ((tt.translation_id = t.id)))
                           WHERE ((t.id = l.translation_id AND tt.table_name = 'location')) ORDER BY translation_id DESC) d) AS translations
-        FROM location l WHERE l.project_id = :p_id ORDER BY NAME ASC """)    
+        FROM location l WHERE l.project_id = :p_id ORDER BY NAME ASC """)
     statement = sql.bindparams(p_id=project_id, )
     results = []
     for row in connection.execute(statement).fetchall():

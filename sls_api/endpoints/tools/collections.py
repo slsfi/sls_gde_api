@@ -203,10 +203,10 @@ def edit_facsimile(project):
     connection = db_engine.connect()
     facsimile_query = select([facsimile.c.id]).where(facsimile.c.id == int_or_none(facsimile_id))
     facsimile_row = connection.execute(facsimile_query).fetchone()
-    if facsimile is None:
+    if facsimile_row is None:
         return jsonify({"msg": "No facsimile with an ID of {} exists.".format(facsimile_id)}), 404
 
-    facsimile_collection_id = request_data.get("facsimile_collection_id", None)
+    # facsimile_collection_id = request_data.get("facsimile_collection_id", None)
     page = request_data.get("page", None)
     priority = request_data.get("priority", None)
     type = request_data.get("type", None)

@@ -38,10 +38,10 @@ def add_new_location(project):
     translation_id = create_translation(request_data["name"])
     # Add a default translation for the location
     create_translation_text(translation_id, "location")
-    
+
     locations = get_table("location")
     connection = db_engine.connect()
-    
+
     new_location = {
         "name": request_data["name"],
         "description": request_data.get("description", None),
@@ -109,7 +109,7 @@ def edit_location(project, location_id):
     alias = request_data.get("alias", None)
     deleted = request_data.get("deleted", 0)
     country = request_data.get("country", None)
-    
+
     values = {}
     if name is not None:
         values["name"] = name
@@ -304,7 +304,7 @@ def edit_subject(project, subject_id):
 @project_permission_required
 def add_new_translation(project):
     """
-    Add a new translation 
+    Add a new translation
     """
     request_data = request.get_json()
     if not request_data:
@@ -360,13 +360,12 @@ def edit_translation(project, translation_id):
     Edit a translation objects in the database
 
     POST data MUST be in JSON format.
-    
+
     NB! We need to check if the combination of table_name & field_name already exists or not.
     If it does not consist, add, otherwise update.
-    
-    SELECT the translation_text rows with the translation_id
-    Chekc if we have matches to language & table_name & field_name
 
+    SELECT the translation_text rows with the translation_id
+    Check if we have matches to language & table_name & field_name
     """
     request_data = request.get_json()
     if not request_data:
@@ -383,9 +382,9 @@ def edit_translation(project, translation_id):
     }
 
     translation_text_id = get_translation_text_id(translation_id, new_translation["table_name"], new_translation["field_name"], new_translation["language"])
-    
+
     connection = db_engine.connect()
-    
+
     # if translation_text_id is None we should add a new row to the translation_text table
     if translation_text_id is None:
         try:
