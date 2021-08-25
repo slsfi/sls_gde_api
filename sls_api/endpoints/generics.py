@@ -15,6 +15,19 @@ from sqlalchemy import create_engine, MetaData, Table
 from sqlalchemy.sql import select, text
 import time
 
+ALLOWED_EXTENSIONS_FOR_FACSIMILE_UPLOAD = ["tif", "tiff", "png", "jpg", "jpeg"]
+
+FACSIMILE_UPLOAD_FOLDER = "/tmp/uploads"
+
+# these are the max resolutions for each zoom level of facsimile, used for resizing uploaded TIF files.
+# imagemagick retains aspect ratio by default, so resizing a 730x1200 image to "600x600" would result in a 365x600 file
+FACSIMILE_IMAGE_SIZES = {
+    1: "600x600",
+    2: "1200x1200",
+    3: "2000x2000",
+    4: "4000x4000"
+}
+
 metadata = MetaData()
 
 logger = logging.getLogger("sls_api.generics")
@@ -40,6 +53,11 @@ with io.open(os.path.join(config_dir, "digital_editions.yml"), encoding="UTF-8")
     # automatically recycle unused connections after 15 minutes of not being used, to prevent keeping connections open to postgresql forever
     db_engine = create_engine(config["engine"], pool_pre_ping=True, pool_size=30, max_overflow=30, pool_recycle=900)
     elastic_config = config["elasticsearch_connection"]
+
+
+def allowed_facsimile(filename):
+    return '.' in filename and \
+           filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS_FOR_FACSIMILE_UPLOAD
 
 
 def get_project_config(project_name):
