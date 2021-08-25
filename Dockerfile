@@ -1,13 +1,24 @@
 FROM python:3.6-slim-stretch
 
 # build-essential is needed to build some libraries (mainly uwsgi and the various database support ones)
+# git is needed to pull/push file changes
+# imagemagick is needed for conversions as part of facsimile upload
 # libmariadbclient-dev is needed to build mysqlclient for mysql/mariadb support
-RUN apt update && apt install -y build-essential libmariadbclient-dev libpq-dev git
+# libpq-dev is needed for proper postgresql support
+RUN apt update && apt install -y \
+    build-essential \
+    git \
+    imagemagick \
+    libmariadbclient-dev \
+    libpq-dev
 
 # create uwsgi user for uWSGI to run as (running as root is a Bad Idea, generally)
 RUN useradd -ms /bin/bash uwsgi
 RUN mkdir /app
 RUN chown -R uwsgi /app
+
+# remove default imagemagick policy file, as it's horribly restrictive for our use-case
+RUN rm /etc/ImageMagick-6/policy.xml
 
 # drop into uwsgi user to copy over API files, should ensure proper permissions for these files
 USER uwsgi
