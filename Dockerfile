@@ -29,11 +29,23 @@ COPY . /app/
 USER root
 RUN pip install uwsgi
 RUN pip install -e .
+RUN chown -R uwsgi /app
+
+
+# relocate SSH key and fix permissions
+RUN mkdir -p /home/uwsgi/.ssh
+RUN mv /app/deploy_ssh_key /home/uwsgi/.ssh/id_rsa
+RUN chown -R uwsgi:uwsgi /home/uwsgi/.ssh
+RUN chmod 600 /home/uwsgi/.ssh/id_rsa
 
 # finally drop back into uwsgi user to copy final files and run API
 USER uwsgi
-# Ensure .ssh folder exists, for SSH keys/configuration to be mounted
-RUN mkdir ~/.ssh
 
-# Set SSH file permissions and then start API using uwsgi.ini configuration file
-CMD ["/bin/bash", "-c", "chmod -R 600 ~/.ssh && uwsgi --ini /app/uwsgi.ini"]
+# scan SSH host keys for github.com
+RUN ssh-keyscan github.com >> ~/.ssh/known_hosts
+
+# set up git user
+RUN git config --global user.email is@sls.fi
+RUN git config --global user.name sls-deployment
+
+CMD ["uwsgi", "--ini", "/app/uwsgi.ini"]
