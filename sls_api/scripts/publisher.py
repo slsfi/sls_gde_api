@@ -226,7 +226,7 @@ def generate_ms_file(master_file_path, target_file_path, publication_info):
     ms_document.Save(target_file_path)
 
 
-def check_publication_mtimes_and_publish_files(project: str, publication_ids: Union[tuple, None], no_git=False, force_publish=False):
+def check_publication_mtimes_and_publish_files(project: str, publication_ids: Union[tuple, None], git_author: str, no_git=False, force_publish=False):
     update_success, result_str = update_files_in_git_repo(project)
     if not update_success:
         logger.error("Git update failed! Reason: {}".format(result_str))
@@ -671,8 +671,7 @@ def check_publication_mtimes_and_publish_files(project: str, publication_ids: Un
                     for change in changes:
                         # Each changed file should be added, as there may be other activity in the git repo we don't want to commit
                         outputs.append(run_git_command(project, ["add", change]))
-                    # Using Publisher as the author with the is@sls.fi email as a contact point should be fine
-                    outputs.append(run_git_command(project, ["commit", "--author=Publisher <is@sls.fi>", "-m", "Published new web files"]))
+                    outputs.append(run_git_command(project, ["commit", "--author", git_author, "-m", "Published new web files"]))
                     outputs.append(run_git_command(project, ["push"]))
                 except CalledProcessError:
                     logger.exception("Exception during git sync of webfile changes.")
@@ -688,6 +687,7 @@ if __name__ == "__main__":
                         help="Force re-publication of all publications (tries to publish all files, est/com/var/ms)")
     parser.add_argument("-l", "--list_projects", action="store_true",
                         help="Print a listing of available projects with seemingly valid configuration and exit")
+    parser.add_argument("--git_author", type=str, help="Author used for git commits (Default 'Publisher <is@sls.fi>')", default="Publisher <is@sls.fi>")
     parser.add_argument("--no_git", action="store_true", help="Don't run git commands as part of publishing.")
 
     args = parser.parse_args()
@@ -705,10 +705,12 @@ if __name__ == "__main__":
             ids = tuple(args.publication_ids)
         if str(args.project).lower() == "all":
             for p in valid_projects:
-                check_publication_mtimes_and_publish_files(p, ids, no_git=args.no_git, force_publish=args.all_ids)
+                check_publication_mtimes_and_publish_files(p, ids, git_author=args.git_author,
+                                                           no_git=args.no_git, force_publish=args.all_ids)
         else:
             if args.project in valid_projects:
-                check_publication_mtimes_and_publish_files(args.project, ids, no_git=args.no_git, force_publish=args.all_ids)
+                check_publication_mtimes_and_publish_files(args.project, ids, git_author=args.git_author,
+                                                           no_git=args.no_git, force_publish=args.all_ids)
             else:
                 logger.error(f"{args.project} is not in the API configuration or lacks 'comments_database' setting, aborting...")
                 sys.exit(1)

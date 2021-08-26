@@ -2,7 +2,6 @@
 from lxml import etree as ET
 import re
 import io
-import html
 from io import StringIO
 from bs4 import BeautifulSoup
 
@@ -749,7 +748,7 @@ class CTeiDocument:
                 soup.contents[0].unwrap()
                 dom = ET.parse(StringIO("<note>" + str(soup) + "</note>"))
                 newdom = transform(dom)
-                result = ET.tostring(newdom, encoding='unicode')                
+                result = ET.tostring(newdom, encoding='unicode')
             except Exception as e:
                 print(e)
         # Return as TEI xml

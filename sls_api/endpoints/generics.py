@@ -440,13 +440,13 @@ def create_translation_text(translation_id, table_name):
         statement = text(stmt).bindparams(t_id=translation_id, table_name=table_name)
         connection.execute(statement)
     connection.close()
-    
+
 
 # Get a translation_text_id based on translation_id, table_name, field_name, language
 def get_translation_text_id(translation_id, table_name, field_name, language):
     connection = db_engine.connect()
     if translation_id is not None:
-        stmt = """ SELECT id FROM translation_text WHERE 
+        stmt = """ SELECT id FROM translation_text WHERE
                             (translation_id = :t_id AND (language is NULL OR language = 'not set') AND table_name = :table_name AND field_name = :field_name AND deleted = 0)
                             OR (translation_id = :t_id AND language = :language AND table_name = :table_name AND field_name = :field_name AND language != 'not set' AND deleted = 0)
                     LIMIT 1
@@ -461,5 +461,5 @@ def get_translation_text_id(translation_id, table_name, field_name, language):
             return None
     else:
         connection = db_engine.connect()
+        connection.close()
         return None
-    

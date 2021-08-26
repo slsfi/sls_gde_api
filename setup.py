@@ -22,7 +22,7 @@ setup(
         'requests==2.25.*',
         'simplejson==3.17.*',
         'sqlalchemy==1.3.*',
-        'Pillow==8.1.*',
+        'Pillow==8.2.*',
         'werkzeug==1.0.*',
         'elasticsearch==7.11.*'
     ]
