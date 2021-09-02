@@ -20,20 +20,11 @@ logger = logging.getLogger("sls_api.metadata")
 
 
 @meta.route("/projects/")
-@jwt_optional
 def get_projects():
     """
     List all GDE projects
     """
-    jwt = get_jwt_identity()
-    if jwt is None:
-        return select_all_from_table("project")
-    else:
-        if int(os.environ.get("FLASK_DEBUG", 0)) == 1 and jwt["sub"] == "test@test.com":
-            # test user in DEBUG mode has access to all projects
-            return select_all_from_table("project")
-        else:
-            return jsonify(jwt["projects"])
+    return select_all_from_table("project")
 
 
 @meta.route("/<project>/html/<filename>")
@@ -216,8 +207,10 @@ def get_collections(project):
         connection = db_engine.connect()
         status = 1 if config["show_internally_published"] else 2
         project_id = get_project_id_from_name(project)
-        sql = sqlalchemy.sql.text(
-            "SELECT id, name as title FROM publication_collection WHERE project_id = :p_id AND published>=:p_status ORDER BY name")
+        sql = sqlalchemy.sql.text("SELECT id, name as title "
+                                  "FROM publication_collection "
+                                  "WHERE project_id = :p_id AND published>=:p_status "
+                                  "ORDER BY name")
         statement = sql.bindparams(p_status=status, p_id=project_id)
         results = []
         for row in connection.execute(statement).fetchall():
@@ -271,9 +264,11 @@ def get_collection_publication_by_legacyid(project, legacy_id):
     logger.info("Getting /<project>/legacy/<legacy_id>")
     connection = db_engine.connect()
     project_id = get_project_id_from_name(project)
-    sql = sqlalchemy.sql.text("SELECT p.id as pub_id, pc.id as coll_id FROM publication p \
-                                JOIN publication_collection pc ON pc.id = p.publication_collection_id \
-                                WHERE (p.legacy_id = :l_id OR pc.legacy_id = :l_id) AND pc.project_id = :p_id ORDER BY pc.id")
+    sql = sqlalchemy.sql.text("SELECT p.id as pub_id, pc.id as coll_id "
+                              "FROM publication p "
+                              "JOIN publication_collection pc ON pc.id = p.publication_collection_id "
+                              "WHERE (p.legacy_id = :l_id OR pc.legacy_id = :l_id) AND pc.project_id = :p_id "
+                              "ORDER BY pc.id")
     statement = sql.bindparams(l_id=legacy_id, p_id=project_id)
     results = []
     for row in connection.execute(statement).fetchall():
@@ -287,8 +282,8 @@ def get_collection_publication_by_legacyid(project, legacy_id):
 def get_legacyid_by_publication_id(project, publication_id):
     logger.info("Getting /<project>/legacy/publication/<publication_id>")
     connection = db_engine.connect()
-    sql = sqlalchemy.sql.text("SELECT p.legacy_id FROM publication p WHERE p.id = :p_id AND deleted != 1 ")
-    statement = sql.bindparams(p_id=publication_id, )
+    sql = sqlalchemy.sql.text("SELECT p.legacy_id FROM publication p WHERE p.id = :p_id AND deleted != 1")
+    statement = sql.bindparams(p_id=publication_id)
     results = []
     for row in connection.execute(statement).fetchall():
         results.append(dict(row))
@@ -301,8 +296,8 @@ def get_legacyid_by_publication_id(project, publication_id):
 def get_legacyid_by_collection_id(project, collection_id):
     logger.info("Getting /<project>/legacy/collection/<collection_id>")
     connection = db_engine.connect()
-    sql = sqlalchemy.sql.text("SELECT pc.legacy_id FROM publication_collection pc WHERE pc.id = :pc_id AND deleted != 1 ")
-    statement = sql.bindparams(pc_id=collection_id, )
+    sql = sqlalchemy.sql.text("SELECT pc.legacy_id FROM publication_collection pc WHERE pc.id = :pc_id AND deleted != 1")
+    statement = sql.bindparams(pc_id=collection_id)
     results = []
     for row in connection.execute(statement).fetchall():
         results.append(dict(row))
@@ -316,8 +311,8 @@ def get_project_subjects(project):
     logger.info("Getting /<project>/subjects")
     connection = db_engine.connect()
     project_id = get_project_id_from_name(project)
-    sql = sqlalchemy.sql.text(""" SELECT * FROM subject WHERE project_id = :p_id """)
-    statement = sql.bindparams(p_id=project_id, )
+    sql = sqlalchemy.sql.text("SELECT * FROM subject WHERE project_id = :p_id")
+    statement = sql.bindparams(p_id=project_id)
     results = []
     for row in connection.execute(statement).fetchall():
         results.append(dict(row))
@@ -332,15 +327,12 @@ def get_project_locations(project):
     connection = db_engine.connect()
     project_id = get_project_id_from_name(project)
     # Get both locations and their translations
-    sql = sqlalchemy.sql.text(""" SELECT *,
-    ( SELECT array_to_json(array_agg(row_to_json(d.*))) AS array_to_json
-                   FROM ( SELECT tt.id, tt.text, tt."language", t.neutral_text, tt.field_name, tt.table_name, t.id as translation_id,
-                            tt.date_modified, tt.date_created
-                           FROM (translation t
-                             JOIN translation_text tt ON ((tt.translation_id = t.id)))
-                          WHERE ((t.id = l.translation_id AND tt.table_name = 'location')) ORDER BY translation_id DESC) d) AS translations
-        FROM location l WHERE l.project_id = :p_id ORDER BY NAME ASC """)
-    statement = sql.bindparams(p_id=project_id, )
+    stmnt = "SELECT *, (SELECT array_to_json(array_agg(row_to_json(d.*))) AS array_to_json " \
+            "FROM (SELECT tt.id, tt.text, tt.language, t.neutral_text, tt.field_name, tt.table_name, t.id as translation_id, tt.date_modified, tt.date_created " \
+            "FROM translation t JOIN translation_text tt ON tt.translation_id = t.id " \
+            "WHERE t.id = l.translation_id and tt.table_name = 'location' ORDER BY translation_id DESC) d) AS translations " \
+            "FROM location l WHERE l.project_id = :p_id ORDER BY NAME"
+    statement = sqlalchemy.sql.text(stmnt).bindparams(p_id=project_id)
     results = []
     for row in connection.execute(statement).fetchall():
         results.append(dict(row))
@@ -369,7 +361,7 @@ def get_project_works(project):
     logger.info("Getting /<project>/works")
     connection = db_engine.connect()
     project_id = get_project_id_from_name(project)
-    sql = sqlalchemy.sql.text(""" SELECT * FROM work WHERE project_id = :p_id """)
+    sql = sqlalchemy.sql.text("SELECT * FROM work WHERE project_id = :p_id")
     statement = sql.bindparams(p_id=project_id, )
     results = []
     for row in connection.execute(statement).fetchall():
@@ -433,21 +425,20 @@ def get_project_tooltip_text(project, object_type, ident, use_legacy=False):
 def get_subject(project, subject_id):
     logger.info("Getting subject /{}/subject/{}".format(project, subject_id))
     connection = db_engine.connect()
-    subject_sql = "SELECT * FROM subject "
     project_id = get_project_id_from_name(project)
     # Check if subject_id is a number
     try:
         subject_id = int(subject_id)
-        subject_sql = subject_sql + " WHERE id = :id AND deleted = 0 AND project_id = :p_id "
+        subject_sql = "SELECT * FROM subject WHERE id = :id AND deleted = 0 AND project_id = :p_id"
     except ValueError:
         subject_id = subject_id
-        subject_sql = subject_sql + " WHERE legacy_id = :id AND deleted = 0 AND project_id = :p_id "
+        subject_sql = "SELECT * FROM subject WHERE legacy_id = :id AND deleted = 0 AND project_id = :p_id"
 
     statement = sqlalchemy.sql.text(subject_sql).bindparams(id=subject_id, p_id=project_id)
     return_data = connection.execute(statement).fetchone()
 
     if return_data is None:
-        subject_sql = " SELECT * FROM subject WHERE legacy_id = :id AND deleted = 0 AND project_id = :p_id "
+        subject_sql = " SELECT * FROM subject WHERE legacy_id = :id AND deleted = 0 AND project_id = :p_id"
         statement = sqlalchemy.sql.text(subject_sql).bindparams(id=str(subject_id), p_id=project_id)
         return_data = connection.execute(statement).fetchone()
         connection.close()
@@ -464,16 +455,15 @@ def get_subject(project, subject_id):
 def get_tag(project, tag_id):
     logger.info("Getting tag /{}/tag/{}".format(project, tag_id))
     connection = db_engine.connect()
-    tag_sql = "SELECT * FROM tag "
 
     project_id = get_project_id_from_name(project)
     # Check if tag_id is a number
     try:
         tag_id = int(tag_id)
-        tag_sql = tag_sql + " WHERE id = :id AND deleted = 0 AND project_id = :p_id "
+        tag_sql = "SELECT * FROM tag WHERE id = :id AND deleted = 0 AND project_id = :p_id"
     except ValueError:
         tag_id = tag_id
-        tag_sql = tag_sql + " WHERE legacy_id = :id AND deleted = 0 AND project_id = :p_id "
+        tag_sql = "SELECT * FROM tag WHERE id = :id AND deleted = 0 AND project_id = :p_id"
 
     statement = sqlalchemy.sql.text(tag_sql).bindparams(id=tag_id, p_id=project_id)
     return_data = connection.execute(statement).fetchone()
@@ -496,15 +486,14 @@ def get_tag(project, tag_id):
 def get_work(project, work_id):
     logger.info("Getting work /{}/work/{}".format(project, work_id))
     connection = db_engine.connect()
-    work_sql = "SELECT * FROM work "
 
     # Check if work_id is a number
     try:
         work_id = int(work_id)
-        work_sql = work_sql + " WHERE id = :id AND deleted = 0 "
+        work_sql = "SELECT * FROM work WHERE id = :id AND deleted = 0"
     except ValueError:
         work_id = work_id
-        work_sql = work_sql + " WHERE legacy_id = :id AND deleted = 0 "
+        work_sql = "SELECT * FROM work WHERE legacy_id = :id AND deleted = 0"
 
     statement = sqlalchemy.sql.text(work_sql).bindparams(id=work_id)
     return_data = connection.execute(statement).fetchone()
@@ -520,16 +509,15 @@ def get_work(project, work_id):
 def get_location(project, location_id):
     logger.info("Getting location /{}/location/{}".format(project, location_id))
     connection = db_engine.connect()
-    location_sql = "SELECT * FROM location "
 
     project_id = get_project_id_from_name(project)
     # Check if location_id is a number
     try:
         location_id = int(location_id)
-        location_sql = location_sql + " WHERE id = :id AND deleted = 0 AND project_id = :p_id "
+        location_sql = "SELECT * FROM location WHERE id = :id AND deleted = 0 AND project_id = :p_id "
     except ValueError:
         location_id = location_id
-        location_sql = location_sql + " WHERE legacy_id = :id AND deleted = 0 AND project_id = :p_id "
+        location_sql = "SELECT * FROM location WHERE legacy_id = :id AND deleted = 0 AND project_id = :p_id "
 
     statement = sqlalchemy.sql.text(location_sql).bindparams(id=location_id, p_id=project_id)
     return_data = connection.execute(statement).fetchone()
@@ -572,12 +560,12 @@ def get_urn(project, url, legacy_id=None):
     project_id = get_project_id_from_name(project)
     connection = db_engine.connect()
     if legacy_id is not None:
-        sql = sqlalchemy.sql.text("SELECT * FROM urn_lookup where legacy_id=:l_id  AND project_id=:p_id").bindparams(
-            l_id=str(legacy_id), p_id=project_id)
+        stmnt = "SELECT * FROM urn_lookup where legacy_id=:l_id  AND project_id=:p_id"
+        sql = sqlalchemy.sql.text(stmnt).bindparams(l_id=str(legacy_id), p_id=project_id)
     else:
         url_like_str = "%#{}".format(url)
-        sql = sqlalchemy.sql.text("SELECT * FROM urn_lookup where url LIKE :url AND project_id=:p_id").bindparams(
-            url=url_like_str, p_id=project_id)
+        stmnt = "SELECT * FROM urn_lookup where url LIKE :url AND project_id=:p_id"
+        sql = sqlalchemy.sql.text(stmnt).bindparams(url=url_like_str, p_id=project_id)
     return_data = []
     for row in connection.execute(sql).fetchall():
         return_data.append(dict(row))
@@ -596,7 +584,7 @@ def list_tooltips(table):
     if table == "subject":
         sql = sqlalchemy.sql.text("SELECT id, full_name, project_id, legacy_id FROM subject")
     else:
-        sql = sqlalchemy.sql.text("SELECT id, name, project_id, legacy_id FROM {}".format(table))
+        sql = sqlalchemy.sql.text(f"SELECT id, name, project_id, legacy_id FROM {table}")
     results = []
     for row in connection.execute(sql).fetchall():
         results.append(dict(row))
@@ -627,16 +615,16 @@ def get_tooltip(table, row_id, project=None, use_legacy=False):
 
     if is_legacy_id:
         if table == "subject":
-            sql = sqlalchemy.sql.text("SELECT id, legacy_id, full_name, description FROM subject WHERE legacy_id=:id" + project_sql)
+            stmnt = f"SELECT id, legacy_id, full_name, description FROM subject WHERE legacy_id=:id{project_sql}"
         else:
-            sql_query = "SELECT id, legacy_id, name, description FROM {} WHERE legacy_id=:id " + project_sql
-            sql = sqlalchemy.sql.text(sql_query.format(table))
+            stmnt = f"SELECT id, legacy_id, name, description FROM {table} WHERE legacy_id=:id{project_sql}"
     else:
         if table == "subject":
-            sql = sqlalchemy.sql.text("SELECT id, legacy_id, full_name, description FROM subject WHERE id=:id" + project_sql)
+            stmnt = f"SELECT id, legacy_id, full_name, description FROM subject WHERE id=:id{project_sql}"
         else:
-            sql_query = "SELECT id, legacy_id, name, description FROM {} WHERE id=:id" + project_sql
-            sql = sqlalchemy.sql.text(sql_query.format(table))
+            stmnt = f"SELECT id, legacy_id, name, description FROM {table} WHERE id=:id{project_sql}"
+
+    sql = sqlalchemy.sql.text(stmnt)
 
     if project is None:
         statement = sql.bindparams(id=ident)
