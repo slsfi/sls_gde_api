@@ -2,7 +2,7 @@
 from lxml import etree as ET
 import re
 import io
-import html
+from io import StringIO
 from bs4 import BeautifulSoup
 
 # Configuration
@@ -320,6 +320,9 @@ class CTeiDocument:
 
             # Get the position for the note in the main text
             sPosition = self.__GetNotePosition(cMainText, comment['id'])
+            sPosition = sPosition.replace('l', '')
+            sPosition = re.sub('p[0-9]+_', '', sPosition)
+            sPosition = re.sub('g[0-9]+_', '', sPosition)
 
             # Position will be None if the note was not found in the main text, then we don't add the note.
             if sPosition is not None:
@@ -741,11 +744,11 @@ class CTeiDocument:
         # Do the transformation
         if len(sHtml) > 0 and transform is not None:
             try:
-                parser = ET.XMLParser(recover=True)
                 soup = BeautifulSoup(sHtml, "html.parser")
-                xml_doc_in = ET.XML("<note>" + html.escape(str(soup)) + "</note>", parser)
-                xml_doc_out = transform(xml_doc_in)
-                result = ET.tostring(xml_doc_out, encoding='unicode')
+                soup.contents[0].unwrap()
+                dom = ET.parse(StringIO("<note>" + str(soup) + "</note>"))
+                newdom = transform(dom)
+                result = ET.tostring(newdom, encoding='unicode')
             except Exception as e:
                 print(e)
         # Return as TEI xml

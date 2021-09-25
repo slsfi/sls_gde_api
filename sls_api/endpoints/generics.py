@@ -4,6 +4,7 @@ from flask import jsonify, safe_join
 from flask_jwt_extended import get_jwt_identity, verify_jwt_in_request
 from functools import wraps
 import glob
+import hashlib
 import io
 import logging
 from lxml import etree
@@ -14,6 +15,19 @@ from sqlalchemy import create_engine, MetaData, Table
 from sqlalchemy.sql import select, text
 import time
 
+ALLOWED_EXTENSIONS_FOR_FACSIMILE_UPLOAD = ["tif", "tiff", "png", "jpg", "jpeg"]
+
+FACSIMILE_UPLOAD_FOLDER = "/tmp/uploads"
+
+# these are the max resolutions for each zoom level of facsimile, used for resizing uploaded TIF files.
+# imagemagick retains aspect ratio by default, so resizing a 730x1200 image to "600x600" would result in a 365x600 file
+FACSIMILE_IMAGE_SIZES = {
+    1: "600x600",
+    2: "1200x1200",
+    3: "2000x2000",
+    4: "4000x4000"
+}
+
 metadata = MetaData()
 
 logger = logging.getLogger("sls_api.generics")
@@ -22,11 +36,28 @@ config_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file
 with io.open(os.path.join(config_dir, "digital_editions.yml"), encoding="UTF-8") as config:
     yaml = YAML(typ="safe")
     config = yaml.load(config)
+
+    # handle environment variables in the configuration file
+    for setting, value in config.items():
+        if isinstance(value, str):
+            # handle strings that are or contain environment variables
+            config[setting] = os.path.expandvars(value)
+        elif isinstance(value, dict):
+            # handle project settings that are or contain environment variables
+            for project_setting, project_value in value.items():
+                if isinstance(project_value, str):
+                    value[project_setting] = os.path.expandvars(project_value)
+
     # connection pool settings - keep a pool of up to 30 connections, but allow spillover to up to 60 if needed.
     # before using a connection, use an SQL ping (typically SELECT 1) to check if it's valid and recycle transparently if not
     # automatically recycle unused connections after 15 minutes of not being used, to prevent keeping connections open to postgresql forever
     db_engine = create_engine(config["engine"], pool_pre_ping=True, pool_size=30, max_overflow=30, pool_recycle=900)
     elastic_config = config["elasticsearch_connection"]
+
+
+def allowed_facsimile(filename):
+    return '.' in filename and \
+           filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS_FOR_FACSIMILE_UPLOAD
 
 
 def get_project_config(project_name):
@@ -42,13 +73,26 @@ def int_or_none(var):
         return None
 
 
+def calculate_checksum(full_file_path) -> str:
+    """
+    Read 'full_file_path' in chunks and generate an MD5 checksum for the file, returning as string
+    """
+    hash_md5 = hashlib.md5()
+    with open(full_file_path, "rb") as f:
+        logger.debug(f"Calculating MD5 checksum for {full_file_path}...")
+        # read in chunks to prevent having to load entire file into memory at once
+        for chunk in iter(lambda: f.read(8 * hash_md5.block_size), b""):
+            hash_md5.update(chunk)
+    return hash_md5.hexdigest()
+
+
 def project_permission_required(fn):
     """
     Function decorator that checks for JWT authorization and that the user has edit rights for the project.
     The project the method concerns should be the first positional argument or a keyword argument.
     """
     @wraps(fn)
-    def wrapper(*args, **kwargs):
+    def decorated_function(*args, **kwargs):
         verify_jwt_in_request()
         identity = get_jwt_identity()
         if int(os.environ.get("FLASK_DEBUG", 0)) == 1 and identity["sub"] == "test@test.com":
@@ -63,7 +107,7 @@ def project_permission_required(fn):
                     return fn(*args, **kwargs)
             else:
                 return jsonify({"msg": "No access to this project."}), 403
-    return wrapper
+    return decorated_function
 
 
 def get_project_id_from_name(project):
@@ -191,6 +235,10 @@ def get_published_status(project, collection_id, publication_id):
     project_config = get_project_config(project)
     if project_config is None:
         return False, "No such project."
+
+    if publication_id is None or str(publication_id) == "undefined":
+        return False, "No such publication_id."
+
     connection = db_engine.connect()
     stmt = """SELECT project.published AS proj_pub, publication_collection.published AS col_pub, publication.published as pub
     FROM project
@@ -368,3 +416,50 @@ def get_content(project, folder, xml_filename, xsl_filename, parameters):
         content = "File not found"
 
     return content
+
+
+# Create a stub for a translation
+def create_translation(neutral):
+    connection = db_engine.connect()
+    stmt = """ INSERT INTO translation (neutral_text) VALUES(:neutral) RETURNING id """
+    statement = text(stmt).bindparams(neutral=neutral, )
+    result = connection.execute(statement)
+    row = result.fetchone()
+    connection.close()
+    if row is not None:
+        return row['id']
+    else:
+        return None
+
+
+# Create a stub for a translation
+def create_translation_text(translation_id, table_name):
+    connection = db_engine.connect()
+    if translation_id is not None:
+        stmt = """ INSERT INTO translation_text (translation_id, text, table_name, field_name, language) VALUES(:t_id, 'placeholder', :table_name, 'language', 'not set') RETURNING id """
+        statement = text(stmt).bindparams(t_id=translation_id, table_name=table_name)
+        connection.execute(statement)
+    connection.close()
+
+
+# Get a translation_text_id based on translation_id, table_name, field_name, language
+def get_translation_text_id(translation_id, table_name, field_name, language):
+    connection = db_engine.connect()
+    if translation_id is not None:
+        stmt = """ SELECT id FROM translation_text WHERE
+                            (translation_id = :t_id AND (language is NULL OR language = 'not set') AND table_name = :table_name AND field_name = :field_name AND deleted = 0)
+                            OR (translation_id = :t_id AND language = :language AND table_name = :table_name AND field_name = :field_name AND language != 'not set' AND deleted = 0)
+                    LIMIT 1
+                """
+        statement = text(stmt).bindparams(t_id=translation_id, table_name=table_name, field_name=field_name, language=language)
+        result = connection.execute(statement)
+        row = result.fetchone()
+        connection.close()
+        if row is not None:
+            return row['id']
+        else:
+            return None
+    else:
+        connection = db_engine.connect()
+        connection.close()
+        return None

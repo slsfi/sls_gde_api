@@ -87,8 +87,8 @@ def get_media_image_metadata(project, media_id, lang):
                                     FROM media m
                                     JOIN media_collection mc ON mc.id = m.media_collection_id
                                     JOIN media_connection mcon ON mcon.media_id = m.id
-                                    JOIN location l ON l.id = mcon.location_id
-                                    JOIN subject s ON s.id = mcon.subject_id
+                                    LEFT JOIN location l ON l.id = mcon.location_id
+                                    LEFT JOIN subject s ON s.id = mcon.subject_id
                                     WHERE m.id = :id or m.legacy_id = :id""").bindparams(id=media_id, lang=lang)
         result = connection.execute(sql).fetchone()
         connection.close()
@@ -236,7 +236,7 @@ def get_gallery_data(project, gallery_id, lang=None):
                                     JOIN translation_text tt_desc ON tt_desc.translation_id = t_desc.id AND tt_desc.language=:lang
                                     WHERE mc.project_id = :p_id
                                     AND mc.id= :gallery_id
-                                    AND m.type='image_ref' """).bindparams(gallery_id=gallery_id, p_id=project_id, lang=lang)
+                                    AND m.type='image_ref' AND m.deleted != 1 """).bindparams(gallery_id=gallery_id, p_id=project_id, lang=lang)
         results = []
         for row in connection.execute(sql).fetchall():
             results.append(dict(row))

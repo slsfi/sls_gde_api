@@ -207,9 +207,34 @@ def get_work_manifestation_metadata(project, manifestation_id):
         connection.close()
         return jsonify({"msg": "Desired manifestation_id not found in database."}), 404
 
-    sql = """SELECT w_m.* FROM work_manifestation w_m WHERE w_m.id = :manifestation_id w_m.deleted = 0 ORDER BY w_m.title"""
+    sql = """SELECT w_m.* FROM work_manifestation w_m WHERE w_m.id = :manifestation_id AND w_m.deleted = 0 ORDER BY w_m.title"""
 
     sql = text(sql).bindparams(manifestation_id=manifestation_id)
+
+    data = []
+    result = connection.execute(sql)
+    row = result.fetchone()
+    while row is not None:
+        data.append(dict(row))
+        row = result.fetchone()
+
+    connection.close()
+
+    return jsonify(data)
+
+
+@workregister.route("/<project>/workregister/work/manifestations/<work_id>")
+def get_work_manifestations(project, work_id):
+    logger.info("Getting results for /workregister/work/manifestations/<work_id>")
+    connection = db_engine.connect()
+    # Only allow int
+    if str(work_id).isnumeric() is False:
+        connection.close()
+        return jsonify({"msg": "Desired work_id not found in database."}), 404
+
+    sql = """SELECT w_m.* FROM work_manifestation w_m WHERE w_m.work_id = :work_id AND w_m.deleted = 0 ORDER BY w_m.title"""
+
+    sql = text(sql).bindparams(work_id=work_id)
 
     data = []
     result = connection.execute(sql)

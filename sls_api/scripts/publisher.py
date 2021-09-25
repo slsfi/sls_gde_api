@@ -5,8 +5,9 @@ from sqlalchemy import create_engine
 from sqlalchemy.sql import text
 from subprocess import CalledProcessError
 import sys
+from typing import Union
 
-from sls_api.endpoints.generics import config, db_engine, get_project_id_from_name
+from sls_api.endpoints.generics import calculate_checksum, config, db_engine, get_project_id_from_name
 from sls_api.endpoints.tools.files import run_git_command, update_files_in_git_repo
 from sls_api.scripts.CTeiDocument import CTeiDocument
 
@@ -138,8 +139,12 @@ def generate_est_and_com_files(publication_info, project, est_master_file_path, 
     """
     # Generate est file for this document
     est_document = CTeiDocument()
-    est_document.Load(est_master_file_path, bRemoveDelSpans=True)
-    est_document.PostProcessMainText()
+    try:
+        est_document.Load(est_master_file_path, bRemoveDelSpans=True)
+        est_document.PostProcessMainText()
+    except Exception as ex:
+        logger.exception("Failed to handle est master file: {}".format(est_master_file_path))
+        raise ex
 
     if publication_info is not None:
         est_document.SetMetadata(publication_info['original_publication_date'], publication_info['p_id'], publication_info['name'],
@@ -165,22 +170,26 @@ def generate_est_and_com_files(publication_info, project, est_master_file_path, 
             config[project]["file_root"], COMMENTS_TEMPLATE_PATH_IN_FILE_ROOT)
 
     # load in com_master file
-    com_document.Load(com_master_file_path)
+    try:
+        com_document.Load(com_master_file_path)
 
-    # if com_xsl_path is invalid or not given, try using COMMENTS_XSL_PATH_IN_FILE_ROOT
-    if com_xsl_path is None or not os.path.exists(com_xsl_path):
-        com_xsl_path = os.path.join(
-            config[project]["file_root"], COMMENTS_XSL_PATH_IN_FILE_ROOT)
+        # if com_xsl_path is invalid or not given, try using COMMENTS_XSL_PATH_IN_FILE_ROOT
+        if com_xsl_path is None or not os.path.exists(com_xsl_path):
+            com_xsl_path = os.path.join(
+                config[project]["file_root"], COMMENTS_XSL_PATH_IN_FILE_ROOT)
 
-    # process comments and save
-    com_document.ProcessCommments(comments, est_document, com_xsl_path)
-    com_document.PostProcessOtherText()
+        # process comments and save
+        com_document.ProcessCommments(comments, est_document, com_xsl_path)
+        com_document.PostProcessOtherText()
 
-    if publication_info is not None:
-        com_document.SetMetadata(publication_info['original_publication_date'], publication_info['p_id'], publication_info['name'],
-                                 publication_info['genre'], 'com', publication_info['c_id'], publication_info['publication_group_id'])
+        if publication_info is not None:
+            com_document.SetMetadata(publication_info['original_publication_date'], publication_info['p_id'], publication_info['name'],
+                                     publication_info['genre'], 'com', publication_info['c_id'], publication_info['publication_group_id'])
 
-    com_document.Save(com_target_path)
+        com_document.Save(com_target_path)
+    except Exception as ex:
+        logger.exception("Failed to handle com master file: {}".format(com_master_file_path))
+        raise ex
 
 
 def process_var_documents_and_generate_files(main_var_doc, main_var_path, var_docs, var_paths, publication_info):
@@ -203,9 +212,13 @@ def generate_ms_file(master_file_path, target_file_path, publication_info):
     """
     Given a project name, and valid master and target file paths for a publication manuscript, regenerates target file based on source file
     """
-    ms_document = CTeiDocument()
-    ms_document.Load(master_file_path)
-    ms_document.PostProcessOtherText()
+    try:
+        ms_document = CTeiDocument()
+        ms_document.Load(master_file_path)
+        ms_document.PostProcessOtherText()
+    except Exception as ex:
+        logger.exception("Failed to handle manuscript file: {}".format(master_file_path))
+        raise ex
 
     if publication_info is not None:
         ms_document.SetMetadata(publication_info['original_publication_date'], publication_info['p_id'], publication_info['name'],
@@ -213,7 +226,7 @@ def generate_ms_file(master_file_path, target_file_path, publication_info):
     ms_document.Save(target_file_path)
 
 
-def check_publication_mtimes_and_publish_files(project, publication_ids):
+def check_publication_mtimes_and_publish_files(project: str, publication_ids: Union[tuple, None], git_author: str, no_git=False, force_publish=False):
     update_success, result_str = update_files_in_git_repo(project)
     if not update_success:
         logger.error("Git update failed! Reason: {}".format(result_str))
@@ -222,10 +235,9 @@ def check_publication_mtimes_and_publish_files(project, publication_ids):
     project_settings = config.get(project, None)
 
     # if publication_ids is a tuple of ints, we're (re)publishing a certain publication(s)
+    # explicitly set force_publish in this instance, so we force-generate files for publishing (this overrides mtime checks)
     if isinstance(publication_ids, tuple):
         force_publish = True
-    else:
-        force_publish = False
 
     if project_id is not None and project_settings is not None:
         file_root = project_settings.get("file_root", None)
@@ -246,11 +258,11 @@ def check_publication_mtimes_and_publish_files(project, publication_ids):
                                 p.name as name \
                                 FROM publication p \
                                 JOIN publication_collection pcol ON p.publication_collection_id=pcol.id \
-                                WHERE pcol.project_id = :proj"
+                                WHERE pcol.project_id = :proj AND p.deleted != 1 AND pcol.deleted != 1 "
 
             # publication_comment info, relating to "general comments" file for each publication
             comment_query = "SELECT \
-                            p.id  as p_id, \
+                            p.id as p_id, \
                             p.publication_collection_id as c_id, \
                             pc.original_filename as original_filename, \
                             p.original_publication_date as original_publication_date, \
@@ -261,7 +273,7 @@ def check_publication_mtimes_and_publish_files(project, publication_ids):
                             FROM publication p \
                             JOIN publication_collection pcol ON p.publication_collection_id = pcol.id \
                             JOIN publication_comment pc ON p.publication_comment_id = pc.id \
-                            WHERE pcol.project_id = :proj"
+                            WHERE pcol.project_id = :proj AND p.deleted != 1 AND pcol.deleted != 1 AND pc.deleted != 1 "
 
             # publication_manuscript info
             manuscript_query = "SELECT \
@@ -278,9 +290,9 @@ def check_publication_mtimes_and_publish_files(project, publication_ids):
                                 FROM publication_manuscript pm \
                                 JOIN publication p ON pm.publication_id = p.id \
                                 JOIN publication_collection pcol ON p.publication_collection_id = pcol.id \
-                                WHERE pcol.project_id = :proj"
+                                WHERE pcol.project_id = :proj AND p.deleted != 1 AND pcol.deleted != 1 AND pm.deleted != 1 "
 
-            if force_publish:
+            if force_publish and isinstance(publication_ids, tuple):
                 # append publication.id checks if this is a forced (re)publication of certain publication(s)
                 publication_query += " AND p.id IN :p_ids"
                 publication_query = text(publication_query).bindparams(proj=project_id, p_ids=publication_ids)
@@ -327,30 +339,49 @@ def check_publication_mtimes_and_publish_files(project, publication_ids):
                 comment_file = comment_filenames.get(publication_id, COMMENTS_TEMPLATE_PATH_IN_FILE_ROOT)
 
                 if comment_file is None:
-                    logger.info("Comment file not set for publication {}".format(publication_id))
-                    continue
+                    logger.info("Comment file not set for publication {}, using template instead.".format(publication_id))
+                    comment_file = COMMENTS_TEMPLATE_PATH_IN_FILE_ROOT
 
                 com_source_file_path = os.path.join(file_root, comment_file)
 
-                if not est_source_file_path:
-                    logger.info("Source file not set for publication {}".format(publication_id))
+                if os.path.isdir(est_source_file_path):
+                    logger.warning("Source file {} for publication {} is a directory!".format(est_source_file_path, publication_id))
                     continue
-                if not com_source_file_path:
-                    logger.info("Source file not set for publication {} comment".format(publication_id))
+                if os.path.isdir(com_source_file_path):
+                    logger.warning("Source file {} for publication {} comment is a directory!".format(com_source_file_path, publication_id))
+                    continue
                 if not os.path.exists(est_source_file_path):
-                    logger.warning("Source file {} for publication {} do not exist!".format(est_source_file_path, publication_id))
+                    logger.warning("Source file {} for publication {} does not exist!".format(est_source_file_path, publication_id))
                     continue
                 if not os.path.exists(com_source_file_path):
-                    logger.warning("Source file {} for publication {} do not exist!".format(com_source_file_path, publication_id))
+                    logger.warning("Source file {} for publication {} does not exist!".format(com_source_file_path, publication_id))
                     continue
 
                 if force_publish:
                     # during force_publish, just generate
                     logger.info("Generating new est/com files for publication {}...".format(publication_id))
-                    changes.add(est_target_file_path)
-                    changes.add(com_target_file_path)
-                    generate_est_and_com_files(row, project, est_source_file_path, com_source_file_path,
-                                               est_target_file_path, com_target_file_path)
+                    try:
+                        # calculate md5sum for existing files
+                        md5sums = []
+                        if os.path.exists(est_target_file_path):
+                            md5sums.append(calculate_checksum(est_target_file_path))
+                        else:
+                            md5sums.append("SKIP")
+                        if os.path.exists(com_target_file_path):
+                            md5sums.append(calculate_checksum(com_target_file_path))
+                        else:
+                            md5sums.append("SKIP")
+                        generate_est_and_com_files(row, project, est_source_file_path, com_source_file_path,
+                                                   est_target_file_path, com_target_file_path)
+                    except Exception:
+                        logger.exception("Failed to generate est/com files for publication {}!".format(publication_id))
+                        continue
+                    else:
+                        # only add files to change set if they actually changed
+                        if md5sums[0] == "SKIP" or md5sums[0] != calculate_checksum(est_target_file_path):
+                            changes.add(est_target_file_path)
+                        if md5sums[1] == "SKIP" or md5sums[1] != calculate_checksum(com_target_file_path):
+                            changes.add(com_target_file_path)
                 else:
                     # otherwise, check if this publication's files need to be re-generated
                     try:
@@ -363,27 +394,63 @@ def check_publication_mtimes_and_publish_files(project, publication_ids):
                         # It is then easiest to just generate new ones
                         logger.warning("Error getting time_modified for target or source files for publication {}".format(publication_id))
                         logger.info("Generating new est/com files for publication {}...".format(publication_id))
-                        changes.add(est_target_file_path)
-                        changes.add(com_target_file_path)
-                        generate_est_and_com_files(row, project, est_source_file_path, com_source_file_path,
-                                                   est_target_file_path, com_target_file_path)
+                        try:
+                            # calculate md5sum for existing files
+                            md5sums = []
+                            if os.path.exists(est_target_file_path):
+                                md5sums.append(calculate_checksum(est_target_file_path))
+                            else:
+                                md5sums.append("SKIP")
+                            if os.path.exists(com_target_file_path):
+                                md5sums.append(calculate_checksum(com_target_file_path))
+                            else:
+                                md5sums.append("SKIP")
+                            generate_est_and_com_files(row, project, est_source_file_path, com_source_file_path,
+                                                       est_target_file_path, com_target_file_path)
+                        except Exception:
+                            logger.exception("Failed to generate est/com files for publication {}!".format(publication_id))
+                            continue
+                        else:
+                            # only add files to change set if they actually changed
+                            if md5sums[0] == "SKIP" or md5sums[0] != calculate_checksum(est_target_file_path):
+                                changes.add(est_target_file_path)
+                            if md5sums[1] == "SKIP" or md5sums[1] != calculate_checksum(com_target_file_path):
+                                changes.add(com_target_file_path)
                     else:
                         if est_target_mtime >= est_source_mtime and com_target_mtime >= com_source_mtime:
                             # If both the est and com files are newer than the source files, just continue to the next publication
                             continue
                         else:
                             # If one or either is outdated, generate new ones
-                            changes.add(est_target_file_path)
-                            changes.add(com_target_file_path)
                             logger.info("Reading files for publication {} are outdated, generating new est/com files...".format(publication_id))
-                            generate_est_and_com_files(row, project, est_source_file_path, com_source_file_path,
-                                                       est_target_file_path, com_target_file_path)
+                            try:
+                                # calculate md5sum for existing files
+                                md5sums = []
+                                if os.path.exists(est_target_file_path):
+                                    md5sums.append(calculate_checksum(est_target_file_path))
+                                else:
+                                    md5sums.append("SKIP")
+                                if os.path.exists(com_target_file_path):
+                                    md5sums.append(calculate_checksum(com_target_file_path))
+                                else:
+                                    md5sums.append("SKIP")
+                                generate_est_and_com_files(row, project, est_source_file_path, com_source_file_path,
+                                                           est_target_file_path, com_target_file_path)
+                            except Exception:
+                                logger.exception("Failed to generate est/com files for publication {}!".format(publication_id))
+                                continue
+                            else:
+                                # only add files to change set if they actually changed
+                                if md5sums[0] == "SKIP" or md5sums[0] != calculate_checksum(est_target_file_path):
+                                    changes.add(est_target_file_path)
+                                if md5sums[1] == "SKIP" or md5sums[1] != calculate_checksum(com_target_file_path):
+                                    changes.add(com_target_file_path)
 
                 # Process all variants belonging to this publication
                 # publication_version with type=1 is the "main" variant, the others should have type=2 and be versions of that main variant
                 variant_query = text("SELECT id, original_filename "
                                      "FROM publication_version "
-                                     "WHERE publication_version.publication_id = :pub_id AND publication_version.type = :vers_type")
+                                     "WHERE publication_version.publication_id = :pub_id AND publication_version.type = :vers_type AND publication_version.deleted != 1")
 
                 # open new DB connection for variant data fetch
                 connection = db_engine.connect()
@@ -412,11 +479,15 @@ def check_publication_mtimes_and_publish_files(project, publication_ids):
                     main_variant_source = os.path.join(file_root, main_variant_info["original_filename"])
 
                     if not main_variant_source:
-                        logger.info("Source file for main variant {} is not set.".format(main_variant_info["id"]))
+                        logger.warning("Source file for main variant {} is not set.".format(main_variant_info["id"]))
+                        continue
+
+                    if os.path.isdir(main_variant_source):
+                        logger.error("Source file {} for main variant {} (type=1) is a directory!".format(main_variant_source, main_variant_info["id"]))
                         continue
 
                     if not os.path.exists(main_variant_source):
-                        logger.warning("Source file {} for main variant {} (type=1) does not exist!".format(main_variant_source, main_variant_info["id"]))
+                        logger.error("Source file {} for main variant {} (type=1) does not exist!".format(main_variant_source, main_variant_info["id"]))
                         continue
 
                     target_filename = "{}_{}_var_{}.xml".format(collection_id,
@@ -425,6 +496,11 @@ def check_publication_mtimes_and_publish_files(project, publication_ids):
 
                     # If any variants have changed, we need a CTeiDocument for the main variant to ProcessVariants() with
                     main_variant_target = os.path.join(file_root, "xml", "var", target_filename)
+                    # check current md5sum for main variant file
+                    if os.path.exists(main_variant_target):
+                        main_variant_md5 = calculate_checksum(main_variant_target)
+                    else:
+                        main_variant_md5 = "SKIP"
                     main_variant_doc = CTeiDocument()
                     main_variant_doc.Load(main_variant_source)
 
@@ -440,21 +516,22 @@ def check_publication_mtimes_and_publish_files(project, publication_ids):
 
                         source_filename = variant["original_filename"]
                         if not source_filename:
-                            logger.info("Source file for variant {} is not set.".format(variant["original_filename"]))
+                            logger.error("Source file for variant {} is not set.".format(variant["id"]))
                             continue
                         target_file_path = os.path.join(file_root, "xml", "var", target_filename)
                         # original_filename should be relative to the project root
                         source_file_path = os.path.join(file_root, source_filename)
 
+                        if os.path.isdir(source_file_path):
+                            logger.error("Source file {} for variant {} is a directory!".format(source_file_path, variant["id"]))
+                            continue
                         if not os.path.exists(source_file_path):
-                            logger.warning("Source file {} for variant {} does not exist!".format(source_file_path, variant["id"]))
+                            logger.error("Source file {} for variant {} does not exist!".format(source_file_path, variant["id"]))
                             continue
 
                         # in a force_publish, just load all variants for generation/processing
                         if force_publish:
-                            logger.info(
-                                "Generating new var file for publication_version {}...".format(variant["id"]))
-                            changes.add(target_file_path)
+                            logger.info("Generating new var file for publication_version {}...".format(variant["id"]))
                             variant_doc = CTeiDocument()
                             variant_doc.Load(source_file_path)
                             variant_docs.append(variant_doc)
@@ -469,7 +546,6 @@ def check_publication_mtimes_and_publish_files(project, publication_ids):
                                 # It is then easiest to just generate a new one
                                 logger.warning("Error getting time_modified for target or source files for publication_version {}".format(variant["id"]))
                                 logger.info("Generating new file...")
-                                changes.add(target_file_path)
                                 variant_doc = CTeiDocument()
                                 variant_doc.Load(source_file_path)
                                 variant_docs.append(variant_doc)
@@ -477,7 +553,6 @@ def check_publication_mtimes_and_publish_files(project, publication_ids):
                             else:
                                 if target_mtime < source_mtime:
                                     logger.info("File {} is older than source file {}, generating new file...".format(target_file_path, source_file_path))
-                                    changes.add(target_file_path)
                                     variant_doc = CTeiDocument()
                                     variant_doc.Load(source_file_path)
                                     variant_docs.append(variant_doc)
@@ -485,8 +560,20 @@ def check_publication_mtimes_and_publish_files(project, publication_ids):
                                 else:
                                     # If no changes, don't generate CTeiDocument and don't make a new web XML file
                                     continue
+                    # check current md5sum for variant files
+                    variant_md5_sums = {}
+                    for path in variant_paths:
+                        variant_md5_sums[path] == "SKIP" if not os.path.exists(path) else calculate_checksum(path)
                     # lastly, actually process all generated CTeiDocument objects and create web XML files
                     process_var_documents_and_generate_files(main_variant_doc, main_variant_target, variant_docs, variant_paths, row)
+
+                    # only add main variant file to change set if file actually changed
+                    if main_variant_md5 == "SKIP" or main_variant_md5 != calculate_checksum(main_variant_target):
+                        changes.add(main_variant_target)
+                    # only add variant files to change set if their file actually changed
+                    for path, md5sum in variant_md5_sums.items():
+                        if md5sum == "SKIP" or md5sum != calculate_checksum(path):
+                            changes.add(path)
 
             # For each publication_manuscript belonging to this project, check the modification timestamp of its master file and compare it to the generated web XML file
             # logger.debug("Manuscript query resulting rows: {}".format(manuscript_info[0].keys())) TODO: fix IndexError if manuscript_info has no rows
@@ -505,10 +592,13 @@ def check_publication_mtimes_and_publish_files(project, publication_ids):
                     logger.info("Source file not set for manuscript {}".format(manuscript_id))
                     continue
 
-                target_file_path = os.path.join(
-                    file_root, "xml", "ms", target_filename)
+                target_file_path = os.path.join(file_root, "xml", "ms", target_filename)
                 # original_filename should be relative to the project root
                 source_file_path = os.path.join(file_root, source_filename)
+
+                if os.path.isdir(source_file_path):
+                    logger.warning("Source file {} for manuscript {} is a directory!".format(source_file_path, manuscript_id))
+                    continue
 
                 if not os.path.exists(source_file_path):
                     logger.warning("Source file {} for manuscript {} does not exist!".format(source_file_path, manuscript_id))
@@ -517,8 +607,19 @@ def check_publication_mtimes_and_publish_files(project, publication_ids):
                 # in a force_publish, just generate all ms files
                 if force_publish:
                     logger.info("Generating new ms file for publication_manuscript {}".format(manuscript_id))
-                    changes.add(target_file_path)
-                    generate_ms_file(source_file_path, target_file_path, row)
+                    try:
+                        # calculate md5sum for existing file
+                        if os.path.exists(target_file_path):
+                            md5sum = calculate_checksum(target_file_path)
+                        else:
+                            md5sum = "SKIP"
+                        generate_ms_file(source_file_path, target_file_path, row)
+                    except Exception:
+                        continue
+                    else:
+                        # only add to changes if file has actually changed
+                        if md5sum == "SKIP" or md5sum != calculate_checksum(target_file_path):
+                            changes.add(target_file_path)
                 # otherwise, check if this file needs generating
                 else:
                     try:
@@ -529,27 +630,48 @@ def check_publication_mtimes_and_publish_files(project, publication_ids):
                         # It is then easiest to just generate a new one
                         logger.warning("Error getting time_modified for target or source file for publication_manuscript {}".format(manuscript_id))
                         logger.info("Generating new file...")
-                        changes.add(target_file_path)
-                        generate_ms_file(source_file_path, target_file_path, row)
+                        try:
+                            # calculate md5sum for existing file
+                            if os.path.exists(target_file_path):
+                                md5sum = calculate_checksum(target_file_path)
+                            else:
+                                md5sum = "SKIP"
+                            generate_ms_file(source_file_path, target_file_path, row)
+                        except Exception:
+                            continue
+                        else:
+                            # only add to changes if file has actually changed
+                            if md5sum == "SKIP" or md5sum != calculate_checksum(target_file_path):
+                                changes.add(target_file_path)
                     else:
                         if target_mtime >= source_mtime:
                             # If the target ms file is newer than the source, continue to the next publication_manuscript
                             continue
                         else:
-                            changes.add(target_file_path)
                             logger.info("File {} is older than source file {}, generating new file...".format(target_file_path, source_file_path))
-                            generate_ms_file(source_file_path, target_file_path, row)
+                            try:
+                                # calculate md5sum for existing file
+                                if os.path.exists(target_file_path):
+                                    md5sum = calculate_checksum(target_file_path)
+                                else:
+                                    md5sum = "SKIP"
+                                generate_ms_file(source_file_path, target_file_path, row)
+                            except Exception:
+                                continue
+                            else:
+                                # only add to changes if file has actually changed
+                                if md5sum == "SKIP" or md5sum != calculate_checksum(target_file_path):
+                                    changes.add(target_file_path)
 
             logger.debug("Changes made in publication script run: {}".format([c for c in changes]))
-            if len(changes) > 0:
+            if len(changes) > 0 and not no_git:
                 outputs = []
                 # If there are changes, try to commit them to git
                 try:
                     for change in changes:
                         # Each changed file should be added, as there may be other activity in the git repo we don't want to commit
                         outputs.append(run_git_command(project, ["add", change]))
-                    # Using Publisher as the author with the is@sls.fi email as a contact point should be fine
-                    outputs.append(run_git_command(project, ["commit", "--author=Publisher <is@sls.fi>", "-m", "Published new web files"]))
+                    outputs.append(run_git_command(project, ["commit", "--author", git_author, "-m", "Published new web files"]))
                     outputs.append(run_git_command(project, ["push"]))
                 except CalledProcessError:
                     logger.exception("Exception during git sync of webfile changes.")
@@ -561,8 +683,12 @@ if __name__ == "__main__":
     parser.add_argument("project", help="Which project to publish, either a project name from --list_projects or 'all' for all valid projects")
     parser.add_argument("-i", "--publication_ids", type=int, nargs="*",
                         help="Force re-publication of specific publications (tries to publish all files, est/com/var/ms)")
+    parser.add_argument("--all_ids", action="store_true",
+                        help="Force re-publication of all publications (tries to publish all files, est/com/var/ms)")
     parser.add_argument("-l", "--list_projects", action="store_true",
                         help="Print a listing of available projects with seemingly valid configuration and exit")
+    parser.add_argument("--git_author", type=str, help="Author used for git commits (Default 'Publisher <is@sls.fi>')", default="Publisher <is@sls.fi>")
+    parser.add_argument("--no_git", action="store_true", help="Don't run git commands as part of publishing.")
 
     args = parser.parse_args()
 
@@ -579,10 +705,12 @@ if __name__ == "__main__":
             ids = tuple(args.publication_ids)
         if str(args.project).lower() == "all":
             for p in valid_projects:
-                check_publication_mtimes_and_publish_files(p, ids)
+                check_publication_mtimes_and_publish_files(p, ids, git_author=args.git_author,
+                                                           no_git=args.no_git, force_publish=args.all_ids)
         else:
             if args.project in valid_projects:
-                check_publication_mtimes_and_publish_files(args.project, ids)
+                check_publication_mtimes_and_publish_files(args.project, ids, git_author=args.git_author,
+                                                           no_git=args.no_git, force_publish=args.all_ids)
             else:
                 logger.error(f"{args.project} is not in the API configuration or lacks 'comments_database' setting, aborting...")
                 sys.exit(1)

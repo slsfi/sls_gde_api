@@ -1,6 +1,6 @@
 from flask import Blueprint, jsonify, request
 from flask_jwt_extended import jwt_required
-from sqlalchemy import join, select
+from sqlalchemy import join, select, sql
 
 from sls_api.endpoints.generics import db_engine, get_project_id_from_name, get_table, int_or_none, \
     project_permission_required
@@ -46,6 +46,40 @@ def get_publication(project, publication_id):
     return jsonify(result)
 
 
+@publication_tools.route("/<project>/publication/manuscript/<publication_id>/")
+@project_permission_required
+def get_publication_manuscript(project, publication_id):
+    """
+    Get a publication object from the database
+    """
+    connection = db_engine.connect()
+    publication_ms = get_table("publication_manuscript")
+    statement = select([publication_ms]).where(publication_ms.c.publication_id == int_or_none(publication_id))
+    rows = connection.execute(statement).fetchall()
+    result = []
+    for row in rows:
+        result.append(dict(row))
+    connection.close()
+    return jsonify(result)
+
+
+@publication_tools.route("/<project>/publication/version/<publication_id>/")
+@project_permission_required
+def get_publication_version(project, publication_id):
+    """
+    Get a publication object from the database
+    """
+    connection = db_engine.connect()
+    publication_v = get_table("publication_version")
+    statement = select([publication_v]).where(publication_v.c.publication_id == int_or_none(publication_id))
+    rows = connection.execute(statement).fetchall()
+    result = []
+    for row in rows:
+        result.append(dict(row))
+    connection.close()
+    return jsonify(result)
+
+
 @publication_tools.route("/<project>/publication/<publication_id>/versions/")
 @jwt_required
 def get_publication_versions(project, publication_id):
@@ -80,6 +114,30 @@ def get_publication_manuscripts(project, publication_id):
     return jsonify(result)
 
 
+@publication_tools.route("/<project>/publication/<publication_id>/tags/")
+@jwt_required
+def get_publication_tags(project, publication_id):
+    """
+    List all manuscripts for the given publication
+    """
+    connection = db_engine.connect()
+    sql_text = """ select t.*, e_o.* from event_occurrence e_o
+    join event_connection e_c on e_o.event_id = e_c.event_id
+    join tag t on t.id = e_c.tag_id
+    where e_o.publication_id = :pub_id
+    and e_c.tag_id is not null
+    and e_c.deleted != 1 and e_o.deleted != 1
+    and t.deleted != 1 """
+
+    statement = sql.text(sql_text).bindparams(pub_id=publication_id)
+    rows = connection.execute(statement).fetchall()
+    result = []
+    for row in rows:
+        result.append(dict(row))
+    connection.close()
+    return jsonify(result)
+
+
 @publication_tools.route("/<project>/publication/<publication_id>/facsimiles/")
 @jwt_required
 def get_publication_facsimiles(project, publication_id):
@@ -95,6 +153,7 @@ def get_publication_facsimiles(project, publication_id):
 
     statement = select([publication_facsimiles, facsimile_collections.c.title])\
         .where(publication_facsimiles.c.publication_id == int_or_none(publication_id))\
+        .where(publication_facsimiles.c.deleted != 1)\
         .select_from(tables)
 
     rows = connection.execute(statement).fetchall()

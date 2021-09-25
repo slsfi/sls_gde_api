@@ -16,7 +16,7 @@ def get_occurrences(object_type, ident):
     Get event occurrence info and related publication IDs for a given subject, tag, or location
     Given a numerical or legacy ID for an object, returns a list of events and occurance information for the object
     """
-    if object_type not in ["subject", "tag", "location"]:
+    if object_type not in ["subject", "tag", "location", "work_manifestation"]:
         abort(404)
     else:
         connection = db_engine.connect()
@@ -33,21 +33,21 @@ def get_occurrences(object_type, ident):
                 return jsonify([])
 
         events_sql = "SELECT id, type, description FROM event WHERE id IN " \
-                     "(SELECT event_id FROM event_connection WHERE {}_id=:o_id)".format(object_type)
+                     "(SELECT event_id FROM event_connection WHERE deleted != 1 AND {}_id=:o_id)".format(object_type)
         occurrence_sql = "SELECT original_id as song_original_id, ps.name as song_name, ps.type as song_type, number as song_number, \
                         variant as song_variant, landscape as song_landscape, place as song_place, recorder_firstname as song_recorder_firstname, \
                         recorder_lastname as song_recorder_lastname, recorder_born_name as song_recorder_born_name, performer_firstname as song_performer_firstname,\
                         performer_lastname as song_performer_lastname, performer_born_name as song_performer_born_name, note as song_note, comment as song_comment, \
                         lyrics as song_lyrics, original_collection_location as song_original_collection_location, original_collection_signature as song_original_collection_signature,\
                         ps.original_publication_date as song_original_publication_date, page_number as song_page_number, subtype as song_subtype, event_occurrence.id,\
-                        publication.publication_collection_id AS collection_id, event_occurrence.id, event_occurrence.type, description, \
+                        event_occurrence.publication_facsimile_page AS publication_facsimile_page, publication.publication_collection_id AS collection_id, event_occurrence.id, event_occurrence.type, description, \
                         event_occurrence.publication_id, event_occurrence.publication_version_id, event_occurrence.publication_facsimile_id, \
-        event_occurrence.publication_comment_id, event_occurrence.publication_manuscript_id, \
-        pc.name as publication_collection_name, publication.name as publication_name \
+        event_occurrence.publication_comment_id, event_occurrence.publication_manuscript_id, publication.published as publication_published, \
+        pc.name as publication_collection_name, publication.name as publication_name  \
         FROM event_occurrence, publication \
         JOIN publication_collection pc ON pc.id = publication.publication_collection_id \
         LEFT OUTER JOIN publication_song ps ON ps.publication_id = publication.id \
-        WHERE event_occurrence.event_id=:e_id AND event_occurrence.publication_id=publication.id \
+        WHERE event_occurrence.event_id=:e_id AND event_occurrence.publication_id=publication.id AND publication.deleted != 1 AND event_occurrence.deleted != 1 AND pc.deleted != 1 \
         AND (event_occurrence.publication_song_id = ps.id OR event_occurrence.publication_song_id is null)"
 
         events_stmnt = sqlalchemy.sql.text(events_sql).bindparams(o_id=object_id)
@@ -71,7 +71,7 @@ def get_all_occurrences_by_type(object_type, project=None):
     Get occurrences for each person
     TODO: refactor and divide into multiple functions
     """
-    if object_type not in ["subject", "tag", "location"]:
+    if object_type not in ["subject", "tag", "location", "work_manifestation"]:
         abort(404)
     else:
         connection = db_engine.connect()
@@ -103,7 +103,7 @@ def get_all_occurrences_by_type(object_type, project=None):
             try:
                 object_id = int(ident)
             except ValueError:
-                object_sql = "SELECT id FROM {} WHERE legacy_id=:l_id".format(object_type)
+                object_sql = "SELECT id FROM {} WHERE legacy_id=:l_id and deleted != 1 ".format(object_type)
                 stmt = sqlalchemy.sql.text(object_sql).bindparams(l_id=ident)
                 row = connection.execute(stmt).fetchone()
                 object_id = row.id
@@ -144,6 +144,29 @@ def get_all_occurrences_by_type(object_type, project=None):
                     row["source"] = type_object["source"]
                     row["name"] = type_object["name"]
                     row["type"] = type_object["type"]
+                if object_type == "work_manifestation":
+                    type_stmnt = sqlalchemy.sql.text("""SELECT work_manifestation.type::text, work.description::text, work.source::text, work.title::text,
+                        journal::text, publisher::text, published_year::text, volume::text,, total_pages::text, ISBN::text,
+                        publication_location::text, translated_by::text, work_id::text, work_manuscript_id::text, linked_work_manifestation_id::text
+                        FROM work_manifestation WHERE id=:ty_id""").bindparams(
+                        ty_id=object_id)
+                    type_object = connection.execute(type_stmnt).fetchone()
+                    type_object = dict(type_object)
+                    row["description"] = type_object["description"]
+                    row["source"] = type_object["source"]
+                    row["name"] = type_object["title"]
+                    row["type"] = type_object["type"]
+                    row["journal"] = type_object["journal"]
+                    row["publisher"] = type_object["publisher"]
+                    row["published_year"] = type_object["published_year"]
+                    row["volume"] = type_object["volume"]
+                    row["total_pages"] = type_object["total_pages"]
+                    row["ISBN"] = type_object["ISBN"]
+                    row["publication_location"] = type_object["publication_location"]
+                    row["translated_by"] = type_object["translated_by"]
+                    row["work_id"] = type_object["work_id"]
+                    row["work_manuscript_id"] = type_object["work_manuscript_id"]
+                    row["linked_work_manifestation_id"] = type_object["linked_work_manifestation_id"]
                 if object_type == "location":
                     type_stmnt = sqlalchemy.sql.text("SELECT location.description::text, location.source::text, location.name::text, location.country::text, location.city::text, \
                                                         location.latitude::text, location.longitude::text, location.region::text FROM location WHERE id=:ty_id").bindparams(
@@ -258,7 +281,8 @@ def get_subject_occurrences(project=None, subject_id=None):
                             publication_facsimile_id, publication_facsimile_page, \
                             publication_manuscript_id, publication_version_id, ev.type, \
                             pub.id as publication_id, pub.name as publication_name, pub.original_filename as original_filename, \
-                            ev_o.publication_song_id as publication_song_id \
+                            ev_o.publication_song_id as publication_song_id, \
+                            ev_c.id as ev_c_id \
                             FROM event_connection ev_c \
                             JOIN event ev ON ev.id = ev_c.event_id \
                             JOIN event_occurrence ev_o ON ev_o.event_id = ev_c.event_id \
@@ -336,7 +360,8 @@ def get_location_occurrences(project=None, location_id=None):
                             publication_facsimile_id, publication_facsimile_page, \
                             publication_manuscript_id, publication_version_id, ev.type, \
                             pub.id as publication_id, pub.name as publication_name, pub.original_filename as original_filename, \
-                            ev_o.publication_song_id as publication_song_id \
+                            ev_o.publication_song_id as publication_song_id, \
+                            ev_c.id as ev_c_id \
                             FROM event_connection ev_c \
                             JOIN event ev ON ev.id = ev_c.event_id \
                             JOIN event_occurrence ev_o ON ev_o.event_id = ev_c.event_id \
@@ -413,7 +438,8 @@ def get_tag_occurrences(project=None, tag_id=None):
                             publication_facsimile_id, publication_facsimile_page, \
                             publication_manuscript_id, publication_version_id, ev.type, \
                             pub.id as publication_id, pub.name as publication_name, pub.original_filename as original_filename, \
-                            ev_o.publication_song_id as publication_song_id \
+                            ev_o.publication_song_id as publication_song_id, \
+                            ev_c.id as ev_c_id \
                             FROM event_connection ev_c \
                             JOIN event ev ON ev.id = ev_c.event_id \
                             JOIN event_occurrence ev_o ON ev_o.event_id = ev_c.event_id \
@@ -457,6 +483,59 @@ def get_tag_occurrences(project=None, tag_id=None):
     connection.close()
 
     return jsonify(tags)
+
+
+@occurrences.route("/<project>/work_manifestation/occurrences/<work_manifestation_id>/")
+@occurrences.route("/<project>/work_manifestation/occurrences/")
+def get_work_manifestation_occurrences(project=None, work_manifestation_id=None):
+
+    work_sql = """ SELECT id, title \
+                    FROM work_manifestation WHERE deleted != 1 """
+    if work_manifestation_id is not None:
+        work_sql = work_sql + " AND id = :work_manifestation_id "
+        statement = sqlalchemy.sql.text(work_sql).bindparams(work_manifestation_id=work_manifestation_id)
+    else:
+        statement = sqlalchemy.sql.text(work_sql)
+
+    connection = db_engine.connect()
+    work_manifestations = []
+    result = connection.execute(statement)
+    work_manifestation = result.fetchone()
+    while work_manifestation is not None:
+        work_manifestation = dict(work_manifestations)
+        occurrence_sql = "SELECT \
+                            pub_c.name as collection_name, pub_c.id as collection_id, ev.description, ev.id, ev_o.publication_comment_id, \
+                            publication_facsimile_id, publication_facsimile_page, \
+                            publication_manuscript_id, publication_version_id, ev.type, \
+                            pub.id as publication_id, pub.name as publication_name, pub.original_filename as original_filename, \
+                            ev_o.publication_song_id as publication_song_id, \
+                            ev_c.id as ev_c_id \
+                            FROM event_connection ev_c \
+                            JOIN event ev ON ev.id = ev_c.event_id \
+                            JOIN event_occurrence ev_o ON ev_o.event_id = ev_c.event_id \
+                            JOIN publication pub ON pub.id = ev_o.publication_id \
+                            JOIN publication_collection pub_c ON pub_c.id = pub.publication_collection_id \
+                            JOIN work_manifestation ON ev_c.work_manifestation_id = work_manifestation.id \
+                            WHERE ev.deleted != 1 AND ev_o.deleted != 1 AND ev_c.deleted != 1 AND work_manifestation.id = :work_manifestation_id ORDER BY pub_c.name ASC"
+        statement_occ = sqlalchemy.sql.text(occurrence_sql).bindparams(work_manifestation=work_manifestation['id'])
+        work_manifestation['occurrences'] = []
+        connection_2 = db_engine.connect()
+        result_2 = connection_2.execute(statement_occ)
+        occurrence = result_2.fetchone()
+        while occurrence is not None:
+            occurrenceData = dict(occurrence)
+            work_manifestation['occurrences'].append(occurrenceData)
+            occurrence = result_2.fetchone()
+
+        if len(work_manifestation['occurrences']) > 0:
+            work_manifestations.append(work_manifestation)
+
+        connection_2.close()
+        work_manifestation = result.fetchone()
+
+    connection.close()
+
+    return jsonify(work_manifestations)
 
 
 @occurrences.route("/<project>/occurrences/collection/<object_type>/<collection_id>")

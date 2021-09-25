@@ -54,7 +54,7 @@ def get_introduction(project, collection_id, publication_id, lang="swe"):
             content = get_content(project, "inl", filename, xsl_file, None)
             data = {
                 "id": "{}_{}_inl".format(collection_id, publication_id),
-                "content": content
+                "content": content.replace("id=", "data-id=")
             }
             return jsonify(data), 200
         else:
@@ -84,7 +84,7 @@ def get_title(project, collection_id, publication_id, lang="swe"):
             content = get_content(project, "tit", filename, xsl_file, None)
             data = {
                 "id": "{}_{}_tit".format(collection_id, publication_id),
-                "content": content
+                "content": content.replace("id=", "data-id=")
             }
             return jsonify(data), 200
         else:
@@ -119,6 +119,7 @@ def get_reading_text(project, collection_id, publication_id, section_id=None):
         bookId = get_collection_legacy_id(collection_id)
         if bookId is None:
             bookId = collection_id
+        bookId = '"{}"'.format(bookId)
 
         if section_id is not None:
             section_id = '"{}"'.format(section_id)
@@ -162,6 +163,8 @@ def get_comments(project, collection_id, publication_id, note_id=None, section_i
             if bookId is None:
                 bookId = collection_id
 
+            bookId = '"{}"'.format(bookId)
+
             if result is not None:
                 filename = "{}_com.xml".format(result["legacy_id"])
                 connection.close()
@@ -183,7 +186,7 @@ def get_comments(project, collection_id, publication_id, note_id=None, section_i
             if section_id is not None:
                 section_id = '"{}"'.format(section_id)
                 content = get_content(project, "com", filename, xsl_file, {
-                    "sectionId": section_id,
+                    "sectionId": str(section_id),
                     "estDocument": '"file://{}"'.format(safe_join(config["file_root"], "xml", "est", filename.replace("com", "est"))),
                     "bookId": bookId
                 })
@@ -270,12 +273,21 @@ def get_manuscript(project, collection_id, publication_id, manuscript_id=None, s
         if bookId is None:
             bookId = collection_id
 
+        bookId = '"{}"'.format(bookId)
+
         for index in range(len(manuscript_info)):
             manuscript = manuscript_info[index]
             if section_id is not None:
+                section_id = '"{}"'.format(section_id)
                 params = {
                     "bookId": bookId,
-                    "sectionId": section_id
+                    "sectionId": str(section_id)
+                }
+            elif manuscript_id is not None and 'ch' in str(manuscript_id):
+                section_id = '"{}"'.format(manuscript_id)
+                params = {
+                    "bookId": bookId,
+                    "sectionId": str(section_id)
                 }
             elif manuscript_id is not None and 'ch' in str(manuscript_id):
                 params = {
@@ -290,8 +302,8 @@ def get_manuscript(project, collection_id, publication_id, manuscript_id=None, s
                 filename = "{}.xml".format(manuscript["legacy_id"])
             else:
                 filename = "{}_{}_ms_{}.xml".format(collection_id, publication_id, manuscript["id"])
-            manuscript_info[index]["manuscript_changes"] = get_content(project, "ms", filename, "ms_changes.xsl", params)
-            manuscript_info[index]["manuscript_normalized"] = get_content(project, "ms", filename, "ms_normalized.xsl", params)
+            manuscript_info[index]["manuscript_changes"] = get_content(project, "ms", filename, "ms_changes.xsl", params).replace("id=", "data-id=")
+            manuscript_info[index]["manuscript_normalized"] = get_content(project, "ms", filename, "ms_normalized.xsl", params).replace("id=", "data-id=")
 
         data = {
             "id": "{}_{}".format(collection_id, publication_id),
@@ -330,6 +342,8 @@ def get_variant(project, collection_id, publication_id, section_id=None):
         if bookId is None:
             bookId = collection_id
 
+        bookId = '"{}"'.format(bookId)
+
         for index in range(len(variation_info)):
             variation = variation_info[index]
             params = {
@@ -342,6 +356,7 @@ def get_variant(project, collection_id, publication_id, section_id=None):
                 xsl_file = "poem_variants_other.xsl"
 
             if section_id is not None:
+                section_id = '"{}"'.format(section_id)
                 params["section_id"] = section_id
 
             if variation["original_filename"] is None and variation["legacy_id"] is not None:

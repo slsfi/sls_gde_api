@@ -1,8 +1,9 @@
 from flask import Blueprint, jsonify, request
-from sqlalchemy import select
+from sqlalchemy import select, text
+from datetime import datetime
 
 from sls_api.endpoints.generics import db_engine, get_project_id_from_name, get_table, int_or_none, \
-    project_permission_required, select_all_from_table
+    project_permission_required
 
 
 collection_tools = Blueprint("collection_tools", __name__)
@@ -64,9 +65,35 @@ def create_facsimile_collection(project):
 @project_permission_required
 def list_facsimile_collections(project):
     """
-    List all available publication_facsimile_collections
+    List all publication_collection objects for a given project
     """
-    return select_all_from_table("publication_facsimile_collection")
+    project_id = get_project_id_from_name(project)
+    connection = db_engine.connect()
+    statement = """ select * from publication_facsimile_collection where deleted != 1 AND (
+                    id in
+                    (
+                        select publication_facsimile_collection_id from publication_facsimile where publication_id in (
+                            select id from publication where publication_collection_id in (
+                                select id from publication_collection where project_id = :project_id and deleted != 1
+                            )
+                        )
+                    ) or
+                    id not in
+                    (
+                        select publication_facsimile_collection_id from publication_facsimile where publication_id in (
+                            select id from publication where publication_collection_id in (
+                                select id from publication_collection where deleted != 1
+                            )
+                        )
+                    )
+                )"""
+    statement = text(statement).bindparams(project_id=project_id)
+    rows = connection.execute(statement).fetchall()
+    result = []
+    for row in rows:
+        result.append(dict(row))
+    connection.close()
+    return jsonify(result)
 
 
 @collection_tools.route("/<project>/facsimile_collection/<collection_id>/link/", methods=["POST"])
@@ -132,7 +159,11 @@ def link_facsimile_collection_to_publication(project, collection_id):
         "publication_facsimile_collection_id": collection_id,
         "publication_id": publication_id,
         "publication_manuscript_id": request_data.get("publication_manuscript_id", None),
-        "publication_version_id": request_data.get("publication_version_id", None)
+        "publication_version_id": request_data.get("publication_version_id", None),
+        "page_nr": request_data.get("page", 0),
+        "section_id": request_data.get("section_id", 0),
+        "priority": request_data.get("priority", 0),
+        "type": request_data.get("type", 0)
     }
     try:
         result = connection.execute(insert, **new_facsimile)
@@ -153,6 +184,64 @@ def link_facsimile_collection_to_publication(project, collection_id):
         connection.close()
 
 
+@collection_tools.route("/<project>/facsimile_collection/facsimile/edit/", methods=["POST"])
+@project_permission_required
+def edit_facsimile(project):
+    """
+    Edit a facsimile object in the database
+
+    POST data MUST be in JSON format.
+
+    """
+    request_data = request.get_json()
+    if not request_data:
+        return jsonify({"msg": "No data provided."}), 400
+
+    facsimile_id = request_data.get("id", None)
+    facsimile = get_table("publication_facsimile")
+
+    connection = db_engine.connect()
+    facsimile_query = select([facsimile.c.id]).where(facsimile.c.id == int_or_none(facsimile_id))
+    facsimile_row = connection.execute(facsimile_query).fetchone()
+    if facsimile_row is None:
+        return jsonify({"msg": "No facsimile with an ID of {} exists.".format(facsimile_id)}), 404
+
+    # facsimile_collection_id = request_data.get("facsimile_collection_id", None)
+    page = request_data.get("page", None)
+    priority = request_data.get("priority", None)
+    type = request_data.get("type", None)
+
+    values = {}
+    if page is not None:
+        values["page_nr"] = page
+    if type is not None:
+        values["type"] = type
+    if priority is not None:
+        values["priority"] = priority
+
+    values["date_modified"] = datetime.now()
+
+    if len(values) > 0:
+        try:
+            update = facsimile.update().where(facsimile.c.id == int(facsimile_id)).values(**values)
+            connection.execute(update)
+            return jsonify({
+                "msg": "Updated facsimile {} with values {}".format(int(facsimile_id), str(values)),
+                "facsimile_id": int(facsimile_id)
+            })
+        except Exception as e:
+            result = {
+                "msg": "Failed to update facsimile.",
+                "reason": str(e)
+            }
+            return jsonify(result), 500
+        finally:
+            connection.close()
+    else:
+        connection.close()
+        return jsonify("No valid update values given."), 400
+
+
 @collection_tools.route("/<project>/facsimile_collection/<collection_id>/list_links/")
 @project_permission_required
 def list_facsimile_collection_links(project, collection_id):
@@ -168,6 +257,26 @@ def list_facsimile_collection_links(project, collection_id):
         result.append(dict(row))
     connection.close()
     return jsonify(result)
+
+
+@collection_tools.route("/<project>/facsimile_publication/delete/<f_pub_id>", methods=["DELETE"])
+@project_permission_required
+def delete_facsimile_collection_link(project, f_pub_id):
+    """
+    List all publication_facsimile objects in the given publication_facsimile_collection
+    """
+    connection = db_engine.connect()
+    publication_facsimile = get_table("publication_facsimile")
+    values = {}
+    values['deleted'] = 1
+    values["date_modified"] = datetime.now()
+    update = publication_facsimile.update().where(publication_facsimile.c.id == int(f_pub_id)).values(**values)
+    connection.execute(update)
+    connection.close()
+    result = {
+        "msg": "Deleted publication_facsimile"
+    }
+    return jsonify(result), 200
 
 
 @collection_tools.route("/<project>/publication_collection/list/")
@@ -271,8 +380,9 @@ def new_publication_collection(project):
 
 
 @collection_tools.route("/<project>/publication_collection/<collection_id>/publications/")
+@collection_tools.route("/<project>/publication_collection/<collection_id>/publications/<order_by>/")
 @project_permission_required
-def list_publications(project, collection_id):
+def list_publications(project, collection_id, order_by="id"):
     """
     List all publications in a given collection
     """
@@ -280,7 +390,7 @@ def list_publications(project, collection_id):
     connection = db_engine.connect()
     collections = get_table("publication_collection")
     publications = get_table("publication")
-    statement = select([collections]).where(collections.c.id == int_or_none(collection_id))
+    statement = select([collections]).where(collections.c.id == int_or_none(collection_id)).order_by(str(order_by))
     rows = connection.execute(statement).fetchall()
     if len(rows) != 1:
         return jsonify(
@@ -294,7 +404,7 @@ def list_publications(project, collection_id):
                 "msg": "Found collection not part of project {!r} with ID {}.".format(project, project_id)
             }
         ), 400
-    statement = select([publications]).where(publications.c.publication_collection_id == int_or_none(collection_id))
+    statement = select([publications]).where(publications.c.publication_collection_id == int_or_none(collection_id)).order_by(str(order_by))
     rows = connection.execute(statement).fetchall()
     result = []
     for row in rows:
