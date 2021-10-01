@@ -157,7 +157,7 @@ def upload_facsimile_file(project, collection_id, page_number):
     if config is None:
         return jsonify({"msg": "No such project."}), 400
     if "facsimile" not in request.files:
-        return jsonify({"msg": "No file provided!"}), 400
+        return jsonify({"msg": "No facsimile file in request.files provided!"}), 400
 
     # get a folder path for the facsimile collection from the database if set, otherwise use project file root
     connection = db_engine.connect()
@@ -177,7 +177,7 @@ def upload_facsimile_file(project, collection_id, page_number):
     uploaded_file = request.files["facsimile"]
     # if user selects no file, some libraries send a POST with an empty file and filename
     if uploaded_file.filename == "":
-        return jsonify({"msg": "No file provided!"}), 400
+        return jsonify({"msg": "No file provided in uploaded_file.filename!"}), 400
 
     if uploaded_file and allowed_facsimile(uploaded_file.filename):
         # handle potentially malicious filename and save file to temp folder
