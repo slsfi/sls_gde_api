@@ -156,8 +156,11 @@ def upload_facsimile_file(project, collection_id, page_number):
     config = get_project_config(project)
     if config is None:
         return jsonify({"msg": "No such project."}), 400
+    if request.files is None:
+        return jsonify({"msg": "Request.files is none!"}), 400
     if "facsimile" not in request.files:
-        return jsonify({"msg": "No facsimile file in request.files provided!"}), 400
+        return jsonify({"msg": str(request.files)}), 400
+    
 
     # get a folder path for the facsimile collection from the database if set, otherwise use project file root
     connection = db_engine.connect()
