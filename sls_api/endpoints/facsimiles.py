@@ -5,6 +5,7 @@ import os
 import sqlalchemy
 import subprocess
 from werkzeug.utils import secure_filename
+from subprocess import PIPE
 
 from sls_api.endpoints.generics import ALLOWED_EXTENSIONS_FOR_FACSIMILE_UPLOAD, allowed_facsimile, db_engine, \
     FACSIMILE_IMAGE_SIZES, FACSIMILE_UPLOAD_FOLDER, get_project_config, get_project_id_from_name
@@ -128,7 +129,7 @@ def convert_resize_uploaded_facsimile(uploaded_file_path, collection_folder_path
     for zoom_level, resolution in FACSIMILE_IMAGE_SIZES.items():
         convert_cmd = ["convert", "-resize", resolution, "-quality", "77", "-colorspace", "sRGB",
                        uploaded_file_path, safe_join(collection_folder_path, str(zoom_level), f"{page_number}.jpg")]
-        success = subprocess.run(convert_cmd, capture_output=False, check=True)
+        success = subprocess.run(convert_cmd, check=True, stdout=PIPE, stderr=PIPE)
         if success.returncode == 0:
             successful_conversions.append(zoom_level)
     # remove uploaded source file once conversions are complete
