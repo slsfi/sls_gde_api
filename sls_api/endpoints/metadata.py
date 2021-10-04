@@ -207,16 +207,9 @@ def get_collections(project):
         connection = db_engine.connect()
         status = 1 if config["show_internally_published"] else 2
         project_id = get_project_id_from_name(project)
-<<<<<<< HEAD
         sql = sqlalchemy.sql.text(
             """ SELECT id, name as title, published, date_created, date_modified, date_published_externally, legacy_id,
             project_id, publication_collection_title_id, publication_collection_introduction_id, name FROM publication_collection WHERE project_id = :p_id AND published>=:p_status ORDER BY name """)
-=======
-        sql = sqlalchemy.sql.text("SELECT id, name as title "
-                                  "FROM publication_collection "
-                                  "WHERE project_id = :p_id AND published>=:p_status "
-                                  "ORDER BY name")
->>>>>>> master
         statement = sql.bindparams(p_status=status, p_id=project_id)
         results = []
         for row in connection.execute(statement).fetchall():
@@ -333,7 +326,6 @@ def get_project_locations(project):
     connection = db_engine.connect()
     project_id = get_project_id_from_name(project)
     # Get both locations and their translations
-<<<<<<< HEAD
     sql = sqlalchemy.sql.text(""" SELECT *,
     ( SELECT array_to_json(array_agg(row_to_json(d.*))) AS array_to_json
                    FROM ( SELECT tt.id, tt.text, tt."language", t.neutral_text, tt.field_name, tt.table_name, t.id as translation_id,
@@ -343,14 +335,6 @@ def get_project_locations(project):
                           WHERE ((t.id = l.translation_id AND tt.table_name = 'location') AND tt.deleted = 0 AND t.deleted = 0) ORDER BY translation_id DESC) d) AS translations
         FROM location l WHERE l.project_id = :p_id AND l.deleted = 0 ORDER BY NAME ASC """)    
     statement = sql.bindparams(p_id=project_id, )
-=======
-    stmnt = "SELECT *, (SELECT array_to_json(array_agg(row_to_json(d.*))) AS array_to_json " \
-            "FROM (SELECT tt.id, tt.text, tt.language, t.neutral_text, tt.field_name, tt.table_name, t.id as translation_id, tt.date_modified, tt.date_created " \
-            "FROM translation t JOIN translation_text tt ON tt.translation_id = t.id " \
-            "WHERE t.id = l.translation_id and tt.table_name = 'location' ORDER BY translation_id DESC) d) AS translations " \
-            "FROM location l WHERE l.project_id = :p_id ORDER BY NAME"
-    statement = sqlalchemy.sql.text(stmnt).bindparams(p_id=project_id)
->>>>>>> master
     results = []
     for row in connection.execute(statement).fetchall():
         results.append(dict(row))
