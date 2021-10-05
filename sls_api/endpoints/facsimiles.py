@@ -125,19 +125,22 @@ def convert_resize_uploaded_facsimile(uploaded_file_path, collection_folder_path
     Returns True if all conversions succeeded, otherwise returns False.
     """
     successful_conversions = []
-    for zoom_level, resolution in FACSIMILE_IMAGE_SIZES.items():
-        convert_cmd = ["convert", "-resize", resolution, "-quality", "77", "-colorspace", "sRGB",
-                       uploaded_file_path, safe_join(collection_folder_path, str(zoom_level), f"{page_number}.jpg")]
-        success = subprocess.run(convert_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True)
-        if success.returncode == 0:
-            successful_conversions.append(zoom_level)
-        else:
-            logger.error("Failed to convert uploaded facsimile!")
-            logger.error(success.stdout)
-            logger.error(success.stderr)
-    # remove uploaded source file once conversions are complete
-    os.remove(uploaded_file_path)
-    return len(successful_conversions) == len(FACSIMILE_IMAGE_SIZES.keys())
+    try:
+        for zoom_level, resolution in FACSIMILE_IMAGE_SIZES.items():
+            convert_cmd = ["convert", "-resize", resolution, "-quality", "77", "-colorspace", "sRGB",
+                        uploaded_file_path, safe_join(collection_folder_path, str(zoom_level), f"{page_number}.jpg")]
+            success = subprocess.run(convert_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True)
+            if success.returncode == 0:
+                successful_conversions.append(zoom_level)
+            else:
+                logger.error("Failed to convert uploaded facsimile!")
+                logger.error(success.stdout)
+                logger.error(success.stderr)
+        # remove uploaded source file once conversions are complete
+        os.remove(uploaded_file_path)
+        return len(successful_conversions) == len(FACSIMILE_IMAGE_SIZES.keys())
+    except Exception as ex:
+        logger.error(f"Failed to convert uploaded facsimile!: {ex}")
 
 
 @facsimiles.route("/<project>/facsimiles/<collection_id>/<page_number>", methods=["PUT", "POST"])
