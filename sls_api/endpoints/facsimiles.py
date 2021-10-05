@@ -7,7 +7,7 @@ import subprocess
 from werkzeug.utils import secure_filename
 
 from sls_api.endpoints.generics import ALLOWED_EXTENSIONS_FOR_FACSIMILE_UPLOAD, allowed_facsimile, db_engine, \
-    FACSIMILE_IMAGE_SIZES, FACSIMILE_UPLOAD_FOLDER, get_project_config, get_project_id_from_name
+    FACSIMILE_IMAGE_SIZES, FACSIMILE_UPLOAD_FOLDER, get_project_config, get_project_id_from_name, project_permission_required
 
 facsimiles = Blueprint('facsimiles', __name__)
 logger = logging.getLogger("sls_api.facsimiles")
@@ -140,6 +140,7 @@ def convert_resize_uploaded_facsimile(uploaded_file_path, collection_folder_path
     return len(successful_conversions) == len(FACSIMILE_IMAGE_SIZES.keys())
 
 
+@project_permission_required
 @facsimiles.route("/<project>/facsimiles/<collection_id>/<page_number>", methods=["PUT", "POST"])
 def upload_facsimile_file(project, collection_id, page_number):
     """
