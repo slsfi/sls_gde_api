@@ -126,7 +126,7 @@ def convert_resize_uploaded_facsimile(uploaded_file_path, collection_folder_path
     """
     successful_conversions = []
     for zoom_level, resolution in FACSIMILE_IMAGE_SIZES.items():
-        os.makedirs(safe_join(collection_folder_path, zoom_level), exist_ok=True)
+        os.makedirs(safe_join(collection_folder_path, str(zoom_level)), exist_ok=True)
         convert_cmd = ["convert", "-resize", resolution, "-quality", "77", "-colorspace", "sRGB",
                        uploaded_file_path, safe_join(collection_folder_path, str(zoom_level), f"{page_number}.jpg")]
         try:
@@ -136,7 +136,7 @@ def convert_resize_uploaded_facsimile(uploaded_file_path, collection_folder_path
             logger.error(ex.stdout)
             logger.error(ex.stderr)
         else:
-            successful_conversions.append(zoom_level)
+            successful_conversions.append(str(zoom_level))
     # remove uploaded source file once conversions are complete
     os.remove(uploaded_file_path)
     return len(successful_conversions) == len(FACSIMILE_IMAGE_SIZES.keys())
