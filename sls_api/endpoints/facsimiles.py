@@ -129,11 +129,10 @@ def convert_resize_uploaded_facsimile(uploaded_file_path, collection_folder_path
         os.makedirs(safe_join(collection_folder_path, zoom_level), exist_ok=True)
         convert_cmd = ["convert", "-resize", resolution, "-quality", "77", "-colorspace", "sRGB",
                        uploaded_file_path, safe_join(collection_folder_path, zoom_level, f"{page_number}.jpg")]
-        success = subprocess.run(convert_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True)
-        if success.returncode == 0:
-            successful_conversions.append(zoom_level)
-        else:
-            logger.error("Failed to convert uploaded facsimile!")
+        try:
+            success = subprocess.run(convert_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True)
+        except subprocess.CalledProcessError:
+            logger.exception("Failed to convert uploaded facsimile!")
             logger.error(success.stdout)
             logger.error(success.stderr)
     # remove uploaded source file once conversions are complete
