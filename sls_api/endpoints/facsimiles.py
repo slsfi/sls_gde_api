@@ -126,6 +126,7 @@ def convert_resize_uploaded_facsimile(uploaded_file_path, collection_folder_path
     """
     successful_conversions = []
     for zoom_level, resolution in FACSIMILE_IMAGE_SIZES.items():
+        os.makedirs(safe_join(collection_folder_path, zoom_level), exist_ok=True)
         convert_cmd = ["convert", "-resize", resolution, "-quality", "77", "-colorspace", "sRGB",
                        uploaded_file_path, safe_join(collection_folder_path, zoom_level, f"{page_number}.jpg")]
         success = subprocess.run(convert_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True)
