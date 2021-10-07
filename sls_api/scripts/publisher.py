@@ -226,7 +226,7 @@ def generate_ms_file(master_file_path, target_file_path, publication_info):
     ms_document.Save(target_file_path)
 
 
-def check_publication_mtimes_and_publish_files(project: str, publication_ids: Union[tuple, None], git_author: str, no_git=False, force_publish=False):
+def check_publication_mtimes_and_publish_files(project: str, publication_ids: Union[tuple, None], git_author: str, no_git=False, force_publish=False, is_multilingual=False):
     update_success, result_str = update_files_in_git_repo(project)
     if not update_success:
         logger.error("Git update failed! Reason: {}".format(result_str))
@@ -259,6 +259,24 @@ def check_publication_mtimes_and_publish_files(project: str, publication_ids: Un
                                 FROM publication p \
                                 JOIN publication_collection pcol ON p.publication_collection_id=pcol.id \
                                 WHERE pcol.project_id = :proj AND p.deleted != 1 AND pcol.deleted != 1 "
+
+            if is_multilingual:
+                # publication info
+                publication_query = "SELECT \
+                                    p.id as p_id, \
+                                    p.publication_collection_id as c_id, \
+                                    pcol.id as c_id, \
+                                    tr.text as original_filename, \
+                                    p.original_publication_date as original_publication_date, \
+                                    p.genre as genre, \
+                                    p.publication_group_id as publication_group_id, \
+                                    p.publication_comment_id as publication_comment_id, \
+                                    p.name as name, \
+                                    tr.language as language \
+                                    FROM publication p \
+                                    JOIN publication_collection pcol ON p.publication_collection_id=pcol.id \
+                                    JOIN translation_text tr ON p.translation_id = tr.translation_id and tr.field_name='original_filename' \
+                                    WHERE pcol.project_id = :proj AND p.deleted != 1 AND pcol.deleted != 1 "
 
             # publication_comment info, relating to "general comments" file for each publication
             comment_query = "SELECT \
@@ -329,6 +347,10 @@ def check_publication_mtimes_and_publish_files(project: str, publication_ids: Un
                     logger.info("Source file not set for publication {}".format(publication_id))
                     continue
                 est_target_filename = "{}_{}_est.xml".format(collection_id, publication_id)
+                if is_multilingual:
+                    language = row["language"]
+                    est_target_filename = "{}_{}_{}_est.xml".format(collection_id, publication_id, language)
+
                 com_target_filename = est_target_filename.replace("_est.xml", "_com.xml")
                 est_target_file_path = os.path.join(file_root, "xml", "est", est_target_filename)
                 com_target_file_path = os.path.join(file_root, "xml", "com", com_target_filename)
@@ -689,6 +711,7 @@ if __name__ == "__main__":
                         help="Print a listing of available projects with seemingly valid configuration and exit")
     parser.add_argument("--git_author", type=str, help="Author used for git commits (Default 'Publisher <is@sls.fi>')", default="Publisher <is@sls.fi>")
     parser.add_argument("--no_git", action="store_true", help="Don't run git commands as part of publishing.")
+    parser.add_argument("--is_multilingual", action="store_true", help="The publication is multilingual and original_filename is found in translation_text")
 
     args = parser.parse_args()
 
@@ -710,7 +733,7 @@ if __name__ == "__main__":
         else:
             if args.project in valid_projects:
                 check_publication_mtimes_and_publish_files(args.project, ids, git_author=args.git_author,
-                                                           no_git=args.no_git, force_publish=args.all_ids)
+                                                           no_git=args.no_git, force_publish=args.all_ids, is_multilingual=args.is_multilingual)
             else:
                 logger.error(f"{args.project} is not in the API configuration or lacks 'comments_database' setting, aborting...")
                 sys.exit(1)
