@@ -305,13 +305,51 @@ def get_legacyid_by_collection_id(project, collection_id):
 
 
 # Get all subjects for a project
+@meta.route("/<project>/subjects-i18n/<language>")
 @meta.route("/<project>/subjects")
-def get_project_subjects(project):
+def get_project_subjects(project, language=None):
     logger.info("Getting /<project>/subjects")
     connection = db_engine.connect()
     project_id = get_project_id_from_name(project)
-    sql = sqlalchemy.sql.text("SELECT * FROM subject WHERE project_id = :p_id")
-    statement = sql.bindparams(p_id=project_id)
+    
+    if language is not None:
+        query = """select 
+            s.id, s.date_created, s.date_modified, s.deleted, s.type, 
+            s.translation_id, s.legacy_id, s.date_born, s.date_deceased,
+            s.project_id, s.source, 
+            COALESCE(t_fn.text, s.first_name) as first_name,
+            COALESCE(t_ln.text, s.last_name) as last_name, 
+            COALESCE(t_plb.text, s.place_of_birth) as place_of_birth, 
+            COALESCE(t_occ.text, s.occupation) as occupation,
+            COALESCE(t_prep.text, s.preposition) as preposition,
+            COALESCE(t_fln.text, s.full_name) as full_name,
+            COALESCE(t_desc.text, s.description) as description,
+            COALESCE(t_alias.text, s.alias) as alias,
+            COALESCE(t_prv.text, s.previous_last_name) as previous_last_name,
+            COALESCE(t_alt.text, s.alternative_form) as alternative_form
+
+            from subject s
+
+            LEFT JOIN translation_text t_fn ON t_fn.translation_id = s.translation_id and t_fn.language=:lang and t_fn.field_name='first_name'
+            LEFT JOIN translation_text t_ln ON t_ln.translation_id = s.translation_id and t_ln.language=:lang and t_ln.field_name='last_name'
+            LEFT JOIN translation_text t_plb ON t_plb.translation_id = s.translation_id and t_plb.language=:lang and t_plb.field_name='place_of_birth'
+            LEFT JOIN translation_text t_occ ON t_occ.translation_id = s.translation_id and t_occ.language=:lang and t_occ.field_name='occupation'
+            LEFT JOIN translation_text t_prep ON t_prep.translation_id = s.translation_id and t_prep.language=:lang and t_prep.field_name='preposition'
+            LEFT JOIN translation_text t_fln ON t_fn.translation_id = s.translation_id and t_fln.language=:lang and t_fln.field_name='full_name'
+            LEFT JOIN translation_text t_desc ON t_desc.translation_id = s.translation_id and t_desc.language=:lang and t_desc.field_name='description'
+            LEFT JOIN translation_text t_alias ON t_alias.translation_id = s.translation_id and t_alias.language=:lang and t_alias.field_name='alias'
+            LEFT JOIN translation_text t_prv ON t_prv.translation_id = s.translation_id and t_prv.language=:lang and t_prv.field_name='previous_last_name'
+            LEFT JOIN translation_text t_alt ON t_alt.translation_id = s.translation_id and t_alt.language=:lang and t_alt.field_name='alternative_form'
+
+            WHERE project_id = :p_id
+        """
+        sql = sqlalchemy.sql.text(query)
+        statement = sql.bindparams(p_id=project_id, lang=language)
+    else:
+        sql = sqlalchemy.sql.text("SELECT * FROM subject WHERE project_id = :p_id")
+        statement = sql.bindparams(p_id=project_id)
+
+
     results = []
     for row in connection.execute(statement).fetchall():
         results.append(dict(row))
