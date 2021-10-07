@@ -94,9 +94,10 @@ def get_title(project, collection_id, publication_id, lang="swe"):
             }), 403
 
 
+@text.route("/<project>/text/<collection_id>/<publication_id>/est-i18n/<language>")
 @text.route("/<project>/text/<collection_id>/<publication_id>/est/<section_id>")
 @text.route("/<project>/text/<collection_id>/<publication_id>/est")
-def get_reading_text(project, collection_id, publication_id, section_id=None):
+def get_reading_text(project, collection_id, publication_id, section_id=None, language=None):
     """
     Get reading text for a given publication
     """
@@ -107,8 +108,12 @@ def get_reading_text(project, collection_id, publication_id, section_id=None):
         select = "SELECT legacy_id FROM publication WHERE id = :p_id AND original_filename IS NULL"
         statement = sqlalchemy.sql.text(select).bindparams(p_id=publication_id)
         result = connection.execute(statement).fetchone()
-        if result is None:
+        if result is None or language is not None:
             filename = "{}_{}_est.xml".format(collection_id, publication_id)
+            if language is not None:
+                filename = "{}_{}_{}_est.xml".format(collection_id, publication_id, language)
+                logger.debug("Filename (est) for {} is {}".format(publication_id, filename))
+
             connection.close()
         else:
             filename = "{}_est.xml".format(result["legacy_id"])
@@ -128,9 +133,12 @@ def get_reading_text(project, collection_id, publication_id, section_id=None):
         else:
             content = get_content(project, "est", filename, xsl_file, {"bookId": bookId})
         data = {
+            # @TODO: investigate if id should have language in its value or not (similar to filename).
             "id": "{}_{}_est".format(collection_id, publication_id),
             "content": content.replace("id=", "data-id=")
         }
+        if language is not None:
+            data["language"] = language
         return jsonify(data), 200
     else:
         return jsonify({
