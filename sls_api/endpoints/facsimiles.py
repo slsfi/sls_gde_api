@@ -44,7 +44,10 @@ def get_facsimiles(project, publication_id, section_id=None):
 
         sql = " ".join([sql, "ORDER BY f.priority"])
 
-        pub_id = publication_id.split('_')[1]
+        if '_' in publication_id:
+            pub_id = publication_id.split('_')[1]
+        else:
+            pub_id = publication_id
 
         if section_id is not None:
             section_id = str(section_id).replace('ch', '')
