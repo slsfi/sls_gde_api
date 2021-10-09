@@ -347,11 +347,12 @@ def check_publication_mtimes_and_publish_files(project: str, publication_ids: Un
                     logger.info("Source file not set for publication {}".format(publication_id))
                     continue
                 est_target_filename = "{}_{}_est.xml".format(collection_id, publication_id)
+                com_target_filename = est_target_filename.replace("_est.xml", "_com.xml")
+
                 if is_multilingual:
                     language = row["language"]
                     est_target_filename = "{}_{}_{}_est.xml".format(collection_id, publication_id, language)
 
-                com_target_filename = est_target_filename.replace("_est.xml", "_com.xml")
                 est_target_file_path = os.path.join(file_root, "xml", "est", est_target_filename)
                 com_target_file_path = os.path.join(file_root, "xml", "com", com_target_filename)
                 # original_filename should be relative to the project root
