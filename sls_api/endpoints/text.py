@@ -102,6 +102,11 @@ def get_reading_text(project, collection_id, publication_id, section_id=None, la
     Get reading text for a given publication
     """
     can_show, message = get_published_status(project, collection_id, publication_id)
+
+    if (section_id in ['sv', 'fi']):
+        language=section_id
+        section_id = None
+
     if can_show:
         logger.info("Getting XML for {} and transforming...".format(request.full_path))
         connection = db_engine.connect()
