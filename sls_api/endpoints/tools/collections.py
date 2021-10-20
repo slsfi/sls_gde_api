@@ -39,6 +39,7 @@ def create_facsimile_collection(project):
         "title": request_data.get("title", None),
         "description": request_data.get("description", None),
         "folder_path": request_data.get("folderPath", None),
+        "external_url": request_data.get("externalUrl", None),
         "number_of_pages": request_data.get("numberOfPages", None),
         "start_page_number": request_data.get("startPageNumber", None)
     }
