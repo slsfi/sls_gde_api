@@ -28,7 +28,7 @@ def get_facsimiles(project, publication_id, section_id=None):
 
         connection = db_engine.connect()
 
-        sql = 'select * from publication_facsimile as f \
+        sql = 'select *, f.id as publication_facsimile_id from publication_facsimile as f \
         left join publication_facsimile_collection as fc on fc.id=f.publication_facsimile_collection_id \
         left join publication p on p.id=f.publication_id \
         where f.deleted != 1 and fc.deleted != 1 and f.publication_id=:p_id \
