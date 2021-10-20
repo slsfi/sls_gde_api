@@ -64,7 +64,7 @@ def create_facsimile_collection(project):
 
 @collection_tools.route("/<project>/facsimile_collection/<facsimile_collection_id>/edit/", methods=["POST"])
 @project_permission_required
-def create_facsimile_collection(project, facsimile_collection_id):
+def edit_facsimile_collection(project, facsimile_collection_id):
     """
     Edit a facsimile_collection object in the database
 
