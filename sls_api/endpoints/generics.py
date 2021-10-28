@@ -99,12 +99,17 @@ def project_permission_required(fn):
             # If in FLASK_DEBUG mode, test@test.com user has access to all projects
             return fn(*args, **kwargs)
         else:
+            # locate project arg in function arguments
             if len(args) > 0:
-                if args[0] in identity["projects"]:
-                    return fn(*args, **kwargs)
-            elif "projects" in kwargs:
-                if kwargs["projects"] in identity["projects"]:
-                    return fn(*args, **kwargs)
+                project = args[0]
+            elif "project" in kwargs:
+                project = kwargs["project"]
+            else:
+                return jsonify({"msg": "No project identified."}), 500
+
+            # check for permission
+            if project in identity["projects"]:
+                return fn(*args, **kwargs)
             else:
                 return jsonify({"msg": "No access to this project."}), 403
     return decorated_function
