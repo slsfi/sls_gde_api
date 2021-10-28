@@ -38,6 +38,16 @@ class User(db.Model):
         """
         return cls.query.filter_by(email=email).first()
 
+    @classmethod
+    def reset_password(cls, email, password):
+        user = cls.query.filter_by(email=email).first()
+        if user:
+            user.password = pwd_context.hash(password)
+            db.session.commit()
+            return True
+        else:
+            return False
+
     def get_projects(self):
         """
         Returns a list of all projects the User can edit
