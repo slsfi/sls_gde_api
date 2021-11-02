@@ -378,16 +378,24 @@ def edit_translation(project, translation_id):
         "field_name": request_data.get("field_name", None),
         "text": request_data.get("text", None),
         "language": request_data.get("language", None),
+        "id": request_data.get("translation_text_id", None),
         "translation_id": translation_id
     }
 
-    translation_text_id = get_translation_text_id(translation_id, new_translation["table_name"], new_translation["field_name"], new_translation["language"])
-
+    if new_translation["id"] is not None and new_translation["field_name"] == 'language':
+        # We are updating the language
+        translation_text_id = new_translation["id"]
+    else:
+        # We are updating or creating a new translation
+        translation_text_id = get_translation_text_id(translation_id, new_translation["table_name"], new_translation["field_name"], new_translation["language"])
+    
     connection = db_engine.connect()
 
     # if translation_text_id is None we should add a new row to the translation_text table
     if translation_text_id is None:
         try:
+            # Make sure we add a new ID
+            del new_translation["id"]
             insert = translation_text.insert()
             result = connection.execute(insert, **new_translation)
             new_row = select([translation_text]).where(translation_text.c.id == result.inserted_primary_key[0])

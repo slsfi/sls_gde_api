@@ -44,7 +44,10 @@ def get_facsimiles(project, publication_id, section_id=None):
 
         sql = " ".join([sql, "ORDER BY f.priority"])
 
-        pub_id = publication_id.split('_')[1]
+        if '_' in publication_id:
+            pub_id = publication_id.split('_')[1]
+        else:
+            pub_id = publication_id
 
         if section_id is not None:
             section_id = str(section_id).replace('ch', '')
@@ -126,9 +129,9 @@ def convert_resize_uploaded_facsimile(uploaded_file_path, collection_folder_path
     """
     successful_conversions = []
     for zoom_level, resolution in FACSIMILE_IMAGE_SIZES.items():
-        os.makedirs(safe_join(collection_folder_path, zoom_level), exist_ok=True)
+        os.makedirs(safe_join(collection_folder_path, str(zoom_level)), exist_ok=True)
         convert_cmd = ["convert", "-resize", resolution, "-quality", "77", "-colorspace", "sRGB",
-                       uploaded_file_path, safe_join(collection_folder_path, zoom_level, f"{page_number}.jpg")]
+                       uploaded_file_path, safe_join(collection_folder_path, str(zoom_level), f"{page_number}.jpg")]
         try:
             subprocess.run(convert_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True)
         except subprocess.CalledProcessError as ex:
@@ -136,7 +139,7 @@ def convert_resize_uploaded_facsimile(uploaded_file_path, collection_folder_path
             logger.error(ex.stdout)
             logger.error(ex.stderr)
         else:
-            successful_conversions.append(zoom_level)
+            successful_conversions.append(str(zoom_level))
     # remove uploaded source file once conversions are complete
     os.remove(uploaded_file_path)
     return len(successful_conversions) == len(FACSIMILE_IMAGE_SIZES.keys())
@@ -163,8 +166,11 @@ def upload_facsimile_file(project, collection_id, page_number):
     config = get_project_config(project)
     if config is None:
         return jsonify({"msg": "No such project."}), 400
+    if request.files is None:
+        return jsonify({"msg": "Request.files is none!"}), 400
     if "facsimile" not in request.files:
-        return jsonify({"msg": "No file provided!"}), 400
+        return jsonify({"msg": str(request.files)}), 400
+    
 
     # get a folder path for the facsimile collection from the database if set, otherwise use project file root
     connection = db_engine.connect()
@@ -184,7 +190,7 @@ def upload_facsimile_file(project, collection_id, page_number):
     uploaded_file = request.files["facsimile"]
     # if user selects no file, some libraries send a POST with an empty file and filename
     if uploaded_file.filename == "":
-        return jsonify({"msg": "No file provided!"}), 400
+        return jsonify({"msg": "No file provided in uploaded_file.filename!"}), 400
 
     if uploaded_file and allowed_facsimile(uploaded_file.filename):
         # handle potentially malicious filename and save file to temp folder
