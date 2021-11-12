@@ -320,7 +320,8 @@ class CTeiDocument:
 
             # Get the position for the note in the main text
             sPosition = self.__GetNotePosition(cMainText, comment['id'])
-            sPosition = sPosition.replace('l', '')
+            #sPosition = sPosition.replace('l', '')
+            sPosition = re.sub('l([0-9]+)', r'\1', sPosition)
             sPosition = re.sub('p[0-9]+_', '', sPosition)
             sPosition = re.sub('g[0-9]+_', '', sPosition)
 
@@ -417,8 +418,12 @@ class CTeiDocument:
                                                                    namespaces={
                                                                        cMainText.sPrefix: cMainText.sNamespaceUrl})
                                 if len(oParentNode) > 0:
+                                    # Check if poem
+                                    poemParentNode = oParentNode[0].xpath('./ancestor::' + cMainText.sPrefix + ':div[@type="poem"]', namespaces={cMainText.sPrefix: cMainText.sNamespaceUrl})
                                     if 'type' in oParentNode[0].attrib:
-                                        if oParentNode[0].attrib['type'] != 'letter':
+                                        if oParentNode[0].attrib['type'] == 'title' and len(poemParentNode) > 0:
+                                            sStart = self.strings['header-poem']
+                                        else:
                                             sStart = self.strings['header']
                                     else:
                                         sStart = self.strings['header']

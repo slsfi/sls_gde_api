@@ -54,7 +54,7 @@ def get_introduction(project, collection_id, publication_id, lang="swe"):
             content = get_content(project, "inl", filename, xsl_file, None)
             data = {
                 "id": "{}_{}_inl".format(collection_id, publication_id),
-                "content": content.replace("id=", "data-id=")
+                "content": content.replace(" id=", " data-id=")
             }
             return jsonify(data), 200
         else:
@@ -84,7 +84,7 @@ def get_title(project, collection_id, publication_id, lang="swe"):
             content = get_content(project, "tit", filename, xsl_file, None)
             data = {
                 "id": "{}_{}_tit".format(collection_id, publication_id),
-                "content": content.replace("id=", "data-id=")
+                "content": content.replace(" id=", " data-id=")
             }
             return jsonify(data), 200
         else:
@@ -135,7 +135,7 @@ def get_reading_text(project, collection_id, publication_id, section_id=None, la
         data = {
             # @TODO: investigate if id should have language in its value or not (similar to filename).
             "id": "{}_{}_est".format(collection_id, publication_id),
-            "content": content.replace("id=", "data-id=")
+            "content": content.replace(" id=", " data-id=")
         }
         if language is not None:
             data["language"] = language
@@ -297,6 +297,11 @@ def get_manuscript(project, collection_id, publication_id, manuscript_id=None, s
                     "bookId": bookId,
                     "sectionId": str(section_id)
                 }
+            elif manuscript_id is not None and 'ch' in str(manuscript_id):
+                params = {
+                    "bookId": bookId,
+                    "sectionId": manuscript_id
+                }
             else:
                 params = {
                     "bookId": bookId
@@ -305,8 +310,8 @@ def get_manuscript(project, collection_id, publication_id, manuscript_id=None, s
                 filename = "{}.xml".format(manuscript["legacy_id"])
             else:
                 filename = "{}_{}_ms_{}.xml".format(collection_id, publication_id, manuscript["id"])
-            manuscript_info[index]["manuscript_changes"] = get_content(project, "ms", filename, "ms_changes.xsl", params).replace("id=", "data-id=")
-            manuscript_info[index]["manuscript_normalized"] = get_content(project, "ms", filename, "ms_normalized.xsl", params).replace("id=", "data-id=")
+            manuscript_info[index]["manuscript_changes"] = get_content(project, "ms", filename, "ms_changes.xsl", params).replace(" id=", " data-id=")
+            manuscript_info[index]["manuscript_normalized"] = get_content(project, "ms", filename, "ms_normalized.xsl", params).replace(" id=", " data-id=")
 
         data = {
             "id": "{}_{}".format(collection_id, publication_id),
