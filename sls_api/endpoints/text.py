@@ -335,12 +335,8 @@ def get_variant(project, collection_id, publication_id, section_id=None):
     if can_show:
         logger.info("Getting XML for {} and transforming...".format(request.full_path))
         connection = db_engine.connect()
-        if section_id is not None:
-            select = "SELECT sort_order, name, type, legacy_id, id, original_filename FROM publication_version WHERE publication_id = :p_id AND section_id = :s_id ORDER BY type, sort_order ASC"
-            statement = sqlalchemy.sql.text(select).bindparams(p_id=publication_id, s_id=section_id)
-        else:
-            select = "SELECT sort_order, name, type, legacy_id, id, original_filename FROM publication_version WHERE publication_id = :p_id ORDER BY type, sort_order ASC"
-            statement = sqlalchemy.sql.text(select).bindparams(p_id=publication_id)
+        select = "SELECT sort_order, name, type, legacy_id, id, original_filename FROM publication_version WHERE publication_id = :p_id ORDER BY type, sort_order ASC"
+        statement = sqlalchemy.sql.text(select).bindparams(p_id=publication_id)
         variation_info = []
         for row in connection.execute(statement).fetchall():
             variation_info.append(dict(row))
@@ -351,21 +347,24 @@ def get_variant(project, collection_id, publication_id, section_id=None):
             bookId = collection_id
 
         bookId = '"{}"'.format(bookId)
-
-        for index in range(len(variation_info)):
-            variation = variation_info[index]
+        if section_id is not None:
+            section_id = '"{}"'.format(section_id)
+            params = {
+                "bookId": bookId,
+                "sectionId": str(section_id)
+            }
+        else:
             params = {
                 "bookId": bookId
             }
+
+        for index in range(len(variation_info)):
+            variation = variation_info[index]
 
             if variation["type"] == 1:
                 xsl_file = "poem_variants_est.xsl"
             else:
                 xsl_file = "poem_variants_other.xsl"
-
-            if section_id is not None:
-                section_id = '"{}"'.format(section_id)
-                params["section_id"] = section_id
 
             if variation["original_filename"] is None and variation["legacy_id"] is not None:
                 filename = "{}.xml".format(variation["legacy_id"])

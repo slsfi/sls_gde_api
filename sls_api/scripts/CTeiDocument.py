@@ -36,8 +36,9 @@ config_genres['kontrakt'] = 'cg_nonfiction'
 # ------------------
 config_strings = dict()
 config_strings['footnote'] = 'Fotnot'
-config_strings['header'] = 'Titel'
+config_strings['header'] = 'Rubrik'
 config_strings['date'] = 'Datering'
+config_strings['header-poem'] = 'Titel'
 
 
 # ------------------------------------------------
