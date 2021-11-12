@@ -297,11 +297,6 @@ def get_manuscript(project, collection_id, publication_id, manuscript_id=None, s
                     "bookId": bookId,
                     "sectionId": str(section_id)
                 }
-            elif manuscript_id is not None and 'ch' in str(manuscript_id):
-                params = {
-                    "bookId": bookId,
-                    "sectionId": manuscript_id
-                }
             else:
                 params = {
                     "bookId": bookId
