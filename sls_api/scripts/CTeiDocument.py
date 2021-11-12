@@ -320,7 +320,8 @@ class CTeiDocument:
 
             # Get the position for the note in the main text
             sPosition = self.__GetNotePosition(cMainText, comment['id'])
-            sPosition = sPosition.replace('l', '')
+            #sPosition = sPosition.replace('l', '')
+            sPosition = re.sub('l([0-9]+)', r'\1', sPosition)
             sPosition = re.sub('p[0-9]+_', '', sPosition)
             sPosition = re.sub('g[0-9]+_', '', sPosition)
 
