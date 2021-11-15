@@ -323,6 +323,7 @@ class CTeiDocument:
             sPosition = self.__GetNotePosition(cMainText, comment['id'])
             sPosition = re.sub('cl[0-9]+_', '', sPosition)
             sPosition = re.sub('lg[0-9]+_', '', sPosition)
+            sPosition = re.sub('list[0-9]+_', '', sPosition)
             # sPosition = sPosition.replace('l', '')
             sPosition = re.sub('l([0-9]+)', r'\1', sPosition)
             sPosition = re.sub('p[0-9]+_', '', sPosition)
