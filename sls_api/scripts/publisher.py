@@ -563,7 +563,10 @@ def check_publication_mtimes_and_publish_files(project: str, publication_ids: Un
                     # check current md5sum for variant files
                     variant_md5_sums = {}
                     for path in variant_paths:
-                        variant_md5_sums[path] == "SKIP" if not os.path.exists(path) else calculate_checksum(path)
+                        if not os.path.exists(path):
+                            variant_md5_sums[path] = "SKIP"
+                        else:
+                            variant_md5_sums = calculate_checksum(path)
                     # lastly, actually process all generated CTeiDocument objects and create web XML files
                     process_var_documents_and_generate_files(main_variant_doc, main_variant_target, variant_docs, variant_paths, row)
 
