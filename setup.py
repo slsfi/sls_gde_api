@@ -14,6 +14,7 @@ setup(
         'flask-cors==3.0.*',
         'flasgger==0.9.*',
         'lxml==4.6.*',
+        'psycopg2-binary==2.9.*',
         'mysqlclient==2.0.*',
         'passlib==1.7.*',
         'psycopg2-binary==2.8.*',
