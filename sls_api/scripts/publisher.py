@@ -153,8 +153,11 @@ def generate_est_and_com_files(publication_info, project, est_master_file_path, 
         if letterId is not None:
             letterData = get_letter_info_from_database(letterId)
             est_document.SetLetterTitleAndStatusAndMeta(letterData)
-
-    est_document.Save(est_target_path)
+    try:
+        est_document.Save(est_target_path)
+    except Exception as ex:
+        logger.exception("Failed to save est document {}".format(est_target_path))
+        raise ex
 
     # Get all documentnote IDs from the main master file (these are the IDs of the comments for this document)
     note_ids = est_document.GetAllNoteIDs()
