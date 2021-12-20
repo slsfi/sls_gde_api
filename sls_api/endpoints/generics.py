@@ -17,6 +17,7 @@ import time
 
 ALLOWED_EXTENSIONS_FOR_FACSIMILE_UPLOAD = ["tif", "tiff", "png", "jpg", "jpeg"]
 
+# temporary folder uploaded facsimiles are stored in before being resized and stored properly in the project files
 FACSIMILE_UPLOAD_FOLDER = "/tmp/uploads"
 
 # these are the max resolutions for each zoom level of facsimile, used for resizing uploaded TIF files.
