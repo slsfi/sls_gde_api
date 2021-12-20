@@ -311,15 +311,15 @@ def get_project_subjects(project, language=None):
     logger.info("Getting /<project>/subjects")
     connection = db_engine.connect()
     project_id = get_project_id_from_name(project)
-    
+
     if language is not None:
-        query = """select 
-            s.id, s.date_created, s.date_modified, s.deleted, s.type, 
+        query = """select
+            s.id, s.date_created, s.date_modified, s.deleted, s.type,
             s.translation_id, s.legacy_id, s.date_born, s.date_deceased,
-            s.project_id, s.source, 
+            s.project_id, s.source,
             COALESCE(t_fn.text, s.first_name) as first_name,
-            COALESCE(t_ln.text, s.last_name) as last_name, 
-            COALESCE(t_plb.text, s.place_of_birth) as place_of_birth, 
+            COALESCE(t_ln.text, s.last_name) as last_name,
+            COALESCE(t_plb.text, s.place_of_birth) as place_of_birth,
             COALESCE(t_occ.text, s.occupation) as occupation,
             COALESCE(t_prep.text, s.preposition) as preposition,
             COALESCE(t_fln.text, s.full_name) as full_name,
@@ -349,7 +349,6 @@ def get_project_subjects(project, language=None):
         sql = sqlalchemy.sql.text("SELECT * FROM subject WHERE project_id = :p_id")
         statement = sql.bindparams(p_id=project_id)
 
-
     results = []
     for row in connection.execute(statement).fetchall():
         results.append(dict(row))
@@ -371,8 +370,8 @@ def get_project_locations(project):
                            FROM (translation t
                              JOIN translation_text tt ON ((tt.translation_id = t.id)))
                           WHERE ((t.id = l.translation_id AND tt.table_name = 'location') AND tt.deleted = 0 AND t.deleted = 0) ORDER BY translation_id DESC) d) AS translations
-        FROM location l WHERE l.project_id = :p_id AND l.deleted = 0 ORDER BY NAME ASC """)    
-    statement = sql.bindparams(p_id=project_id, )
+        FROM location l WHERE l.project_id = :p_id AND l.deleted = 0 ORDER BY NAME ASC """)
+    statement = sql.bindparams(p_id=project_id,)
     results = []
     for row in connection.execute(statement).fetchall():
         results.append(dict(row))

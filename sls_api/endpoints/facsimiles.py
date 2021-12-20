@@ -171,7 +171,7 @@ def upload_facsimile_file(project, collection_id, page_number):
     if request.files is None:
         return jsonify({"msg": "Request.files is none!"}), 400
     if "facsimile" not in request.files:
-        return jsonify({"msg": "No file provided in request (facsimile)!"}), 
+        return jsonify({"msg": "No file provided in request (facsimile)!"}), 400
     # get a folder path for the facsimile collection from the database if set, otherwise use project file root
     connection = db_engine.connect()
     collection_check_statement = sqlalchemy.sql.text("SELECT * FROM publication_facsimile_collection WHERE deleted != 1 AND id=:coll_id").bindparams(coll_id=collection_id)
