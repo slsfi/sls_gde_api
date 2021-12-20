@@ -236,8 +236,13 @@ def get_facsimile_file(project, collection_id, number, zoom_level):
         else:
             try:
                 status = int(row[0])
-            except Exception:
+            except ValueError:
                 logger.exception(f"Couldn't convert {row[0]} to integer.")
+                return jsonify({
+                    "msg": "Desired facsimile file not found in database."
+                }), 404
+            except Exception:
+                logger.exception(f"Unknown exception handling {row} during facsimile file fetch.")
                 return jsonify({
                     "msg": "Desired facsimile file not found in database."
                 }), 404
