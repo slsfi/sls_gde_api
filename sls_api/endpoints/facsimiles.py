@@ -163,6 +163,8 @@ def upload_facsimile_file(project, collection_id, page_number):
     Where zoom_level is determined by FACSIMILE_IMAGE_SIZES in generics.py (1-4)
     """
     # TODO OpenStack Swift support for ISILON file storage - config param for root 'facsimiles' path
+    # ensure temporary facsimile upload folder exists
+    os.makedirs(FACSIMILE_UPLOAD_FOLDER, exist_ok=True)
     config = get_project_config(project)
     if config is None:
         return jsonify({"msg": "No such project."}), 400
