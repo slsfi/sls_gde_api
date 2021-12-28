@@ -108,7 +108,7 @@ def project_permission_required(fn):
                 return jsonify({"msg": "No project identified."}), 500
 
             # check for permission
-            if project in identity["projects"]:
+            if identity["projects"] is not None and project in identity["projects"]:
                 return fn(*args, **kwargs)
             else:
                 return jsonify({"msg": "No access to this project."}), 403
