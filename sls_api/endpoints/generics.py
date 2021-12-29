@@ -1,6 +1,6 @@
 import calendar
 from collections import OrderedDict
-from flask import jsonify, safe_join
+from flask import jsonify
 from flask_jwt_extended import get_jwt_identity, verify_jwt_in_request
 from functools import wraps
 import glob
@@ -14,6 +14,7 @@ from ruamel.yaml import YAML
 from sqlalchemy import create_engine, MetaData, Table
 from sqlalchemy.sql import select, text
 import time
+from werkzeug.security import safe_join
 
 ALLOWED_EXTENSIONS_FOR_FACSIMILE_UPLOAD = ["tif", "tiff", "png", "jpg", "jpeg"]
 

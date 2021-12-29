@@ -1,6 +1,6 @@
-from flask import abort, Blueprint, request, Response, safe_join
+from flask import abort, Blueprint, request, Response
 from flask.json import jsonify
-from flask_jwt_extended import get_jwt_identity, jwt_optional
+from flask_jwt_extended import get_jwt_identity, jwt_required
 import glob
 import io
 import json
@@ -8,6 +8,7 @@ import logging
 import os
 import sqlalchemy.sql
 from urllib.parse import unquote
+from werkzeug.security import safe_join
 
 from sls_api.endpoints.generics import db_engine, get_project_config, get_project_id_from_name, path_hierarchy, select_all_from_table
 from sls_api.endpoints.tools.files import git_commit_and_push_file
@@ -119,7 +120,7 @@ def get_manuscripts(project, publication_id):
 
 
 @meta.route("/<project>/toc/<collection_id>", methods=["GET", "PUT"])
-@jwt_optional
+@jwt_required(optional=True)
 def handle_toc(project, collection_id):
     config = get_project_config(project)
     if config is None:
@@ -147,7 +148,7 @@ def handle_toc(project, collection_id):
         elif request.method == "PUT":
             # uploading a new table of contents requires authorization and project permission
             identity = get_jwt_identity()
-            if identity is None:
+            if not identity:
                 return jsonify({"msg": "Missing Authorization Header"}), 403
             else:
                 authorized = False

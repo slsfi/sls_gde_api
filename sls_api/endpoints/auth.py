@@ -1,5 +1,5 @@
 from flask import Blueprint, jsonify, request
-from flask_jwt_extended import create_access_token, create_refresh_token, get_jwt_identity, jwt_required, jwt_refresh_token_required
+from flask_jwt_extended import create_access_token, create_refresh_token, get_jwt_identity, jwt_required
 from sls_api.models import User
 
 
@@ -69,7 +69,7 @@ def login_user():
 
 
 @auth.route("/refresh", methods=["POST"])
-@jwt_refresh_token_required
+@jwt_required(refresh=True)
 def refresh_token():
     identity = get_jwt_identity()
     return jsonify(
@@ -81,6 +81,6 @@ def refresh_token():
 
 
 @auth.route("/test", methods=["POST"])
-@jwt_required
+@jwt_required()
 def test_authentication():
     return jsonify(get_jwt_identity())

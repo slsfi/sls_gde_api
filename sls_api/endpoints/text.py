@@ -1,6 +1,7 @@
-from flask import Blueprint, jsonify, request, safe_join
+from flask import Blueprint, jsonify, request
 import logging
 import sqlalchemy
+from werkzeug.security import safe_join
 
 from sls_api.endpoints.generics import db_engine, get_collection_published_status, get_content, get_project_config, get_published_status, get_collection_legacy_id
 

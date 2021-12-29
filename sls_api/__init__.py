@@ -1,9 +1,7 @@
-from flask import Flask, redirect, url_for
+from flask import Flask
 from flask_jwt_extended import JWTManager
-from flasgger import Swagger
 from flask_cors import CORS
 import logging
-import json
 import os
 from raven.contrib.flask import Sentry
 from ruamel.yaml import YAML
@@ -43,22 +41,6 @@ else:
 # check what config files exists, so we know what blueprints to load
 projects_config_exists = os.path.exists(os.path.join("sls_api", "configs", "digital_editions.yml"))
 security_config_exists = os.path.exists(os.path.join("sls_api", "configs", "security.yml"))
-
-# Load in Swagger UI to display api documentation at /apidocs, with a 302-redirect at the base URL
-if os.path.exists("openapi.json"):
-    app.config["SWAGGER"] = {
-        "title": "SLS API",
-        "uiversion": 3  # Use the Swagger 3.* UI, to properly support OpenAPI 3.0.0
-    }
-    with open("openapi.json") as json_file:
-        swagger = Swagger(app, template=json.load(json_file))
-
-    # redirect requests at the base URL to /apidocs
-    @app.route("/")
-    def redir_to_docs():
-        return redirect(url_for("flasgger.apidocs"), code=302)
-else:
-    logger.warning("Could not load openapi.json specification file!")
 
 
 # Selectively import and register endpoints based on which configs exist and can be loaded
