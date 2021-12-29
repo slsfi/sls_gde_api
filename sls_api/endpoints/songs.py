@@ -1,6 +1,7 @@
-from flask import Blueprint, jsonify, Response, request, safe_join, send_file
+from flask import Blueprint, jsonify, Response, request, send_file
 import logging
 import sqlalchemy
+from werkzeug.security import safe_join
 
 from sls_api.endpoints.generics import db_engine, get_project_config
 

@@ -13,7 +13,7 @@ logger = logging.getLogger("sls_api.tools.publishing")
 
 
 @publishing_tools.route("/projects/new/", methods=["POST"])
-@jwt_required
+@jwt_required()
 def add_new_project():
     """
     Takes project name as JSON data
@@ -37,7 +37,7 @@ def add_new_project():
 
 
 @publishing_tools.route("/projects/<project_id>/edit/", methods=["POST"])
-@jwt_required
+@jwt_required()
 def edit_project(project_id):
     """
     Takes "name" and/or "published" as JSON data
@@ -209,7 +209,7 @@ def edit_intro(project, collection_id):
     connection = db_engine.connect()
     result = connection.execute(query).fetchone()
     if result is None:
-        result.close()
+        connection.close()
         return jsonify("No such publication collection exists."), 404
 
     values = {}
@@ -243,7 +243,7 @@ def get_title(project, collection_id):
     connection = db_engine.connect()
     result = connection.execute(query).fetchone()
     if result is None:
-        result.close()
+        connection.close()
         return jsonify("No such publication collection exists."), 404
 
     query = select([titles]).where(titles.c.id == int(result[collections.c.publication_collection_title_id]))
@@ -272,7 +272,7 @@ def edit_title(project, collection_id):
     connection = db_engine.connect()
     result = connection.execute(query).fetchone()
     if result is None:
-        result.close()
+        connection.close()
         return jsonify("No such publication collection exists."), 404
 
     values = {}

@@ -1,11 +1,12 @@
 import base64
-from flask import Blueprint, jsonify, request, safe_join
+from flask import Blueprint, jsonify, request
 from flask_jwt_extended import get_jwt_identity
 import io
 import json
 import logging
 import os
 import subprocess
+from werkzeug.security import safe_join
 
 from sls_api.endpoints.generics import get_project_config, project_permission_required
 

@@ -10,7 +10,7 @@ publication_tools = Blueprint("publication_tools", __name__)
 
 
 @publication_tools.route("/<project>/publications/")
-@jwt_required
+@jwt_required()
 def get_publications(project):
     """
     List all available publications in the given project
@@ -81,7 +81,7 @@ def get_publication_version(project, publication_id):
 
 
 @publication_tools.route("/<project>/publication/<publication_id>/versions/")
-@jwt_required
+@jwt_required()
 def get_publication_versions(project, publication_id):
     """
     List all versions of the given publication
@@ -98,7 +98,7 @@ def get_publication_versions(project, publication_id):
 
 
 @publication_tools.route("/<project>/publication/<publication_id>/manuscripts/")
-@jwt_required
+@jwt_required()
 def get_publication_manuscripts(project, publication_id):
     """
     List all manuscripts for the given publication
@@ -115,7 +115,7 @@ def get_publication_manuscripts(project, publication_id):
 
 
 @publication_tools.route("/<project>/publication/<publication_id>/tags/")
-@jwt_required
+@jwt_required()
 def get_publication_tags(project, publication_id):
     """
     List all manuscripts for the given publication
@@ -139,7 +139,7 @@ def get_publication_tags(project, publication_id):
 
 
 @publication_tools.route("/<project>/publication/<publication_id>/facsimiles/")
-@jwt_required
+@jwt_required()
 def get_publication_facsimiles(project, publication_id):
     """
     List all fascimilies for the given publication
@@ -165,7 +165,7 @@ def get_publication_facsimiles(project, publication_id):
 
 
 @publication_tools.route("/<project>/publication/<publication_id>/comments/")
-@jwt_required
+@jwt_required()
 def get_publication_comments(project, publication_id):
     """
     List all comments for the given publication
