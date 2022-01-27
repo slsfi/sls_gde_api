@@ -39,6 +39,7 @@ def create_facsimile_collection(project):
         "title": request_data.get("title", None),
         "description": request_data.get("description", None),
         "folder_path": request_data.get("folderPath", None),
+        "external_url": request_data.get("externalUrl", None),
         "number_of_pages": request_data.get("numberOfPages", None),
         "start_page_number": request_data.get("startPageNumber", None)
     }
@@ -59,6 +60,73 @@ def create_facsimile_collection(project):
         return jsonify(result), 500
     finally:
         connection.close()
+
+
+@collection_tools.route("/<project>/facsimile_collection/<facsimile_collection_id>/edit/", methods=["POST"])
+@project_permission_required
+def edit_facsimile_collection(project, facsimile_collection_id):
+    """
+    Edit a facsimile_collection object in the database
+
+    POST data MUST be in JSON format.
+    """
+    request_data = request.get_json()
+    if not request_data:
+        return jsonify({"msg": "No data provided."}), 400
+
+    facsimile_collections = get_table("publication_facsimile_collection")
+
+    connection = db_engine.connect()
+    facsimile_collections_query = select([facsimile_collections.c.id]).where(facsimile_collections.c.id == int_or_none(facsimile_collection_id))
+    facsimile_collections_row = connection.execute(facsimile_collections_query).fetchone()
+    if facsimile_collections_row is None:
+        return jsonify({"msg": "No facsimile collection with an ID of {} exists.".format(facsimile_collection_id)}), 404
+
+    title = request_data.get("title", None)
+    number_of_pages = request_data.get("number_of_pages", 0)
+    start_page_number = request_data.get("start_page_number", 0)
+    description = request_data.get("description", None)
+    folder_path = request_data.get("folder_path", None)
+    page_comment = request_data.get("page_comment", None)
+    external_url = request_data.get("external_url", None)
+
+    values = {}
+    if title is not None:
+        values["title"] = title
+    if number_of_pages is not None:
+        values["number_of_pages"] = number_of_pages
+    if start_page_number is not None:
+        values["start_page_number"] = start_page_number
+    if description is not None:
+        values["description"] = description
+    if folder_path is not None:
+        values["folder_path"] = folder_path
+    if page_comment is not None:
+        values["page_comment"] = page_comment
+    if external_url is not None:
+        values["external_url"] = external_url
+
+    values["date_modified"] = datetime.now()
+
+    if len(values) > 0:
+        try:
+            update = facsimile_collections.update().where(facsimile_collections.c.id == int(facsimile_collection_id)).values(**values)
+            connection.execute(update)
+            return jsonify({
+                "msg": "Updated facsimile_collection {} with values {}".format(int(facsimile_collection_id), str(values)),
+                "facsimile_collection_id": int(facsimile_collection_id)
+            })
+        except Exception as e:
+            result = {
+                "msg": "Failed to update facsimile_collections.",
+                "reason": str(e)
+            }
+            return jsonify(result), 500
+        finally:
+            connection.close()
+    else:
+        connection.close()
+        return jsonify("No valid update values given."), 400
 
 
 @collection_tools.route("/<project>/facsimile_collection/list/")

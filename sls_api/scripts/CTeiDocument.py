@@ -36,8 +36,9 @@ config_genres['kontrakt'] = 'cg_nonfiction'
 # ------------------
 config_strings = dict()
 config_strings['footnote'] = 'Fotnot'
-config_strings['header'] = 'Titel'
+config_strings['header'] = 'Rubrik'
 config_strings['date'] = 'Datering'
+config_strings['header-poem'] = 'Titel'
 
 
 # ------------------------------------------------
@@ -320,9 +321,12 @@ class CTeiDocument:
 
             # Get the position for the note in the main text
             sPosition = self.__GetNotePosition(cMainText, comment['id'])
-            sPosition = sPosition.replace('l', '')
+            sPosition = re.sub('cl[0-9]+_', '', sPosition)
+            sPosition = re.sub('lg[0-9]+_', '', sPosition)
+            sPosition = re.sub('list[0-9]+_', '', sPosition)
+            # sPosition = sPosition.replace('l', '')
+            sPosition = re.sub('l([0-9]+)', r'\1', sPosition)
             sPosition = re.sub('p[0-9]+_', '', sPosition)
-            sPosition = re.sub('g[0-9]+_', '', sPosition)
 
             # Position will be None if the note was not found in the main text, then we don't add the note.
             if sPosition is not None:
@@ -417,8 +421,12 @@ class CTeiDocument:
                                                                    namespaces={
                                                                        cMainText.sPrefix: cMainText.sNamespaceUrl})
                                 if len(oParentNode) > 0:
+                                    # Check if poem
+                                    poemParentNode = oParentNode[0].xpath('./ancestor::' + cMainText.sPrefix + ':div[@type="poem"]', namespaces={cMainText.sPrefix: cMainText.sNamespaceUrl})
                                     if 'type' in oParentNode[0].attrib:
-                                        if oParentNode[0].attrib['type'] != 'letter':
+                                        if oParentNode[0].attrib['type'] == 'title' and len(poemParentNode) > 0:
+                                            sStart = self.strings['header-poem']
+                                        else:
                                             sStart = self.strings['header']
                                     else:
                                         sStart = self.strings['header']

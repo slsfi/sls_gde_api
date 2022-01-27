@@ -28,7 +28,7 @@ def get_facsimiles(project, publication_id, section_id=None):
 
         connection = db_engine.connect()
 
-        sql = 'select * from publication_facsimile as f \
+        sql = 'select *, f.id as publication_facsimile_id from publication_facsimile as f \
         left join publication_facsimile_collection as fc on fc.id=f.publication_facsimile_collection_id \
         left join publication p on p.id=f.publication_id \
         where f.deleted != 1 and fc.deleted != 1 and f.publication_id=:p_id \
@@ -163,15 +163,15 @@ def upload_facsimile_file(project, collection_id, page_number):
     Where zoom_level is determined by FACSIMILE_IMAGE_SIZES in generics.py (1-4)
     """
     # TODO OpenStack Swift support for ISILON file storage - config param for root 'facsimiles' path
+    # ensure temporary facsimile upload folder exists
+    os.makedirs(FACSIMILE_UPLOAD_FOLDER, exist_ok=True)
     config = get_project_config(project)
     if config is None:
         return jsonify({"msg": "No such project."}), 400
     if request.files is None:
         return jsonify({"msg": "Request.files is none!"}), 400
     if "facsimile" not in request.files:
-        return jsonify({"msg": str(request.files)}), 400
-    
-
+        return jsonify({"msg": "No file provided in request (facsimile)!"}), 400
     # get a folder path for the facsimile collection from the database if set, otherwise use project file root
     connection = db_engine.connect()
     collection_check_statement = sqlalchemy.sql.text("SELECT * FROM publication_facsimile_collection WHERE deleted != 1 AND id=:coll_id").bindparams(coll_id=collection_id)
@@ -236,8 +236,13 @@ def get_facsimile_file(project, collection_id, number, zoom_level):
         else:
             try:
                 status = int(row[0])
-            except Exception:
+            except ValueError:
                 logger.exception(f"Couldn't convert {row[0]} to integer.")
+                return jsonify({
+                    "msg": "Desired facsimile file not found in database."
+                }), 404
+            except Exception:
+                logger.exception(f"Unknown exception handling {row} during facsimile file fetch.")
                 return jsonify({
                     "msg": "Desired facsimile file not found in database."
                 }), 404
