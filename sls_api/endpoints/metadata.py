@@ -1,6 +1,6 @@
 from flask import abort, Blueprint, request, Response, safe_join
 from flask.json import jsonify
-from flask_jwt_extended import get_jwt_identity, jwt_optional
+from flask_jwt_extended import get_jwt_identity, jwt_optional, jwt_required
 import glob
 import io
 import json
@@ -8,6 +8,7 @@ import logging
 import os
 import sqlalchemy.sql
 from urllib.parse import unquote
+from pprint import pprint
 
 from sls_api.endpoints.generics import db_engine, get_project_config, get_project_id_from_name, path_hierarchy, select_all_from_table
 from sls_api.endpoints.tools.files import git_commit_and_push_file
@@ -304,9 +305,332 @@ def get_legacyid_by_collection_id(project, collection_id):
     return jsonify(results)
 
 
+# Get all translations for a subject of a project
+@meta.route("/<project>/subjects/<subject_id>/translations")
+def get_project_subject_translations(project, subject_id):
+    logger.info("Getting /<project>/subjects/<subject_id>/translations")
+    connection = db_engine.connect()
+    project_id = get_project_id_from_name(project)
+    
+    query = """SELECT
+        :s_id AS "subject_id",
+        translation_text.language AS "lang",
+        translation_text.text AS "value",
+        translation_text.field_name AS "name"
+        FROM translation_text
+        JOIN subject
+            ON subject.translation_id = translation_text.translation_id
+                AND subject.id = :s_id
+                AND subject.project_id = :p_id
+    """
+    sql = sqlalchemy.sql.text(query)
+    statement = sql.bindparams(p_id=project_id, s_id=subject_id)
+
+    translations = {}
+    results = []
+    for row in connection.execute(statement).fetchall():
+        field = dict(row)
+        if translations.get(field['lang']) is None:
+            translations[field['lang']] = {
+                "language": field['lang'],
+                "subject_id": field['subject_id'],
+                "first_name": '',
+                "last_name": '', 
+                "place_of_birth": '', 
+                "occupation": '',
+                "preposition": '',
+                "full_name": '',
+                "description": '',
+                "alias": '',
+                "previous_last_name": '',
+                "alternative_form": ''
+            }
+        translations[field['lang']][field['name']] = field['value']
+
+    for lang, translation in translations.items():
+        results.append(translation)
+
+    connection.close()
+    return jsonify(results)
+
+# Update translations for a subject of a project
+@meta.route("/<project>/subjects/<subject_id>/translations/<lang>", methods=["PUT"])
+# @jwt_required
+def update_project_subject_translations(project, subject_id, lang):
+    # identity = get_jwt_identity()
+    # if identity is None:
+    #     return jsonify({"msg": "Missing Authorization Header"}), 403
+
+    # authorized = False
+    # # in debug mode, test user has access to every project
+    # if int(os.environ.get("FLASK_DEBUG", 0)) == 1 and identity["sub"] == "test@test.com":
+    #     authorized = True
+    # elif project in identity["projects"]:
+    #     authorized = True
+    # if not authorized:
+    #     return jsonify({"msg": "No access to this project."}), 403
+
+    data = request.get_json()
+    if not data:
+        return jsonify({"msg": "No JSON in payload."}), 422
+
+    logger.info("Updating /<project>/subjects/<subject_id>/translations/<lang>")
+    field = data.get("field", None)
+    value = data.get("value", None)
+    connection = db_engine.connect()
+    project_id = get_project_id_from_name(project)
+
+    query = """UPDATE translation_text
+        SET
+            text = :t_value
+        FROM subject
+        WHERE
+            subject.translation_id = translation_text.translation_id
+            AND translation_text.language = :t_lang
+            AND translation_text.field_name = :t_field
+            AND subject.id = :s_id
+            AND subject.project_id = :p_id
+    """
+
+    sql = sqlalchemy.sql.text(query)
+    statement = sql.bindparams(p_id=project_id, s_id=subject_id, t_field=field, t_lang=lang, t_value=value)
+    connection.execute(statement)
+
+    connection.close()
+    return jsonify({"msg": "Updated"}), 200
+
+# Create translations for a subject of a project
+@meta.route("/<project>/subjects/<subject_id>/translations/<lang>", methods=["POST"])
+# @jwt_required
+def create_project_subject_translations(project, subject_id, lang):
+    # identity = get_jwt_identity()
+    # if identity is None:
+    #     return jsonify({"msg": "Missing Authorization Header"}), 403
+
+    # authorized = False
+    # # in debug mode, test user has access to every project
+    # if int(os.environ.get("FLASK_DEBUG", 0)) == 1 and identity["sub"] == "test@test.com":
+    #     authorized = True
+    # elif project in identity["projects"]:
+    #     authorized = True
+    # if not authorized:
+    #     return jsonify({"msg": "No access to this project."}), 403
+
+    logger.info("Creating /<project>/subjects/<subject_id>/translations/<lang>")
+    connection = db_engine.connect()
+    project_id = get_project_id_from_name(project)
+
+    # get translation id from subject
+    query = """SELECT
+            subject.translation_id
+        FROM subject
+        WHERE
+            subject.id = :s_id
+            AND subject.project_id = :p_id
+    """
+
+    sql = sqlalchemy.sql.text(query)
+    statement = sql.bindparams(p_id=project_id, s_id=subject_id)
+    subject = dict(connection.execute(statement).fetchone())
+
+    if (subject['translation_id'] == None):
+        query = """INSERT INTO translation(neutral_text) VALUES ('') RETURNING id;"""
+
+        sql = sqlalchemy.sql.text(query)
+        translation = dict(connection.execute(sql).fetchone())
+
+        query = """UPDATE subject
+            SET
+                translation_id = :t_id
+            WHERE
+                subject.id = :s_id
+                AND subject.project_id = :p_id
+        """
+
+        sql = sqlalchemy.sql.text(query)
+        statement = sql.bindparams(p_id=project_id, s_id=subject_id, t_id=translation['id'])
+        connection.execute(statement)
+
+        subject['translation_id'] = translation['id']
+    else:
+        # check if translation already exists
+        query = """SELECT
+                COUNT(*) AS "count"
+            FROM translation_text
+            WHERE
+                translation_text.translation_id = :t_id
+                AND translation_text.language = :t_lang
+        """
+
+        sql = sqlalchemy.sql.text(query)
+        statement = sql.bindparams(t_id=subject['translation_id'], t_lang=lang)
+        translation_text = dict(connection.execute(statement).fetchone())
+
+        if (translation_text['count'] != 0):
+            connection.close()
+            return jsonify({"msg": "Translation already exists."}), 422
+
+    # insert translation entries
+    query = """INSERT INTO translation_text (translation_id, language, text, field_name, table_name) VALUES (:t_id, :t_lang, '', 'first_name', 'subject');
+        INSERT INTO translation_text (translation_id, language, text, field_name, table_name) VALUES (:t_id, :t_lang, '', 'last_name', 'subject');
+        INSERT INTO translation_text (translation_id, language, text, field_name, table_name) VALUES (:t_id, :t_lang, '', 'place_of_birth', 'subject');
+        INSERT INTO translation_text (translation_id, language, text, field_name, table_name) VALUES (:t_id, :t_lang, '', 'occupation', 'subject');
+        INSERT INTO translation_text (translation_id, language, text, field_name, table_name) VALUES (:t_id, :t_lang, '', 'preposition', 'subject');
+        INSERT INTO translation_text (translation_id, language, text, field_name, table_name) VALUES (:t_id, :t_lang, '', 'full_name', 'subject');
+        INSERT INTO translation_text (translation_id, language, text, field_name, table_name) VALUES (:t_id, :t_lang, '', 'description', 'subject');
+        INSERT INTO translation_text (translation_id, language, text, field_name, table_name) VALUES (:t_id, :t_lang, '', 'alias', 'subject');
+        INSERT INTO translation_text (translation_id, language, text, field_name, table_name) VALUES (:t_id, :t_lang, '', 'previous_last_name', 'subject');
+        INSERT INTO translation_text (translation_id, language, text, field_name, table_name) VALUES (:t_id, :t_lang, '', 'alternative_form', 'subject');
+    """
+
+    sql = sqlalchemy.sql.text(query)
+    statement = sql.bindparams(t_id=subject['translation_id'], t_lang=lang)
+    connection.execute(statement)
+
+    connection.close()
+    return jsonify({"msg": "Created"}), 200
+
+# Update subject of a project
+@meta.route("/<project>/subjects/<subject_id>", methods=["PUT"])
+# @jwt_required
+def update_project_subject(project, subject_id):
+    # identity = get_jwt_identity()
+    # if identity is None:
+    #     return jsonify({"msg": "Missing Authorization Header"}), 403
+
+    # authorized = False
+    # # in debug mode, test user has access to every project
+    # if int(os.environ.get("FLASK_DEBUG", 0)) == 1 and identity["sub"] == "test@test.com":
+    #     authorized = True
+    # elif project in identity["projects"]:
+    #     authorized = True
+    # if not authorized:
+    #     return jsonify({"msg": "No access to this project."}), 403
+
+    data = request.get_json()
+    if not data:
+        return jsonify({"msg": "No JSON in payload."}), 422
+
+    logger.info("Updating /<project>/subjects/<subject_id>")
+    updated = []
+    if (data.get("first_name", None) != None):
+        updated.append('first_name = :s_first_name')
+    if (data.get("last_name", None) != None):
+        updated.append('last_name = :s_last_name')
+    if (data.get("full_name", None) != None):
+        updated.append('full_name = :s_full_name')
+    if (data.get("place_of_birth", None) != None):
+        updated.append('place_of_birth = :s_place_of_birth')
+    if (data.get("occupation", None) != None):
+        updated.append('occupation = :s_occupation')
+    if (data.get("preposition", None) != None):
+        updated.append('preposition = :s_preposition')
+    if (data.get("description", None) != None):
+        updated.append('description = :s_description')
+    if (data.get("alias", None) != None):
+        updated.append('alias = :s_alias')
+    if (data.get("previous_last_name", None) != None):
+        updated.append('previous_last_name = :s_previous_last_name')
+    if (data.get("alternative_form", None) != None):
+        updated.append('alternative_form = :s_alternative_form')
+    if (len(updated) == 0):
+        return jsonify({"msg": "No fields to update."}), 422
+
+    updates = ','.join(updated)
+    connection = db_engine.connect()
+    project_id = get_project_id_from_name(project)
+
+    query = """UPDATE subject
+        SET
+            """ + updates + """
+        WHERE
+            subject.id = :s_id
+            AND subject.project_id = :p_id
+    """
+
+    sql = sqlalchemy.sql.text(query)
+    sql = sql.bindparams(p_id=project_id, s_id=subject_id)
+    if (data.get("first_name", None) != None):
+        sql = sql.bindparams(s_first_name=data.get("first_name", None))
+    if (data.get("last_name", None) != None):
+        sql = sql.bindparams(s_last_name=data.get("last_name", None))
+    if (data.get("full_name", None) != None):
+        sql = sql.bindparams(s_full_name=data.get("full_name", None))
+    if (data.get("place_of_birth", None) != None):
+        sql = sql.bindparams(s_place_of_birth=data.get("place_of_birth", None))
+    if (data.get("occupation", None) != None):
+        sql = sql.bindparams(s_occupation=data.get("occupation", None))
+    if (data.get("preposition", None) != None):
+        sql = sql.bindparams(s_preposition=data.get("preposition", None))
+    if (data.get("description", None) != None):
+        sql = sql.bindparams(s_description=data.get("description", None))
+    if (data.get("alias", None) != None):
+        sql = sql.bindparams(s_alias=data.get("alias", None))
+    if (data.get("previous_last_name", None) != None):
+        sql = sql.bindparams(s_previous_last_name=data.get("previous_last_name", None))
+    if (data.get("alternative_form", None) != None):
+        sql = sql.bindparams(s_alternative_form=data.get("alternative_form", None))
+    connection.execute(sql)
+
+    connection.close()
+    return jsonify({"msg": "Updated"}), 200
+
+# Update translations for a subject of a project
+@meta.route("/<project>/subjects", methods=["POST"])
+# @jwt_required
+def create_project_subject(project):
+    # identity = get_jwt_identity()
+    # if identity is None:
+    #     return jsonify({"msg": "Missing Authorization Header"}), 403
+
+    # authorized = False
+    # # in debug mode, test user has access to every project
+    # if int(os.environ.get("FLASK_DEBUG", 0)) == 1 and identity["sub"] == "test@test.com":
+    #     authorized = True
+    # elif project in identity["projects"]:
+    #     authorized = True
+    # if not authorized:
+    #     return jsonify({"msg": "No access to this project."}), 403
+
+    data = request.get_json()
+    if not data:
+        return jsonify({"msg": "No JSON in payload."}), 422
+
+    logger.info("Creating /<project>/subjects")
+
+    first_name = data.get("first_name", None)
+    last_name = data.get("last_name", None)
+    full_name = data.get("full_name", None)
+    place_of_birth = data.get("place_of_birth", None)
+    occupation = data.get("occupation", None)
+    preposition = data.get("preposition", None)
+    description = data.get("description", None)
+    alias = data.get("alias", None)
+    previous_last_name = data.get("previous_last_name", None)
+    alternative_form = data.get("alternative_form", None)
+
+    connection = db_engine.connect()
+    project_id = get_project_id_from_name(project)
+
+    query = """INSERT INTO subject
+        (first_name, last_name, full_name, place_of_birth, occupation, preposition, description, alias, previous_last_name, alternative_form, project_id)
+        VALUES (:s_first_name, :s_last_name, :s_full_name, :s_place_of_birth, :s_occupation, :s_preposition, :s_description, :s_alias, :s_previous_last_name, :s_alternative_form, :p_id)
+        RETURNING *
+    """
+
+    sql = sqlalchemy.sql.text(query)
+    statement = sql.bindparams(
+        p_id=project_id, s_alternative_form=alternative_form, s_previous_last_name=previous_last_name,
+        s_alias=alias, s_description=description, s_preposition=preposition, s_occupation=occupation,
+        s_place_of_birth=place_of_birth, s_full_name=full_name, s_last_name=last_name, s_first_name=first_name
+    )
+    subject = dict(connection.execute(statement).fetchone())
+    connection.close()
+    return jsonify(subject), 200
+
 # Get all subjects for a project
-@meta.route("/<project>/subjects-i18n/<language>")
-@meta.route("/<project>/subjects")
+@meta.route("/<project>/subjects-i18n/<language>", methods=["GET"])
+@meta.route("/<project>/subjects", methods=["GET"])
 def get_project_subjects(project, language=None):
     logger.info("Getting /<project>/subjects")
     connection = db_engine.connect()
