@@ -16,7 +16,7 @@ setup(
         'lxml==4.6.*',
         'mysqlclient==2.0.*',
         'passlib==1.7.*',
-        'psycopg2-binary==2.8.*',
+        'psycopg2-binary==2.9.*',
         'raven[flask]==6.10.*',
         'ruamel.yaml==0.16.*',
         'requests==2.25.*',
