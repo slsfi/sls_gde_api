@@ -611,7 +611,7 @@ def edit_facsimile_collection(project, collection_id):
     page_count = request_data.get("numberOfPages", None)
     start_page = request_data.get("startPageNumber", None)
     description = request_data.get("description", None)
-
+    external_url = request_data.get("external_url", None)
     collections = get_table("publication_facsimile_collection")
     query = select([collections]).where(collections.c.id == int_or_none(collection_id))
     connection = db_engine.connect()
@@ -630,7 +630,8 @@ def edit_facsimile_collection(project, collection_id):
         values["start_page_number"] = start_page
     if description is not None:
         values["description"] = description
-
+    if external_url is not None:
+        values["external_url"] = external_url
     values["date_modified"] = datetime.now()
 
     if len(values) > 0:
