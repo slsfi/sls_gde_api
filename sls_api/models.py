@@ -32,6 +32,16 @@ class User(db.Model):
         return cls.query.filter_by(email=email).first()
 
     @classmethod
+    def reset_projects(cls, email, projects):
+        user = cls.query.filter_by(email=email).first()
+        if user:
+            user.projects = projects
+            db.session.commit()
+            return True
+        else:
+            return False
+
+    @classmethod
     def find_by_email(cls, email):
         """
         Returns a User object if one exists for the given email, otherwise None
