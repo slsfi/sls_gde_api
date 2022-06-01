@@ -218,7 +218,6 @@ def get_collections(project):
         connection.close()
         return jsonify(results)
 
-
 @meta.route("/<project>/collection/<collection_id>")
 def get_collection(project, collection_id):
     logger.info("Getting collection /{}/collection/{}".format(project, collection_id))
@@ -304,6 +303,60 @@ def get_legacyid_by_collection_id(project, collection_id):
     connection.close()
     return jsonify(results)
 
+# Get all translations for a subject of a project
+@meta.route("/<project>/publications")
+def get_project_publications(project):
+    logger.info("Getting /<project>/publications")
+    connection = db_engine.connect()
+    project_id = get_project_id_from_name(project)
+    
+    query = """SELECT
+                publication.id AS "id",
+                translation_text.text AS "name",
+                translation_text.language AS "lang"
+            FROM translation_text
+            LEFT JOIN
+                publication ON translation_text.translation_id = publication.translation_id
+            LEFT JOIN
+                publication_collection ON publication.publication_collection_id = publication_collection.id
+            WHERE translation_text.field_name = 'name'
+                AND publication_collection.project_id = :p_id
+            ORDER BY publication.id ASC, translation_text.language ASC
+    """
+    sql = sqlalchemy.sql.text(query)
+    statement = sql.bindparams(p_id=project_id)
+    results = []
+    for row in connection.execute(statement).fetchall():
+        results.append(dict(row))
+    connection.close()
+    return jsonify(results)
+
+# Get all translations for a subject of a project
+@meta.route("/<project>/publications/<publication_id>/xml-files/<lang>")
+def get_project_publications_xml_file(project, publication_id, lang):
+    logger.info("Getting /<project>/publications/<publication_id>/xml-files/<lang>")
+    connection = db_engine.connect()
+    project_id = get_project_id_from_name(project)
+    
+    query = """SELECT
+                publication.id AS "id",
+                translation_text.text AS "file",
+                translation_text.language AS "lang"
+            FROM translation_text
+            LEFT JOIN
+                publication ON translation_text.translation_id = publication.translation_id
+            LEFT JOIN
+                publication_collection ON publication.publication_collection_id = publication_collection.id
+            WHERE translation_text.field_name = 'original_filename'
+                AND publication_collection.project_id = :p_id
+                AND translation_text.language = :t_lang
+                AND publication.id = :pub_id
+    """
+    sql = sqlalchemy.sql.text(query)
+    statement = sql.bindparams(p_id=project_id, t_lang=lang, pub_id=publication_id)
+    results = dict(connection.execute(statement).fetchone())
+    connection.close()
+    return jsonify(results)
 
 # Get all translations for a subject of a project
 @meta.route("/<project>/subjects/<subject_id>/translations")
