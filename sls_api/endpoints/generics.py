@@ -196,9 +196,8 @@ def path_hierarchy(project, path, language):
 
 
 def filter_title(path):
-    path = ''.join([i for i in path.lstrip('-') if not i.isdigit()])
-    path = re.sub('-', '', path)
-    path = re.sub('.md', '', path)
+    path = path.lstrip(' -0123456789')
+    path = path.replace('.md', '')
     return path.strip()
 
 
