@@ -331,6 +331,63 @@ def get_project_publications(project):
     connection.close()
     return jsonify(results)
 
+# Get metadata for a publication of a project
+@meta.route("/<project>/publications/<publication_id>/metadata")
+def get_project_publications_metadata(project, publication_id):
+    logger.info("Getting /<project>/publications/<publication_id>/metadata")
+    connection = db_engine.connect()
+    project_id = get_project_id_from_name(project)
+    
+    query = """SELECT
+                publication.id AS "id",
+                publication.original_publication_date AS "publication_date",
+                publication.genre AS "document_type",
+                publication.original_language AS "original_language",
+                publication.archive_signum AS "archive_signature",
+                event_occurrence.type AS "event_type",
+                CASE
+                    WHEN event_occurrence.type = 'sent letter' AND subject.first_name != 'Leo' AND subject.last_name != 'Mechelin' THEN CONCAT(subject.first_name, ' ', subject.last_name)
+                    ELSE 'Leo Mechelin'
+                END AS "sender",
+                CASE
+                    WHEN event_occurrence.type = 'received letter' AND subject.first_name != 'Leo' AND subject.last_name != 'Mechelin' THEN CONCAT(subject.first_name, ' ', subject.last_name)
+                    ELSE 'Leo Mechelin'
+                END AS "recipient",
+                CASE
+                    WHEN publication_facsimile.priority = 1 THEN FALSE
+                    ELSE TRUE
+                END AS "is_draft_or_version",
+                publication_facsimile_collection.number_of_pages,
+                publication_facsimile_collection.page_comment,
+                publication_facsimile_collection.external_url,
+                contribution.text_language AS "translated_into",
+                CONCAT(contributor.first_name, ' ', contributor.last_name) AS "translator"
+            FROM publication
+            LEFT JOIN
+                publication_collection ON publication.publication_collection_id = publication_collection.id
+            LEFT JOIN
+                event_occurrence ON publication.id = event_occurrence.publication_id
+            LEFT JOIN
+                publication_facsimile ON publication.id = publication_facsimile.publication_id
+            LEFT JOIN
+                publication_facsimile_collection ON publication_facsimile.publication_facsimile_collection_id = publication_facsimile_collection.id
+            LEFT JOIN
+                event_connection ON event_occurrence.event_id = event_connection.event_id
+            LEFT JOIN
+                subject ON event_connection.subject_id = subject.id
+            LEFT JOIN
+                contribution ON publication.id = contribution.publication_id
+            LEFT JOIN
+                contributor ON contribution.contributor_id = contributor.id
+            WHERE publication_collection.project_id = :p_id
+                AND publication.id = :pub_id
+    """
+    sql = sqlalchemy.sql.text(query)
+    statement = sql.bindparams(p_id=project_id, pub_id=publication_id)
+    results = dict(connection.execute(statement).fetchone())
+    connection.close()
+    return jsonify(results)
+
 # Get all translations for a subject of a project
 @meta.route("/<project>/publications/<publication_id>/xml-files/<lang>")
 def get_project_publications_xml_file(project, publication_id, lang):
