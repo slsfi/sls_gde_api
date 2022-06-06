@@ -63,7 +63,8 @@ def login_user():
         {
             "msg": "Logged in as {!r}".format(data["email"]),
             "access_token": create_access_token(identity=identity),
-            "refresh_token": create_refresh_token(identity=identity)
+            "refresh_token": create_refresh_token(identity=identity),
+            "user_projects": current_user.get_projects()
         }
     ), 200
 

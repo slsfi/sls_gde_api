@@ -388,7 +388,7 @@ def edit_translation(project, translation_id):
     else:
         # We are updating or creating a new translation
         translation_text_id = get_translation_text_id(translation_id, new_translation["table_name"], new_translation["field_name"], new_translation["language"])
-    
+
     connection = db_engine.connect()
 
     # if translation_text_id is None we should add a new row to the translation_text table

@@ -60,7 +60,7 @@ def create_facsimile_collection(project):
         return jsonify(result), 500
     finally:
         connection.close()
-        
+
 
 @collection_tools.route("/<project>/facsimile_collection/<facsimile_collection_id>/edit/", methods=["POST"])
 @project_permission_required
@@ -105,7 +105,7 @@ def edit_facsimile_collection(project, facsimile_collection_id):
         values["page_comment"] = page_comment
     if external_url is not None:
         values["external_url"] = external_url
-        
+
     values["date_modified"] = datetime.now()
 
     if len(values) > 0:
