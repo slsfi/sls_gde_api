@@ -189,6 +189,7 @@ def generate_est_and_com_files(publication_info, project, est_master_file_path, 
             com_document.SetMetadata(publication_info['original_publication_date'], publication_info['p_id'], publication_info['name'],
                                      publication_info['genre'], 'com', publication_info['c_id'], publication_info['publication_group_id'])
 
+        print(com_target_path)
         com_document.Save(com_target_path)
     except Exception as ex:
         logger.exception("Failed to handle com master file: {}".format(com_master_file_path))
