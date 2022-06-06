@@ -706,7 +706,8 @@ def check_publication_mtimes_and_publish_files(project: str, publication_ids: Un
                     outputs.append(run_git_command(project, ["push"]))
                 except CalledProcessError:
                     logger.exception("Exception during git sync of webfile changes.")
-                    logger.debug("Git outputs: {}".format("\n".join(outputs)))
+                    logger.debug("Git outputs: \n")
+                    logger.debug(outputs)
 
 
 if __name__ == "__main__":
