@@ -3,7 +3,7 @@ import logging
 import sqlalchemy
 from werkzeug.security import safe_join
 
-from sls_api.endpoints.generics import db_engine, get_collection_published_status, get_content, get_project_config, get_published_status, get_collection_legacy_id
+from sls_api.endpoints.generics import db_engine, get_collection_published_status, get_content, get_xml_content, get_project_config, get_published_status, get_collection_legacy_id
 
 text = Blueprint('text', __name__)
 logger = logging.getLogger("sls_api.text")
@@ -373,6 +373,59 @@ def get_variant(project, collection_id, publication_id, section_id=None):
             "id": "{}_{}_var".format(collection_id, publication_id),
             "variations": variation_info
         }
+        return jsonify(data), 200
+    else:
+        return jsonify({
+            "id": "{}_{}".format(collection_id, publication_id),
+            "error": message
+        }), 403
+
+@text.route("/<project>/text/xml/<collection_id>/<publication_id>/est-i18n/<language>")
+@text.route("/<project>/text/xml/<collection_id>/<publication_id>/est/<section_id>")
+@text.route("/<project>/text/xml/<collection_id>/<publication_id>/est")
+def get_reading_text_xml(project, collection_id, publication_id, section_id=None, language=None):
+    """
+    Get reading text in xml format for a given publication
+    """
+    can_show, message = get_published_status(project, collection_id, publication_id)
+    if can_show:
+        logger.info("Getting XML for {} ...".format(request.full_path))
+        connection = db_engine.connect()
+        select = "SELECT legacy_id FROM publication WHERE id = :p_id AND original_filename IS NULL"
+        statement = sqlalchemy.sql.text(select).bindparams(p_id=publication_id)
+        result = connection.execute(statement).fetchone()
+        if result is None or language is not None:
+            filename = "{}_{}_est.xml".format(collection_id, publication_id)
+            if language is not None:
+                filename = "{}_{}_{}_est.xml".format(collection_id, publication_id, language)
+                logger.debug("Filename (est xml) for {} is {}".format(publication_id, filename))
+
+            connection.close()
+        else:
+            filename = "{}_est.xml".format(result["legacy_id"])
+            connection.close()
+        logger.debug("Filename (est xml) for {} is {}".format(publication_id, filename))
+
+        xsl_file = "extract_chapter.xsl"
+
+        bookId = get_collection_legacy_id(collection_id)
+        if bookId is None:
+            bookId = collection_id
+        bookId = '"{}"'.format(bookId)
+
+        if section_id is not None:
+            section_id = '"{}"'.format(section_id)
+            content = get_xml_content(project, "est", filename, xsl_file,
+                                  {"bookId": bookId, "sectionId": section_id})
+        else:
+            content = get_xml_content(project, "est", filename, None, {"bookId": bookId})
+        data = {
+            # @TODO: investigate if id should have language in its value or not (similar to filename).
+            "id": "{}_{}_est".format(collection_id, publication_id),
+            "content": content
+        }
+        if language is not None:
+            data["language"] = language
         return jsonify(data), 200
     else:
         return jsonify({
