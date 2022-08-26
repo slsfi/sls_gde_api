@@ -380,6 +380,7 @@ def get_variant(project, collection_id, publication_id, section_id=None):
             "error": message
         }), 403
 
+
 @text.route("/<project>/text/xml/<collection_id>/<publication_id>/est-i18n/<language>")
 @text.route("/<project>/text/xml/<collection_id>/<publication_id>/est/<section_id>")
 @text.route("/<project>/text/xml/<collection_id>/<publication_id>/est")
@@ -416,7 +417,7 @@ def get_reading_text_xml(project, collection_id, publication_id, section_id=None
         if section_id is not None:
             section_id = '"{}"'.format(section_id)
             content = get_xml_content(project, "est", filename, xsl_file,
-                                  {"bookId": bookId, "sectionId": section_id})
+                                      {"bookId": bookId, "sectionId": section_id})
         else:
             content = get_xml_content(project, "est", filename, None, {"bookId": bookId})
         data = {

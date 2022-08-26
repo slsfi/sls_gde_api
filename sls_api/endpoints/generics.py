@@ -472,6 +472,7 @@ def get_translation_text_id(translation_id, table_name, field_name, language):
         connection.close()
         return None
 
+
 def get_xml_content(project, folder, xml_filename, xsl_filename, parameters):
     project_config = get_project_config(project)
     if project_config is None:
@@ -498,6 +499,7 @@ def get_xml_content(project, folder, xml_filename, xsl_filename, parameters):
     else:
         content = "File not found"
     return content
+
 
 def transform_xml(xsl_file_path, xml_file_path, replace_namespace=False, params=None):
     logger.debug("Transforming {} using {}".format(xml_file_path, xsl_file_path))
