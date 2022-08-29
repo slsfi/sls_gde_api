@@ -381,12 +381,12 @@ def get_variant(project, collection_id, publication_id, section_id=None):
         }), 403
 
 
-@text.route("/<project>/text/xml/<collection_id>/<publication_id>/est-i18n/<language>")
-@text.route("/<project>/text/xml/<collection_id>/<publication_id>/est/<section_id>")
-@text.route("/<project>/text/xml/<collection_id>/<publication_id>/est")
-def get_reading_text_xml(project, collection_id, publication_id, section_id=None, language=None):
+@text.route("/<project>/text/<format>/<collection_id>/<publication_id>/est-i18n/<language>")
+@text.route("/<project>/text/<format>/<collection_id>/<publication_id>/est/<section_id>")
+@text.route("/<project>/text/<format>/<collection_id>/<publication_id>/est")
+def get_reading_text_downloadable_format(project, format, collection_id, publication_id, section_id=None, language=None):
     """
-    Get reading text in xml format for a given publication
+    Get reading text in a downloadable format for a given publication
     """
     can_show, message = get_published_status(project, collection_id, publication_id)
     if can_show:
@@ -407,7 +407,12 @@ def get_reading_text_xml(project, collection_id, publication_id, section_id=None
             connection.close()
         logger.debug("Filename (est xml) for {} is {}".format(publication_id, filename))
 
-        xsl_file = "extract_chapter.xsl"
+        if format == "xml":
+            xsl_file = "downloadable_xml.xsl"
+        elif format == "plaintext":
+            xsl_file = "downloadable_plaintext.xsl"
+        else:
+            xsl_file = None
 
         bookId = get_collection_legacy_id(collection_id)
         if bookId is None:
@@ -419,7 +424,8 @@ def get_reading_text_xml(project, collection_id, publication_id, section_id=None
             content = get_xml_content(project, "est", filename, xsl_file,
                                       {"bookId": bookId, "sectionId": section_id})
         else:
-            content = get_xml_content(project, "est", filename, None, {"bookId": bookId})
+            content = get_xml_content(project, "est", filename, xsl_file, {"bookId": bookId})
+
         data = {
             # @TODO: investigate if id should have language in its value or not (similar to filename).
             "id": "{}_{}_est".format(collection_id, publication_id),
