@@ -408,9 +408,9 @@ def get_reading_text_downloadable_format(project, format, collection_id, publica
         logger.debug("Filename (est xml) for {} is {}".format(publication_id, filename))
 
         if format == "xml":
-            xsl_file = "downloadable_xml.xsl"
+            xsl_file = "est_downloadable_xml.xsl"
         elif format == "plaintext":
-            xsl_file = "downloadable_plaintext.xsl"
+            xsl_file = "est_downloadable_plaintext.xsl"
         else:
             xsl_file = None
 
