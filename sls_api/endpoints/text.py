@@ -381,6 +381,37 @@ def get_variant(project, collection_id, publication_id, section_id=None):
         }), 403
 
 
+@text.route("/<project>/text/<format>/<collection_id>/inl")
+@text.route("/<project>/text/<format>/<collection_id>/inl/<lang>")
+def get_introduction_downloadable_format(project, format, collection_id, lang="swe"):
+    """
+    Get introduction text in a downloadable format for a given collection
+    """
+    config = get_project_config(project)
+    if config is None:
+        return jsonify({"msg": "No such project."}), 400
+    else:
+        can_show, message = get_collection_published_status(project, collection_id)
+        if can_show:
+            logger.info("Getting XML for {} and transforming...".format(request.full_path))
+            version = "int" if config["show_internally_published"] else "ext"
+            # TODO get original_filename from publication_collection_introduction table? how handle language/version
+            filename = "{}_inl_{}_{}.xml".format(collection_id, lang, version)
+            if format == "xml":
+                xsl_file = None
+            content = get_xml_content(project, "inl", filename, xsl_file, None)
+            data = {
+                "id": "{}_inl".format(collection_id),
+                "content": content.replace(" id=", " data-id=")
+            }
+            return jsonify(data), 200
+        else:
+            return jsonify({
+                "id": "{}_inl".format(collection_id),
+                "error": message
+            }), 403
+
+
 @text.route("/<project>/text/<format>/<collection_id>/<publication_id>/est-i18n/<language>")
 @text.route("/<project>/text/<format>/<collection_id>/<publication_id>/est/<section_id>")
 @text.route("/<project>/text/<format>/<collection_id>/<publication_id>/est")
@@ -409,8 +440,8 @@ def get_reading_text_downloadable_format(project, format, collection_id, publica
 
         if format == "xml":
             xsl_file = "est_downloadable_xml.xsl"
-        elif format == "plaintext":
-            xsl_file = "est_downloadable_plaintext.xsl"
+        elif format == "txt":
+            xsl_file = "est_downloadable_txt.xsl"
         else:
             xsl_file = None
 
@@ -439,3 +470,70 @@ def get_reading_text_downloadable_format(project, format, collection_id, publica
             "id": "{}_{}".format(collection_id, publication_id),
             "error": message
         }), 403
+
+
+@text.route("/<project>/text/<format>/<collection_id>/<publication_id>/com")
+@text.route("/<project>/text/<format>/<collection_id>/<publication_id>/com/<section_id>")
+def get_comments_downloadable_format(project, format, collection_id, publication_id, section_id=None):
+    """
+    Get comments in a downloadable format for a given publication
+    """
+    config = get_project_config(project)
+    if config is None:
+        return jsonify({"msg": "No such project."}), 400
+    else:
+        can_show, message = get_published_status(project, collection_id, publication_id)
+        if can_show:
+            logger.info("Getting XML for {} and transforming...".format(request.full_path))
+            connection = db_engine.connect()
+            select = "SELECT legacy_id FROM publication_comment WHERE id IN (SELECT publication_comment_id FROM publication WHERE id = :p_id) \
+                        AND legacy_id IS NOT NULL AND original_filename IS NULL"
+            statement = sqlalchemy.sql.text(select).bindparams(p_id=publication_id)
+            result = connection.execute(statement).fetchone()
+
+            bookId = get_collection_legacy_id(collection_id)
+            if bookId is None:
+                bookId = collection_id
+            bookId = '"{}"'.format(bookId)
+
+            if result is not None:
+                filename = "{}_com.xml".format(result["legacy_id"])
+                connection.close()
+            else:
+                filename = "{}_{}_com.xml".format(collection_id, publication_id)
+                connection.close()
+            logger.debug("Filename (com) for {} is {}".format(publication_id, filename))
+
+            params = {
+                "estDocument": '"file://{}"'.format(safe_join(config["file_root"], "xml", "est", filename.replace("com", "est"))),
+                "bookId": bookId
+            }
+
+            if format == "xml":
+                xsl_file = "com_downloadable_xml.xsl"
+            elif format == "txt":
+                xsl_file = "com_downloadable_txt.xsl"
+            else:
+                xsl_file = None
+
+            if section_id is not None:
+                section_id = '"{}"'.format(section_id)
+                content = get_xml_content(project, "com", filename, xsl_file, {
+                    "sectionId": str(section_id),
+                    "estDocument": '"file://{}"'.format(safe_join(config["file_root"], "xml", "est", filename.replace("com", "est"))),
+                    "bookId": bookId
+                })
+            else:
+                content = get_xml_content(project, "com", filename, xsl_file, params)
+
+            data = {
+                "id": "{}_{}_com".format(collection_id, publication_id),
+                "content": content
+            }
+            connection.close()
+            return jsonify(data), 200
+        else:
+            return jsonify({
+                "id": "{}_{}".format(collection_id, publication_id),
+                "error": message
+            }), 403
