@@ -95,9 +95,9 @@ def get_title(project, collection_id, publication_id, lang="swe"):
             }), 403
 
 
-@text.route("/<project>/text/<collection_id>/<publication_id>/fore")
-@text.route("/<project>/text/<collection_id>/<publication_id>/fore/<lang>")
-def get_foreword(project, collection_id, lang="swe"):
+@text.route("/<project>/text/<collection_id>/fore")
+@text.route("/<project>/text/<collection_id>/fore/<lang>")
+def get_foreword(project, collection_id, lang="sv"):
     """
     Get foreword for a given collection
     """
@@ -413,7 +413,7 @@ def get_variant(project, collection_id, publication_id, section_id=None):
 
 @text.route("/<project>/text/<format>/<collection_id>/inl")
 @text.route("/<project>/text/<format>/<collection_id>/inl/<lang>")
-def get_introduction_downloadable_format(project, format, collection_id, lang="swe"):
+def get_introduction_downloadable_format(project, format, collection_id, lang="sv"):
     """
     Get introduction text in a downloadable format for a given collection
     """
@@ -432,7 +432,7 @@ def get_introduction_downloadable_format(project, format, collection_id, lang="s
             content = get_xml_content(project, "inl", filename, xsl_file, None)
             data = {
                 "id": "{}_inl".format(collection_id),
-                "content": content.replace(" id=", " data-id=")
+                "content": content
             }
             return jsonify(data), 200
         else:

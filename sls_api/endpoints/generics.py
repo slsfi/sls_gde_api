@@ -494,8 +494,13 @@ def get_xml_content(project, folder, xml_filename, xsl_filename, parameters):
                 content = "Error parsing document"
                 content += str(e)
         else:
-            with io.open(xml_file_path, mode="r") as xml_file:
-                content = xml_file.read()
+            try:
+                with io.open(xml_file_path, encoding="UTF-8") as xml_file:
+                    content = xml_file.read()
+            except Exception as e:
+                logger.exception("Error opening/reading XML file")
+                content = "Error opening/reading XML file"
+                content += str(e)
     else:
         content = "File not found"
     return content
