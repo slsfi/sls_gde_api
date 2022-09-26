@@ -411,8 +411,8 @@ def get_variant(project, collection_id, publication_id, section_id=None):
         }), 403
 
 
-@text.route("/<project>/text/<format>/<collection_id>/inl")
-@text.route("/<project>/text/<format>/<collection_id>/inl/<lang>")
+@text.route("/<project>/text/downloadable/<format>/<collection_id>/inl")
+@text.route("/<project>/text/downloadable/<format>/<collection_id>/inl/<lang>")
 def get_introduction_downloadable_format(project, format, collection_id, lang="sv"):
     """
     Get introduction text in a downloadable format for a given collection
@@ -442,9 +442,9 @@ def get_introduction_downloadable_format(project, format, collection_id, lang="s
             }), 403
 
 
-@text.route("/<project>/text/<format>/<collection_id>/<publication_id>/est-i18n/<language>")
-@text.route("/<project>/text/<format>/<collection_id>/<publication_id>/est/<section_id>")
-@text.route("/<project>/text/<format>/<collection_id>/<publication_id>/est")
+@text.route("/<project>/text/downloadable/<format>/<collection_id>/<publication_id>/est-i18n/<language>")
+@text.route("/<project>/text/downloadable/<format>/<collection_id>/<publication_id>/est/<section_id>")
+@text.route("/<project>/text/downloadable/<format>/<collection_id>/<publication_id>/est")
 def get_reading_text_downloadable_format(project, format, collection_id, publication_id, section_id=None, language=None):
     """
     Get reading text in a downloadable format for a given publication
@@ -502,8 +502,8 @@ def get_reading_text_downloadable_format(project, format, collection_id, publica
         }), 403
 
 
-@text.route("/<project>/text/<format>/<collection_id>/<publication_id>/com")
-@text.route("/<project>/text/<format>/<collection_id>/<publication_id>/com/<section_id>")
+@text.route("/<project>/text/downloadable/<format>/<collection_id>/<publication_id>/com")
+@text.route("/<project>/text/downloadable/<format>/<collection_id>/<publication_id>/com/<section_id>")
 def get_comments_downloadable_format(project, format, collection_id, publication_id, section_id=None):
     """
     Get comments in a downloadable format for a given publication
