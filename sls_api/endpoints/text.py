@@ -95,6 +95,36 @@ def get_title(project, collection_id, publication_id, lang="swe"):
             }), 403
 
 
+@text.route("/<project>/text/<collection_id>/<publication_id>/fore")
+@text.route("/<project>/text/<collection_id>/<publication_id>/fore/<lang>")
+def get_foreword(project, collection_id, lang="swe"):
+    """
+    Get foreword for a given collection
+    """
+    config = get_project_config(project)
+    if config is None:
+        return jsonify({"msg": "No such project."}), 400
+    else:
+        can_show, message = get_collection_published_status(project, collection_id)
+        if can_show:
+            logger.info("Getting XML for {} and transforming...".format(request.full_path))
+            version = "int" if config["show_internally_published"] else "ext"
+            # TODO get original_filename from database table? how handle language/version
+            filename = "{}_fore_{}_{}.xml".format(collection_id, lang, version)
+            xsl_file = "foreword.xsl"
+            content = get_content(project, "fore", filename, xsl_file, None)
+            data = {
+                "id": "{}_fore".format(collection_id),
+                "content": content.replace(" id=", " data-id=")
+            }
+            return jsonify(data), 200
+        else:
+            return jsonify({
+                "id": "{}".format(collection_id),
+                "error": message
+            }), 403
+
+
 @text.route("/<project>/text/<collection_id>/<publication_id>/est-i18n/<language>")
 @text.route("/<project>/text/<collection_id>/<publication_id>/est/<section_id>")
 @text.route("/<project>/text/<collection_id>/<publication_id>/est")
