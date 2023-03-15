@@ -10,7 +10,7 @@ import sqlalchemy.sql
 from urllib.parse import unquote
 from werkzeug.security import safe_join
 
-from sls_api.endpoints.generics import db_engine, get_project_config, get_project_id_from_name, path_hierarchy, select_all_from_table
+from sls_api.endpoints.generics import db_engine, get_project_config, get_project_id_from_name, path_hierarchy, select_all_from_table, flatten_json, get_first_valid_item_from_toc
 from sls_api.endpoints.tools.files import git_commit_and_push_file
 
 meta = Blueprint('metadata', __name__)
@@ -117,6 +117,40 @@ def get_manuscripts(project, publication_id):
         results.append(dict(row))
     connection.close()
     return jsonify(results)
+
+
+@meta.route("/<project>/toc/<collection_id>/first")
+def get_first_toc_item(project, collection_id):
+    config = get_project_config(project)
+    if config is None:
+        return jsonify({"msg": "No such project."}), 400
+    else:
+        logger.info(f"Getting first table of contents item for /{project}/toc/{collection_id}")
+        file_path_query = safe_join(config["file_root"], "toc", f'{collection_id}.json')
+
+        try:
+            file_path = [f for f in glob.iglob(file_path_query)][0]
+            logger.info(f"Finding {file_path} (toc collection fetch)")
+            if os.path.exists(file_path):
+                with io.open(file_path, encoding="UTF-8") as json_file:
+                    contents = json_file.read()
+                    contents = json.loads(contents)
+                    toc_flattened = []
+                    flatten_json(contents, toc_flattened)
+                    contents = toc_flattened
+                    first_toc_item = get_first_valid_item_from_toc(contents)
+                return jsonify(first_toc_item), 200
+            else:
+                abort(404)
+        except json.JSONDecodeError:
+            logger.exception(f"File {file_path_query} is not a valid JSON document.")
+            abort(404)
+        except IndexError:
+            logger.warning(f"File {file_path_query} not found on disk.")
+            abort(404)
+        except Exception:
+            logger.exception(f"Error fetching {file_path_query}")
+            abort(404)
 
 
 @meta.route("/<project>/toc/<collection_id>", methods=["GET", "PUT"])

@@ -540,3 +540,21 @@ def transform_xml(xsl_file_path, xml_file_path, replace_namespace=False, params=
     if len(xsl_transform.error_log) > 0:
         logging.debug(xsl_transform.error_log)
     return str(result)
+
+
+# Recursive function for flattening the given json, i.e. turning it into a one dimensional array, which is stored in "flattened"
+def flatten_json(json, flattened):
+    if json is not None:
+        if json.get('children') is not None:
+            for i in range(len(json['children'])):
+                if json['children'][i].get('itemId') is not None and json['children'][i].get('itemId') != '':
+                    flattened.append(json['children'][i])
+                flatten_json(json['children'][i], flattened)
+
+
+# Searches the given array of toc items for the first one that has an itemId value and a type value other than "subtitle" and "section_title"
+def get_first_valid_item_from_toc(flattened_toc):
+    for i in range(len(flattened_toc)):
+        if flattened_toc[i].get('itemId') is not None and flattened_toc[i].get('itemId') != '' and flattened_toc[i].get('type') is not None and flattened_toc[i].get('type') != 'subtitle' and flattened_toc[i].get('type') != 'section_title':
+            return flattened_toc[i]
+    return {}
