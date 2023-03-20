@@ -119,14 +119,19 @@ def get_manuscripts(project, publication_id):
     return jsonify(results)
 
 
-@meta.route("/<project>/toc/<collection_id>/first")
-def get_first_toc_item(project, collection_id):
+@meta.route("/<project>/toc-first/<collection_id>/<language>")
+@meta.route("/<project>/toc-first/<collection_id>")
+def get_first_toc_item(project, collection_id, language = None):
     config = get_project_config(project)
     if config is None:
         return jsonify({"msg": "No such project."}), 400
     else:
-        logger.info(f"Getting first table of contents item for /{project}/toc/{collection_id}")
-        file_path_query = safe_join(config["file_root"], "toc", f'{collection_id}.json')
+        if language is not None and language != "":
+            logger.info(f"Getting first table of contents item for /{project}/toc-first/{collection_id}/{language}")
+            file_path_query = safe_join(config["file_root"], "toc", f'{collection_id}_{language}.json')
+        else: 
+            logger.info(f"Getting first table of contents item for /{project}/toc-first/{collection_id}")
+            file_path_query = safe_join(config["file_root"], "toc", f'{collection_id}.json')
 
         try:
             file_path = [f for f in glob.iglob(file_path_query)][0]
@@ -153,16 +158,21 @@ def get_first_toc_item(project, collection_id):
             abort(404)
 
 
+@meta.route("/<project>/toc/<collection_id>/<language>", methods=["GET", "PUT"])
 @meta.route("/<project>/toc/<collection_id>", methods=["GET", "PUT"])
 @jwt_required(optional=True)
-def handle_toc(project, collection_id):
+def handle_toc(project, collection_id, language = None):
     config = get_project_config(project)
     if config is None:
         return jsonify({"msg": "No such project."}), 400
     else:
         if request.method == "GET":
-            logger.info(f"Getting table of contents for /{project}/toc/{collection_id}")
-            file_path_query = safe_join(config["file_root"], "toc", f'{collection_id}.json')
+            if language is not None and language != "":
+                logger.info(f"Getting table of contents for /{project}/toc/{collection_id}/{language}")
+                file_path_query = safe_join(config["file_root"], "toc", f'{collection_id}_{language}.json')
+            else:
+                logger.info(f"Getting table of contents for /{project}/toc/{collection_id}")
+                file_path_query = safe_join(config["file_root"], "toc", f'{collection_id}.json')
 
             try:
                 file_path = [f for f in glob.iglob(file_path_query)][0]
@@ -195,11 +205,17 @@ def handle_toc(project, collection_id):
                 if not authorized:
                     return jsonify({"msg": "No access to this project."}), 403
                 else:
-                    logger.info(f"Processing new table of contents for /{project}/toc/{collection_id}")
+                    if language is not None and language != "":
+                        logger.info(f"Processing new table of contents for /{project}/toc/{collection_id}/{language}")
+                    else:
+                        logger.info(f"Processing new table of contents for /{project}/toc/{collection_id}")
                     data = request.get_json()
                     if not data:
                         return jsonify({"msg": "No JSON in payload."}), 400
-                    file_path = safe_join(config["file_root"], "toc", f"{collection_id}.json")
+                    if language is not None and language != "":
+                        file_path = safe_join(config["file_root"], "toc", f"{collection_id}_{language}.json")
+                    else:
+                        file_path = safe_join(config["file_root"], "toc", f"{collection_id}.json")
                     try:
                         # save new toc as file_path.new
                         with open(f"{file_path}.new", "w", encoding="utf-8") as outfile:
