@@ -1,9 +1,10 @@
-from flask import Blueprint, jsonify, request, Response, safe_join
+from flask import Blueprint, jsonify, request, Response
 import io
 import logging
 import os
 import sqlalchemy
 import subprocess
+from werkzeug.security import safe_join
 from werkzeug.utils import secure_filename
 
 from sls_api.endpoints.generics import ALLOWED_EXTENSIONS_FOR_FACSIMILE_UPLOAD, allowed_facsimile, db_engine, \
@@ -294,15 +295,17 @@ def get_facsimile_pages(project, col_pub, section_id=None):
     try:
         pub_id = col_pub.split('_')[1]
         connection = db_engine.connect()
-        sql = sqlalchemy.sql.text("SELECT pf.*, pf.page_nr as page_number, pfc.number_of_pages, pfc.start_page_number, pfc.id as collection_id\
+        stmnt = "SELECT pf.*, pf.page_nr as page_number, pfc.number_of_pages, pfc.start_page_number, pfc.id as collection_id\
             FROM publication_facsimile pf\
             JOIN publication_facsimile_collection pfc on pfc.id = pf.publication_facsimile_collection_id\
-            WHERE pf.deleted != 1 AND pfc.deleted != 1 AND pf.publication_id = :pub_id")
+            WHERE pf.deleted != 1 AND pfc.deleted != 1 AND pf.publication_id = :pub_id"
         if section_id is not None:
             section_id = str(section_id).replace('ch', '')
-            sql = " ".join([sql, "and pf.section_id = :section"])
+            stmnt = " ".join([stmnt, "and pf.section_id = :section"])
+            sql = sqlalchemy.sql.text(stmnt)
             statement = sql.bindparams(pub_id=pub_id, section=section_id)
         else:
+            sql = sqlalchemy.sql.text(stmnt)
             statement = sql.bindparams(pub_id=pub_id)
         result = connection.execute(statement).fetchone()
         facs = dict(result)

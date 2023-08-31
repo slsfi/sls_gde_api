@@ -1,6 +1,6 @@
-from flask import abort, Blueprint, request, Response, safe_join
+from flask import abort, Blueprint, request, Response
 from flask.json import jsonify
-from flask_jwt_extended import get_jwt_identity, jwt_optional
+from flask_jwt_extended import get_jwt_identity, jwt_required
 import glob
 import io
 import json
@@ -8,8 +8,9 @@ import logging
 import os
 import sqlalchemy.sql
 from urllib.parse import unquote
+from werkzeug.security import safe_join
 
-from sls_api.endpoints.generics import db_engine, get_project_config, get_project_id_from_name, path_hierarchy, select_all_from_table
+from sls_api.endpoints.generics import db_engine, get_project_config, get_project_id_from_name, path_hierarchy, select_all_from_table, flatten_json, get_first_valid_item_from_toc
 from sls_api.endpoints.tools.files import git_commit_and_push_file
 
 meta = Blueprint('metadata', __name__)
@@ -118,16 +119,60 @@ def get_manuscripts(project, publication_id):
     return jsonify(results)
 
 
+@meta.route("/<project>/toc-first/<collection_id>/<language>")
+@meta.route("/<project>/toc-first/<collection_id>")
+def get_first_toc_item(project, collection_id, language=None):
+    config = get_project_config(project)
+    if config is None:
+        return jsonify({"msg": "No such project."}), 400
+    else:
+        if language is not None and language != "":
+            logger.info(f"Getting first table of contents item for /{project}/toc-first/{collection_id}/{language}")
+            file_path_query = safe_join(config["file_root"], "toc", f'{collection_id}_{language}.json')
+        else:
+            logger.info(f"Getting first table of contents item for /{project}/toc-first/{collection_id}")
+            file_path_query = safe_join(config["file_root"], "toc", f'{collection_id}.json')
+
+        try:
+            file_path = [f for f in glob.iglob(file_path_query)][0]
+            logger.info(f"Finding {file_path} (toc collection fetch)")
+            if os.path.exists(file_path):
+                with io.open(file_path, encoding="UTF-8") as json_file:
+                    contents = json_file.read()
+                    contents = json.loads(contents)
+                    toc_flattened = []
+                    flatten_json(contents, toc_flattened)
+                    contents = toc_flattened
+                    first_toc_item = get_first_valid_item_from_toc(contents)
+                return jsonify(first_toc_item), 200
+            else:
+                abort(404)
+        except json.JSONDecodeError:
+            logger.exception(f"File {file_path_query} is not a valid JSON document.")
+            abort(404)
+        except IndexError:
+            logger.warning(f"File {file_path_query} not found on disk.")
+            abort(404)
+        except Exception:
+            logger.exception(f"Error fetching {file_path_query}")
+            abort(404)
+
+
+@meta.route("/<project>/toc/<collection_id>/<language>", methods=["GET", "PUT"])
 @meta.route("/<project>/toc/<collection_id>", methods=["GET", "PUT"])
-@jwt_optional
-def handle_toc(project, collection_id):
+@jwt_required(optional=True)
+def handle_toc(project, collection_id, language=None):
     config = get_project_config(project)
     if config is None:
         return jsonify({"msg": "No such project."}), 400
     else:
         if request.method == "GET":
-            logger.info(f"Getting table of contents for /{project}/toc/{collection_id}")
-            file_path_query = safe_join(config["file_root"], "toc", f'{collection_id}.json')
+            if language is not None and language != "":
+                logger.info(f"Getting table of contents for /{project}/toc/{collection_id}/{language}")
+                file_path_query = safe_join(config["file_root"], "toc", f'{collection_id}_{language}.json')
+            else:
+                logger.info(f"Getting table of contents for /{project}/toc/{collection_id}")
+                file_path_query = safe_join(config["file_root"], "toc", f'{collection_id}.json')
 
             try:
                 file_path = [f for f in glob.iglob(file_path_query)][0]
@@ -147,24 +192,30 @@ def handle_toc(project, collection_id):
         elif request.method == "PUT":
             # uploading a new table of contents requires authorization and project permission
             identity = get_jwt_identity()
-            if identity is None:
+            if not identity:
                 return jsonify({"msg": "Missing Authorization Header"}), 403
             else:
                 authorized = False
                 # in debug mode, test user has access to every project
                 if int(os.environ.get("FLASK_DEBUG", 0)) == 1 and identity["sub"] == "test@test.com":
                     authorized = True
-                elif project in identity["projects"]:
+                elif identity["projects"] is not None and project in identity["projects"]:
                     authorized = True
 
                 if not authorized:
                     return jsonify({"msg": "No access to this project."}), 403
                 else:
-                    logger.info(f"Processing new table of contents for /{project}/toc/{collection_id}")
+                    if language is not None and language != "":
+                        logger.info(f"Processing new table of contents for /{project}/toc/{collection_id}/{language}")
+                    else:
+                        logger.info(f"Processing new table of contents for /{project}/toc/{collection_id}")
                     data = request.get_json()
                     if not data:
                         return jsonify({"msg": "No JSON in payload."}), 400
-                    file_path = safe_join(config["file_root"], "toc", f"{collection_id}.json")
+                    if language is not None and language != "":
+                        file_path = safe_join(config["file_root"], "toc", f"{collection_id}_{language}.json")
+                    else:
+                        file_path = safe_join(config["file_root"], "toc", f"{collection_id}.json")
                     try:
                         # save new toc as file_path.new
                         with open(f"{file_path}.new", "w", encoding="utf-8") as outfile:

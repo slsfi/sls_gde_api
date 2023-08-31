@@ -413,7 +413,6 @@ def edit_translation(project, translation_id):
             return jsonify(result), 500
         finally:
             connection.close()
-            return result
     # if translation_text_id is not None, we should update the data
     else:
         new_translation["date_modified"] = datetime.now()
@@ -735,7 +734,7 @@ def edit_work_manifestation(project, man_id):
 
 
 @event_tools.route("/locations/")
-@jwt_required
+@jwt_required()
 def get_locations():
     """
     Get all locations from the database
@@ -744,7 +743,7 @@ def get_locations():
 
 
 @event_tools.route("/subjects/")
-@jwt_required
+@jwt_required()
 def get_subjects():
     """
     Get all subjects from the database
@@ -771,7 +770,7 @@ def get_subjects():
 
 
 @event_tools.route("/tags/")
-@jwt_required
+@jwt_required()
 def get_tags():
     """
     Get all tags from the database
@@ -780,7 +779,7 @@ def get_tags():
 
 
 @event_tools.route("/work_manifestations/")
-@jwt_required
+@jwt_required()
 def get_work_manifestations():
     """
     Get all work_manifestations from the database
@@ -820,7 +819,7 @@ def get_work_manifestations():
 
 
 @event_tools.route("/events/")
-@jwt_required
+@jwt_required()
 def get_events():
     """
     Get a list of all available events in the database
@@ -829,7 +828,7 @@ def get_events():
 
 
 @event_tools.route("/events/search/", methods=["POST"])
-@jwt_required
+@jwt_required()
 def find_event_by_description():
     """
     List all events whose description contains a given phrase
@@ -859,7 +858,7 @@ def find_event_by_description():
 
 
 @event_tools.route("/events/new/", methods=["POST"])
-@jwt_required
+@jwt_required()
 def add_new_event():
     """
     Add a new event to the database
@@ -901,7 +900,7 @@ def add_new_event():
 
 
 @event_tools.route("/event/<event_id>/connections/new/", methods=["POST"])
-@jwt_required
+@jwt_required()
 def connect_event(event_id):
     """
     Link an event to a location, subject, or tag through event_connection
@@ -954,7 +953,7 @@ def connect_event(event_id):
 
 
 @event_tools.route("/event/<event_id>/connections/")
-@jwt_required
+@jwt_required()
 def get_event_connections(event_id):
     """
     List all event_connections for a given event, to find related locations, subjects, and tags
@@ -971,7 +970,7 @@ def get_event_connections(event_id):
 
 
 @event_tools.route("/event/<event_id>/occurrences/")
-@jwt_required
+@jwt_required()
 def get_event_occurrences(event_id):
     """
     Get a list of all event_occurrence in the database, optionally limiting to a given event
@@ -988,7 +987,7 @@ def get_event_occurrences(event_id):
 
 
 @event_tools.route("/event/<event_id>/occurrences/new/", methods=["POST"])
-@jwt_required
+@jwt_required()
 def new_event_occurrence(event_id):
     """
     Add a new event_occurrence to the database
@@ -1054,7 +1053,7 @@ def new_event_occurrence(event_id):
 
 
 @event_tools.route("/event/<publication_id>/occurrences/add/", methods=["POST"])
-@jwt_required
+@jwt_required()
 def new_publication_event_occurrence(publication_id):
     """
     Add a new event_occurrence to the publication
@@ -1164,7 +1163,7 @@ def new_publication_event_occurrence(publication_id):
 
 
 @event_tools.route("/event/<occ_id>/occurrences/edit/", methods=["POST"])
-@jwt_required
+@jwt_required()
 def edit_event_occurrence(occ_id):
     """
     Edit a event_occurrence
@@ -1202,7 +1201,7 @@ def edit_event_occurrence(occ_id):
 
 
 @event_tools.route("/event/<occ_id>/occurrences/delete/", methods=["POST"])
-@jwt_required
+@jwt_required()
 def delete_event_occurrence(occ_id):
     """
     Logical delete a event_occurrence
@@ -1212,9 +1211,10 @@ def delete_event_occurrence(occ_id):
     if not request_data:
         return jsonify({"msg": "No data provided."}), 400
 
-    values = {}
-    values["date_modified"] = datetime.now()
-    values["deleted"] = 1
+    values = {
+        "date_modified": datetime.now(),
+        "deleted": 1
+    }
 
     connection = db_engine.connect()
     event_occurrences = get_table("event_occurrence")

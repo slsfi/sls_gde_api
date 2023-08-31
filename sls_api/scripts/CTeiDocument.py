@@ -202,10 +202,15 @@ class CTeiDocument:
                         # Find all lines in the poem
                         oLineNodes = oNode.xpath('.//' + self.sPrefix + ':l',
                                                  namespaces={self.sPrefix: self.sNamespaceUrl})
-                        # Iterate all lines and add line numbers
+                        # Iterate all lines and add line numbers, except for lines that are divided into parts, which should be counted as just one line
                         for oLineNode in oLineNodes:
-                            oLineNode.attrib['n'] = str(iCounter)
-                            iCounter += 1
+                            if 'part' in oLineNode.attrib:
+                                if oLineNode.attrib['part'] == 'I':
+                                    oLineNode.attrib['n'] = str(iCounter)
+                                    iCounter += 1
+                            else:
+                                oLineNode.attrib['n'] = str(iCounter)
+                                iCounter += 1
         # --------------------
         # Auto number all tables
         self.__AutoNumber('table', 'table')

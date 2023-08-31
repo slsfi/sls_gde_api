@@ -1,7 +1,8 @@
-from flask import Blueprint, jsonify, Response, safe_join, send_file
+from flask import Blueprint, jsonify, Response, send_file
 import io
 import logging
 import sqlalchemy
+from werkzeug.security import safe_join
 
 from sls_api.endpoints.generics import db_engine, get_project_config, get_project_id_from_name
 
@@ -418,7 +419,7 @@ def get_pdf_file(project, collection_id, file_type, download_name, use_download_
     connection.close()
 
     try:
-        return send_file(file_path, attachment_filename=download_name, conditional=True)
+        return send_file(file_path, download_name=download_name, conditional=True)
     except Exception:
         logger.exception(f"Failed sending file from {file_path}")
         return Response("File not found.", status=404, content_type="text/json")

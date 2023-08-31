@@ -1,6 +1,6 @@
 import calendar
 from collections import OrderedDict
-from flask import jsonify, safe_join
+from flask import jsonify
 from flask_jwt_extended import get_jwt_identity, verify_jwt_in_request
 from functools import wraps
 import glob
@@ -14,6 +14,7 @@ from ruamel.yaml import YAML
 from sqlalchemy import create_engine, MetaData, Table
 from sqlalchemy.sql import select, text
 import time
+from werkzeug.security import safe_join
 
 ALLOWED_EXTENSIONS_FOR_FACSIMILE_UPLOAD = ["tif", "tiff", "png", "jpg", "jpeg"]
 
@@ -195,9 +196,8 @@ def path_hierarchy(project, path, language):
 
 
 def filter_title(path):
-    path = ''.join([i for i in path.lstrip('-') if not i.isdigit()])
-    path = re.sub('-', '', path)
-    path = re.sub('.md', '', path)
+    path = path.lstrip(' -0123456789')
+    path = path.replace('.md', '')
     return path.strip()
 
 
@@ -471,3 +471,90 @@ def get_translation_text_id(translation_id, table_name, field_name, language):
         connection = db_engine.connect()
         connection.close()
         return None
+
+
+def get_xml_content(project, folder, xml_filename, xsl_filename, parameters):
+    project_config = get_project_config(project)
+    if project_config is None:
+        return "No such project."
+    xml_file_path = safe_join(project_config["file_root"], "xml", folder, xml_filename)
+    if xsl_filename is not None:
+        xsl_file_path = safe_join(project_config["file_root"], "xslt", xsl_filename)
+    else:
+        xsl_file_path = None
+
+    content = None
+    if os.path.exists(xml_file_path):
+        logger.info("Getting contents from file ...")
+        if xsl_file_path is not None:
+            try:
+                content = transform_xml(xsl_file_path, xml_file_path, params=parameters)
+            except Exception as e:
+                logger.exception("Error when parsing XML file")
+                content = "Error parsing document"
+                content += str(e)
+        else:
+            try:
+                with io.open(xml_file_path, encoding="UTF-8") as xml_file:
+                    content = xml_file.read()
+            except Exception as e:
+                logger.exception("Error opening/reading XML file")
+                content = "Error opening/reading XML file"
+                content += str(e)
+    else:
+        content = "File not found"
+    return content
+
+
+def transform_xml(xsl_file_path, xml_file_path, replace_namespace=False, params=None):
+    logger.debug("Transforming {} using {}".format(xml_file_path, xsl_file_path))
+    if params is not None:
+        logger.debug("Parameters are {}".format(params))
+    if not os.path.exists(xsl_file_path):
+        return "XSL file {!r} not found!".format(xsl_file_path)
+    if not os.path.exists(xml_file_path):
+        return "XML file {!r} not found!".format(xml_file_path)
+
+    with io.open(xml_file_path, mode="rb") as xml_file:
+        xml_contents = xml_file.read()
+        if replace_namespace:
+            xml_contents = xml_contents.replace(b'xmlns="http://www.sls.fi/tei"',
+                                                b'xmlns="http://www.tei-c.org/ns/1.0"')
+
+        xml_root = etree.fromstring(xml_contents)
+
+    xsl_parser = etree.XMLParser()
+    xsl_parser.resolvers.add(FileResolver())
+    with io.open(xsl_file_path, encoding="UTF-8") as xsl_file:
+        xslt_root = etree.parse(xsl_file, parser=xsl_parser)
+        xsl_transform = etree.XSLT(xslt_root)
+
+    if params is None:
+        result = xsl_transform(xml_root)
+    elif isinstance(params, dict) or isinstance(params, OrderedDict):
+        result = xsl_transform(xml_root, **params)
+    else:
+        raise Exception(
+            "Invalid parameters for XSLT transformation, must be of type dict or OrderedDict, not {}".format(
+                type(params)))
+    if len(xsl_transform.error_log) > 0:
+        logging.debug(xsl_transform.error_log)
+    return str(result)
+
+
+# Recursive function for flattening the given json, i.e. turning it into a one dimensional array, which is stored in "flattened"
+def flatten_json(json, flattened):
+    if json is not None:
+        if json.get('children') is not None:
+            for i in range(len(json['children'])):
+                if json['children'][i].get('itemId') is not None and json['children'][i].get('itemId') != '':
+                    flattened.append(json['children'][i])
+                flatten_json(json['children'][i], flattened)
+
+
+# Searches the given array of toc items for the first one that has an itemId value and a type value other than "subtitle" and "section_title"
+def get_first_valid_item_from_toc(flattened_toc):
+    for i in range(len(flattened_toc)):
+        if flattened_toc[i].get('itemId') is not None and flattened_toc[i].get('itemId') != '' and flattened_toc[i].get('type') is not None and flattened_toc[i].get('type') != 'subtitle' and flattened_toc[i].get('type') != 'section_title':
+            return flattened_toc[i]
+    return {}

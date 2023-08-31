@@ -335,9 +335,10 @@ def delete_facsimile_collection_link(project, f_pub_id):
     """
     connection = db_engine.connect()
     publication_facsimile = get_table("publication_facsimile")
-    values = {}
-    values['deleted'] = 1
-    values["date_modified"] = datetime.now()
+    values = {
+        'deleted': 1,
+        "date_modified": datetime.now()
+    }
     update = publication_facsimile.update().where(publication_facsimile.c.id == int(f_pub_id)).values(**values)
     connection.execute(update)
     connection.close()
