@@ -149,7 +149,7 @@ def select_all_from_table(table_name):
     rows = connection.execute(select([table])).fetchall()
     result = []
     for row in rows:
-        result.append(dict(row))
+        result.append(row)._asdict()
     connection.close()
     return jsonify(result)
 
@@ -192,7 +192,7 @@ def path_hierarchy(project, path, language):
         del hierarchy['children']
         hierarchy['type'] = 'file'
 
-    return dict(hierarchy)
+    return hierarchy
 
 
 def filter_title(path):

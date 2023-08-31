@@ -55,7 +55,7 @@ def add_new_location(project):
         insert = locations.insert()
         result = connection.execute(insert, **new_location)
         new_row = select([locations]).where(locations.c.id == result.inserted_primary_key[0])
-        new_row = dict(connection.execute(new_row).fetchone())
+        new_row = connection.execute(new_row).fetchone()._asdict()
         result = {
             "msg": "Created new location with ID {}".format(result.inserted_primary_key[0]),
             "row": new_row
@@ -200,7 +200,7 @@ def add_new_subject(project):
         insert = subjects.insert()
         result = connection.execute(insert, **new_subject)
         new_row = select([subjects]).where(subjects.c.id == result.inserted_primary_key[0])
-        new_row = dict(connection.execute(new_row).fetchone())
+        new_row = connection.execute(new_row).fetchone()._asdict()
         result = {
             "msg": "Created new subject with ID {}".format(result.inserted_primary_key[0]),
             "row": new_row
@@ -336,7 +336,7 @@ def add_new_translation(project):
         insert = transaltion.insert()
         result = connection.execute(insert, **new_translation)
         new_row = select([transaltion]).where(transaltion.c.id == result.inserted_primary_key[0])
-        new_row = dict(connection.execute(new_row).fetchone())
+        new_row = connection.execute(new_row).fetchone()._asdict()
         result = {
             "msg": "Created new translation with ID {}".format(result.inserted_primary_key[0]),
             "row": new_row
@@ -399,7 +399,7 @@ def edit_translation(project, translation_id):
             insert = translation_text.insert()
             result = connection.execute(insert, **new_translation)
             new_row = select([translation_text]).where(translation_text.c.id == result.inserted_primary_key[0])
-            new_row = dict(connection.execute(new_row).fetchone())
+            new_row = connection.execute(new_row).fetchone()._asdict()
             result = {
                 "msg": "Created new translation_text with ID {}".format(result.inserted_primary_key[0]),
                 "row": new_row
@@ -470,7 +470,7 @@ def add_new_tag(project):
         insert = tags.insert()
         result = connection.execute(insert, **new_tag)
         new_row = select([tags]).where(tags.c.id == result.inserted_primary_key[0])
-        new_row = dict(connection.execute(new_row).fetchone())
+        new_row = connection.execute(new_row).fetchone()._asdict()
         result = {
             "msg": "Created new tag with ID {}".format(result.inserted_primary_key[0]),
             "row": new_row
@@ -610,7 +610,7 @@ def add_new_work_manifestation(project):
         result = connection.execute(insert, **new_work_reference)
 
         new_row = select([work_manifestations]).where(work_manifestations.c.id == work_manifestation_id)
-        new_row = dict(connection.execute(new_row).fetchone())
+        new_row = connection.execute(new_row).fetchone()._asdict()
         result = {
             "msg": "Created new work_manifestation with ID {}".format(work_manifestation_id),
             "row": new_row
@@ -764,7 +764,7 @@ def get_subjects():
     rows = connection.execute(stmt).fetchall()
     result = []
     for row in rows:
-        result.append(dict(row))
+        result.append(row)._asdict()
     connection.close()
     return jsonify(result)
 
@@ -813,7 +813,7 @@ def get_work_manifestations():
     rows = connection.execute(stmt).fetchall()
     result = []
     for row in rows:
-        result.append(dict(row))
+        result.append(row)._asdict()
     connection.close()
     return jsonify(result)
 
@@ -852,7 +852,7 @@ def find_event_by_description():
 
     result = []
     for row in rows:
-        result.append(dict(row))
+        result.append(row)._asdict()
     connection.close()
     return jsonify(result)
 
@@ -883,7 +883,7 @@ def add_new_event():
         insert = events.insert()
         result = connection.execute(insert, **new_event)
         new_row = select([events]).where(events.c.id == result.inserted_primary_key[0])
-        new_row = dict(connection.execute(new_row).fetchone())
+        new_row = connection.execute(new_row).fetchone()._asdict()
         result = {
             "msg": "Created new event with ID {}".format(result.inserted_primary_key[0]),
             "row": new_row
@@ -936,7 +936,7 @@ def connect_event(event_id):
     try:
         result = connection.execute(insert, **new_event_connection)
         new_row = select([event_connections]).where(event_connections.c.id == result.inserted_primary_key[0])
-        new_row = dict(connection.execute(new_row).fetchone())
+        new_row = connection.execute(new_row).fetchone()._asdict()
         result = {
             "msg": "Created new event_connection with ID {}".format(result.inserted_primary_key[0]),
             "row": new_row
@@ -964,7 +964,7 @@ def get_event_connections(event_id):
     rows = connection.execute(statement).fetchall()
     result = []
     for row in rows:
-        result.append(dict(row))
+        result.append(row)._asdict()
     connection.close()
     return jsonify(result)
 
@@ -981,7 +981,7 @@ def get_event_occurrences(event_id):
     rows = connection.execute(statement).fetchall()
     result = []
     for row in rows:
-        result.append(dict(row))
+        result.append(row)._asdict()
     connection.close()
     return jsonify(result)
 
@@ -1036,7 +1036,7 @@ def new_event_occurrence(event_id):
     try:
         result = connection.execute(insert, **new_occurrence)
         new_row = select([event_occurrences]).where(event_occurrences.c.id == result.inserted_primary_key[0])
-        new_row = dict(connection.execute(new_row).fetchone())
+        new_row = connection.execute(new_row).fetchone()._asdict()
         result = {
             "msg": "Created new event_occurrence with ID {}".format(result.inserted_primary_key[0]),
             "row": new_row
@@ -1109,7 +1109,7 @@ def new_publication_event_occurrence(publication_id):
         try:
             result = connection.execute(insert, **new_occurrence)
             new_row = select([event_occ]).where(event_occ.c.id == result.inserted_primary_key[0])
-            new_row = dict(connection.execute(new_row).fetchone())
+            new_row = connection.execute(new_row).fetchone()._asdict()
         except Exception as e:
             result = {
                 "msg": "Failed to create new event_occurrence",
@@ -1127,7 +1127,7 @@ def new_publication_event_occurrence(publication_id):
         try:
             result = connection.execute(insert, **new_connection)
             new_row = select([event_conn]).where(event_conn.c.id == result.inserted_primary_key[0])
-            new_row = dict(connection.execute(new_row).fetchone())
+            new_row = connection.execute(new_row).fetchone()._asdict()
         except Exception as e:
             result = {
                 "msg": "Failed to create new event_connection",
@@ -1146,7 +1146,7 @@ def new_publication_event_occurrence(publication_id):
             insert = event_conn.insert()
             result = connection.execute(insert, **new_connection)
             new_row = select([event_conn]).where(event_conn.c.id == result.inserted_primary_key[0])
-            new_row = dict(connection.execute(new_row).fetchone())
+            new_row = connection.execute(new_row).fetchone()._asdict()
             result = {
                 "msg": "Created new event_connection with ID {}".format(result.inserted_primary_key[0]),
                 "row": new_row

@@ -124,7 +124,7 @@ def edit_publication_collection(project, collection_id):
         ins = titles.insert()
         result = connection.execute(ins, **new_title)
         new_title_row = select([titles]).where(titles.c.id == result.inserted_primary_key[0])
-        new_title_row = dict(connection.execute(new_title_row).fetchone())
+        new_title_row = connection.execute(new_title_row).fetchone()._asdict()
         collection_title_id = new_title_row["id"]
 
     if collection_intro_id is None and collection_intro_filename is not None:
@@ -132,7 +132,7 @@ def edit_publication_collection(project, collection_id):
         ins = introductions.insert()
         result = connection.execute(ins, **new_intro)
         new_intro_row = select([introductions]).where(introductions.c.id == result.inserted_primary_key[0])
-        new_intro_row = dict(connection.execute(new_intro_row).fetchone())
+        new_intro_row = connection.execute(new_intro_row).fetchone()._asdict()
         collection_intro_id = new_intro_row["id"]
 
     if collection_title_id is not None:
@@ -185,7 +185,7 @@ def get_intro(project, collection_id):
     query = select([introductions])\
         .where(introductions.c.id == int(result[collections.c.publication_collection_introduction_id]))
 
-    row = dict(connection.execute(query).fetchone())
+    row = connection.execute(query).fetchone()._asdict()
     connection.close()
     return jsonify(row)
 
@@ -248,7 +248,7 @@ def get_title(project, collection_id):
 
     query = select([titles]).where(titles.c.id == int(result[collections.c.publication_collection_title_id]))
 
-    row = dict(connection.execute(query).fetchone())
+    row = connection.execute(query).fetchone()._asdict()
     connection.close()
     return jsonify(row)
 
