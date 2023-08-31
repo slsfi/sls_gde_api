@@ -9,14 +9,14 @@ jobs:
 
     steps:
     - uses: actions/checkout@v3
-    - name: Set up Python 3.10
+    - name: Set up Python 3.11
       uses: actions/setup-python@v3
       with:
-        python-version: '3.10'
+        python-version: '3.11'
         architecture: 'x64'
     - name: Install dependencies
       run: |
-        sudo apt update && sudo apt install -y build-essential libmariadbclient-dev libpq-dev
+        sudo apt update && sudo apt install -y build-essential git imagemagick libmariadb-dev libpq-dev pkg-config
         python -m pip install --upgrade pip
         pip install --upgrade -e .
         pip install flake8
