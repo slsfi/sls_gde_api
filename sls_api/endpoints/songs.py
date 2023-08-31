@@ -177,7 +177,7 @@ def get_song_file(project, file_type, file_name):
 
     try:
         return send_file(file_path, as_attachment=True, mimetype='application/octet-stream',
-                         attachment_filename=file_name)
+                         download_name=file_name)
     except Exception:
         logger.exception(f"Failed sending file from {file_path}")
         return Response("File not found.", status=404, content_type="text/json")

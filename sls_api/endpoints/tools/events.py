@@ -1211,9 +1211,10 @@ def delete_event_occurrence(occ_id):
     if not request_data:
         return jsonify({"msg": "No data provided."}), 400
 
-    values = {}
-    values["date_modified"] = datetime.now()
-    values["deleted"] = 1
+    values = {
+        "date_modified": datetime.now(),
+        "deleted": 1
+    }
 
     connection = db_engine.connect()
     event_occurrences = get_table("event_occurrence")

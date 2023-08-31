@@ -1,16 +1,18 @@
-FROM python:3.10-slim
+FROM python:3.11-slim
 
 # build-essential is needed to build some libraries (mainly uwsgi and the various database support ones)
 # git is needed to pull/push file changes
 # imagemagick is needed for conversions as part of facsimile upload
 # libmariadb-dev is needed to build mysqlclient for mysql/mariadb support
 # libpq-dev is needed for proper postgresql support
+# pkg-config is required to build mysqlclient
 RUN apt update && apt install -y \
     build-essential \
     git \
     imagemagick \
     libmariadb-dev \
-    libpq-dev
+    libpq-dev \
+    pkg-config
 
 # create uwsgi user for uWSGI to run as (running as root is a Bad Idea, generally)
 RUN useradd -ms /bin/bash uwsgi
