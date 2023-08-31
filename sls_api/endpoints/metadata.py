@@ -121,7 +121,7 @@ def get_manuscripts(project, publication_id):
 
 @meta.route("/<project>/toc-first/<collection_id>/<language>")
 @meta.route("/<project>/toc-first/<collection_id>")
-def get_first_toc_item(project, collection_id, language = None):
+def get_first_toc_item(project, collection_id, language=None):
     config = get_project_config(project)
     if config is None:
         return jsonify({"msg": "No such project."}), 400
@@ -129,7 +129,7 @@ def get_first_toc_item(project, collection_id, language = None):
         if language is not None and language != "":
             logger.info(f"Getting first table of contents item for /{project}/toc-first/{collection_id}/{language}")
             file_path_query = safe_join(config["file_root"], "toc", f'{collection_id}_{language}.json')
-        else: 
+        else:
             logger.info(f"Getting first table of contents item for /{project}/toc-first/{collection_id}")
             file_path_query = safe_join(config["file_root"], "toc", f'{collection_id}.json')
 
@@ -161,7 +161,7 @@ def get_first_toc_item(project, collection_id, language = None):
 @meta.route("/<project>/toc/<collection_id>/<language>", methods=["GET", "PUT"])
 @meta.route("/<project>/toc/<collection_id>", methods=["GET", "PUT"])
 @jwt_required(optional=True)
-def handle_toc(project, collection_id, language = None):
+def handle_toc(project, collection_id, language=None):
     config = get_project_config(project)
     if config is None:
         return jsonify({"msg": "No such project."}), 400
