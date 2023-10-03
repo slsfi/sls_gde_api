@@ -429,12 +429,17 @@ def get_introduction_downloadable_format(project, format, collection_id, lang="s
             filename = "{}_inl_{}_{}.xml".format(collection_id, lang, version)
             if format == "xml":
                 xsl_file = None
-            content = get_xml_content(project, "inl", filename, xsl_file, None)
-            data = {
-                "id": "{}_inl".format(collection_id),
-                "content": content
-            }
-            return jsonify(data), 200
+                content = get_xml_content(project, "inl", filename, xsl_file, None)
+                data = {
+                    "id": "{}_inl".format(collection_id),
+                    "content": content
+                }
+                return jsonify(data), 200
+            else:
+                return jsonify({
+                    "id": "{}_inl".format(collection_id),
+                    "error": f"Unknown file format {format}"
+                })
         else:
             return jsonify({
                 "id": "{}_inl".format(collection_id),
