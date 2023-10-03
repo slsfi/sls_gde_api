@@ -36,7 +36,7 @@ RUN chown -R uwsgi /app
 
 # relocate SSH key and fix permissions
 RUN mkdir -p /home/uwsgi/.ssh
-RUN mv /app/deploy_ssh_key /home/uwsgi/.ssh/id_rsa
+RUN mv /app/ssh_key /home/uwsgi/.ssh/id_rsa
 RUN chown -R uwsgi:uwsgi /home/uwsgi/.ssh
 RUN chmod 600 /home/uwsgi/.ssh/id_rsa
 

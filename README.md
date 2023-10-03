@@ -22,15 +22,16 @@ limitations under the License.
     - Create config files from _example files in `config` folder
       - Note that environment variables may be used in the YAML files if desired, they are parsed during startup.
     - Ensure volume paths in `docker-compose.yml` point at the correct host and container folders
-      - if needed, add in SSH private key for private repository access as well
+    - Add SSH private key contents to `ssh_key` file.
     - run `docker-compose build` in root folder containing `Dockerfile` and `docker-compose.yml`
 
 - Running in Production
+    - Add SSH private key contents to `ssh_key` file.
     - Start api using `docker-compose up -d`
     - Please note that the default port is 8000, this can be changed in `docker-compose.yml`
     - API can then be accessed at http://127.0.0.1:8000
 
-- Manually testing the API without Docker, using a python virtualenv
+- Manually testing the API without Docker, using a python virtualenv (not recommended)
     - `source /path/to/virtualenv/bin/activate` or `/path/to/virtualenv/Scripts/activate_this.bat` on Windows
     - `pip install --upgrade -e .`
     - `export FLASK_APP=/path/to/sls_api` or `set FLASK_APP=/path/to/sls_api` on Windows
