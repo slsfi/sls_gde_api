@@ -41,7 +41,7 @@ def get_publication_song(project, song_id):
     if return_data is None:
         return jsonify({"msg": "Desired song not found in database."}), 404
     else:
-        return jsonify(dict(return_data)), 200
+        return jsonify(return_data._asdict()), 200
 
 
 @songs.route("/<project>/song/id/<song_id>/")
@@ -53,7 +53,7 @@ def get_song_by_id(project, song_id):
         statement = sql.bindparams(s_id=song_id)
         result = connection.execute(statement).fetchone()
         connection.close()
-        return jsonify(dict(result)), 200
+        return jsonify(result._asdict()), 200
     except Exception:
         logger.exception(f"Failed to get song by id {song_id}.")
         return Response("Couldn't get song by id.", status=404, content_type="text/json")
@@ -148,7 +148,7 @@ def get_songs_filtered(project):
         result = connection.execute(statement).fetchall()
         return_data = []
         for row in result:
-            return_data.append(dict(row))
+            return_data.append(row._asdict())
         connection.close()
         return jsonify(return_data), 200
     except Exception as e:
@@ -177,7 +177,7 @@ def get_song_file(project, file_type, file_name):
 
     try:
         return send_file(file_path, as_attachment=True, mimetype='application/octet-stream',
-                         attachment_filename=file_name)
+                         download_name=file_name)
     except Exception:
         logger.exception(f"Failed sending file from {file_path}")
         return Response("File not found.", status=404, content_type="text/json")

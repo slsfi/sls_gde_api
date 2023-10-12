@@ -16,7 +16,7 @@ def list_publication_groups(project):
     groups = get_table("publication_group")
     statement = select([groups.c.id, groups.c.published, groups.c.name])
     rows = connection.execute(statement).fetchall()
-    result = dict(rows[0])
+    result = rows[0]._asdict()
     connection.close()
     return jsonify(result)
 
@@ -31,7 +31,7 @@ def get_publication_group(project, group_id):
     groups = get_table("publication_group")
     statement = select([groups]).where(groups.c.id == int_or_none(group_id))
     rows = connection.execute(statement).fetchall()
-    result = dict(rows[0])
+    result = rows[0]._asdict()
     connection.close()
     return jsonify(result)
 
@@ -47,7 +47,7 @@ def get_publications_in_group(project, group_id):
     statement = select([publications.c.id, publications.c.name]).where(publications.c.publication_group_id == int_or_none(group_id))
     result = []
     for row in connection.execute(statement).fetchall():
-        result.append(dict(row))
+        result.append(row)._asdict()
     connection.close()
     return jsonify(result)
 
@@ -78,7 +78,7 @@ def add_publication_to_group(project, publication_id):
     try:
         connection.execute(statement)
         statement = select([publications]).where(publications.c.id == int_or_none(publication_id))
-        updated = dict(connection.execute(statement).fetchone())
+        updated = connection.execute(statement).fetchone()._asdict()
         transaction.commit()
         result = {
             "msg": "Updated publication object",
@@ -121,7 +121,7 @@ def add_new_publication_group(project):
     try:
         result = connection.execute(insert, **new_group)
         new_row = select([groups]).where(groups.c.id == result.inserted_primary_key[0])
-        new_row = dict(connection.execute(new_row).fetchone())
+        new_row = connection.execute(new_row).fetchone()._asdict()
         result = {
             "msg": "Created new group with ID {}".format(result.inserted_primary_key[0]),
             "row": new_row

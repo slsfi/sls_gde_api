@@ -10,7 +10,7 @@ import sqlalchemy.sql
 from urllib.parse import unquote
 from werkzeug.security import safe_join
 
-from sls_api.endpoints.generics import db_engine, get_project_config, get_project_id_from_name, path_hierarchy, select_all_from_table
+from sls_api.endpoints.generics import db_engine, get_project_config, get_project_id_from_name, path_hierarchy, select_all_from_table, flatten_json, get_first_valid_item_from_toc
 from sls_api.endpoints.tools.files import git_commit_and_push_file
 
 meta = Blueprint('metadata', __name__)
@@ -114,21 +114,65 @@ def get_manuscripts(project, publication_id):
     statement = sql.bindparams(pub_id=publication_id)
     results = []
     for row in connection.execute(statement).fetchall():
-        results.append(dict(row))
+        results.append(row)._asdict()
     connection.close()
     return jsonify(results)
 
 
+@meta.route("/<project>/toc-first/<collection_id>/<language>")
+@meta.route("/<project>/toc-first/<collection_id>")
+def get_first_toc_item(project, collection_id, language=None):
+    config = get_project_config(project)
+    if config is None:
+        return jsonify({"msg": "No such project."}), 400
+    else:
+        if language is not None and language != "":
+            logger.info(f"Getting first table of contents item for /{project}/toc-first/{collection_id}/{language}")
+            file_path_query = safe_join(config["file_root"], "toc", f'{collection_id}_{language}.json')
+        else:
+            logger.info(f"Getting first table of contents item for /{project}/toc-first/{collection_id}")
+            file_path_query = safe_join(config["file_root"], "toc", f'{collection_id}.json')
+
+        try:
+            file_path = [f for f in glob.iglob(file_path_query)][0]
+            logger.info(f"Finding {file_path} (toc collection fetch)")
+            if os.path.exists(file_path):
+                with io.open(file_path, encoding="UTF-8") as json_file:
+                    contents = json_file.read()
+                    contents = json.loads(contents)
+                    toc_flattened = []
+                    flatten_json(contents, toc_flattened)
+                    contents = toc_flattened
+                    first_toc_item = get_first_valid_item_from_toc(contents)
+                return jsonify(first_toc_item), 200
+            else:
+                abort(404)
+        except json.JSONDecodeError:
+            logger.exception(f"File {file_path_query} is not a valid JSON document.")
+            abort(404)
+        except IndexError:
+            logger.warning(f"File {file_path_query} not found on disk.")
+            abort(404)
+        except Exception:
+            logger.exception(f"Error fetching {file_path_query}")
+            abort(404)
+
+
+@meta.route("/<project>/toc/<collection_id>/<language>", methods=["GET", "PUT"])
 @meta.route("/<project>/toc/<collection_id>", methods=["GET", "PUT"])
 @jwt_required(optional=True)
-def handle_toc(project, collection_id):
+def handle_toc(project, collection_id, language=None):
     config = get_project_config(project)
     if config is None:
         return jsonify({"msg": "No such project."}), 400
     else:
         if request.method == "GET":
-            logger.info(f"Getting table of contents for /{project}/toc/{collection_id}")
-            file_path_query = safe_join(config["file_root"], "toc", f'{collection_id}.json')
+            if language is not None and language != "":
+                logger.info(f"Getting table of contents for /{project}/toc/{collection_id}/{language}")
+                file_path_query = safe_join(config["file_root"], "toc", f'{collection_id}_{language}.json')
+            else:
+                logger.info(f"Getting table of contents for /{project}/toc/{collection_id}")
+                file_path_query = safe_join(config["file_root"], "toc", f'{collection_id}.json')
 
             try:
                 file_path = [f for f in glob.iglob(file_path_query)][0]
@@ -161,11 +205,17 @@ def handle_toc(project, collection_id):
                 if not authorized:
                     return jsonify({"msg": "No access to this project."}), 403
                 else:
-                    logger.info(f"Processing new table of contents for /{project}/toc/{collection_id}")
+                    if language is not None and language != "":
+                        logger.info(f"Processing new table of contents for /{project}/toc/{collection_id}/{language}")
+                    else:
+                        logger.info(f"Processing new table of contents for /{project}/toc/{collection_id}")
                     data = request.get_json()
                     if not data:
                         return jsonify({"msg": "No JSON in payload."}), 400
-                    file_path = safe_join(config["file_root"], "toc", f"{collection_id}.json")
+                    if language is not None and language != "":
+                        file_path = safe_join(config["file_root"], "toc", f"{collection_id}_{language}.json")
+                    else:
+                        file_path = safe_join(config["file_root"], "toc", f"{collection_id}.json")
                     try:
                         # save new toc as file_path.new
                         with open(f"{file_path}.new", "w", encoding="utf-8") as outfile:
@@ -214,7 +264,7 @@ def get_collections(project):
         statement = sql.bindparams(p_status=status, p_id=project_id)
         results = []
         for row in connection.execute(statement).fetchall():
-            results.append(dict(row))
+            results.append(row)._asdict()
         connection.close()
         return jsonify(results)
 
@@ -227,7 +277,7 @@ def get_collection(project, collection_id):
     statement = sql.bindparams(c_id=collection_id)
     results = []
     for row in connection.execute(statement).fetchall():
-        results.append(dict(row))
+        results.append(row)._asdict()
     connection.close()
     return jsonify(results)
 
@@ -240,7 +290,7 @@ def get_publication(project, publication_id):
     statement = sql.bindparams(p_id=publication_id)
     results = []
     for row in connection.execute(statement).fetchall():
-        results.append(dict(row))
+        results.append(row)._asdict()
     connection.close()
     return jsonify(results)
 
@@ -253,7 +303,7 @@ def get_collection_publications(project, collection_id):
     statement = sql.bindparams(c_id=collection_id)
     results = []
     for row in connection.execute(statement).fetchall():
-        results.append(dict(row))
+        results.append(row)._asdict()
     connection.close()
     return jsonify(results)
 
@@ -272,7 +322,7 @@ def get_collection_publication_by_legacyid(project, legacy_id):
     statement = sql.bindparams(l_id=legacy_id, p_id=project_id)
     results = []
     for row in connection.execute(statement).fetchall():
-        results.append(dict(row))
+        results.append(row)._asdict()
     connection.close()
     return jsonify(results)
 
@@ -286,7 +336,7 @@ def get_legacyid_by_publication_id(project, publication_id):
     statement = sql.bindparams(p_id=publication_id)
     results = []
     for row in connection.execute(statement).fetchall():
-        results.append(dict(row))
+        results.append(row)._asdict()
     connection.close()
     return jsonify(results)
 
@@ -300,7 +350,7 @@ def get_legacyid_by_collection_id(project, collection_id):
     statement = sql.bindparams(pc_id=collection_id)
     results = []
     for row in connection.execute(statement).fetchall():
-        results.append(dict(row))
+        results.append(row)._asdict()
     connection.close()
     return jsonify(results)
 
@@ -352,7 +402,7 @@ def get_project_subjects(project, language=None):
 
     results = []
     for row in connection.execute(statement).fetchall():
-        results.append(dict(row))
+        results.append(row)._asdict()
     connection.close()
     return jsonify(results)
 
@@ -375,7 +425,7 @@ def get_project_locations(project):
     statement = sql.bindparams(p_id=project_id,)
     results = []
     for row in connection.execute(statement).fetchall():
-        results.append(dict(row))
+        results.append(row)._asdict()
     connection.close()
     return jsonify(results)
 
@@ -390,7 +440,7 @@ def get_project_tags(project):
     statement = sql.bindparams(p_id=project_id, )
     results = []
     for row in connection.execute(statement).fetchall():
-        results.append(dict(row))
+        results.append(row)._asdict()
     connection.close()
     return jsonify(results)
 
@@ -405,7 +455,7 @@ def get_project_works(project):
     statement = sql.bindparams(p_id=project_id, )
     results = []
     for row in connection.execute(statement).fetchall():
-        results.append(dict(row))
+        results.append(row)._asdict()
     connection.close()
     return jsonify(results)
 
@@ -485,10 +535,10 @@ def get_subject(project, subject_id):
         if return_data is None:
             return jsonify({"msg": "Desired subject not found in database."}), 404
         else:
-            return jsonify(dict(return_data)), 200
+            return jsonify(return_data)._asdict(), 200
     else:
         connection.close()
-        return jsonify(dict(return_data)), 200
+        return jsonify(return_data)._asdict(), 200
 
 
 @meta.route("/<project>/tag/<tag_id>")
@@ -516,10 +566,10 @@ def get_tag(project, tag_id):
         if return_data is None:
             return jsonify({"msg": "Desired tag not found in database."}), 404
         else:
-            return jsonify(dict(return_data)), 200
+            return jsonify(return_data)._asdict(), 200
     else:
         connection.close()
-        return jsonify(dict(return_data)), 200
+        return jsonify(return_data)._asdict(), 200
 
 
 @meta.route("/<project>/work/<work_id>")
@@ -542,7 +592,7 @@ def get_work(project, work_id):
     if return_data is None:
         return jsonify({"msg": "Desired work not found in database."}), 404
     else:
-        return jsonify(dict(return_data)), 200
+        return jsonify(return_data)._asdict(), 200
 
 
 @meta.route("/<project>/location/<location_id>")
@@ -570,10 +620,10 @@ def get_location(project, location_id):
         if return_data is None:
             return jsonify({"msg": "Desired location not found in database."}), 404
         else:
-            return jsonify(dict(return_data)), 200
+            return jsonify(return_data)._asdict(), 200
     else:
         connection.close()
-        return jsonify(dict(return_data)), 200
+        return jsonify(return_data)._asdict(), 200
 
 
 @meta.route("/<project>/files/<folder>/<file_name>/")
@@ -608,7 +658,7 @@ def get_urn(project, url, legacy_id=None):
         sql = sqlalchemy.sql.text(stmnt).bindparams(url=url_like_str, p_id=project_id)
     return_data = []
     for row in connection.execute(sql).fetchall():
-        return_data.append(dict(row))
+        return_data.append(row)._asdict()
     connection.close()
     return jsonify(return_data), 200
 
@@ -627,7 +677,7 @@ def list_tooltips(table):
         sql = sqlalchemy.sql.text(f"SELECT id, name, project_id, legacy_id FROM {table}")
     results = []
     for row in connection.execute(sql).fetchall():
-        results.append(dict(row))
+        results.append(row)._asdict()
     connection.close()
     return results
 
@@ -677,4 +727,4 @@ def get_tooltip(table, row_id, project=None, use_legacy=False):
     if result is None:
         return dict()
     else:
-        return dict(result)
+        return result._asdict()

@@ -82,11 +82,8 @@ if security_config_exists:
 
     app.register_blueprint(auth, url_prefix="/auth")
 
-    @app.before_first_request
-    def create_tables():
-        """
-        Before our first request, ensure all database tables are created and the test user account exists
-        """
+    with app.app_context():
+        # ensure database exists and is populated with test user
         db.create_all()
         if User.find_by_email("test@test.com") is None:
             User.create_new_user("test@test.com", "test")

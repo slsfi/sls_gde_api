@@ -26,7 +26,7 @@ def get_publications(project):
     rows = connection.execute(statement).fetchall()
     result = []
     for row in rows:
-        result.append(dict(row))
+        result.append(row)._asdict()
     connection.close()
     return jsonify(result)
 
@@ -41,7 +41,7 @@ def get_publication(project, publication_id):
     publications = get_table("publication")
     statement = select([publications]).where(publications.c.id == int_or_none(publication_id))
     rows = connection.execute(statement).fetchall()
-    result = dict(rows[0])
+    result = rows[0]._asdict()
     connection.close()
     return jsonify(result)
 
@@ -58,7 +58,7 @@ def get_publication_manuscript(project, publication_id):
     rows = connection.execute(statement).fetchall()
     result = []
     for row in rows:
-        result.append(dict(row))
+        result.append(row)._asdict()
     connection.close()
     return jsonify(result)
 
@@ -75,7 +75,7 @@ def get_publication_version(project, publication_id):
     rows = connection.execute(statement).fetchall()
     result = []
     for row in rows:
-        result.append(dict(row))
+        result.append(row)._asdict()
     connection.close()
     return jsonify(result)
 
@@ -92,7 +92,7 @@ def get_publication_versions(project, publication_id):
     rows = connection.execute(statement).fetchall()
     result = []
     for row in rows:
-        result.append(dict(row))
+        result.append(row)._asdict()
     connection.close()
     return jsonify(result)
 
@@ -109,7 +109,7 @@ def get_publication_manuscripts(project, publication_id):
     rows = connection.execute(statement).fetchall()
     result = []
     for row in rows:
-        result.append(dict(row))
+        result.append(row)._asdict()
     connection.close()
     return jsonify(result)
 
@@ -133,7 +133,7 @@ def get_publication_tags(project, publication_id):
     rows = connection.execute(statement).fetchall()
     result = []
     for row in rows:
-        result.append(dict(row))
+        result.append(row)._asdict()
     connection.close()
     return jsonify(result)
 
@@ -159,7 +159,7 @@ def get_publication_facsimiles(project, publication_id):
     rows = connection.execute(statement).fetchall()
     result = []
     for row in rows:
-        result.append(dict(row))
+        result.append(row)._asdict()
     connection.close()
     return jsonify(result)
 
@@ -180,7 +180,7 @@ def get_publication_comments(project, publication_id):
     rows = connection.execute(statement).fetchall()
     result = []
     for row in rows:
-        result.append(dict(row))
+        result.append(row)._asdict()
     connection.close()
     return jsonify(result)
 
@@ -233,7 +233,7 @@ def link_file_to_publication(project, publication_id):
         try:
             result = connection.execute(ins, **new_comment)
             new_row = select([comments]).where(comments.c.id == result.inserted_primary_key[0])
-            new_row = dict(connection.execute(new_row).fetchone())
+            new_row = connection.execute(new_row).fetchone()._asdict()
 
             # update publication object in database with new publication_comment ID
             update_stmt = publications.update().where(publications.c.id == int_or_none(publication_id)). \
@@ -274,7 +274,7 @@ def link_file_to_publication(project, publication_id):
         try:
             result = connection.execute(ins, **new_object)
             new_row = select([table]).where(table.c.id == result.inserted_primary_key[0])
-            new_row = dict(connection.execute(new_row).fetchone())
+            new_row = connection.execute(new_row).fetchone()._asdict()
             result = {
                 "msg": "Created new publication{} with ID {}".format(file_type.capitalize(), result.inserted_primary_key[0]),
                 "row": new_row

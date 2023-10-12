@@ -58,7 +58,7 @@ def get_facsimiles(project, publication_id, section_id=None):
 
         result = []
         for row in connection.execute(statement).fetchall():
-            facsimile = dict(row)
+            facsimile = row._asdict()
             if row.folder_path != '' and row.folder_path is not None:
                 facsimile["start_url"] = row.folder_path
             else:
@@ -102,7 +102,7 @@ def get_project_publication_facsimile_relations(project):
     statement = sql.bindparams(p_id=project_id)
     results = []
     for row in connection.execute(statement).fetchall():
-        results.append(dict(row))
+        results.append(row)._asdict()
     connection.close()
     return jsonify(results)
 
@@ -115,7 +115,7 @@ def get_facsimile_collections(project, facsimile_collection_ids):
     statement = sqlalchemy.sql.text(sql).bindparams(ids=tuple(facsimile_collection_ids.split(',')))
     return_data = []
     for row in connection.execute(statement).fetchall():
-        return_data.append(dict(row))
+        return_data.append(row)._asdict()
     connection.close()
     return jsonify(return_data), 200
 
@@ -308,7 +308,7 @@ def get_facsimile_pages(project, col_pub, section_id=None):
             sql = sqlalchemy.sql.text(stmnt)
             statement = sql.bindparams(pub_id=pub_id)
         result = connection.execute(statement).fetchone()
-        facs = dict(result)
+        facs = result._asdict()
         connection.close()
         return jsonify(facs), 200
     except Exception:

@@ -9,22 +9,22 @@ jobs:
 
     steps:
     - uses: actions/checkout@v3
-    - name: Set up Python 3.10
+    - name: Set up Python 3.11
       uses: actions/setup-python@v3
       with:
-        python-version: '3.10'
+        python-version: '3.11'
         architecture: 'x64'
     - name: Install dependencies
       run: |
-        sudo apt update && sudo apt install -y build-essential libmariadbclient-dev libpq-dev
+        sudo apt update && sudo apt install -y build-essential git imagemagick libmariadb-dev libpq-dev pkg-config
         python -m pip install --upgrade pip
         pip install --upgrade -e .
         pip install flake8
     - name: Lint with flake8
       run: |
         # stop the build if there are Python syntax errors or undefined names
-        flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+        flake8 sls_api --count --select=E9,F63,F7,F82 --show-source --statistics
         # run full flake8 suite, ignore line-length errors in addition to defaults
-        flake8 . --count --extend-ignore=E501 --show-source --statistics
+        flake8 sls_api --count --extend-ignore=E501 --show-source --statistics
         # exit-zero treats all errors as warnings. The GitHub editor is 127 chars wide
-        flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+        flake8 sls_api --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
