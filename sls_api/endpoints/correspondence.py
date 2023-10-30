@@ -2,7 +2,7 @@ from flask import Blueprint, jsonify
 import logging
 from sqlalchemy.sql import text
 
-from sls_api.endpoints.generics import db_engine, get_project_id_from_name
+from sls_api.endpoints.generics import db_engine, get_project_id_from_name, named_tuple_as_dict_or_empty_dict
 
 correspondence = Blueprint('correspondence', __name__)
 logger = logging.getLogger("sls_api.correspondence")
@@ -24,7 +24,7 @@ def get_correspondence_metadata_for_publication(project, pub_id):
     corresp = []
     subjects = []
     for row in connection.execute(corresp_sql).fetchall():
-        row = row._asdict()
+        row = named_tuple_as_dict_or_empty_dict(row)
         subject = {
             row['type']: row['full_name'],
             'id': row['subject_id']

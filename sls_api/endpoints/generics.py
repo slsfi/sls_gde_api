@@ -57,6 +57,13 @@ with io.open(os.path.join(config_dir, "digital_editions.yml"), encoding="UTF-8")
     elastic_config = config["elasticsearch_connection"]
 
 
+def named_tuple_as_dict_or_empty_dict(named_tuple):
+    if named_tuple:
+        return named_tuple._asdict()
+    else:
+        return {}
+
+
 def allowed_facsimile(filename):
     return '.' in filename and \
            filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS_FOR_FACSIMILE_UPLOAD
@@ -149,7 +156,7 @@ def select_all_from_table(table_name):
     rows = connection.execute(select([table])).fetchall()
     result = []
     for row in rows:
-        result.append(row)._asdict()
+        result.append(named_tuple_as_dict_or_empty_dict(row))
     connection.close()
     return jsonify(result)
 

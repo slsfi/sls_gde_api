@@ -3,7 +3,7 @@ from sqlalchemy import select, text
 from datetime import datetime
 
 from sls_api.endpoints.generics import db_engine, get_project_id_from_name, get_table, int_or_none, \
-    project_permission_required
+    named_tuple_as_dict_or_empty_dict, project_permission_required
 
 
 collection_tools = Blueprint("collection_tools", __name__)
@@ -46,7 +46,7 @@ def create_facsimile_collection(project):
     try:
         result = connection.execute(insert, **new_collection)
         new_row = select([collections]).where(collections.c.id == result.inserted_primary_key[0])
-        new_row = connection.execute(new_row).fetchone()._asdict()
+        new_row = named_tuple_as_dict_or_empty_dict(connection.execute(new_row).fetchone())
         result = {
             "msg": "Created new publication_facsimile_collection with ID {}".format(result.inserted_primary_key[0]),
             "row": new_row
@@ -159,7 +159,7 @@ def list_facsimile_collections(project):
     rows = connection.execute(statement).fetchall()
     result = []
     for row in rows:
-        result.append(row)._asdict()
+        result.append(named_tuple_as_dict_or_empty_dict(row))
     connection.close()
     return jsonify(result)
 
@@ -236,7 +236,7 @@ def link_facsimile_collection_to_publication(project, collection_id):
     try:
         result = connection.execute(insert, **new_facsimile)
         new_row = select([publication_facsimiles]).where(publication_facsimiles.c.id == result.inserted_primary_key[0])
-        new_row = connection.execute(new_row).fetchone()._asdict()
+        new_row = named_tuple_as_dict_or_empty_dict(connection.execute(new_row).fetchone())
         result = {
             "msg": "Created new publication_facsimile with ID {}".format(result.inserted_primary_key[0]),
             "row": new_row
@@ -322,7 +322,7 @@ def list_facsimile_collection_links(project, collection_id):
     rows = connection.execute(statement).fetchall()
     result = []
     for row in rows:
-        result.append(row)._asdict()
+        result.append(named_tuple_as_dict_or_empty_dict(row))
     connection.close()
     return jsonify(result)
 
@@ -370,7 +370,7 @@ def list_publication_collections(project):
     rows = connection.execute(statement).fetchall()
     result = []
     for row in rows:
-        result.append(row)._asdict()
+        result.append(named_tuple_as_dict_or_empty_dict(row))
     connection.close()
     return jsonify(result)
 
@@ -418,12 +418,12 @@ def new_publication_collection(project):
         ins = introductions.insert()
         result = connection.execute(ins, **new_intro)
         new_intro_row = select([introductions]).where(introductions.c.id == result.inserted_primary_key[0])
-        new_intro_row = connection.execute(new_intro_row).fetchone()._asdict()
+        new_intro_row = named_tuple_as_dict_or_empty_dict(connection.execute(new_intro_row).fetchone())
 
         ins = titles.insert()
         result = connection.execute(ins, **new_title)
         new_title_row = select([titles]).where(titles.c.id == result.inserted_primary_key[0])
-        new_title_row = connection.execute(new_title_row).fetchone()._asdict()
+        new_title_row = named_tuple_as_dict_or_empty_dict(connection.execute(new_title_row).fetchone())
 
         new_collection = {
             "project_id": get_project_id_from_name(project),
@@ -437,7 +437,7 @@ def new_publication_collection(project):
         ins = collections.insert()
         result = connection.execute(ins, **new_collection)
         new_collection_row = select([collections]).where(collections.c.id == result.inserted_primary_key[0])
-        new_collection_row = connection.execute(new_collection_row).fetchone()._asdict()
+        new_collection_row = named_tuple_as_dict_or_empty_dict(connection.execute(new_collection_row).fetchone())
         transaction.commit()
 
         return jsonify({
@@ -486,7 +486,7 @@ def list_publications(project, collection_id, order_by="id"):
     rows = connection.execute(statement).fetchall()
     result = []
     for row in rows:
-        result.append(row)._asdict()
+        result.append(named_tuple_as_dict_or_empty_dict(row))
     connection.close()
     return jsonify(result)
 
@@ -557,7 +557,7 @@ def new_publication(project, collection_id):
     try:
         result = connection.execute(insert, **publication)
         new_row = select([publications]).where(publications.c.id == result.inserted_primary_key[0])
-        new_row = connection.execute(new_row).fetchone()._asdict()
+        new_row = named_tuple_as_dict_or_empty_dict(connection.execute(new_row).fetchone())
         result = {
             "msg": "Created new publication with ID {}".format(result.inserted_primary_key[0]),
             "row": new_row

@@ -2,7 +2,7 @@ from flask import abort, Blueprint, jsonify
 import logging
 import sqlalchemy
 
-from sls_api.endpoints.generics import db_engine, get_project_id_from_name
+from sls_api.endpoints.generics import db_engine, get_project_id_from_name, named_tuple_as_dict_or_empty_dict
 
 occurrences = Blueprint('occurrences', __name__)
 logger = logging.getLogger("sls_api.occurrences")
@@ -53,13 +53,13 @@ def get_occurrences(object_type, ident):
         events_stmnt = sqlalchemy.sql.text(events_sql).bindparams(o_id=object_id)
         results = []
         for row in connection.execute(events_stmnt).fetchall():
-            results.append(row._asdict())
+            results.append(named_tuple_as_dict_or_empty_dict(row))
 
         for event in results:
             event["occurrences"] = []
             occurrence_stmnt = sqlalchemy.sql.text(occurrence_sql).bindparams(e_id=event["id"])
             for row in connection.execute(occurrence_stmnt).fetchall():
-                event["occurrences"].append(row._asdict())
+                event["occurrences"].append(named_tuple_as_dict_or_empty_dict(row))
         connection.close()
         return jsonify(results)
 
@@ -95,7 +95,7 @@ def get_all_occurrences_by_type(object_type, project=None):
         ob_statement = sqlalchemy.sql.text(ob_sql)
         obs = []
         for row in connection.execute(ob_statement).fetchall():
-            obs.append(row._asdict())
+            obs.append(named_tuple_as_dict_or_empty_dict(row))
 
         occur = []
         for o in obs:
@@ -118,13 +118,13 @@ def get_all_occurrences_by_type(object_type, project=None):
             events_stmnt = sqlalchemy.sql.text(events_sql).bindparams(o_id=object_id)
             results = []
             for row in connection.execute(events_stmnt).fetchall():
-                row = row._asdict()
+                row = named_tuple_as_dict_or_empty_dict(row)
                 if object_type == "subject":
                     type_stmnt = sqlalchemy.sql.text(
                         "SELECT type, subject.first_name::text, subject.last_name::text, subject.source::text, subject.description::text, subject.occupation::text, subject.place_of_birth::text, subject.date_born::text, subject.date_deceased::text FROM subject WHERE id=:ty_id").bindparams(
                         ty_id=object_id)
                     type_object = connection.execute(type_stmnt).fetchone()
-                    type_object = type_object._asdict()
+                    type_object = named_tuple_as_dict_or_empty_dict(type_object)
                     row["object_type"] = type_object["type"]
                     row["date_born"] = type_object["date_born"]
                     row["date_deceased"] = type_object["date_deceased"]
@@ -139,7 +139,7 @@ def get_all_occurrences_by_type(object_type, project=None):
                         "SELECT tag.type::text, tag.description::text, tag.source::text, tag.name::text FROM tag WHERE id=:ty_id").bindparams(
                         ty_id=object_id)
                     type_object = connection.execute(type_stmnt).fetchone()
-                    type_object = type_object._asdict()
+                    type_object = named_tuple_as_dict_or_empty_dict(type_object)
                     row["description"] = type_object["description"]
                     row["source"] = type_object["source"]
                     row["name"] = type_object["name"]
@@ -151,7 +151,7 @@ def get_all_occurrences_by_type(object_type, project=None):
                         FROM work_manifestation WHERE id=:ty_id""").bindparams(
                         ty_id=object_id)
                     type_object = connection.execute(type_stmnt).fetchone()
-                    type_object = type_object._asdict()
+                    type_object = named_tuple_as_dict_or_empty_dict(type_object)
                     row["description"] = type_object["description"]
                     row["source"] = type_object["source"]
                     row["name"] = type_object["title"]
@@ -172,7 +172,7 @@ def get_all_occurrences_by_type(object_type, project=None):
                                                         location.latitude::text, location.longitude::text, location.region::text FROM location WHERE id=:ty_id").bindparams(
                         ty_id=object_id)
                     type_object = connection.execute(type_stmnt).fetchone()
-                    type_object = type_object._asdict()
+                    type_object = named_tuple_as_dict_or_empty_dict(type_object)
                     row["description"] = type_object["description"]
                     row["source"] = type_object["source"]
                     row["name"] = type_object["name"]
@@ -188,18 +188,18 @@ def get_all_occurrences_by_type(object_type, project=None):
                 event["occurrences"] = []
                 occurrence_stmnt = sqlalchemy.sql.text(occurrence_sql).bindparams(e_id=event["id"])
                 for row in connection.execute(occurrence_stmnt).fetchall():
-                    row = row._asdict()
+                    row = named_tuple_as_dict_or_empty_dict(row)
 
                     if row["publication_manuscript_id"] is not None:
                         type_sql = sqlalchemy.sql.text("SELECT publication_manuscript.id AS id, publication_manuscript.original_filename, publication_manuscript.name \
                         FROM publication_manuscript WHERE id=:m_id").bindparams(m_id=row["publication_manuscript_id"])
                         manu = connection.execute(type_sql).fetchone()
-                        row["publication_manuscript"] = manu._asdict()
+                        row["publication_manuscript"] = named_tuple_as_dict_or_empty_dict(manu)
                     if row["publication_version_id"] is not None:
                         type_sql = sqlalchemy.sql.text("SELECT publication_version.id AS id, publication_version.original_filename, publication_version.name \
                         FROM publication_version WHERE id=:v_id").bindparams(v_id=row["publication_version_id"])
                         variation = connection.execute(type_sql).fetchone()
-                        row["publication_version"] = variation._asdict()
+                        row["publication_version"] = named_tuple_as_dict_or_empty_dict(variation)
                     if row["publication_comment_id"] is not None:
                         type_sql = ""
                     if row["publication_facsimile_id"] is not None:
@@ -210,7 +210,7 @@ def get_all_occurrences_by_type(object_type, project=None):
                         publication_facsimile_collection.id=publication_facsimile.publication_facsimile_collection_id"
                         type_sql = sqlalchemy.sql.text(type_sql).bindparams(f_id=row["publication_facsimile_id"])
                         facs = connection.execute(type_sql).fetchone()
-                        row["publication_facsimile"] = facs._asdict()
+                        row["publication_facsimile"] = named_tuple_as_dict_or_empty_dict(facs)
                     if row["publication_id"] is not None \
                             and row["publication_facsimile_id"] is None \
                             and row["publication_facsimile_id"] is None \
@@ -222,7 +222,7 @@ def get_all_occurrences_by_type(object_type, project=None):
                                                        "publication.name "
                                                        "FROM publication WHERE id=:pub_id").bindparams(pub_id=row["publication_id"])
                         publication = connection.execute(type_sql).fetchone()
-                        row["publication"] = publication._asdict()
+                        row["publication"] = named_tuple_as_dict_or_empty_dict(publication)
                     if row["publication_song_id"] is not None:
                         type_sql = sqlalchemy.sql.text("SELECT \
                             original_id as song_original_id, ps.name as song_name, ps.type as song_type, number as song_number, \
@@ -233,7 +233,7 @@ def get_all_occurrences_by_type(object_type, project=None):
                         ps.original_publication_date as song_original_publication_date, page_number as song_page_number, subtype as song_subtype \
                          FROM publication_song WHERE id=:song_id").bindparams(song_id=row["publication_song_id"])
                         publication_song = connection.execute(type_sql).fetchone()
-                        row["publication_song"] = publication_song._asdict()
+                        row["publication_song"] = named_tuple_as_dict_or_empty_dict(publication_song)
 
                     event["occurrences"].append(row)
 
@@ -275,7 +275,7 @@ def get_subject_occurrences(project=None, subject_id=None):
     result = connection.execute(statement_subj)
     subject = result.fetchone()
     while subject is not None:
-        subject = subject._asdict()
+        subject = named_tuple_as_dict_or_empty_dict(subject)
         occurrence_sql = "SELECT \
                             pub_c.name as collection_name, pub_c.id as collection_id, ev.description, ev.id, ev_o.publication_comment_id, \
                             publication_facsimile_id, publication_facsimile_page, \
@@ -297,7 +297,7 @@ def get_subject_occurrences(project=None, subject_id=None):
         result_2 = connection_2.execute(statement_occ)
         occurrence = result_2.fetchone()
         while occurrence is not None:
-            occurrenceData = occurrence._asdict()
+            occurrenceData = named_tuple_as_dict_or_empty_dict(occurrence)
             if subject_id is not None:
                 song_sql = "SELECT \
                 ps.volume as song_volume, ps.id as song_id, ps.name as song_name, ps.type as song_type, number as song_number, \
@@ -313,7 +313,7 @@ def get_subject_occurrences(project=None, subject_id=None):
                 song_result = connection_2.execute(song_sql)
                 song_data = song_result.fetchone()
                 if song_data is not None:
-                    song_data = song_data._asdict()
+                    song_data = named_tuple_as_dict_or_empty_dict(song_data)
                     occurrenceData.update(song_data)
             subject['occurrences'].append(occurrenceData)
             occurrence = result_2.fetchone()
@@ -354,7 +354,7 @@ def get_location_occurrences(project=None, location_id=None):
     result = connection.execute(statement_loc)
     location = result.fetchone()
     while location is not None:
-        location = location._asdict()
+        location = named_tuple_as_dict_or_empty_dict(location)
         occurrence_sql = "SELECT \
                             pub_c.name as collection_name, pub_c.id as collection_id, ev.description, ev.id, ev_o.publication_comment_id, \
                             publication_facsimile_id, publication_facsimile_page, \
@@ -375,7 +375,7 @@ def get_location_occurrences(project=None, location_id=None):
         result_2 = connection_2.execute(statement_occ)
         occurrence = result_2.fetchone()
         while occurrence is not None:
-            occurrenceData = occurrence._asdict()
+            occurrenceData = named_tuple_as_dict_or_empty_dict(occurrence)
             if location_id is not None:
                 song_sql = "SELECT \
                 ps.volume as song_volume, ps.id as song_id, ps.name as song_name, ps.type as song_type, number as song_number, \
@@ -391,7 +391,7 @@ def get_location_occurrences(project=None, location_id=None):
                 song_result = connection_2.execute(song_sql)
                 song_data = song_result.fetchone()
                 if song_data is not None:
-                    song_data = song_data._asdict()
+                    song_data = named_tuple_as_dict_or_empty_dict(song_data)
                     occurrenceData.update(song_data)
             location['occurrences'].append(occurrenceData)
             occurrence = result_2.fetchone()
@@ -432,7 +432,7 @@ def get_tag_occurrences(project=None, tag_id=None):
     result = connection.execute(statement_tag)
     tag = result.fetchone()
     while tag is not None:
-        tag = tag._asdict()
+        tag = named_tuple_as_dict_or_empty_dict(tag)
         occurrence_sql = "SELECT \
                             pub_c.name as collection_name, pub_c.id as collection_id, ev.description, ev.id, ev_o.publication_comment_id, \
                             publication_facsimile_id, publication_facsimile_page, \
@@ -453,7 +453,7 @@ def get_tag_occurrences(project=None, tag_id=None):
         result_2 = connection_2.execute(statement_occ)
         occurrence = result_2.fetchone()
         while occurrence is not None:
-            occurrenceData = occurrence._asdict()
+            occurrenceData = named_tuple_as_dict_or_empty_dict(occurrence)
             if tag_id is not None:
                 song_sql = "SELECT \
                 ps.volume as song_volume, ps.id as song_id, ps.name as song_name, ps.type as song_type, number as song_number, \
@@ -469,7 +469,7 @@ def get_tag_occurrences(project=None, tag_id=None):
                 song_result = connection_2.execute(song_sql)
                 song_data = song_result.fetchone()
                 if song_data is not None:
-                    song_data = song_data._asdict()
+                    song_data = named_tuple_as_dict_or_empty_dict(song_data)
                     occurrenceData.update(song_data)
             tag['occurrences'].append(occurrenceData)
             occurrence = result_2.fetchone()
@@ -502,7 +502,7 @@ def get_work_manifestation_occurrences(project=None, work_manifestation_id=None)
     result = connection.execute(statement)
     work_manifestation = result.fetchone()
     while work_manifestation is not None:
-        work_manifestation = work_manifestations._asdict()
+        work_manifestation = named_tuple_as_dict_or_empty_dict(work_manifestations)
         occurrence_sql = "SELECT \
                             pub_c.name as collection_name, pub_c.id as collection_id, ev.description, ev.id, ev_o.publication_comment_id, \
                             publication_facsimile_id, publication_facsimile_page, \
@@ -523,7 +523,7 @@ def get_work_manifestation_occurrences(project=None, work_manifestation_id=None)
         result_2 = connection_2.execute(statement_occ)
         occurrence = result_2.fetchone()
         while occurrence is not None:
-            occurrenceData = occurrence._asdict()
+            occurrenceData = named_tuple_as_dict_or_empty_dict(occurrence)
             work_manifestation['occurrences'].append(occurrenceData)
             occurrence = result_2.fetchone()
 
@@ -551,7 +551,7 @@ def get_person_occurrences_by_collection(project, object_type, collection_id):
     result = connection.execute(occurrence_sql)
     row = result.fetchone()
     while row is not None:
-        occurrences.append(row)._asdict()
+        occurrences.append(row._asdict())
         row = result.fetchone()
 
     subjects = []
@@ -564,7 +564,7 @@ def get_person_occurrences_by_collection(project, object_type, collection_id):
         result = connection.execute(subject_sql)
         row = result.fetchone()
         while row is not None:
-            subjects.append(row)._asdict()
+            subjects.append(row._asdict())
             row = result.fetchone()
     connection.close()
 
