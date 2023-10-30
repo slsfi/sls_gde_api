@@ -120,7 +120,7 @@ def project_permission_required(fn):
 
 
 def get_project_id_from_name(project):
-    projects = Table('project', metadata, autoload=True, autoload_with=db_engine)
+    projects = Table('project', metadata, autoload_with=db_engine)
     connection = db_engine.connect()
     statement = select([projects.c.id]).where(projects.c.name == project)
     project_id = connection.execute(statement).fetchone()
@@ -132,7 +132,7 @@ def get_project_id_from_name(project):
 
 
 def get_collection_legacy_id(collection_id):
-    publication_collection = Table('publication_collection', metadata, autoload=True, autoload_with=db_engine)
+    publication_collection = Table('publication_collection', metadata, autoload_with=db_engine)
     connection = db_engine.connect()
     statement = select([publication_collection.c.legacy_id]).where(publication_collection.c.id == collection_id)
     collection_legacy_id = connection.execute(statement).fetchone()
@@ -144,7 +144,7 @@ def get_collection_legacy_id(collection_id):
 
 
 def select_all_from_table(table_name):
-    table = Table(table_name, metadata, autoload=True, autoload_with=db_engine)
+    table = Table(table_name, metadata, autoload_with=db_engine)
     connection = db_engine.connect()
     rows = connection.execute(select([table])).fetchall()
     result = []
@@ -155,7 +155,7 @@ def select_all_from_table(table_name):
 
 
 def get_table(table_name):
-    return Table(table_name, metadata, autoload=True, autoload_with=db_engine)
+    return Table(table_name, metadata, autoload_with=db_engine)
 
 
 def slugify_route(path):
