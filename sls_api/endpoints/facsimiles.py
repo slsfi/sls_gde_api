@@ -67,20 +67,20 @@ def get_facsimiles(project, publication_id, section_id=None):
                     "digitaledition",
                     project,
                     "facsimile",
-                    str(row["publication_facsimile_collection_id"])
+                    str(row.publication_facsimile_collection_id)
                 )
-            pre_pages = row["start_page_number"] or 0
+            pre_pages = row.start_page_number or 0
 
-            facsimile["first_page"] = pre_pages + row["page_nr"]
+            facsimile["first_page"] = pre_pages + row.page_nr
 
             sql2 = "SELECT * FROM publication_facsimile WHERE deleted != 1 AND publication_facsimile_collection_id=:fc_id AND page_nr>:page_nr ORDER BY page_nr ASC LIMIT 1"
-            statement2 = sqlalchemy.sql.text(sql2).bindparams(fc_id=row["publication_facsimile_collection_id"],
-                                                              page_nr=row["page_nr"])
+            statement2 = sqlalchemy.sql.text(sql2).bindparams(fc_id=row.publication_facsimile_collection_id,
+                                                              page_nr=row.page_nr)
             for row2 in connection.execute(statement2).fetchall():
-                facsimile["last_page"] = pre_pages + row2["page_nr"] - 1
+                facsimile["last_page"] = pre_pages + row2.page_nr - 1
 
             if "last_page" not in facsimile.keys():
-                facsimile["last_page"] = row["number_of_pages"]
+                facsimile["last_page"] = row.number_of_pages
 
             result.append(facsimile)
         connection.close()
