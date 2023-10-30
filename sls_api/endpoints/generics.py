@@ -136,7 +136,7 @@ def get_project_id_from_name(project):
     project_id = connection.execute(statement).fetchone()
     connection.close()
     try:
-        return int(project_id["id"])
+        return int(project_id.id)
     except Exception:
         return None
 
@@ -148,7 +148,7 @@ def get_collection_legacy_id(collection_id):
     collection_legacy_id = connection.execute(statement).fetchone()
     connection.close()
     try:
-        return int(collection_legacy_id["legacy_id"])
+        return int(collection_legacy_id.legacy_id)
     except Exception:
         return None
 
@@ -445,7 +445,7 @@ def create_translation(neutral):
     row = result.fetchone()
     connection.close()
     if row is not None:
-        return row['id']
+        return row.id
     else:
         return None
 
@@ -474,7 +474,7 @@ def get_translation_text_id(translation_id, table_name, field_name, language):
         row = result.fetchone()
         connection.close()
         if row is not None:
-            return row['id']
+            return row.id
         else:
             return None
     else:

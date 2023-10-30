@@ -52,40 +52,40 @@ def get_letter_info_from_database(letter_id):
     # Get Sender
     sender = get_letter_person(letter_id, 'avsändare')
     if sender is not None:
-        letter['sender'] = sender['full_name']
-        letter['sender_id'] = sender['id']
+        letter['sender'] = sender.full_name
+        letter['sender_id'] = sender.id
     else:
         letter['sender'] = ''
         letter['sender_id'] = ''
     # Get Reciever
     reciever = get_letter_person(letter_id, 'mottagare')
     if reciever is not None:
-        letter['reciever'] = reciever['full_name']
-        letter['reciever_id'] = reciever['id']
+        letter['reciever'] = reciever.full_name
+        letter['reciever_id'] = reciever.id
     else:
         letter['reciever'] = ''
         letter['reciever_id'] = ''
     # Get Sender Location
     sender_location = get_letter_location(letter_id, 'avsändarort')
     if sender_location is not None:
-        letter['sender_location'] = sender_location['name']
-        letter['sender_location_id'] = sender_location['id']
+        letter['sender_location'] = sender_location.name
+        letter['sender_location_id'] = sender_location.id
     else:
         letter['sender_location'] = ''
         letter['sender_location_id'] = ''
     # Get Reciever Location
     reciever_location = get_letter_location(letter_id, 'mottagarort')
     if reciever_location is not None:
-        letter['reciever_location'] = reciever_location['name']
-        letter['reciever_location_id'] = reciever_location['id']
+        letter['reciever_location'] = reciever_location.name
+        letter['reciever_location_id'] = reciever_location.id
     else:
         letter['reciever_location'] = ''
         letter['reciever_location_id'] = ''
     # Get Title and Status
     title = get_letter_info(letter_id)
     if title is not None:
-        letter['title'] = title['title']
-        letter['title_id'] = title['id']
+        letter['title'] = title.title
+        letter['title_id'] = title.id
     else:
         letter['title'] = ''
         letter['title_id'] = ''
