@@ -55,7 +55,7 @@ def add_new_location(project):
     try:
         insert = locations.insert()
         result = connection.execute(insert, **new_location)
-        new_row = select([locations]).where(locations.c.id == result.inserted_primary_key[0])
+        new_row = select(locations).where(locations.c.id == result.inserted_primary_key[0])
         new_row = named_tuple_as_dict_or_empty_dict(connection.execute(new_row).fetchone())
         result = {
             "msg": "Created new location with ID {}".format(result.inserted_primary_key[0]),
@@ -94,7 +94,7 @@ def edit_location(project, location_id):
     locations = get_table("location")
 
     connection = db_engine.connect()
-    location_query = select([locations.c.id]).where(locations.c.id == int_or_none(location_id))
+    location_query = select(locations.c.id).where(locations.c.id == int_or_none(location_id))
     location_row = connection.execute(location_query).fetchone()
     if location_row is None:
         return jsonify({"msg": "No location with an ID of {} exists.".format(location_id)}), 404
@@ -200,7 +200,7 @@ def add_new_subject(project):
     try:
         insert = subjects.insert()
         result = connection.execute(insert, **new_subject)
-        new_row = select([subjects]).where(subjects.c.id == result.inserted_primary_key[0])
+        new_row = select(subjects).where(subjects.c.id == result.inserted_primary_key[0])
         new_row = named_tuple_as_dict_or_empty_dict(connection.execute(new_row).fetchone())
         result = {
             "msg": "Created new subject with ID {}".format(result.inserted_primary_key[0]),
@@ -243,7 +243,7 @@ def edit_subject(project, subject_id):
     subjects = get_table("subject")
 
     connection = db_engine.connect()
-    subject_query = select([subjects.c.id]).where(subjects.c.id == int_or_none(subject_id))
+    subject_query = select(subjects.c.id).where(subjects.c.id == int_or_none(subject_id))
     subject_row = connection.execute(subject_query).fetchone()
     if subject_row is None:
         return jsonify({"msg": "No subject with an ID of {} exists.".format(subject_id)}), 404
@@ -336,7 +336,7 @@ def add_new_translation(project):
     try:
         insert = transaltion.insert()
         result = connection.execute(insert, **new_translation)
-        new_row = select([transaltion]).where(transaltion.c.id == result.inserted_primary_key[0])
+        new_row = select(transaltion).where(transaltion.c.id == result.inserted_primary_key[0])
         new_row = named_tuple_as_dict_or_empty_dict(connection.execute(new_row).fetchone())
         result = {
             "msg": "Created new translation with ID {}".format(result.inserted_primary_key[0]),
@@ -399,7 +399,7 @@ def edit_translation(project, translation_id):
             del new_translation["id"]
             insert = translation_text.insert()
             result = connection.execute(insert, **new_translation)
-            new_row = select([translation_text]).where(translation_text.c.id == result.inserted_primary_key[0])
+            new_row = select(translation_text).where(translation_text.c.id == result.inserted_primary_key[0])
             new_row = named_tuple_as_dict_or_empty_dict(connection.execute(new_row).fetchone())
             result = {
                 "msg": "Created new translation_text with ID {}".format(result.inserted_primary_key[0]),
@@ -470,7 +470,7 @@ def add_new_tag(project):
     try:
         insert = tags.insert()
         result = connection.execute(insert, **new_tag)
-        new_row = select([tags]).where(tags.c.id == result.inserted_primary_key[0])
+        new_row = select(tags).where(tags.c.id == result.inserted_primary_key[0])
         new_row = named_tuple_as_dict_or_empty_dict(connection.execute(new_row).fetchone())
         result = {
             "msg": "Created new tag with ID {}".format(result.inserted_primary_key[0]),
@@ -510,7 +510,7 @@ def edit_tag(project, tag_id):
     tags = get_table("tag")
 
     connection = db_engine.connect()
-    tag_query = select([tags.c.id]).where(tags.c.id == int_or_none(tag_id))
+    tag_query = select(tags.c.id).where(tags.c.id == int_or_none(tag_id))
     tag_row = connection.execute(tag_query).fetchone()
     if tag_row is None:
         return jsonify({"msg": "No tag with an ID of {} exists.".format(tag_id)}), 404
@@ -610,7 +610,7 @@ def add_new_work_manifestation(project):
         insert = work_references.insert()
         result = connection.execute(insert, **new_work_reference)
 
-        new_row = select([work_manifestations]).where(work_manifestations.c.id == work_manifestation_id)
+        new_row = select(work_manifestations).where(work_manifestations.c.id == work_manifestation_id)
         new_row = named_tuple_as_dict_or_empty_dict(connection.execute(new_row).fetchone())
         result = {
             "msg": "Created new work_manifestation with ID {}".format(work_manifestation_id),
@@ -653,7 +653,7 @@ def edit_work_manifestation(project, man_id):
     connection = db_engine.connect()
 
     # get manifestation data
-    query = select([manifestations.c.id]).where(manifestations.c.id == int_or_none(man_id))
+    query = select(manifestations.c.id).where(manifestations.c.id == int_or_none(man_id))
     row = connection.execute(query).fetchone()
     if row is None:
         return jsonify({"msg": "No manifestation with an ID of {} exists.".format(man_id)}), 404
@@ -848,7 +848,7 @@ def find_event_by_description():
     events = get_table("event")
     connection = db_engine.connect()
 
-    statement = select([events]).where(events.c.description.ilike("%{}%".format(request_data["phrase"])))
+    statement = select(events).where(events.c.description.ilike("%{}%".format(request_data["phrase"])))
     rows = connection.execute(statement).fetchall()
 
     result = []
@@ -883,7 +883,7 @@ def add_new_event():
     try:
         insert = events.insert()
         result = connection.execute(insert, **new_event)
-        new_row = select([events]).where(events.c.id == result.inserted_primary_key[0])
+        new_row = select(events).where(events.c.id == result.inserted_primary_key[0])
         new_row = named_tuple_as_dict_or_empty_dict(connection.execute(new_row).fetchone())
         result = {
             "msg": "Created new event with ID {}".format(result.inserted_primary_key[0]),
@@ -918,7 +918,7 @@ def connect_event(event_id):
         return jsonify({"msg": "No data provided."}), 400
     events = get_table("event")
     connection = db_engine.connect()
-    select_event = select([events]).where(events.c.id == int_or_none(event_id))
+    select_event = select(events).where(events.c.id == int_or_none(event_id))
     event_exists = connection.execute(select_event).fetchall()
     if len(event_exists) != 1:
         return jsonify(
@@ -936,7 +936,7 @@ def connect_event(event_id):
     }
     try:
         result = connection.execute(insert, **new_event_connection)
-        new_row = select([event_connections]).where(event_connections.c.id == result.inserted_primary_key[0])
+        new_row = select(event_connections).where(event_connections.c.id == result.inserted_primary_key[0])
         new_row = named_tuple_as_dict_or_empty_dict(connection.execute(new_row).fetchone())
         result = {
             "msg": "Created new event_connection with ID {}".format(result.inserted_primary_key[0]),
@@ -961,7 +961,7 @@ def get_event_connections(event_id):
     """
     event_connections = get_table("event_connection")
     connection = db_engine.connect()
-    statement = select([event_connections]).where(event_connections.c.event_id == int_or_none(event_id))
+    statement = select(event_connections).where(event_connections.c.event_id == int_or_none(event_id))
     rows = connection.execute(statement).fetchall()
     result = []
     for row in rows:
@@ -978,7 +978,7 @@ def get_event_occurrences(event_id):
     """
     event_occurrences = get_table("event_occurrence")
     connection = db_engine.connect()
-    statement = select([event_occurrences]).where(event_occurrences.c.event_id == int_or_none(event_id))
+    statement = select(event_occurrences).where(event_occurrences.c.event_id == int_or_none(event_id))
     rows = connection.execute(statement).fetchall()
     result = []
     for row in rows:
@@ -1012,7 +1012,7 @@ def new_event_occurrence(event_id):
         return jsonify({"msg": "No data provided."}), 400
     events = get_table("event")
     connection = db_engine.connect()
-    select_event = select([events]).where(events.c.id == int_or_none(event_id))
+    select_event = select(events).where(events.c.id == int_or_none(event_id))
     event_exists = connection.execute(select_event).fetchall()
     if len(event_exists) != 1:
         return jsonify(
@@ -1036,7 +1036,7 @@ def new_event_occurrence(event_id):
     }
     try:
         result = connection.execute(insert, **new_occurrence)
-        new_row = select([event_occurrences]).where(event_occurrences.c.id == result.inserted_primary_key[0])
+        new_row = select(event_occurrences).where(event_occurrences.c.id == result.inserted_primary_key[0])
         new_row = named_tuple_as_dict_or_empty_dict(connection.execute(new_row).fetchone())
         result = {
             "msg": "Created new event_occurrence with ID {}".format(result.inserted_primary_key[0]),
@@ -1073,7 +1073,7 @@ def new_publication_event_occurrence(publication_id):
         return jsonify({"msg": "No data provided."}), 400
     event_occ = get_table("event_occurrence")
     connection = db_engine.connect()
-    select_event = select([event_occ.c.event_id]).where(event_occ.c.publication_id == int_or_none(publication_id)).where(event_occ.c.deleted != 1)
+    select_event = select(event_occ.c.event_id).where(event_occ.c.publication_id == int_or_none(publication_id)).where(event_occ.c.deleted != 1)
     result = connection.execute(select_event).fetchone()
     if int_or_none(result["event_id"]) is None:
         event_id = int_or_none(result)
@@ -1109,7 +1109,7 @@ def new_publication_event_occurrence(publication_id):
         }
         try:
             result = connection.execute(insert, **new_occurrence)
-            new_row = select([event_occ]).where(event_occ.c.id == result.inserted_primary_key[0])
+            new_row = select(event_occ).where(event_occ.c.id == result.inserted_primary_key[0])
             new_row = named_tuple_as_dict_or_empty_dict(connection.execute(new_row).fetchone())
         except Exception as e:
             result = {
@@ -1127,7 +1127,7 @@ def new_publication_event_occurrence(publication_id):
         }
         try:
             result = connection.execute(insert, **new_connection)
-            new_row = select([event_conn]).where(event_conn.c.id == result.inserted_primary_key[0])
+            new_row = select(event_conn).where(event_conn.c.id == result.inserted_primary_key[0])
             new_row = named_tuple_as_dict_or_empty_dict(connection.execute(new_row).fetchone())
         except Exception as e:
             result = {
@@ -1146,7 +1146,7 @@ def new_publication_event_occurrence(publication_id):
             event_conn = get_table("event_connection")
             insert = event_conn.insert()
             result = connection.execute(insert, **new_connection)
-            new_row = select([event_conn]).where(event_conn.c.id == result.inserted_primary_key[0])
+            new_row = select(event_conn).where(event_conn.c.id == result.inserted_primary_key[0])
             new_row = named_tuple_as_dict_or_empty_dict(connection.execute(new_row).fetchone())
             result = {
                 "msg": "Created new event_connection with ID {}".format(result.inserted_primary_key[0]),

@@ -14,7 +14,7 @@ def list_publication_groups(project):
     """
     connection = db_engine.connect()
     groups = get_table("publication_group")
-    statement = select([groups.c.id, groups.c.published, groups.c.name])
+    statement = select(groups.c.id, groups.c.published, groups.c.name)
     rows = connection.execute(statement).fetchall()
     result = named_tuple_as_dict_or_empty_dict(rows[0])
     connection.close()
@@ -29,7 +29,7 @@ def get_publication_group(project, group_id):
     """
     connection = db_engine.connect()
     groups = get_table("publication_group")
-    statement = select([groups]).where(groups.c.id == int_or_none(group_id))
+    statement = select(groups).where(groups.c.id == int_or_none(group_id))
     rows = connection.execute(statement).fetchall()
     result = named_tuple_as_dict_or_empty_dict(rows[0])
     connection.close()
@@ -44,7 +44,7 @@ def get_publications_in_group(project, group_id):
     """
     connection = db_engine.connect()
     publications = get_table("publication")
-    statement = select([publications.c.id, publications.c.name]).where(publications.c.publication_group_id == int_or_none(group_id))
+    statement = select(publications.c.id, publications.c.name).where(publications.c.publication_group_id == int_or_none(group_id))
     result = []
     for row in connection.execute(statement).fetchall():
         result.append(named_tuple_as_dict_or_empty_dict(row))
@@ -77,7 +77,7 @@ def add_publication_to_group(project, publication_id):
     transaction = connection.begin()
     try:
         connection.execute(statement)
-        statement = select([publications]).where(publications.c.id == int_or_none(publication_id))
+        statement = select(publications).where(publications.c.id == int_or_none(publication_id))
         updated = named_tuple_as_dict_or_empty_dict(connection.execute(statement).fetchone())
         transaction.commit()
         result = {
@@ -120,7 +120,7 @@ def add_new_publication_group(project):
     }
     try:
         result = connection.execute(insert, **new_group)
-        new_row = select([groups]).where(groups.c.id == result.inserted_primary_key[0])
+        new_row = select(groups).where(groups.c.id == result.inserted_primary_key[0])
         new_row = named_tuple_as_dict_or_empty_dict(connection.execute(new_row).fetchone())
         result = {
             "msg": "Created new group with ID {}".format(result.inserted_primary_key[0]),

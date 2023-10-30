@@ -50,7 +50,7 @@ def edit_project(project_id):
     published = request_data.get("published", None)
 
     projects = get_table("project")
-    query = select([projects.c.id]).where(projects.c.id == int_or_none(project_id))
+    query = select(projects.c.id).where(projects.c.id == int_or_none(project_id))
     connection = db_engine.connect()
 
     result = connection.execute(query)
@@ -98,7 +98,7 @@ def edit_publication_collection(project, collection_id):
     collection_intro_filename = request_data.get("collection_intro_filename", None)
 
     collections = get_table("publication_collection")
-    query = select([collections.c.id]).where(collections.c.id == int_or_none(collection_id))
+    query = select(collections.c.id).where(collections.c.id == int_or_none(collection_id))
     connection = db_engine.connect()
 
     result = connection.execute(query)
@@ -123,7 +123,7 @@ def edit_publication_collection(project, collection_id):
         # Create a new title and add the id to the Collection
         ins = titles.insert()
         result = connection.execute(ins, **new_title)
-        new_title_row = select([titles]).where(titles.c.id == result.inserted_primary_key[0])
+        new_title_row = select(titles).where(titles.c.id == result.inserted_primary_key[0])
         new_title_row = named_tuple_as_dict_or_empty_dict(connection.execute(new_title_row).fetchone())
         collection_title_id = new_title_row["id"]
 
@@ -131,7 +131,7 @@ def edit_publication_collection(project, collection_id):
         # Create a new intro and add the id to the Collection
         ins = introductions.insert()
         result = connection.execute(ins, **new_intro)
-        new_intro_row = select([introductions]).where(introductions.c.id == result.inserted_primary_key[0])
+        new_intro_row = select(introductions).where(introductions.c.id == result.inserted_primary_key[0])
         new_intro_row = named_tuple_as_dict_or_empty_dict(connection.execute(new_intro_row).fetchone())
         collection_intro_id = new_intro_row["id"]
 
@@ -175,15 +175,14 @@ def edit_publication_collection(project, collection_id):
 def get_intro(project, collection_id):
     collections = get_table("publication_collection")
     introductions = get_table("publication_collection_introduction")
-    query = select([collections.c.publication_collection_introduction_id]).where(collections.c.id == int_or_none(collection_id))
+    query = select(collections.c.publication_collection_introduction_id).where(collections.c.id == int_or_none(collection_id))
     connection = db_engine.connect()
     result = connection.execute(query)
     if result.fetchone() is None:
         result.close()
         return jsonify("No such publication collection exists."), 404
 
-    query = select([introductions])\
-        .where(introductions.c.id == int(result[collections.c.publication_collection_introduction_id]))
+    query = select(introductions).where(introductions.c.id == int(result[collections.c.publication_collection_introduction_id]))
 
     row = named_tuple_as_dict_or_empty_dict(connection.execute(query).fetchone())
     connection.close()
@@ -205,7 +204,7 @@ def edit_intro(project, collection_id):
 
     collections = get_table("publication_collection")
     introductions = get_table("publication_collection_introduction")
-    query = select([collections.c.publication_collection_introduction_id]).where(collections.c.id == int_or_none(collection_id))
+    query = select(collections.c.publication_collection_introduction_id).where(collections.c.id == int_or_none(collection_id))
     connection = db_engine.connect()
     result = connection.execute(query).fetchone()
     if result is None:
@@ -239,14 +238,14 @@ def edit_intro(project, collection_id):
 def get_title(project, collection_id):
     collections = get_table("publication_collection")
     titles = get_table("publication_collection_title")
-    query = select([collections.c.publication_collection_title_id]).where(collections.c.id == int_or_none(collection_id))
+    query = select(collections.c.publication_collection_title_id).where(collections.c.id == int_or_none(collection_id))
     connection = db_engine.connect()
     result = connection.execute(query).fetchone()
     if result is None:
         connection.close()
         return jsonify("No such publication collection exists."), 404
 
-    query = select([titles]).where(titles.c.id == int(result[collections.c.publication_collection_title_id]))
+    query = select(titles).where(titles.c.id == int(result[collections.c.publication_collection_title_id]))
 
     row = named_tuple_as_dict_or_empty_dict(connection.execute(query).fetchone())
     connection.close()
@@ -268,7 +267,7 @@ def edit_title(project, collection_id):
 
     collections = get_table("publication_collection")
     titles = get_table("publication_collection_title")
-    query = select([collections.c.publication_collection_title_id]).where(collections.c.id == int_or_none(collection_id))
+    query = select(collections.c.publication_collection_title_id).where(collections.c.id == int_or_none(collection_id))
     connection = db_engine.connect()
     result = connection.execute(query).fetchone()
     if result is None:
@@ -313,7 +312,7 @@ def edit_publication(project, publication_id):
     published = request_data.get("published", None)
 
     publications = get_table("publication")
-    query = select([publications.c.id]).where(publications.c.id == int_or_none(publication_id))
+    query = select(publications.c.id).where(publications.c.id == int_or_none(publication_id))
     connection = db_engine.connect()
 
     result = connection.execute(query)
@@ -362,7 +361,7 @@ def edit_comment(project, publication_id):
 
     publications = get_table("publication")
     comments = get_table("publication_comment")
-    query = select([publications.c.publication_comment_id]).where(publications.c.id == int_or_none(publication_id))
+    query = select(publications.c.publication_comment_id).where(publications.c.id == int_or_none(publication_id))
     connection = db_engine.connect()
 
     result = connection.execute(query).fetchone()
@@ -422,7 +421,7 @@ def add_manuscript(project, publication_id):
 
     publications = get_table("publication")
     manuscripts = get_table("publication_manuscript")
-    query = select([publications]).where(publications.c.id == int_or_none(publication_id))
+    query = select(publications).where(publications.c.id == int_or_none(publication_id))
     connection = db_engine.connect()
 
     result = connection.execute(query).fetchone()
@@ -464,7 +463,7 @@ def edit_manuscript(project, manuscript_id):
     sort_order = request_data.get("sort_order", None)
 
     manuscripts = get_table("publication_manuscript")
-    query = select([manuscripts]).where(manuscripts.c.id == int_or_none(manuscript_id))
+    query = select(manuscripts).where(manuscripts.c.id == int_or_none(manuscript_id))
     connection = db_engine.connect()
 
     result = connection.execute(query).fetchone()
@@ -516,7 +515,7 @@ def add_version(project, publication_id):
 
     publications = get_table("publication")
     versions = get_table("publication_version")
-    query = select([publications]).where(publications.c.id == int_or_none(publication_id))
+    query = select(publications).where(publications.c.id == int_or_none(publication_id))
     connection = db_engine.connect()
 
     result = connection.execute(query).fetchone()
@@ -562,7 +561,7 @@ def edit_version(project, version_id):
     version_type = request_data.get("type", None)
 
     versions = get_table("publication_version")
-    query = select([versions]).where(versions.c.id == int_or_none(version_id))
+    query = select(versions).where(versions.c.id == int_or_none(version_id))
     connection = db_engine.connect()
 
     result = connection.execute(query).fetchone()
@@ -613,7 +612,7 @@ def edit_facsimile_collection(project, collection_id):
     description = request_data.get("description", None)
     external_url = request_data.get("external_url", None)
     collections = get_table("publication_facsimile_collection")
-    query = select([collections]).where(collections.c.id == int_or_none(collection_id))
+    query = select(collections).where(collections.c.id == int_or_none(collection_id))
     connection = db_engine.connect()
 
     result = connection.execute(query).fetchone()
@@ -658,7 +657,7 @@ def get_publication_collection_info(project, collection_id):
     intros = get_table("publication_collection_introduction")
     titles = get_table("publication_collection_title")
 
-    query = select([collections]).where(collections.c.id == int_or_none(collection_id))
+    query = select(collections).where(collections.c.id == int_or_none(collection_id))
     connection = db_engine.connect()
     collection_result = connection.execute(query).fetchone()
     if collection_result is None:
@@ -667,8 +666,8 @@ def get_publication_collection_info(project, collection_id):
 
     intro_id = int_or_none(collection_result["publication_collection_introduction_id"])
     title_id = int_or_none(collection_result["publication_collection_title_id"])
-    intro_query = select([intros.c.published, intros.c.original_filename]).where(intros.c.id == intro_id)
-    title_query = select([titles.c.published, titles.c.original_filename]).where(titles.c.id == title_id)
+    intro_query = select(intros.c.published, intros.c.original_filename).where(intros.c.id == intro_id)
+    title_query = select(titles.c.published, titles.c.original_filename).where(titles.c.id == title_id)
 
     intro_result = connection.execute(intro_query).fetchone()
     title_result = connection.execute(title_query).fetchone()

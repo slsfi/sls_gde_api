@@ -56,6 +56,9 @@ with io.open(os.path.join(config_dir, "digital_editions.yml"), encoding="UTF-8")
     db_engine = create_engine(config["engine"], pool_pre_ping=True, pool_size=30, max_overflow=30, pool_recycle=900)
     elastic_config = config["elasticsearch_connection"]
 
+    # reflect all tables from database so we know what they look like
+    metadata.reflect(bind=db_engine)
+
 
 def named_tuple_as_dict_or_empty_dict(named_tuple):
     if named_tuple:
@@ -129,7 +132,7 @@ def project_permission_required(fn):
 def get_project_id_from_name(project):
     projects = Table('project', metadata, autoload_with=db_engine)
     connection = db_engine.connect()
-    statement = select([projects.c.id]).where(projects.c.name == project)
+    statement = select(projects.c.id).where(projects.c.name == project)
     project_id = connection.execute(statement).fetchone()
     connection.close()
     try:
@@ -141,7 +144,7 @@ def get_project_id_from_name(project):
 def get_collection_legacy_id(collection_id):
     publication_collection = Table('publication_collection', metadata, autoload_with=db_engine)
     connection = db_engine.connect()
-    statement = select([publication_collection.c.legacy_id]).where(publication_collection.c.id == collection_id)
+    statement = select(publication_collection.c.legacy_id).where(publication_collection.c.id == collection_id)
     collection_legacy_id = connection.execute(statement).fetchone()
     connection.close()
     try:
@@ -153,7 +156,7 @@ def get_collection_legacy_id(collection_id):
 def select_all_from_table(table_name):
     table = Table(table_name, metadata, autoload_with=db_engine)
     connection = db_engine.connect()
-    rows = connection.execute(select([table])).fetchall()
+    rows = connection.execute(select(table)).fetchall()
     result = []
     for row in rows:
         result.append(named_tuple_as_dict_or_empty_dict(row))

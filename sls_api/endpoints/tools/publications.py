@@ -19,10 +19,10 @@ def get_publications(project):
     connection = db_engine.connect()
     publication_collections = get_table("publication_collection")
     publications = get_table("publication")
-    statement = select([publication_collections.c.id]).where(publication_collections.c.project_id == project_id)
+    statement = select(publication_collections.c.id).where(publication_collections.c.project_id == project_id)
     collection_ids = connection.execute(statement).fetchall()
     collection_ids = [int(row["id"]) for row in collection_ids]
-    statement = select([publications]).where(publications.c.id.in_(collection_ids))
+    statement = select(publications).where(publications.c.id.in_(collection_ids))
     rows = connection.execute(statement).fetchall()
     result = []
     for row in rows:
@@ -39,7 +39,7 @@ def get_publication(project, publication_id):
     """
     connection = db_engine.connect()
     publications = get_table("publication")
-    statement = select([publications]).where(publications.c.id == int_or_none(publication_id))
+    statement = select(publications).where(publications.c.id == int_or_none(publication_id))
     rows = connection.execute(statement).fetchall()
     result = named_tuple_as_dict_or_empty_dict(rows[0])
     connection.close()
@@ -54,7 +54,7 @@ def get_publication_manuscript(project, publication_id):
     """
     connection = db_engine.connect()
     publication_ms = get_table("publication_manuscript")
-    statement = select([publication_ms]).where(publication_ms.c.publication_id == int_or_none(publication_id))
+    statement = select(publication_ms).where(publication_ms.c.publication_id == int_or_none(publication_id))
     rows = connection.execute(statement).fetchall()
     result = []
     for row in rows:
@@ -71,7 +71,7 @@ def get_publication_version(project, publication_id):
     """
     connection = db_engine.connect()
     publication_v = get_table("publication_version")
-    statement = select([publication_v]).where(publication_v.c.publication_id == int_or_none(publication_id))
+    statement = select(publication_v).where(publication_v.c.publication_id == int_or_none(publication_id))
     rows = connection.execute(statement).fetchall()
     result = []
     for row in rows:
@@ -88,7 +88,7 @@ def get_publication_versions(project, publication_id):
     """
     connection = db_engine.connect()
     publication_versions = get_table("publication_version")
-    statement = select([publication_versions]).where(publication_versions.c.publication_id == int_or_none(publication_id))
+    statement = select(publication_versions).where(publication_versions.c.publication_id == int_or_none(publication_id))
     rows = connection.execute(statement).fetchall()
     result = []
     for row in rows:
@@ -105,7 +105,7 @@ def get_publication_manuscripts(project, publication_id):
     """
     connection = db_engine.connect()
     publication_manuscripts = get_table("publication_manuscript")
-    statement = select([publication_manuscripts]).where(publication_manuscripts.c.publication_id == int_or_none(publication_id))
+    statement = select(publication_manuscripts).where(publication_manuscripts.c.publication_id == int_or_none(publication_id))
     rows = connection.execute(statement).fetchall()
     result = []
     for row in rows:
@@ -151,7 +151,7 @@ def get_publication_facsimiles(project, publication_id):
     # join in facsimile_collections to we can get the collection title as well
     tables = join(publication_facsimiles, facsimile_collections, publication_facsimiles.c.publication_facsimile_collection_id == facsimile_collections.c.id)
 
-    statement = select([publication_facsimiles, facsimile_collections.c.title])\
+    statement = select(publication_facsimiles, facsimile_collections.c.title)\
         .where(publication_facsimiles.c.publication_id == int_or_none(publication_id))\
         .where(publication_facsimiles.c.deleted != 1)\
         .select_from(tables)
@@ -173,10 +173,10 @@ def get_publication_comments(project, publication_id):
     connection = db_engine.connect()
     publications = get_table("publication")
     publication_comments = get_table("publication_comment")
-    statement = select([publications.c.publication_comment_id]).where(publications.c.id == int_or_none(publication_id))
+    statement = select(publications.c.publication_comment_id).where(publications.c.id == int_or_none(publication_id))
     comment_ids = connection.execute(statement).fetchall()
     comment_ids = [int(row[0]) for row in comment_ids]
-    statement = select([publication_comments]).where(publication_comments.c.id.in_(comment_ids))
+    statement = select(publication_comments).where(publication_comments.c.id.in_(comment_ids))
     rows = connection.execute(statement).fetchall()
     result = []
     for row in rows:
@@ -232,7 +232,7 @@ def link_file_to_publication(project, publication_id):
         ins = comments.insert()
         try:
             result = connection.execute(ins, **new_comment)
-            new_row = select([comments]).where(comments.c.id == result.inserted_primary_key[0])
+            new_row = select(comments).where(comments.c.id == result.inserted_primary_key[0])
             new_row = named_tuple_as_dict_or_empty_dict(connection.execute(new_row).fetchone())
 
             # update publication object in database with new publication_comment ID
@@ -273,7 +273,7 @@ def link_file_to_publication(project, publication_id):
         ins = table.insert()
         try:
             result = connection.execute(ins, **new_object)
-            new_row = select([table]).where(table.c.id == result.inserted_primary_key[0])
+            new_row = select(table).where(table.c.id == result.inserted_primary_key[0])
             new_row = named_tuple_as_dict_or_empty_dict(connection.execute(new_row).fetchone())
             result = {
                 "msg": "Created new publication{} with ID {}".format(file_type.capitalize(), result.inserted_primary_key[0]),

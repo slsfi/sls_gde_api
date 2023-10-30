@@ -45,7 +45,7 @@ def create_facsimile_collection(project):
     }
     try:
         result = connection.execute(insert, **new_collection)
-        new_row = select([collections]).where(collections.c.id == result.inserted_primary_key[0])
+        new_row = select(collections).where(collections.c.id == result.inserted_primary_key[0])
         new_row = named_tuple_as_dict_or_empty_dict(connection.execute(new_row).fetchone())
         result = {
             "msg": "Created new publication_facsimile_collection with ID {}".format(result.inserted_primary_key[0]),
@@ -77,7 +77,7 @@ def edit_facsimile_collection(project, facsimile_collection_id):
     facsimile_collections = get_table("publication_facsimile_collection")
 
     connection = db_engine.connect()
-    facsimile_collections_query = select([facsimile_collections.c.id]).where(facsimile_collections.c.id == int_or_none(facsimile_collection_id))
+    facsimile_collections_query = select(facsimile_collections.c.id).where(facsimile_collections.c.id == int_or_none(facsimile_collection_id))
     facsimile_collections_row = connection.execute(facsimile_collections_query).fetchone()
     if facsimile_collections_row is None:
         return jsonify({"msg": "No facsimile collection with an ID of {} exists.".format(facsimile_collection_id)}), 404
@@ -196,7 +196,7 @@ def link_facsimile_collection_to_publication(project, collection_id):
     publication_collections = get_table("publication_collection")
     publications = get_table("publication")
 
-    statement = select([publications.c.publication_collection_id]).where(publications.c.id == publication_id)
+    statement = select(publications.c.publication_collection_id).where(publications.c.id == publication_id)
     result = connection.execute(statement).fetchall()
     if len(result) != 1:
         return jsonify(
@@ -206,7 +206,7 @@ def link_facsimile_collection_to_publication(project, collection_id):
         ), 404
     publication_collection_id = int_or_none(result[0]["publication_collection_id"])
 
-    statement = select([publication_collections.c.project_id]).where(publication_collections.c.id == publication_collection_id)
+    statement = select(publication_collections.c.project_id).where(publication_collections.c.id == publication_collection_id)
     result = connection.execute(statement).fetchall()
     if len(result) != 1:
         return jsonify(
@@ -235,7 +235,7 @@ def link_facsimile_collection_to_publication(project, collection_id):
     }
     try:
         result = connection.execute(insert, **new_facsimile)
-        new_row = select([publication_facsimiles]).where(publication_facsimiles.c.id == result.inserted_primary_key[0])
+        new_row = select(publication_facsimiles).where(publication_facsimiles.c.id == result.inserted_primary_key[0])
         new_row = named_tuple_as_dict_or_empty_dict(connection.execute(new_row).fetchone())
         result = {
             "msg": "Created new publication_facsimile with ID {}".format(result.inserted_primary_key[0]),
@@ -269,7 +269,7 @@ def edit_facsimile(project):
     facsimile = get_table("publication_facsimile")
 
     connection = db_engine.connect()
-    facsimile_query = select([facsimile.c.id]).where(facsimile.c.id == int_or_none(facsimile_id))
+    facsimile_query = select(facsimile.c.id).where(facsimile.c.id == int_or_none(facsimile_id))
     facsimile_row = connection.execute(facsimile_query).fetchone()
     if facsimile_row is None:
         return jsonify({"msg": "No facsimile with an ID of {} exists.".format(facsimile_id)}), 404
@@ -318,7 +318,7 @@ def list_facsimile_collection_links(project, collection_id):
     """
     connection = db_engine.connect()
     facsimiles = get_table("publication_facsimile")
-    statement = select([facsimiles]).where(facsimiles.c.publication_facsimile_collection_id == int_or_none(collection_id))
+    statement = select(facsimiles).where(facsimiles.c.publication_facsimile_collection_id == int_or_none(collection_id))
     rows = connection.execute(statement).fetchall()
     result = []
     for row in rows:
@@ -366,7 +366,7 @@ def list_publication_collections(project):
         LEFT JOIN publication_collection_introduction pci ON pci.id = pc.publication_collection_introduction_id
         WHERE pc.project_id=:project_id AND pc.published>=1 ORDER BY pc.id """
     statement = text(statement).bindparams(project_id=int_or_none(project_id))
-    # statement = select([collections]).where(collections.c.project_id == int_or_none(project_id))
+    # statement = select(collections).where(collections.c.project_id == int_or_none(project_id))
     rows = connection.execute(statement).fetchall()
     result = []
     for row in rows:
@@ -417,12 +417,12 @@ def new_publication_collection(project):
 
         ins = introductions.insert()
         result = connection.execute(ins, **new_intro)
-        new_intro_row = select([introductions]).where(introductions.c.id == result.inserted_primary_key[0])
+        new_intro_row = select(introductions).where(introductions.c.id == result.inserted_primary_key[0])
         new_intro_row = named_tuple_as_dict_or_empty_dict(connection.execute(new_intro_row).fetchone())
 
         ins = titles.insert()
         result = connection.execute(ins, **new_title)
-        new_title_row = select([titles]).where(titles.c.id == result.inserted_primary_key[0])
+        new_title_row = select(titles).where(titles.c.id == result.inserted_primary_key[0])
         new_title_row = named_tuple_as_dict_or_empty_dict(connection.execute(new_title_row).fetchone())
 
         new_collection = {
@@ -436,7 +436,7 @@ def new_publication_collection(project):
 
         ins = collections.insert()
         result = connection.execute(ins, **new_collection)
-        new_collection_row = select([collections]).where(collections.c.id == result.inserted_primary_key[0])
+        new_collection_row = select(collections).where(collections.c.id == result.inserted_primary_key[0])
         new_collection_row = named_tuple_as_dict_or_empty_dict(connection.execute(new_collection_row).fetchone())
         transaction.commit()
 
@@ -468,7 +468,7 @@ def list_publications(project, collection_id, order_by="id"):
     connection = db_engine.connect()
     collections = get_table("publication_collection")
     publications = get_table("publication")
-    statement = select([collections]).where(collections.c.id == int_or_none(collection_id)).order_by(str(order_by))
+    statement = select(collections).where(collections.c.id == int_or_none(collection_id)).order_by(str(order_by))
     rows = connection.execute(statement).fetchall()
     if len(rows) != 1:
         return jsonify(
@@ -482,7 +482,7 @@ def list_publications(project, collection_id, order_by="id"):
                 "msg": "Found collection not part of project {!r} with ID {}.".format(project, project_id)
             }
         ), 400
-    statement = select([publications]).where(publications.c.publication_collection_id == int_or_none(collection_id)).order_by(str(order_by))
+    statement = select(publications).where(publications.c.publication_collection_id == int_or_none(collection_id)).order_by(str(order_by))
     rows = connection.execute(statement).fetchall()
     result = []
     for row in rows:
@@ -523,7 +523,7 @@ def new_publication(project, collection_id):
     collections = get_table("publication_collection")
     publications = get_table("publication")
 
-    statement = select([collections.c.project_id]).where(collections.c.id == int_or_none(collection_id))
+    statement = select(collections.c.project_id).where(collections.c.id == int_or_none(collection_id))
     result = connection.execute(statement).fetchall()
     if len(result) != 1:
         return jsonify(
@@ -556,7 +556,7 @@ def new_publication(project, collection_id):
     }
     try:
         result = connection.execute(insert, **publication)
-        new_row = select([publications]).where(publications.c.id == result.inserted_primary_key[0])
+        new_row = select(publications).where(publications.c.id == result.inserted_primary_key[0])
         new_row = named_tuple_as_dict_or_empty_dict(connection.execute(new_row).fetchone())
         result = {
             "msg": "Created new publication with ID {}".format(result.inserted_primary_key[0]),
