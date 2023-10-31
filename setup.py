@@ -3,7 +3,7 @@ from setuptools import setup
 setup(
     name='sls_api',
     packages=['sls_api'],
-    version="1.3.3",
+    version="1.3.4",
     include_package_data=True,
     install_requires=[
         'argon2_cffi==23.1.0',

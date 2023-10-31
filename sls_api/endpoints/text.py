@@ -140,6 +140,7 @@ def get_reading_text(project, collection_id, publication_id, section_id=None, la
         select = "SELECT legacy_id FROM publication WHERE id = :p_id AND original_filename IS NULL"
         statement = sqlalchemy.sql.text(select).bindparams(p_id=publication_id)
         result = connection.execute(statement).fetchone()
+        result = named_tuple_as_dict_or_empty_dict(result)
         if result is None or language is not None:
             filename = "{}_{}_est.xml".format(collection_id, publication_id)
             if language is not None:
@@ -198,6 +199,7 @@ def get_comments(project, collection_id, publication_id, note_id=None, section_i
                         AND legacy_id IS NOT NULL AND original_filename IS NULL"
             statement = sqlalchemy.sql.text(select).bindparams(p_id=publication_id)
             result = connection.execute(statement).fetchone()
+            result = named_tuple_as_dict_or_empty_dict(result)
 
             bookId = get_collection_legacy_id(collection_id)
             if bookId is None:
@@ -462,6 +464,7 @@ def get_reading_text_downloadable_format(project, format, collection_id, publica
         select = "SELECT legacy_id FROM publication WHERE id = :p_id AND original_filename IS NULL"
         statement = sqlalchemy.sql.text(select).bindparams(p_id=publication_id)
         result = connection.execute(statement).fetchone()
+        result = named_tuple_as_dict_or_empty_dict(result)
         if result is None or language is not None:
             filename = "{}_{}_est.xml".format(collection_id, publication_id)
             if language is not None:
@@ -526,6 +529,7 @@ def get_comments_downloadable_format(project, format, collection_id, publication
                         AND legacy_id IS NOT NULL AND original_filename IS NULL"
             statement = sqlalchemy.sql.text(select).bindparams(p_id=publication_id)
             result = connection.execute(statement).fetchone()
+            result = named_tuple_as_dict_or_empty_dict(result)
 
             bookId = get_collection_legacy_id(collection_id)
             if bookId is None:
