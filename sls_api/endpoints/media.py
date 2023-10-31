@@ -49,6 +49,7 @@ def get_media_article_data(project, type, type_id):
         return_data = []
         for row in connection.execute(statement).fetchall():
             if row is not None:
+                row = row._asdict()
                 row["pdf_path"] = "/" + safe_join(project, "media", "pdf", str(row["id"]))
                 return_data.append(row)
         connection.close()
