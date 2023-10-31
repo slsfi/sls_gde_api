@@ -1,7 +1,7 @@
 from flask import Blueprint, jsonify, request
 from sqlalchemy import select
 
-from sls_api.endpoints.generics import db_engine, get_table, int_or_none, named_tuple_as_dict_or_empty_dict, project_permission_required
+from sls_api.endpoints.generics import db_engine, get_table, int_or_none, project_permission_required
 
 group_tools = Blueprint("group_tools", __name__)
 
@@ -15,8 +15,9 @@ def list_publication_groups(project):
     connection = db_engine.connect()
     groups = get_table("publication_group")
     statement = select(groups.c.id, groups.c.published, groups.c.name)
-    rows = connection.execute(statement).fetchall()
-    result = named_tuple_as_dict_or_empty_dict(rows[0])
+    result = connection.execute(statement).first()
+    if result is not None:
+        result = result._asdict()
     connection.close()
     return jsonify(result)
 
@@ -30,8 +31,9 @@ def get_publication_group(project, group_id):
     connection = db_engine.connect()
     groups = get_table("publication_group")
     statement = select(groups).where(groups.c.id == int_or_none(group_id))
-    rows = connection.execute(statement).fetchall()
-    result = named_tuple_as_dict_or_empty_dict(rows[0])
+    result = connection.execute(statement).first()
+    if result is not None:
+        result = result._asdict()
     connection.close()
     return jsonify(result)
 
@@ -47,7 +49,8 @@ def get_publications_in_group(project, group_id):
     statement = select(publications.c.id, publications.c.name).where(publications.c.publication_group_id == int_or_none(group_id))
     result = []
     for row in connection.execute(statement).fetchall():
-        result.append(named_tuple_as_dict_or_empty_dict(row))
+        if row is not None:
+            result.append(row._asdict())
     connection.close()
     return jsonify(result)
 
@@ -78,7 +81,9 @@ def add_publication_to_group(project, publication_id):
     try:
         connection.execute(statement)
         statement = select(publications).where(publications.c.id == int_or_none(publication_id))
-        updated = named_tuple_as_dict_or_empty_dict(connection.execute(statement).fetchone())
+        updated = connection.execute(statement).fetchone()
+        if updated is not None:
+            updated = updated._asdict()
         transaction.commit()
         result = {
             "msg": "Updated publication object",
@@ -121,7 +126,9 @@ def add_new_publication_group(project):
     try:
         result = connection.execute(insert, **new_group)
         new_row = select(groups).where(groups.c.id == result.inserted_primary_key[0])
-        new_row = named_tuple_as_dict_or_empty_dict(connection.execute(new_row).fetchone())
+        new_row = connection.execute(new_row).fetchone()
+        if new_row is not None:
+            new_row = new_row._asdict()
         result = {
             "msg": "Created new group with ID {}".format(result.inserted_primary_key[0]),
             "row": new_row

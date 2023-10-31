@@ -2,7 +2,7 @@ from flask import Blueprint, jsonify
 import logging
 from sqlalchemy.sql import text
 
-from sls_api.endpoints.generics import db_engine, get_project_id_from_name, named_tuple_as_dict_or_empty_dict
+from sls_api.endpoints.generics import db_engine, get_project_id_from_name
 
 workregister = Blueprint('workregister', __name__)
 logger = logging.getLogger("sls_api.workregister")
@@ -22,7 +22,7 @@ def get_work_manifestations_for_project(project):
     result = connection.execute(manifestation_sql)
     row = result.fetchone()
     while row is not None:
-        manifestations.append(named_tuple_as_dict_or_empty_dict(row))
+        manifestations.append(row._asdict())
         row = result.fetchone()
 
     connection.close()
@@ -56,7 +56,7 @@ def get_work_manifestation_authors_for_project(project, manifestation_id):
     result = connection.execute(authors_sql)
     row = result.fetchone()
     while row is not None:
-        authors.append(named_tuple_as_dict_or_empty_dict(row))
+        authors.append(row._asdict())
         row = result.fetchone()
 
     connection.close()
@@ -90,7 +90,7 @@ def get_work_manifestation_occurrences_for_project(project, manifestation_id):
     result = connection.execute(occurrences_sql)
     row = result.fetchone()
     while row is not None:
-        occurrences.append(named_tuple_as_dict_or_empty_dict(row))
+        occurrences.append(row._asdict())
         row = result.fetchone()
 
     connection.close()
@@ -124,7 +124,7 @@ def get_work_occurrences_by_work(project, work_id):
     result = connection.execute(occurrences_sql)
     row = result.fetchone()
     while row is not None:
-        occurrences.append(named_tuple_as_dict_or_empty_dict(row))
+        occurrences.append(row._asdict())
         row = result.fetchone()
 
     connection.close()
@@ -158,7 +158,7 @@ def get_work_manifestations_for_publication(project, publication_id):
     result = connection.execute(sql)
     row = result.fetchone()
     while row is not None:
-        data.append(named_tuple_as_dict_or_empty_dict(row))
+        data.append(row._asdict())
         row = result.fetchone()
 
     connection.close()
@@ -190,7 +190,7 @@ def get_work_manifestations_by_author(project, author_id):
     result = connection.execute(sql)
     row = result.fetchone()
     while row is not None:
-        data.append(named_tuple_as_dict_or_empty_dict(row))
+        data.append(row._asdict())
         row = result.fetchone()
 
     connection.close()
@@ -215,7 +215,7 @@ def get_work_manifestation_metadata(project, manifestation_id):
     result = connection.execute(sql)
     row = result.fetchone()
     while row is not None:
-        data.append(named_tuple_as_dict_or_empty_dict(row))
+        data.append(row._asdict())
         row = result.fetchone()
 
     connection.close()
@@ -240,7 +240,7 @@ def get_work_manifestations(project, work_id):
     result = connection.execute(sql)
     row = result.fetchone()
     while row is not None:
-        data.append(named_tuple_as_dict_or_empty_dict(row))
+        data.append(row._asdict())
         row = result.fetchone()
 
     connection.close()

@@ -7,7 +7,7 @@ from subprocess import CalledProcessError
 import sys
 from typing import Union
 
-from sls_api.endpoints.generics import calculate_checksum, config, db_engine, get_project_id_from_name, named_tuple_as_dict_or_empty_dict
+from sls_api.endpoints.generics import calculate_checksum, config, db_engine, get_project_id_from_name
 from sls_api.endpoints.tools.files import run_git_command, update_files_in_git_repo
 from sls_api.scripts.CTeiDocument import CTeiDocument
 
@@ -18,8 +18,6 @@ logger.setLevel(logging.DEBUG)
 valid_projects = [project for project in config if isinstance(config[project], dict) and config[project].get("comments_database", False)]
 
 comment_db_engines = {project: create_engine(config[project]["comments_database"], pool_pre_ping=True) for project in valid_projects}
-
-# comment_db_engines = {"topelius": create_engine("mysql://web_user:SecretPassword@mysql.example.com:3306/topelius_notes", pool_pre_ping=True)}
 
 COMMENTS_XSL_PATH_IN_FILE_ROOT = "xslt/comment_html_to_tei.xsl"
 COMMENTS_TEMPLATE_PATH_IN_FILE_ROOT = "templates/comment.xml"
@@ -41,7 +39,7 @@ def get_comments_from_database(project, document_note_ids):
     connection.close()
     if len(comments) <= 0:
         return []
-    return [named_tuple_as_dict_or_empty_dict(comment) for comment in comments]
+    return [comment._asdict() for comment in comments if comment is not None]
 
 
 def get_letter_info_from_database(letter_id):
@@ -341,7 +339,9 @@ def check_publication_mtimes_and_publish_files(project: str, publication_ids: Un
             # logger.debug("Publication query resulting rows: {}".format(publication_info[0].keys()))  TODO: fix IndexError if publication_info has no rows
             # For each publication belonging to this project, check the modification timestamp of its master files and compare them to the generated web XML files
             for row in publication_info:
-                row = named_tuple_as_dict_or_empty_dict(row)
+                if row is None:
+                    continue
+                row = row._asdict()
                 publication_id = row["p_id"]
                 collection_id = row["c_id"]
                 if not row["original_filename"]:
@@ -605,7 +605,9 @@ def check_publication_mtimes_and_publish_files(project: str, publication_ids: Un
             # For each publication_manuscript belonging to this project, check the modification timestamp of its master file and compare it to the generated web XML file
             # logger.debug("Manuscript query resulting rows: {}".format(manuscript_info[0].keys())) TODO: fix IndexError if manuscript_info has no rows
             for row in manuscript_info:
-                row = named_tuple_as_dict_or_empty_dict(row)
+                if row is None:
+                    continue
+                row = row._asdict()
                 collection_id = row["c_id"]
                 publication_id = row["p_id"]
                 manuscript_id = row["m_id"]

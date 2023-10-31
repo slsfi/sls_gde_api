@@ -3,7 +3,7 @@ import logging
 import sqlalchemy
 from werkzeug.security import safe_join
 
-from sls_api.endpoints.generics import db_engine, get_project_config, named_tuple_as_dict_or_empty_dict
+from sls_api.endpoints.generics import db_engine, get_project_config
 
 songs = Blueprint('songs', __name__)
 logger = logging.getLogger("sls_api.songs")
@@ -41,7 +41,7 @@ def get_publication_song(project, song_id):
     if return_data is None:
         return jsonify({"msg": "Desired song not found in database."}), 404
     else:
-        return jsonify(named_tuple_as_dict_or_empty_dict(return_data)), 200
+        return jsonify(return_data._asdict()), 200
 
 
 @songs.route("/<project>/song/id/<song_id>/")
@@ -52,8 +52,10 @@ def get_song_by_id(project, song_id):
         sql = sqlalchemy.sql.text("SELECT * FROM song WHERE id=:s_id")
         statement = sql.bindparams(s_id=song_id)
         result = connection.execute(statement).fetchone()
+        if result is not None:
+            result = result._asdict()
         connection.close()
-        return jsonify(named_tuple_as_dict_or_empty_dict(result)), 200
+        return jsonify(result), 200
     except Exception:
         logger.exception(f"Failed to get song by id {song_id}.")
         return Response("Couldn't get song by id.", status=404, content_type="text/json")
@@ -148,7 +150,8 @@ def get_songs_filtered(project):
         result = connection.execute(statement).fetchall()
         return_data = []
         for row in result:
-            return_data.append(named_tuple_as_dict_or_empty_dict(row))
+            if row is not None:
+                return_data.append(row._asdict())
         connection.close()
         return jsonify(return_data), 200
     except Exception as e:

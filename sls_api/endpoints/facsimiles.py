@@ -9,7 +9,7 @@ from werkzeug.utils import secure_filename
 
 from sls_api.endpoints.generics import ALLOWED_EXTENSIONS_FOR_FACSIMILE_UPLOAD, allowed_facsimile, db_engine, \
     FACSIMILE_IMAGE_SIZES, FACSIMILE_UPLOAD_FOLDER, get_project_config, get_project_id_from_name, \
-    named_tuple_as_dict_or_empty_dict, project_permission_required
+    project_permission_required
 
 facsimiles = Blueprint('facsimiles', __name__)
 logger = logging.getLogger("sls_api.facsimiles")
@@ -59,7 +59,10 @@ def get_facsimiles(project, publication_id, section_id=None):
 
         result = []
         for row in connection.execute(statement).fetchall():
-            facsimile = named_tuple_as_dict_or_empty_dict(row)
+            if row is not None:
+                facsimile = row._asdict()
+            else:
+                facsimile = {}
             if row.folder_path != '' and row.folder_path is not None:
                 facsimile["start_url"] = row.folder_path
             else:
@@ -103,7 +106,8 @@ def get_project_publication_facsimile_relations(project):
     statement = sql.bindparams(p_id=project_id)
     results = []
     for row in connection.execute(statement).fetchall():
-        results.append(named_tuple_as_dict_or_empty_dict(row))
+        if row is not None:
+            results.append(row._asdict())
     connection.close()
     return jsonify(results)
 
@@ -116,7 +120,8 @@ def get_facsimile_collections(project, facsimile_collection_ids):
     statement = sqlalchemy.sql.text(sql).bindparams(ids=tuple(facsimile_collection_ids.split(',')))
     return_data = []
     for row in connection.execute(statement).fetchall():
-        return_data.append(named_tuple_as_dict_or_empty_dict(row))
+        if row is not None:
+            return_data.append(row._asdict())
     connection.close()
     return jsonify(return_data), 200
 
@@ -309,9 +314,10 @@ def get_facsimile_pages(project, col_pub, section_id=None):
             sql = sqlalchemy.sql.text(stmnt)
             statement = sql.bindparams(pub_id=pub_id)
         result = connection.execute(statement).fetchone()
-        facs = named_tuple_as_dict_or_empty_dict(result)
+        if result is not None:
+            result = result._asdict()
         connection.close()
-        return jsonify(facs), 200
+        return jsonify(result), 200
     except Exception:
         logger.exception("Exception while getting facsimile page from database")
         return Response("Couldn't get facsimile page.", status=404, content_type="text/json")

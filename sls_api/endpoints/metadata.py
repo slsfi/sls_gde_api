@@ -10,7 +10,7 @@ import sqlalchemy.sql
 from urllib.parse import unquote
 from werkzeug.security import safe_join
 
-from sls_api.endpoints.generics import db_engine, get_project_config, get_project_id_from_name, path_hierarchy, select_all_from_table, flatten_json, get_first_valid_item_from_toc, named_tuple_as_dict_or_empty_dict
+from sls_api.endpoints.generics import db_engine, get_project_config, get_project_id_from_name, path_hierarchy, select_all_from_table, flatten_json, get_first_valid_item_from_toc
 from sls_api.endpoints.tools.files import git_commit_and_push_file
 
 meta = Blueprint('metadata', __name__)
@@ -114,7 +114,8 @@ def get_manuscripts(project, publication_id):
     statement = sql.bindparams(pub_id=publication_id)
     results = []
     for row in connection.execute(statement).fetchall():
-        results.append(named_tuple_as_dict_or_empty_dict(row))
+        if row is not None:
+            results.append(row._asdict())
     connection.close()
     return jsonify(results)
 
@@ -264,7 +265,8 @@ def get_collections(project):
         statement = sql.bindparams(p_status=status, p_id=project_id)
         results = []
         for row in connection.execute(statement).fetchall():
-            results.append(named_tuple_as_dict_or_empty_dict(row))
+            if row is not None:
+                results.append(row._asdict())
         connection.close()
         return jsonify(results)
 
@@ -277,7 +279,8 @@ def get_collection(project, collection_id):
     statement = sql.bindparams(c_id=collection_id)
     results = []
     for row in connection.execute(statement).fetchall():
-        results.append(named_tuple_as_dict_or_empty_dict(row))
+        if row is not None:
+            results.append(row._asdict())
     connection.close()
     return jsonify(results)
 
@@ -290,7 +293,8 @@ def get_publication(project, publication_id):
     statement = sql.bindparams(p_id=publication_id)
     results = []
     for row in connection.execute(statement).fetchall():
-        results.append(named_tuple_as_dict_or_empty_dict(row))
+        if row is not None:
+            results.append(row._asdict())
     connection.close()
     return jsonify(results)
 
@@ -303,7 +307,8 @@ def get_collection_publications(project, collection_id):
     statement = sql.bindparams(c_id=collection_id)
     results = []
     for row in connection.execute(statement).fetchall():
-        results.append(named_tuple_as_dict_or_empty_dict(row))
+        if row is not None:
+            results.append(row._asdict())
     connection.close()
     return jsonify(results)
 
@@ -322,7 +327,8 @@ def get_collection_publication_by_legacyid(project, legacy_id):
     statement = sql.bindparams(l_id=legacy_id, p_id=project_id)
     results = []
     for row in connection.execute(statement).fetchall():
-        results.append(named_tuple_as_dict_or_empty_dict(row))
+        if row is not None:
+            results.append(row._asdict())
     connection.close()
     return jsonify(results)
 
@@ -336,7 +342,8 @@ def get_legacyid_by_publication_id(project, publication_id):
     statement = sql.bindparams(p_id=publication_id)
     results = []
     for row in connection.execute(statement).fetchall():
-        results.append(named_tuple_as_dict_or_empty_dict(row))
+        if row is not None:
+            results.append(row._asdict())
     connection.close()
     return jsonify(results)
 
@@ -350,7 +357,8 @@ def get_legacyid_by_collection_id(project, collection_id):
     statement = sql.bindparams(pc_id=collection_id)
     results = []
     for row in connection.execute(statement).fetchall():
-        results.append(named_tuple_as_dict_or_empty_dict(row))
+        if row is not None:
+            results.append(row._asdict())
     connection.close()
     return jsonify(results)
 
@@ -402,7 +410,8 @@ def get_project_subjects(project, language=None):
 
     results = []
     for row in connection.execute(statement).fetchall():
-        results.append(named_tuple_as_dict_or_empty_dict(row))
+        if row is not None:
+            results.append(row._asdict())
     connection.close()
     return jsonify(results)
 
@@ -425,7 +434,8 @@ def get_project_locations(project):
     statement = sql.bindparams(p_id=project_id,)
     results = []
     for row in connection.execute(statement).fetchall():
-        results.append(named_tuple_as_dict_or_empty_dict(row))
+        if row is not None:
+            results.append(row._asdict())
     connection.close()
     return jsonify(results)
 
@@ -440,7 +450,8 @@ def get_project_tags(project):
     statement = sql.bindparams(p_id=project_id, )
     results = []
     for row in connection.execute(statement).fetchall():
-        results.append(named_tuple_as_dict_or_empty_dict(row))
+        if row is not None:
+            results.append(row._asdict())
     connection.close()
     return jsonify(results)
 
@@ -455,7 +466,8 @@ def get_project_works(project):
     statement = sql.bindparams(p_id=project_id, )
     results = []
     for row in connection.execute(statement).fetchall():
-        results.append(named_tuple_as_dict_or_empty_dict(row))
+        if row is not None:
+            results.append(row._asdict())
     connection.close()
     return jsonify(results)
 
@@ -535,10 +547,10 @@ def get_subject(project, subject_id):
         if return_data is None:
             return jsonify({"msg": "Desired subject not found in database."}), 404
         else:
-            return jsonify(named_tuple_as_dict_or_empty_dict(return_data)), 200
+            return jsonify(return_data._asdict()), 200
     else:
         connection.close()
-        return jsonify(named_tuple_as_dict_or_empty_dict(return_data)), 200
+        return jsonify(return_data._asdict()), 200
 
 
 @meta.route("/<project>/tag/<tag_id>")
@@ -566,10 +578,10 @@ def get_tag(project, tag_id):
         if return_data is None:
             return jsonify({"msg": "Desired tag not found in database."}), 404
         else:
-            return jsonify(named_tuple_as_dict_or_empty_dict(return_data)), 200
+            return jsonify(return_data._asdict()), 200
     else:
         connection.close()
-        return jsonify(named_tuple_as_dict_or_empty_dict(return_data)), 200
+        return jsonify(return_data._asdict()), 200
 
 
 @meta.route("/<project>/work/<work_id>")
@@ -592,7 +604,7 @@ def get_work(project, work_id):
     if return_data is None:
         return jsonify({"msg": "Desired work not found in database."}), 404
     else:
-        return jsonify(named_tuple_as_dict_or_empty_dict(return_data)), 200
+        return jsonify(return_data._asdict()), 200
 
 
 @meta.route("/<project>/location/<location_id>")
@@ -620,10 +632,10 @@ def get_location(project, location_id):
         if return_data is None:
             return jsonify({"msg": "Desired location not found in database."}), 404
         else:
-            return jsonify(named_tuple_as_dict_or_empty_dict(return_data)), 200
+            return jsonify(return_data._asdict()), 200
     else:
         connection.close()
-        return jsonify(named_tuple_as_dict_or_empty_dict(return_data)), 200
+        return jsonify(return_data._asdict()), 200
 
 
 @meta.route("/<project>/files/<folder>/<file_name>/")
@@ -658,7 +670,8 @@ def get_urn(project, url, legacy_id=None):
         sql = sqlalchemy.sql.text(stmnt).bindparams(url=url_like_str, p_id=project_id)
     return_data = []
     for row in connection.execute(sql).fetchall():
-        return_data.append(named_tuple_as_dict_or_empty_dict(row))
+        if row is not None:
+            return_data.append(row._asdict())
     connection.close()
     return jsonify(return_data), 200
 
@@ -677,7 +690,8 @@ def list_tooltips(table):
         sql = sqlalchemy.sql.text(f"SELECT id, name, project_id, legacy_id FROM {table}")
     results = []
     for row in connection.execute(sql).fetchall():
-        results.append(named_tuple_as_dict_or_empty_dict(row))
+        if row is not None:
+            results.append(row._asdict())
     connection.close()
     return results
 

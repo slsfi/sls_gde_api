@@ -4,7 +4,7 @@ import sqlalchemy
 from werkzeug.security import safe_join
 
 from sls_api.endpoints.generics import db_engine, get_collection_published_status, get_content, get_xml_content, \
-    get_project_config, get_published_status, get_collection_legacy_id, named_tuple_as_dict_or_empty_dict
+    get_project_config, get_published_status, get_collection_legacy_id
 
 text = Blueprint('text', __name__)
 logger = logging.getLogger("sls_api.text")
@@ -31,7 +31,8 @@ def get_text_by_type(project, text_type, text_id):
     statement = sql.bindparams(t_id=text_id)
     results = []
     for row in connection.execute(statement).fetchall():
-        results.append(named_tuple_as_dict_or_empty_dict(row))
+        if row is not None:
+            results.append(row._asdict())
     connection.close()
     return jsonify(results)
 
@@ -261,14 +262,16 @@ def get_manuscript_list(project, collection_id, publication_id, section_id=None)
             statement = sqlalchemy.sql.text(select).bindparams(p_id=publication_id, section=section_id)
             manuscript_info = []
             for row in connection.execute(statement).fetchall():
-                manuscript_info.append(named_tuple_as_dict_or_empty_dict(row))
+                if row is not None:
+                    manuscript_info.append(row._asdict())
             connection.close()
         else:
             select = "SELECT sort_order, name, legacy_id, id, original_filename FROM publication_manuscript WHERE publication_id = :p_id AND deleted != 1 ORDER BY sort_order ASC"
             statement = sqlalchemy.sql.text(select).bindparams(p_id=publication_id)
             manuscript_info = []
             for row in connection.execute(statement).fetchall():
-                manuscript_info.append(named_tuple_as_dict_or_empty_dict(row))
+                if row is not None:
+                    manuscript_info.append(row._asdict())
             connection.close()
 
         data = {
@@ -299,14 +302,16 @@ def get_manuscript(project, collection_id, publication_id, manuscript_id=None, s
             statement = sqlalchemy.sql.text(select).bindparams(m_id=manuscript_id)
             manuscript_info = []
             for row in connection.execute(statement).fetchall():
-                manuscript_info.append(named_tuple_as_dict_or_empty_dict(row))
+                if row is not None:
+                    manuscript_info.append(row._asdict())
             connection.close()
         else:
             select = "SELECT sort_order, name, legacy_id, id, original_filename FROM publication_manuscript WHERE publication_id = :p_id AND deleted != 1 ORDER BY sort_order ASC"
             statement = sqlalchemy.sql.text(select).bindparams(p_id=publication_id)
             manuscript_info = []
             for row in connection.execute(statement).fetchall():
-                manuscript_info.append(named_tuple_as_dict_or_empty_dict(row))
+                if row is not None:
+                    manuscript_info.append(row._asdict())
             connection.close()
 
         bookId = get_collection_legacy_id(collection_id)
@@ -366,7 +371,8 @@ def get_variant(project, collection_id, publication_id, section_id=None):
         statement = sqlalchemy.sql.text(select).bindparams(p_id=publication_id)
         variation_info = []
         for row in connection.execute(statement).fetchall():
-            variation_info.append(named_tuple_as_dict_or_empty_dict(row))
+            if row is not None:
+                variation_info.append(row._asdict())
         connection.close()
 
         bookId = get_collection_legacy_id(collection_id)

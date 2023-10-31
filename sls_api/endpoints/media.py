@@ -4,7 +4,7 @@ import logging
 import sqlalchemy
 from werkzeug.security import safe_join
 
-from sls_api.endpoints.generics import db_engine, get_project_config, get_project_id_from_name, named_tuple_as_dict_or_empty_dict
+from sls_api.endpoints.generics import db_engine, get_project_config, get_project_id_from_name
 
 media = Blueprint('media', __name__)
 logger = logging.getLogger("sls_api.media")
@@ -23,10 +23,14 @@ def get_media_data(project, type, type_id):
             WHERE mc.{}=:m_id AND media.type='image' ".format(media_column))
         statement = sql.bindparams(m_id=type_id)
         result = connection.execute(statement).fetchone()
-        result = named_tuple_as_dict_or_empty_dict(result)
-        result["image_path"] = "/" + safe_join(project, "media", "image", str(result["id"]))
-        connection.close()
-        return jsonify(result), 200
+        if result is not None:
+            result = result._asdict()
+            result["image_path"] = "/" + safe_join(project, "media", "image", str(result["id"]))
+            connection.close()
+            return jsonify(result), 200
+        else:
+            connection.close()
+            raise Exception("Failed to get media from database (returned None).")
     except Exception:
         logger.exception("Failed to get media data.")
         return Response("Couldn't get media data.", status=404, content_type="text/json")
@@ -44,9 +48,9 @@ def get_media_article_data(project, type, type_id):
         statement = sql.bindparams(m_id=type_id)
         return_data = []
         for row in connection.execute(statement).fetchall():
-            row = named_tuple_as_dict_or_empty_dict(row)
-            row["pdf_path"] = "/" + safe_join(project, "media", "pdf", str(row["id"]))
-            return_data.append(row)
+            if row is not None:
+                row["pdf_path"] = "/" + safe_join(project, "media", "pdf", str(row["id"]))
+                return_data.append(row)
         connection.close()
         return jsonify(return_data), 200
     except Exception:
@@ -61,9 +65,13 @@ def get_media_data_image(project, image_id):
         connection = db_engine.connect()
         sql = sqlalchemy.sql.text("SELECT media.image FROM media WHERE id = :image_id ").bindparams(image_id=image_id)
         result = connection.execute(sql).fetchone()
-        result = named_tuple_as_dict_or_empty_dict(result)
-        connection.close()
-        return Response(io.BytesIO(result["image"]), status=200, content_type="image/jpeg")
+        if result is not None:
+            result = result._asdict()
+            connection.close()
+            return Response(io.BytesIO(result["image"]), status=200, content_type="image/jpeg")
+        else:
+            connection.close()
+            raise Exception("Failed to get media image from database (returned None)")
     except Exception:
         logger.exception("Failed to get media image from database.")
         return Response("Couldn't get media image.", status=404, content_type="text/json")
@@ -92,8 +100,10 @@ def get_media_image_metadata(project, media_id, lang):
                                     LEFT JOIN subject s ON s.id = mcon.subject_id
                                     WHERE m.id = :id or m.legacy_id = :id""").bindparams(id=media_id, lang=lang)
         result = connection.execute(sql).fetchone()
+        if result is not None:
+            result = result._asdict()
         connection.close()
-        return jsonify(named_tuple_as_dict_or_empty_dict(result)), 200
+        return jsonify(result), 200
     except Exception:
         logger.exception("Failed to get media metadata from database.")
         return Response("Couldn't get media metadata.", status=404, content_type="text/json")
@@ -119,7 +129,8 @@ def get_media_connections(project, connection_type, media_id):
         statement = sql.bindparams(id=media_id, p_id=project_id)
         results = []
         for row in connection.execute(statement).fetchall():
-            results.append(named_tuple_as_dict_or_empty_dict(row))
+            if row is not None:
+                results.append(row._asdict())
         connection.close()
         return jsonify(results), 200
     except Exception:
@@ -177,7 +188,8 @@ def get_gallery_connections(project, connection_type, gallery_id=None):
             statement = sql.bindparams(p_id=project_id)
         results = []
         for row in connection.execute(statement).fetchall():
-            results.append(named_tuple_as_dict_or_empty_dict(row))
+            if row is not None:
+                results.append(row._asdict())
         connection.close()
         return jsonify(results), 200
     except Exception as e:
@@ -211,7 +223,8 @@ def get_type_gallery_connections(project, connection_type, type_id, limit=None):
 
         results = []
         for row in connection.execute(statement).fetchall():
-            results.append(named_tuple_as_dict_or_empty_dict(row))
+            if row is not None:
+                results.append(row._asdict())
         connection.close()
         return jsonify(results), 200
     except Exception:
@@ -240,7 +253,8 @@ def get_gallery_data(project, gallery_id, lang=None):
                                     AND m.type='image_ref' AND m.deleted != 1 """).bindparams(gallery_id=gallery_id, p_id=project_id, lang=lang)
         results = []
         for row in connection.execute(sql).fetchall():
-            results.append(named_tuple_as_dict_or_empty_dict(row))
+            if row is not None:
+                results.append(row._asdict())
         connection.close()
         return jsonify(results), 200
     except Exception:
@@ -265,7 +279,8 @@ def get_galleries(project, lang=None):
                                     GROUP BY mc.id ORDER BY mc.sort_order ASC ").bindparams(p_id=project_id, l_id=lang)
         results = []
         for row in connection.execute(sql).fetchall():
-            results.append(named_tuple_as_dict_or_empty_dict(row))
+            if row is not None:
+                results.append(row._asdict())
         connection.close()
         return jsonify(results), 200
     except Exception:
@@ -284,7 +299,8 @@ def get_gallery_image(project, collection_id, file_name):
             "SELECT image_path as image_path from media_collection WHERE project_id = :p_id AND id = :id ").bindparams(
             p_id=project_id, id=collection_id)
         result = connection.execute(sql).fetchone()
-        result = named_tuple_as_dict_or_empty_dict(result)
+        if result is not None:
+            result = result._asdict()
         connection.close()
         file_path = safe_join(config["file_root"], "media", str(result['image_path']), "{}".format(str(file_name)))
         try:
@@ -321,7 +337,8 @@ def get_type_gallery_image(project, connection_type, connection_id):
               f"AND mcol.deleted != 1 AND t.deleted != 1 AND m.deleted != 1 AND mcon.deleted != 1 LIMIT 1"
         sql = sqlalchemy.sql.text(sql).bindparams(p_id=project_id, id=connection_id)
         result = connection.execute(sql).fetchone()
-        result = named_tuple_as_dict_or_empty_dict(result)
+        if result is not None:
+            result = result._asdict()
         connection.close()
         file_path = safe_join(config["file_root"], "media", str(result['image_path']),
                               str(result['image_filename_front']).replace(".jpg", "_thumb.jpg"))
@@ -349,8 +366,8 @@ def get_media_data_pdf(project, pdf_id):
         connection = db_engine.connect()
         sql = sqlalchemy.sql.text("SELECT media.pdf FROM media WHERE id = :pdf_id").bindparams(pdf_id=pdf_id)
         result = connection.execute(sql).fetchone()
-        result = named_tuple_as_dict_or_empty_dict(result)
-        result = named_tuple_as_dict_or_empty_dict(result)
+        if result is not None:
+            result = result._asdict()
         connection.close()
         return Response(io.BytesIO(result["pdf"]), status=200, content_type="application/pdf")
     except Exception:
@@ -367,7 +384,8 @@ def get_project_galleries(project):
         sql = sqlalchemy.sql.text("SELECT * FROM media_collection WHERE project_id = :p_id").bindparams(p_id=project_id)
         results = []
         for row in connection.execute(sql).fetchall():
-            results.append(named_tuple_as_dict_or_empty_dict(row))
+            if row is not None:
+                results.append(row._asdict())
         connection.close()
         return jsonify(results), 200
     except Exception:
