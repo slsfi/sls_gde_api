@@ -93,7 +93,7 @@ def get_media_image_metadata(project, media_id, lang):
                                     WHERE m.id = :id or m.legacy_id = :id""").bindparams(id=media_id, lang=lang)
         result = connection.execute(sql).fetchone()
         connection.close()
-        return jsonify(named_tuple_as_dict_or_empty_dict(result), 200)
+        return jsonify(named_tuple_as_dict_or_empty_dict(result)), 200
     except Exception:
         logger.exception("Failed to get media metadata from database.")
         return Response("Couldn't get media metadata.", status=404, content_type="text/json")

@@ -535,10 +535,10 @@ def get_subject(project, subject_id):
         if return_data is None:
             return jsonify({"msg": "Desired subject not found in database."}), 404
         else:
-            return jsonify(named_tuple_as_dict_or_empty_dict(return_data), 200)
+            return jsonify(named_tuple_as_dict_or_empty_dict(return_data)), 200
     else:
         connection.close()
-        return jsonify(named_tuple_as_dict_or_empty_dict(return_data), 200)
+        return jsonify(named_tuple_as_dict_or_empty_dict(return_data)), 200
 
 
 @meta.route("/<project>/tag/<tag_id>")
@@ -566,10 +566,10 @@ def get_tag(project, tag_id):
         if return_data is None:
             return jsonify({"msg": "Desired tag not found in database."}), 404
         else:
-            return jsonify(named_tuple_as_dict_or_empty_dict(return_data), 200)
+            return jsonify(named_tuple_as_dict_or_empty_dict(return_data)), 200
     else:
         connection.close()
-        return jsonify(named_tuple_as_dict_or_empty_dict(return_data), 200)
+        return jsonify(named_tuple_as_dict_or_empty_dict(return_data)), 200
 
 
 @meta.route("/<project>/work/<work_id>")
@@ -592,7 +592,7 @@ def get_work(project, work_id):
     if return_data is None:
         return jsonify({"msg": "Desired work not found in database."}), 404
     else:
-        return jsonify(named_tuple_as_dict_or_empty_dict(return_data), 200)
+        return jsonify(named_tuple_as_dict_or_empty_dict(return_data)), 200
 
 
 @meta.route("/<project>/location/<location_id>")
@@ -620,10 +620,10 @@ def get_location(project, location_id):
         if return_data is None:
             return jsonify({"msg": "Desired location not found in database."}), 404
         else:
-            return jsonify(named_tuple_as_dict_or_empty_dict(return_data), 200)
+            return jsonify(named_tuple_as_dict_or_empty_dict(return_data)), 200
     else:
         connection.close()
-        return jsonify(named_tuple_as_dict_or_empty_dict(return_data), 200)
+        return jsonify(named_tuple_as_dict_or_empty_dict(return_data)), 200
 
 
 @meta.route("/<project>/files/<folder>/<file_name>/")

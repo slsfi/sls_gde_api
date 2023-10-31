@@ -41,7 +41,7 @@ def get_publication_song(project, song_id):
     if return_data is None:
         return jsonify({"msg": "Desired song not found in database."}), 404
     else:
-        return jsonify(named_tuple_as_dict_or_empty_dict(return_data), 200)
+        return jsonify(named_tuple_as_dict_or_empty_dict(return_data)), 200
 
 
 @songs.route("/<project>/song/id/<song_id>/")
@@ -53,7 +53,7 @@ def get_song_by_id(project, song_id):
         statement = sql.bindparams(s_id=song_id)
         result = connection.execute(statement).fetchone()
         connection.close()
-        return jsonify(named_tuple_as_dict_or_empty_dict(result), 200)
+        return jsonify(named_tuple_as_dict_or_empty_dict(result)), 200
     except Exception:
         logger.exception(f"Failed to get song by id {song_id}.")
         return Response("Couldn't get song by id.", status=404, content_type="text/json")
