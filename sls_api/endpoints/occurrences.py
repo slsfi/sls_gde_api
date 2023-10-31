@@ -329,7 +329,7 @@ def get_subject_occurrences(project=None, subject_id=None):
                 ps.original_publication_date as song_original_publication_date, page_number as song_page_number, subtype as song_subtype\
                 FROM publication_song ps WHERE ps.id = :song_id\
                 ORDER BY ps.type ASC"
-                song_sql = sqlalchemy.sql.text(song_sql).bindparams(song_id=occurrence['publication_song_id'])
+                song_sql = sqlalchemy.sql.text(song_sql).bindparams(song_id=occurrenceData['publication_song_id'])
                 song_result = connection_2.execute(song_sql)
                 song_data = song_result.fetchone()
                 if song_data is not None:
@@ -407,7 +407,7 @@ def get_location_occurrences(project=None, location_id=None):
                 ps.original_publication_date as song_original_publication_date, page_number as song_page_number, subtype as song_subtype\
                 FROM publication_song ps WHERE ps.id = :song_id\
                 ORDER BY ps.type ASC"
-                song_sql = sqlalchemy.sql.text(song_sql).bindparams(song_id=occurrence['publication_song_id'])
+                song_sql = sqlalchemy.sql.text(song_sql).bindparams(song_id=occurrenceData['publication_song_id'])
                 song_result = connection_2.execute(song_sql)
                 song_data = song_result.fetchone()
                 if song_data is not None:
@@ -485,7 +485,7 @@ def get_tag_occurrences(project=None, tag_id=None):
                 ps.original_publication_date as song_original_publication_date, page_number as song_page_number, subtype as song_subtype\
                 FROM publication_song ps WHERE ps.id = :song_id\
                 ORDER BY ps.type ASC"
-                song_sql = sqlalchemy.sql.text(song_sql).bindparams(song_id=occurrence['publication_song_id'])
+                song_sql = sqlalchemy.sql.text(song_sql).bindparams(song_id=occurrenceData['publication_song_id'])
                 song_result = connection_2.execute(song_sql)
                 song_data = song_result.fetchone()
                 if song_data is not None:
