@@ -7,7 +7,7 @@ from subprocess import CalledProcessError
 import sys
 from typing import Union
 
-from sls_api.endpoints.generics import calculate_checksum, config, db_engine, get_project_id_from_name
+from sls_api.endpoints.generics import calculate_checksum, config, db_engine, get_project_id_from_name, named_tuple_as_dict_or_empty_dict
 from sls_api.endpoints.tools.files import run_git_command, update_files_in_git_repo
 from sls_api.scripts.CTeiDocument import CTeiDocument
 
@@ -41,7 +41,7 @@ def get_comments_from_database(project, document_note_ids):
     connection.close()
     if len(comments) <= 0:
         return []
-    return [dict(comment) for comment in comments]
+    return [named_tuple_as_dict_or_empty_dict(comment) for comment in comments]
 
 
 def get_letter_info_from_database(letter_id):
@@ -331,7 +331,7 @@ def check_publication_mtimes_and_publish_files(project: str, publication_ids: Un
             # comment_filenames can just be a dict of publication.id to publication_comment.original_filename
             comment_filenames = dict()
             for row in connection.execute(comment_query):
-                comment_filenames[row["p_id"]] = row["original_filename"]
+                comment_filenames[row.p_id] = row.original_filename
 
             # close DB connection for now, it won't be needed for a while
             connection.close()
@@ -341,6 +341,7 @@ def check_publication_mtimes_and_publish_files(project: str, publication_ids: Un
             # logger.debug("Publication query resulting rows: {}".format(publication_info[0].keys()))  TODO: fix IndexError if publication_info has no rows
             # For each publication belonging to this project, check the modification timestamp of its master files and compare them to the generated web XML files
             for row in publication_info:
+                row = named_tuple_as_dict_or_empty_dict(row)
                 publication_id = row["p_id"]
                 collection_id = row["c_id"]
                 if not row["original_filename"]:
@@ -604,6 +605,7 @@ def check_publication_mtimes_and_publish_files(project: str, publication_ids: Un
             # For each publication_manuscript belonging to this project, check the modification timestamp of its master file and compare it to the generated web XML file
             # logger.debug("Manuscript query resulting rows: {}".format(manuscript_info[0].keys())) TODO: fix IndexError if manuscript_info has no rows
             for row in manuscript_info:
+                row = named_tuple_as_dict_or_empty_dict(row)
                 collection_id = row["c_id"]
                 publication_id = row["p_id"]
                 manuscript_id = row["m_id"]
