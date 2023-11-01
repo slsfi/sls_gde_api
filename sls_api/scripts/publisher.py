@@ -35,7 +35,8 @@ def get_comments_from_database(project, document_note_ids):
     comment_query = text("SELECT documentnote.id, documentnote.shortenedSelection, note.description \
                          FROM documentnote INNER JOIN note ON documentnote.note_id = note.id \
                          WHERE documentnote.deleted = 0 AND note.deleted = 0 AND documentnote.id IN :docnote_ids")
-    comments = connection.execute(comment_query, docnote_ids=tuple(document_note_ids)).fetchall()
+    comment_query = comment_query.bindparams(docnote_ids=tuple(document_note_ids))
+    comments = connection.execute(comment_query).fetchall()
     connection.close()
     if len(comments) <= 0:
         return []
@@ -96,7 +97,8 @@ def get_letter_info(letter_id):
     connection = db_engine.connect()
     statement = text("SELECT c.id, c.title from correspondence c \
                      where c.legacy_id = :letter_id ")
-    data = connection.execute(statement, letter_id=letter_id).fetchone()
+    statement = statement.bindparams(letter_id=letter_id)
+    data = connection.execute(statement).fetchone()
     connection.close()
     return data
 
@@ -111,7 +113,8 @@ def get_letter_person(letter_id, type):
                      join event_connection ec on ec.correspondence_id = c.id \
                      join subject s on s.id = ec.subject_id \
                      where c.legacy_id = :letter_id and ec.type = :type ")
-    data = connection.execute(statement, letter_id=letter_id, type=type).fetchone()
+    statement = statement.bindparams(letter_id=letter_id, type=type)
+    data = connection.execute(statement).fetchone()
     connection.close()
     return data
 
@@ -126,7 +129,8 @@ def get_letter_location(letter_id, type):
                      join event_connection ec on ec.correspondence_id = c.id \
                      join location l on l.id = ec.location_id \
                      where c.legacy_id = :letter_id and ec.type = :type ")
-    data = connection.execute(statement, letter_id=letter_id, type=type).fetchone()
+    statement = statement.bindparams(letter_id=letter_id, type=type)
+    data = connection.execute(statement).fetchone()
     connection.close()
     return data
 
