@@ -30,7 +30,8 @@ def get_media_data(project, type, type_id):
             return jsonify(result), 200
         else:
             connection.close()
-            raise Exception("Failed to get media from database (returned None).")
+            logger.error(f"Failed to get media {type} {type_id} (database returned None).")
+            return Response("Couldn't get media data.", status=404, content_type="text/json")
     except Exception:
         logger.exception("Failed to get media data.")
         return Response("Couldn't get media data.", status=404, content_type="text/json")
@@ -72,7 +73,8 @@ def get_media_data_image(project, image_id):
             return Response(io.BytesIO(result["image"]), status=200, content_type="image/jpeg")
         else:
             connection.close()
-            raise Exception("Failed to get media image from database (returned None)")
+            logger.error(f"Failed to get media image {image_id} (database returned None)")
+            return Response("Couldn't get media image.", status=404, content_type="text/json")
     except Exception:
         logger.exception("Failed to get media image from database.")
         return Response("Couldn't get media image.", status=404, content_type="text/json")
@@ -302,7 +304,11 @@ def get_gallery_image(project, collection_id, file_name):
         result = connection.execute(sql).fetchone()
         if result is not None:
             result = result._asdict()
-        connection.close()
+            connection.close()
+        else:
+            logger.error(f"Failed to get gallery image {file_name} (database returned None)")
+            connection.close()
+            return Response("Couldn't get gallery file.", status=404, content_type="text/json")
         file_path = safe_join(config["file_root"], "media", str(result['image_path']), "{}".format(str(file_name)))
         try:
             output = io.BytesIO()
@@ -340,7 +346,11 @@ def get_type_gallery_image(project, connection_type, connection_id):
         result = connection.execute(sql).fetchone()
         if result is not None:
             result = result._asdict()
-        connection.close()
+            connection.close()
+        else:
+            connection.close()
+            logger.error(f"Failed to get gallery file for {connection_type} {connection_id} (database returned None)")
+            return Response("Couldn't get type file.", status=404, content_type="text/json")
         file_path = safe_join(config["file_root"], "media", str(result['image_path']),
                               str(result['image_filename_front']).replace(".jpg", "_thumb.jpg"))
         try:
@@ -369,7 +379,11 @@ def get_media_data_pdf(project, pdf_id):
         result = connection.execute(sql).fetchone()
         if result is not None:
             result = result._asdict()
-        connection.close()
+            connection.close()
+        else:
+            logger.error(f"Failed to get media PDF {pdf_id} (database returned None)")
+            connection.close()
+            return Response("Couldn't get media image.", status=404, content_type="text/json")
         return Response(io.BytesIO(result["pdf"]), status=200, content_type="application/pdf")
     except Exception:
         logger.exception("Failed to get PDF from database.")
