@@ -340,7 +340,6 @@ def check_publication_mtimes_and_publish_files(project: str, publication_ids: Un
 
             # Keep a list of changed files for later git commit
             changes = set()
-            # logger.debug("Publication query resulting rows: {}".format(publication_info[0].keys()))  TODO: fix IndexError if publication_info has no rows
             # For each publication belonging to this project, check the modification timestamp of its master files and compare them to the generated web XML files
             for row in publication_info:
                 if row is None:
@@ -490,12 +489,11 @@ def check_publication_mtimes_and_publish_files(project: str, publication_ids: Un
                 if main_variant_info is None:
                     logger.warning("No main variant found for publication {}!".format(publication_id))
                 else:
-                    logger.debug("Main variant query resulting rows: {}".format(main_variant_info.keys()))
+                    logger.debug(f"Main variant query result: {str(main_variant_info)}")
 
                     # fetch info for all "other" variants
                     variants_query = variant_query.bindparams(pub_id=publication_id, vers_type=2)
                     variants_info = connection.execute(variants_query).fetchall()
-                    # logger.debug("Variants query resulting rows: {}".format(variants_info[0].keys())) TODO: fix IndexError if variants_info has no rows
 
                     # close DB connection, as it's no longer needed
                     connection.close()
@@ -607,7 +605,6 @@ def check_publication_mtimes_and_publish_files(project: str, publication_ids: Un
                             changes.add(path)
 
             # For each publication_manuscript belonging to this project, check the modification timestamp of its master file and compare it to the generated web XML file
-            # logger.debug("Manuscript query resulting rows: {}".format(manuscript_info[0].keys())) TODO: fix IndexError if manuscript_info has no rows
             for row in manuscript_info:
                 if row is None:
                     continue
