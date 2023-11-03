@@ -489,6 +489,7 @@ def check_publication_mtimes_and_publish_files(project: str, publication_ids: Un
                 if main_variant_info is None:
                     logger.warning("No main variant found for publication {}!".format(publication_id))
                 else:
+                    main_variant_info = main_variant_info._asdict()
                     logger.debug(f"Main variant query result: {str(main_variant_info)}")
 
                     # fetch info for all "other" variants
@@ -534,6 +535,9 @@ def check_publication_mtimes_and_publish_files(project: str, publication_ids: Un
                     variant_docs = []
                     variant_paths = []
                     for variant in variants_info:
+                        if variant is None:
+                            continue
+                        variant = variant._asdict()
                         target_filename = "{}_{}_var_{}.xml".format(collection_id,
                                                                     publication_id,
                                                                     variant["id"])
