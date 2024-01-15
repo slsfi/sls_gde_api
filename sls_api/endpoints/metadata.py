@@ -84,7 +84,7 @@ def get_md_contents_as_json(project, fileid):
                 else:
                     abort(404)
         except Exception:
-            logger.error("Error fetching: {}".format(file_path_query))
+            logger.warning("Error fetching: {}".format(file_path_query))
             abort(404)
 
 
