@@ -29,7 +29,6 @@ COPY . /app/
 
 # drop back into root in order to install API and required libraries
 USER root
-RUN pip install uwsgi
 RUN pip install -e .
 RUN chown -R uwsgi /app
 

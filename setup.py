@@ -22,6 +22,7 @@ setup(
         'requests==2.31.0',
         'sqlalchemy==2.0.22',
         'Pillow==10.1.0',
-        'werkzeug==3.0.1'
+        'werkzeug==3.0.1',
+        'uwsgi==2.0.23'
     ]
 )
