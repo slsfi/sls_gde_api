@@ -6,7 +6,6 @@ import os
 from raven.contrib.flask import Sentry
 from ruamel.yaml import YAML
 from sys import stdout
-from uwsgidecorators import postfork
 
 app = Flask(__name__)
 CORS(app)
@@ -81,12 +80,20 @@ if security_config_exists:
     jwt = JWTManager(app)
     db.init_app(app)
 
-    # on load, after uwsgi forks, recycle the database connection pool
-    # this prevents forks from trying to use invalid connections from the master process
-    @postfork
-    def _recycle_db_pool():
-        with app.app_context():
-            db.engine.dispose(close=False)
+    try:
+        # on load, after uwsgi forks, recycle the database connection pool
+        # this prevents forks from trying to use invalid connections from the master process
+        # wrap this in a try-except since we sometimes run code manually and then this is not possible
+        # as uwsgi cannot be imported when python is run manually
+        from uwsgidecorators import postfork
+
+        @postfork
+        def _recycle_db_pool():
+            with app.app_context():
+                db.engine.dispose(close=False)
+    except ImportError:
+        logger.warning("Skipping uwsgi postfork as importing uwsgi failed...")
+        pass
 
     app.register_blueprint(auth, url_prefix="/auth")
 
