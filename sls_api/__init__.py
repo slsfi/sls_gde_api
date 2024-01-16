@@ -90,7 +90,7 @@ if security_config_exists:
         @postfork
         def _recycle_db_pool():
             with app.app_context():
-                db.engine.dispose(close=False)
+                db.engine.dispose()
     except ImportError:
         logger.warning("Skipping uwsgi postfork as importing uwsgi failed...")
         pass
