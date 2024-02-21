@@ -165,7 +165,7 @@ def get_reading_text(project, collection_id, publication_id, section_id=None, la
                                   {"bookId": bookId, "sectionId": section_id})
         else:
             content = get_content(project, "est", filename, xsl_file, {"bookId": bookId})
-        
+
         select = "SELECT language FROM publication WHERE id = :p_id"
         statement = sqlalchemy.sql.text(select).bindparams(p_id=publication_id)
         result = connection.execute(statement).fetchone()
