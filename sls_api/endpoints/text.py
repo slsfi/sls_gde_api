@@ -165,13 +165,23 @@ def get_reading_text(project, collection_id, publication_id, section_id=None, la
                                   {"bookId": bookId, "sectionId": section_id})
         else:
             content = get_content(project, "est", filename, xsl_file, {"bookId": bookId})
+        
+        select = "SELECT language FROM publication WHERE id = :p_id"
+        statement = sqlalchemy.sql.text(select).bindparams(p_id=publication_id)
+        result = connection.execute(statement).fetchone()
+
+        text_language = ""
+        if result is not None and result.language is not None:
+            text_language = result.language
+
         data = {
             # @TODO: investigate if id should have language in its value or not (similar to filename).
+            # SK replies: not necessary, the frontend doesn't use the id value anyway.
             "id": "{}_{}_est".format(collection_id, publication_id),
-            "content": content.replace(" id=", " data-id=")
+            "content": content.replace(" id=", " data-id="),
+            "language": text_language
         }
-        if language is not None:
-            data["language"] = language
+
         return jsonify(data), 200
     else:
         return jsonify({
@@ -298,7 +308,7 @@ def get_manuscript(project, collection_id, publication_id, manuscript_id=None, s
         logger.info("Getting XML for {} and transforming...".format(request.full_path))
         connection = db_engine.connect()
         if manuscript_id is not None and 'ch' not in str(manuscript_id):
-            select = "SELECT sort_order, name, legacy_id, id, original_filename FROM publication_manuscript WHERE id = :m_id AND deleted != 1 ORDER BY sort_order ASC"
+            select = "SELECT sort_order, name, legacy_id, id, original_filename, language FROM publication_manuscript WHERE id = :m_id AND deleted != 1 ORDER BY sort_order ASC"
             statement = sqlalchemy.sql.text(select).bindparams(m_id=manuscript_id)
             manuscript_info = []
             for row in connection.execute(statement).fetchall():
@@ -306,7 +316,7 @@ def get_manuscript(project, collection_id, publication_id, manuscript_id=None, s
                     manuscript_info.append(row._asdict())
             connection.close()
         else:
-            select = "SELECT sort_order, name, legacy_id, id, original_filename FROM publication_manuscript WHERE publication_id = :p_id AND deleted != 1 ORDER BY sort_order ASC"
+            select = "SELECT sort_order, name, legacy_id, id, original_filename, language FROM publication_manuscript WHERE publication_id = :p_id AND deleted != 1 ORDER BY sort_order ASC"
             statement = sqlalchemy.sql.text(select).bindparams(p_id=publication_id)
             manuscript_info = []
             for row in connection.execute(statement).fetchall():
@@ -499,13 +509,21 @@ def get_reading_text_downloadable_format(project, format, collection_id, publica
         else:
             content = get_xml_content(project, "est", filename, xsl_file, {"bookId": bookId})
 
+        select = "SELECT language FROM publication WHERE id = :p_id"
+        statement = sqlalchemy.sql.text(select).bindparams(p_id=publication_id)
+        result = connection.execute(statement).fetchone()
+
+        text_language = ""
+        if result is not None and result.language is not None:
+            text_language = result.language
+
         data = {
             # @TODO: investigate if id should have language in its value or not (similar to filename).
             "id": "{}_{}_est".format(collection_id, publication_id),
-            "content": content
+            "content": content,
+            "language": text_language
         }
-        if language is not None:
-            data["language"] = language
+
         return jsonify(data), 200
     else:
         return jsonify({
