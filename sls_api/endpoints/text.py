@@ -479,11 +479,8 @@ def get_reading_text_downloadable_format(project, format, collection_id, publica
             if language is not None:
                 filename = "{}_{}_{}_est.xml".format(collection_id, publication_id, language)
                 logger.debug("Filename (est xml) for {} is {}".format(publication_id, filename))
-
-            connection.close()
         else:
             filename = "{}_est.xml".format(result.legacy_id)
-            connection.close()
         logger.debug("Filename (est xml) for {} is {}".format(publication_id, filename))
 
         if format == "xml":
@@ -519,6 +516,8 @@ def get_reading_text_downloadable_format(project, format, collection_id, publica
             "content": content,
             "language": text_language
         }
+
+        connection.close()
 
         return jsonify(data), 200
     else:
