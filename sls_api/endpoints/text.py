@@ -146,11 +146,8 @@ def get_reading_text(project, collection_id, publication_id, section_id=None, la
             if language is not None:
                 filename = "{}_{}_{}_est.xml".format(collection_id, publication_id, language)
                 logger.debug("Filename (est) for {} is {}".format(publication_id, filename))
-
-            connection.close()
         else:
             filename = "{}_est.xml".format(result.legacy_id)
-            connection.close()
         logger.debug("Filename (est) for {} is {}".format(publication_id, filename))
         xsl_file = "est.xsl"
 
@@ -175,12 +172,11 @@ def get_reading_text(project, collection_id, publication_id, section_id=None, la
             text_language = result.language
 
         data = {
-            # @TODO: investigate if id should have language in its value or not (similar to filename).
-            # SK replies: not necessary, the frontend doesn't use the id value anyway.
             "id": "{}_{}_est".format(collection_id, publication_id),
             "content": content.replace(" id=", " data-id="),
             "language": text_language
         }
+        connection.close()
 
         return jsonify(data), 200
     else:
