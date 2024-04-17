@@ -2,7 +2,7 @@
 - Flask-driven REST API
 - Runs on Python 3.11
 ---
-Copyright 2018-2023 Svenska Litteratursällskapet i Finland, r.f.
+Copyright 2018-2024 Svenska Litteratursällskapet i Finland, r.f.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -38,19 +38,17 @@ limitations under the License.
     - `export FLASK_DEBUG=1` or `set FLASK_DEBUG=1`on Windows to activate DEBUG mode
     - By using the user `test@test.com` with the password `test`, access to all projects in granted in DEBUG mode
     - `flask run` - note that this uses port 5000 by default
-    - These commands are contained within the `start-standalone.sh` script, so you can start the API by running `./start-standalone.sh` on UNIX-like systems.
 
-### /auth endpoint
+### /auth endpoints
 - Enables JWT-based authentication towards protected endpoints
 - Provides registration, login, and token refresh for users
 
-### /digitaleditions endpoint
+### /digitaleditions endpoints
 - Endpoints used for the SLS Generic Digital Edition platform
-- Currently made for the SLS metadata database, being re-made for the GDE 2018 database spec, see branch `gde2018-database-spec`
 - Port of older PHP apis:
     - https://github.com/slsfi/digital_editions_API
     - https://github.com/slsfi/digital_editions_xslt
-- Needs connection details for MySQL server and paths to folders for XML, HTML, and XSL files
+- Needs connection details for database servers and paths to folders for XML, HTML, and XSL files
     - configs/digital_editions.yml
     - See digital_editions_example.yml for specifics
 
