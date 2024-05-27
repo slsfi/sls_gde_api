@@ -12,17 +12,17 @@ setup(
         'flask==3.0.3',
         'flask-jwt-extended==4.6.0',
         'flask-sqlalchemy==3.1.1',
-        'flask-cors==4.0.0',
-        'lxml==5.2.1',
+        'flask-cors==4.0.1',
+        'lxml==5.2.2',
         'mysqlclient==2.2.4',
         'passlib==1.7.4',
         'Pillow==10.3.0',
         'psycopg2-binary==2.9.9',
         'raven[flask]==6.10.0',
         'ruamel.yaml==0.18.6',
-        'requests==2.31.0',
-        'sqlalchemy==2.0.29',
-        'werkzeug==3.0.2',
+        'requests==2.32.2',
+        'sqlalchemy==2.0.30',
+        'werkzeug==3.0.3',
         'uwsgi==2.0.25.1'
     ]
 )
