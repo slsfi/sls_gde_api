@@ -257,47 +257,54 @@ def get_collections(project, language=None):
         return jsonify({"msg": "No such project."}), 400
     else:
         if language is None:
-            logger.info("Getting collections /{}/collections".format(project))
+            logger.info(
+                "Getting collections /{}/collections".format(project)
+            )
         else:
-            logger.info("Getting collections /{}/collections/{}".format(project, language))
+            logger.info(
+                "Getting collections /{}/collections/{}".format(
+                    project, language
+                )
+            )
 
         connection = db_engine.connect()
         status = 1 if config["show_internally_published"] else 2
         project_id = get_project_id_from_name(project)
 
-        # The query attempts to find a translation for the `name` field in the 
-        # `translate_text` table. If there is no translation or `language` is None,
-        # the query falls back to the original `name` in the `publication_collection`
+        # The query attempts to find a translation for the `name`
+        # field in the `translate_text` table. If there is no
+        # translation or `language` is None, the query falls back
+        # to the original `name` in the `publication_collection`
         # table.
         sql = sqlalchemy.sql.text(
-            """ SELECT 
-                    pc.id, 
-                    COALESCE(tt.text, pc.name) as title, 
-                    pc.published, 
+            """ SELECT
+                    pc.id,
+                    COALESCE(tt.text, pc.name) as title,
+                    pc.published,
                     pc.legacy_id,
-                    pc.project_id, 
-                    pc.publication_collection_title_id, 
-                    pc.publication_collection_introduction_id, 
+                    pc.project_id,
+                    pc.publication_collection_title_id,
+                    pc.publication_collection_introduction_id,
                     COALESCE(tt.text, pc.name) as name
-                FROM 
+                FROM
                     publication_collection pc
-                LEFT JOIN 
+                LEFT JOIN
                     translation_text tt
-                ON 
-                    pc.name_translation_id = tt.translation_id 
-                    AND tt.language = :language 
-                    AND tt.deleted = 0 
-                WHERE 
-                    pc.project_id = :p_id 
-                    AND pc.published >= :p_status 
-                    AND pc.deleted = 0 
-                ORDER BY 
+                ON
+                    pc.name_translation_id = tt.translation_id
+                    AND tt.language = :language
+                    AND tt.deleted = 0
+                WHERE
+                    pc.project_id = :p_id
+                    AND pc.published >= :p_status
+                    AND pc.deleted = 0
+                ORDER BY
                     name """
         )
 
         statement = sql.bindparams(
-            p_status=status, 
-            p_id=project_id, 
+            p_status=status,
+            p_id=project_id,
             language=language
         )
 
