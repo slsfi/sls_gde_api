@@ -257,15 +257,9 @@ def get_collections(project, language=None):
         return jsonify({"msg": "No such project."}), 400
     else:
         if language is None:
-            logger.info(
-                "Getting collections /{}/collections".format(project)
-            )
+            logger.info("Getting collections /{}/collections".format(project))
         else:
-            logger.info(
-                "Getting collections /{}/collections/{}".format(
-                    project, language
-                )
-            )
+            logger.info("Getting collections /{}/collections/{}".format(project, language))
 
         connection = db_engine.connect()
         status = 1 if config["show_internally_published"] else 2
@@ -302,11 +296,7 @@ def get_collections(project, language=None):
                     name """
         )
 
-        statement = sql.bindparams(
-            p_status=status,
-            p_id=project_id,
-            language=language
-        )
+        statement = sql.bindparams(p_status=status, p_id=project_id, language=language)
 
         results = []
         for row in connection.execute(statement).fetchall():
