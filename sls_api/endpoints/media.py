@@ -445,15 +445,15 @@ def get_pdf_file(project, collection_id, file_type, download_name, use_download_
 
             mimetype = "application/pdf"
             file_path = safe_join(config["file_root"],
-                                "downloads",
-                                collection_id,
-                                "{}.pdf".format(direct_download_name))
+                                  "downloads",
+                                  collection_id,
+                                  "{}.pdf".format(direct_download_name))
         elif 'epub' in str(file_type):
             mimetype = "application/epub+zip"
             file_path = safe_join(config["file_root"],
-                                "downloads",
-                                collection_id,
-                                "{}.epub".format(int(collection_id)))
+                                  "downloads",
+                                  collection_id,
+                                  "{}.epub".format(int(collection_id)))
     finally:
         connection.close()
 
