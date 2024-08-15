@@ -210,7 +210,7 @@ def link_facsimile_collection_to_publication(project, collection_id):
                 "msg": "Could not find publication collection for publication, unable to verify that publication belongs to {!r}".format(project)
             }
         ), 404
-    publication_collection_id = int_or_none(result[0]["publication_collection_id"])
+    publication_collection_id = int_or_none(result[0].publication_collection_id)
 
     statement = select(publication_collections.c.project_id).where(publication_collections.c.id == publication_collection_id)
     result = connection.execute(statement).fetchall()
@@ -221,7 +221,7 @@ def link_facsimile_collection_to_publication(project, collection_id):
             }
         ), 404
 
-    if result[0]["project_id"] != project_id:
+    if result[0].project_id != project_id:
         return jsonify(
             {
                 "msg": "Publication {} appears to not belong to project {!r}".format(publication_id, project)
@@ -494,7 +494,7 @@ def list_publications(project, collection_id, order_by="id"):
                 "msg": "Could not find collection in database."
             }
         ), 404
-    elif rows[0]["project_id"] != int_or_none(project_id):
+    elif rows[0].project_id != int_or_none(project_id):
         return jsonify(
             {
                 "msg": "Found collection not part of project {!r} with ID {}.".format(project, project_id)
@@ -551,7 +551,7 @@ def new_publication(project, collection_id):
             }
         ), 404
 
-    if result[0]["project_id"] != project_id:
+    if result[0].project_id != project_id:
         return jsonify(
             {
                 "msg": "publication_collection {} does not belong to project {!r}".format(collection_id, project)
