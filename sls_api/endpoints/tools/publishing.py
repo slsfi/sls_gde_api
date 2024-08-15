@@ -121,8 +121,8 @@ def edit_publication_collection(project, collection_id):
 
     if collection_title_id is None and collection_title_filename is not None:
         # Create a new title and add the id to the Collection
-        ins = titles.insert()
-        result = connection.execute(ins, **new_title)
+        ins = titles.insert().values(**new_title)
+        result = connection.execute(ins)
         new_title_row = select(titles).where(titles.c.id == result.inserted_primary_key[0])
         new_title_row = connection.execute(new_title_row).fetchone()
         new_title_row = new_title_row._asdict()
@@ -130,8 +130,8 @@ def edit_publication_collection(project, collection_id):
 
     if collection_intro_id is None and collection_intro_filename is not None:
         # Create a new intro and add the id to the Collection
-        ins = introductions.insert()
-        result = connection.execute(ins, **new_intro)
+        ins = introductions.insert().values(**new_intro)
+        result = connection.execute(ins)
         new_intro_row = select(introductions).where(introductions.c.id == result.inserted_primary_key[0])
         new_intro_row = connection.execute(new_intro_row).fetchone()
         new_intro_row = new_intro_row._asdict()
