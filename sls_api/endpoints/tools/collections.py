@@ -558,7 +558,6 @@ def new_publication(project, collection_id):
             }
         ), 400
 
-
     publication = {
         "name": request_data.get("name", None),
         "publication_comment_id": request_data.get("publicationComment_id", None),

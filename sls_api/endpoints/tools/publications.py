@@ -1,4 +1,3 @@
-from distlib.database import new_dist_class
 from flask import Blueprint, jsonify, request
 from flask_jwt_extended import jwt_required
 from sqlalchemy import join, select, sql
