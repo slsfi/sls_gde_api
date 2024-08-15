@@ -1,3 +1,4 @@
+from distlib.database import new_dist_class
 from flask import Blueprint, jsonify, request
 from flask_jwt_extended import jwt_required
 from sqlalchemy import join, select, sql
@@ -238,9 +239,9 @@ def link_file_to_publication(project, publication_id):
             "published_by": request_data.get("publishedBy", None),
             "legacy_id": request_data.get("legacyId", None)
         }
-        ins = comments.insert()
         try:
-            result = connection.execute(ins, **new_comment)
+            ins = comments.insert().values(**new_comment)
+            result = connection.execute(ins)
             new_row = select(comments).where(comments.c.id == result.inserted_primary_key[0])
             new_row = connection.execute(new_row).fetchone()
             if new_row is not None:
@@ -281,9 +282,9 @@ def link_file_to_publication(project, publication_id):
             table = get_table("publication_manuscript")
         else:
             table = get_table("publication_version")
-        ins = table.insert()
         try:
-            result = connection.execute(ins, **new_object)
+            ins = table.insert().values(**new_object)
+            result = connection.execute(ins)
             new_row = select(table).where(table.c.id == result.inserted_primary_key[0])
             new_row = connection.execute(new_row).fetchone()
             if new_row is not None:
