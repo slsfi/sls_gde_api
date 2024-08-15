@@ -33,7 +33,6 @@ def create_facsimile_collection(project):
         return jsonify({"msg": "No data provided."}), 400
     collections = get_table("publication_facsimile_collection")
     connection = db_engine.connect()
-    insert = collections.insert()
 
     new_collection = {
         "title": request_data.get("title", None),
@@ -43,8 +42,9 @@ def create_facsimile_collection(project):
         "number_of_pages": request_data.get("numberOfPages", None),
         "start_page_number": request_data.get("startPageNumber", None)
     }
+    insert = collections.insert().values(**new_collection)
     try:
-        result = connection.execute(insert, **new_collection)
+        result = connection.execute(insert)
         new_row = select(collections).where(collections.c.id == result.inserted_primary_key[0])
 
         new_row = connection.execute(new_row).fetchone()
@@ -228,7 +228,6 @@ def link_facsimile_collection_to_publication(project, collection_id):
             }
         ), 400
 
-    insert = publication_facsimiles.insert()
     new_facsimile = {
         "publication_facsimile_collection_id": collection_id,
         "publication_id": publication_id,
@@ -240,7 +239,8 @@ def link_facsimile_collection_to_publication(project, collection_id):
         "type": request_data.get("type", 0)
     }
     try:
-        result = connection.execute(insert, **new_facsimile)
+        insert = publication_facsimiles.insert().values(**new_facsimile)
+        result = connection.execute(insert)
         new_row = select(publication_facsimiles).where(publication_facsimiles.c.id == result.inserted_primary_key[0])
         new_row = connection.execute(new_row).fetchone()
         if new_row is not None:
@@ -427,15 +427,15 @@ def new_publication_collection(project):
             "legacy_id": request_data.get("title_legacyID", None)
         }
 
-        ins = introductions.insert()
-        result = connection.execute(ins, **new_intro)
+        ins = introductions.insert().values(**new_intro)
+        result = connection.execute(ins)
         new_intro_row = select(introductions).where(introductions.c.id == result.inserted_primary_key[0])
         new_intro_row = connection.execute(new_intro_row).fetchone()
         if new_intro_row is not None:
             new_intro_row = new_intro_row._asdict()
 
-        ins = titles.insert()
-        result = connection.execute(ins, **new_title)
+        ins = titles.insert().values(**new_title)
+        result = connection.execute(ins)
         new_title_row = select(titles).where(titles.c.id == result.inserted_primary_key[0])
         new_title_row = connection.execute(new_title_row).fetchone()
         if new_title_row is not None:
@@ -450,8 +450,8 @@ def new_publication_collection(project):
             "publication_collection_title_id": new_title_row["id"]
         }
 
-        ins = collections.insert()
-        result = connection.execute(ins, **new_collection)
+        ins = collections.insert().values(**new_collection)
+        result = connection.execute(ins)
         new_collection_row = select(collections).where(collections.c.id == result.inserted_primary_key[0])
         new_collection_row = connection.execute(new_collection_row).fetchone()
         if new_collection_row is not None:
@@ -558,8 +558,6 @@ def new_publication(project, collection_id):
             }
         ), 400
 
-    insert = publications.insert()
-
     publication = {
         "name": request_data.get("name", None),
         "publication_comment_id": request_data.get("publicationComment_id", None),
@@ -574,7 +572,8 @@ def new_publication(project, collection_id):
         "publication_collection_id": int_or_none(collection_id)
     }
     try:
-        result = connection.execute(insert, **publication)
+        insert = publications.insert().values(**publication)
+        result = connection.execute(insert)
         new_row = select(publications).where(publications.c.id == result.inserted_primary_key[0])
         new_row = connection.execute(new_row).fetchone()
         if new_row is not None:

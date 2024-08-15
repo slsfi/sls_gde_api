@@ -118,13 +118,13 @@ def add_new_publication_group(project):
         return jsonify({"msg": "No data provided."}), 400
     groups = get_table("publication_group")
     connection = db_engine.connect()
-    insert = groups.insert()
     new_group = {
         "name": request_data.get("name", None),
         "published": request_data.get("published", 0)
     }
     try:
-        result = connection.execute(insert, **new_group)
+        insert = groups.insert().values(**new_group)
+        result = connection.execute(insert)
         new_row = select(groups).where(groups.c.id == result.inserted_primary_key[0])
         new_row = connection.execute(new_row).fetchone()
         if new_row is not None:
