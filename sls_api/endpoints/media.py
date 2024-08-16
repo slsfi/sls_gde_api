@@ -4,7 +4,7 @@ import logging
 import sqlalchemy
 from werkzeug.security import safe_join
 
-from sls_api.endpoints.generics import db_engine, get_project_config, get_project_id_from_name
+from sls_api.endpoints.generics import db_engine, get_project_config, get_project_id_from_name, get_allowed_cors_origins
 
 media = Blueprint('media', __name__)
 logger = logging.getLogger("sls_api.media")
@@ -462,14 +462,12 @@ def get_pdf_file(project, collection_id, file_type, download_name, use_download_
             send_file(file_path, mimetype=mimetype, download_name=download_name, conditional=True)
         )
         # Dynamically set the Access-Control-Allow-Origin header
-        # to the request origin if the origin is a *.sls.fi subdomain.
+        # to the request origin if the origin is defined in the list
+        # of allowed CORS origins in the config.
         # This makes it possible to embed PDFs served by the API on
-        # these sites.
-        # Ideally '.sls.fi' would not be hard-coded here, instead the
-        # main domain from where requests should be accepted could be
-        # read from the config.
+        # allowed sites.
         origin = request.headers.get("Origin")
-        if origin and origin.endswith(".sls.fi"):
+        if origin and origin in get_allowed_cors_origins(project):
             response.headers["Access-Control-Allow-Origin"] = origin
             response.headers["Vary"] = "Origin"
         return response

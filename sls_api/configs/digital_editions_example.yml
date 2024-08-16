@@ -22,6 +22,15 @@ parland:
     disabled_publications: [10,12,13,14,9,20,28]
     # SQLAlchemy engine string for comments (edith) database
     comments_database: 'mysql://${MYSQL_USER}:${MYSQL_PASSWORD}@mysql_server.example.com:3306?charset=utf8mb4/parland_comments'
+    # List of origins to allow CORS requests from. Typically, you would put
+    # at least the origin of the project frontend here. This list can include
+    # multiple origins if the project needs to be accessible from different
+    # domains or environments (e.g., staging, production).
+    # Ensure that only trusted origins are added to prevent unauthorized
+    # cross-origin requests.
+    # Currently only used to set response headers on downloadable PDFs and
+    # EPUBs in the `get_pdf_file` endpoint in `endpoints/media.py`.
+    allowed_cors_origins: ["https://parland.sls.fi"]
 
 topelius:
     # First, settings about how the publication tools should communicate towards git
@@ -35,6 +44,15 @@ topelius:
     disabled_publications: [10,12,13,14,9,20,28]
     # SQLAlchemy engine string for comments (edith) database
     comments_database: 'mysql://${MYSQL_USER}:${MYSQL_PASSWORD}@mysql_server.example.com:3306?charset=utf8mb4/topelius_comments'
+    # List of origins to allow CORS requests from. Typically, you would put
+    # at least the origin of the project frontend here. This list can include
+    # multiple origins if the project needs to be accessible from different
+    # domains or environments (e.g., staging, production).
+    # Ensure that only trusted origins are added to prevent unauthorized
+    # cross-origin requests.
+    # Currently only used to set response headers on downloadable PDFs and
+    # EPUBs in the `get_pdf_file` endpoint in `endpoints/media.py`.
+    allowed_cors_origins: ["https://topelius.sls.fi"]
 
 # XML-to-HTML is somewhat computationally expensive, so HTML reading texts are cached for up to this amount of time
 cache_lifetime_seconds: 7200  # 2 hours
