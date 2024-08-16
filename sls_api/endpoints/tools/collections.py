@@ -83,8 +83,9 @@ def edit_facsimile_collection(project, facsimile_collection_id):
     facsimile_collections = get_table("publication_facsimile_collection")
 
     connection = db_engine.connect()
-    facsimile_collections_query = select(facsimile_collections.c.id).where(facsimile_collections.c.id == int_or_none(facsimile_collection_id))
-    facsimile_collections_row = connection.execute(facsimile_collections_query).fetchone()
+    with connection.begin():
+        facsimile_collections_query = select(facsimile_collections.c.id).where(facsimile_collections.c.id == int_or_none(facsimile_collection_id))
+        facsimile_collections_row = connection.execute(facsimile_collections_query).fetchone()
     if facsimile_collections_row is None:
         return jsonify({"msg": "No facsimile collection with an ID of {} exists.".format(facsimile_collection_id)}), 404
 
@@ -214,8 +215,9 @@ def link_facsimile_collection_to_publication(project, collection_id):
         ), 404
     publication_collection_id = int_or_none(result[0].publication_collection_id)
 
-    statement = select(publication_collections.c.project_id).where(publication_collections.c.id == publication_collection_id)
-    result = connection.execute(statement).fetchall()
+    with connection.begin():
+        statement = select(publication_collections.c.project_id).where(publication_collections.c.id == publication_collection_id)
+        result = connection.execute(statement).fetchall()
     if len(result) != 1:
         return jsonify(
             {
@@ -282,8 +284,9 @@ def edit_facsimile(project):
     facsimile = get_table("publication_facsimile")
 
     connection = db_engine.connect()
-    facsimile_query = select(facsimile.c.id).where(facsimile.c.id == int_or_none(facsimile_id))
-    facsimile_row = connection.execute(facsimile_query).fetchone()
+    with connection.begin():
+        facsimile_query = select(facsimile.c.id).where(facsimile.c.id == int_or_none(facsimile_id))
+        facsimile_row = connection.execute(facsimile_query).fetchone()
     if facsimile_row is None:
         return jsonify({"msg": "No facsimile with an ID of {} exists.".format(facsimile_id)}), 404
 
@@ -547,8 +550,9 @@ def new_publication(project, collection_id):
     collections = get_table("publication_collection")
     publications = get_table("publication")
 
-    statement = select(collections.c.project_id).where(collections.c.id == int_or_none(collection_id))
-    result = connection.execute(statement).fetchall()
+    with connection.begin():
+        statement = select(collections.c.project_id).where(collections.c.id == int_or_none(collection_id))
+        result = connection.execute(statement).fetchall()
     if len(result) != 1:
         return jsonify(
             {
