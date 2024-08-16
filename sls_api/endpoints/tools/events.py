@@ -53,17 +53,18 @@ def add_new_location(project):
         "translation_id": translation_id
     }
     try:
-        insert = locations.insert().values(**new_location)
-        result = connection.execute(insert)
-        new_row = select(locations).where(locations.c.id == result.inserted_primary_key[0])
-        new_row = connection.execute(new_row).fetchone()
-        if new_row is not None:
-            new_row = new_row._asdict()
-        result = {
-            "msg": "Created new location with ID {}".format(result.inserted_primary_key[0]),
-            "row": new_row
-        }
-        return jsonify(result), 201
+        with connection.begin():
+            insert = locations.insert().values(**new_location)
+            result = connection.execute(insert)
+            new_row = select(locations).where(locations.c.id == result.inserted_primary_key[0])
+            new_row = connection.execute(new_row).fetchone()
+            if new_row is not None:
+                new_row = new_row._asdict()
+            result = {
+                "msg": "Created new location with ID {}".format(result.inserted_primary_key[0]),
+                "row": new_row
+            }
+            return jsonify(result), 201
     except Exception as e:
         result = {
             "msg": "Failed to create new location",
@@ -141,12 +142,13 @@ def edit_location(project, location_id):
 
     if len(values) > 0:
         try:
-            update = locations.update().where(locations.c.id == int(location_id)).values(**values)
-            connection.execute(update)
-            return jsonify({
-                "msg": "Updated location {} with values {}".format(int(location_id), str(values)),
-                "location_id": int(location_id)
-            })
+            with connection.begin():
+                update = locations.update().where(locations.c.id == int(location_id)).values(**values)
+                connection.execute(update)
+                return jsonify({
+                    "msg": "Updated location {} with values {}".format(int(location_id), str(values)),
+                    "location_id": int(location_id)
+                })
         except Exception as e:
             result = {
                 "msg": "Failed to update location.",
@@ -200,17 +202,18 @@ def add_new_subject(project):
         "date_deceased": request_data.get("date_deceased", None)
     }
     try:
-        insert = subjects.insert().values(**new_subject)
-        result = connection.execute(insert)
-        new_row = select(subjects).where(subjects.c.id == result.inserted_primary_key[0])
-        new_row = connection.execute(new_row).fetchone()
-        if new_row is not None:
-            new_row = new_row._asdict()
-        result = {
-            "msg": "Created new subject with ID {}".format(result.inserted_primary_key[0]),
-            "row": new_row
-        }
-        return jsonify(result), 201
+        with connection.begin():
+            insert = subjects.insert().values(**new_subject)
+            result = connection.execute(insert)
+            new_row = select(subjects).where(subjects.c.id == result.inserted_primary_key[0])
+            new_row = connection.execute(new_row).fetchone()
+            if new_row is not None:
+                new_row = new_row._asdict()
+            result = {
+                "msg": "Created new subject with ID {}".format(result.inserted_primary_key[0]),
+                "row": new_row
+            }
+            return jsonify(result), 201
     except Exception as e:
         result = {
             "msg": "Failed to create new subject.",
@@ -286,12 +289,13 @@ def edit_subject(project, subject_id):
 
     if len(values) > 0:
         try:
-            update = subjects.update().where(subjects.c.id == int(subject_id)).values(**values)
-            connection.execute(update)
-            return jsonify({
-                "msg": "Updated subject {} with values {}".format(int(subject_id), str(values)),
-                "subject_id": int(subject_id)
-            })
+            with connection.begin():
+                update = subjects.update().where(subjects.c.id == int(subject_id)).values(**values)
+                connection.execute(update)
+                return jsonify({
+                    "msg": "Updated subject {} with values {}".format(int(subject_id), str(values)),
+                    "subject_id": int(subject_id)
+                })
         except Exception as e:
             result = {
                 "msg": "Failed to update subject.",
@@ -327,8 +331,9 @@ def add_new_translation(project):
         values = {}
         if translation_id is not None:
             values["translation_id"] = translation_id
-        update = target_table.update().where(target_table.c.id == int(request_data.get("parent_id", None))).values(**values)
-        connection.execute(update)
+        with connection.begin():
+            update = target_table.update().where(target_table.c.id == int(request_data.get("parent_id", None))).values(**values)
+            connection.execute(update)
 
     new_translation = {
         "table_name": request_data.get("table_name", None),
@@ -338,17 +343,18 @@ def add_new_translation(project):
         "translation_id": translation_id
     }
     try:
-        insert = transaltion.insert().values(**new_translation)
-        result = connection.execute(insert)
-        new_row = select(transaltion).where(transaltion.c.id == result.inserted_primary_key[0])
-        new_row = connection.execute(new_row).fetchone()
-        if new_row is not None:
-            new_row = new_row._asdict()
-        result = {
-            "msg": "Created new translation with ID {}".format(result.inserted_primary_key[0]),
-            "row": new_row
-        }
-        return jsonify(result), 201
+        with connection.begin():
+            insert = transaltion.insert().values(**new_translation)
+            result = connection.execute(insert)
+            new_row = select(transaltion).where(transaltion.c.id == result.inserted_primary_key[0])
+            new_row = connection.execute(new_row).fetchone()
+            if new_row is not None:
+                new_row = new_row._asdict()
+            result = {
+                "msg": "Created new translation with ID {}".format(result.inserted_primary_key[0]),
+                "row": new_row
+            }
+            return jsonify(result), 201
     except Exception as e:
         result = {
             "msg": "Failed to create new translation.",
@@ -401,19 +407,20 @@ def edit_translation(project, translation_id):
     # if translation_text_id is None we should add a new row to the translation_text table
     if translation_text_id is None:
         try:
-            # Make sure we add a new ID
-            del new_translation["id"]
-            insert = translation_text.insert().values(**new_translation)
-            result = connection.execute(insert)
-            new_row = select(translation_text).where(translation_text.c.id == result.inserted_primary_key[0])
-            new_row = connection.execute(new_row).fetchone()
-            if new_row is not None:
-                new_row = new_row._asdict()
-            result = {
-                "msg": "Created new translation_text with ID {}".format(result.inserted_primary_key[0]),
-                "row": new_row
-            }
-            return jsonify(result), 201
+            with connection.begin():
+                # Make sure we add a new ID
+                del new_translation["id"]
+                insert = translation_text.insert().values(**new_translation)
+                result = connection.execute(insert)
+                new_row = select(translation_text).where(translation_text.c.id == result.inserted_primary_key[0])
+                new_row = connection.execute(new_row).fetchone()
+                if new_row is not None:
+                    new_row = new_row._asdict()
+                result = {
+                    "msg": "Created new translation_text with ID {}".format(result.inserted_primary_key[0]),
+                    "row": new_row
+                }
+                return jsonify(result), 201
         except Exception as e:
             result = {
                 "msg": "Failed to create new translation_text.",
@@ -427,12 +434,13 @@ def edit_translation(project, translation_id):
         new_translation["date_modified"] = datetime.now()
         if len(new_translation) > 0:
             try:
-                update = translation_text.update().where(translation_text.c.id == int(translation_text_id)).values(**new_translation)
-                connection.execute(update)
-                return jsonify({
-                    "msg": "Updated translation_text {} with values {}".format(int(translation_text_id), str(new_translation)),
-                    "location_id": int(translation_text_id)
-                })
+                with connection.begin():
+                    update = translation_text.update().where(translation_text.c.id == int(translation_text_id)).values(**new_translation)
+                    connection.execute(update)
+                    return jsonify({
+                        "msg": "Updated translation_text {} with values {}".format(int(translation_text_id), str(new_translation)),
+                        "location_id": int(translation_text_id)
+                    })
             except Exception as e:
                 result = {
                     "msg": "Failed to update translation_text.",
@@ -476,17 +484,18 @@ def add_new_tag(project):
         "legacy_id": request_data.get("legacy_id", None)
     }
     try:
-        insert = tags.insert().values(**new_tag)
-        result = connection.execute(insert)
-        new_row = select(tags).where(tags.c.id == result.inserted_primary_key[0])
-        new_row = connection.execute(new_row).fetchone()
-        if new_row is not None:
-            new_row = new_row._asdict()
-        result = {
-            "msg": "Created new tag with ID {}".format(result.inserted_primary_key[0]),
-            "row": new_row
-        }
-        return jsonify(result), 201
+        with connection.begin():
+            insert = tags.insert().values(**new_tag)
+            result = connection.execute(insert)
+            new_row = select(tags).where(tags.c.id == result.inserted_primary_key[0])
+            new_row = connection.execute(new_row).fetchone()
+            if new_row is not None:
+                new_row = new_row._asdict()
+            result = {
+                "msg": "Created new tag with ID {}".format(result.inserted_primary_key[0]),
+                "row": new_row
+            }
+            return jsonify(result), 201
     except Exception as e:
         result = {
             "msg": "Failed to create new tag",
@@ -544,12 +553,13 @@ def edit_tag(project, tag_id):
 
     if len(values) > 0:
         try:
-            update = tags.update().where(tags.c.id == int(tag_id)).values(**values)
-            connection.execute(update)
-            return jsonify({
-                "msg": "Updated tag {} with values {}".format(int(tag_id), str(values)),
-                "tag_id": int(tag_id)
-            })
+            with connection.begin():
+                update = tags.update().where(tags.c.id == int(tag_id)).values(**values)
+                connection.execute(update)
+                return jsonify({
+                    "msg": "Updated tag {} with values {}".format(int(tag_id), str(values)),
+                    "tag_id": int(tag_id)
+                })
         except Exception as e:
             result = {
                 "msg": "Failed to update tag.",
@@ -607,28 +617,29 @@ def add_new_work_manifestation(project):
     }
 
     try:
-        insert = works.insert().values(**new_work)
-        result = connection.execute(insert)
+        with connection.begin():
+            insert = works.insert().values(**new_work)
+            result = connection.execute(insert)
 
-        work_id = result.inserted_primary_key[0]
-        new_work_manifestation["work_id"] = work_id
-        insert = work_manifestations.insert().values(**new_work_manifestation)
-        result = connection.execute(insert)
+            work_id = result.inserted_primary_key[0]
+            new_work_manifestation["work_id"] = work_id
+            insert = work_manifestations.insert().values(**new_work_manifestation)
+            result = connection.execute(insert)
 
-        work_manifestation_id = result.inserted_primary_key[0]
-        new_work_reference["work_manifestation_id"] = work_manifestation_id
-        insert = work_references.insert().values(**new_work_reference)
-        result = connection.execute(insert)
+            work_manifestation_id = result.inserted_primary_key[0]
+            new_work_reference["work_manifestation_id"] = work_manifestation_id
+            insert = work_references.insert().values(**new_work_reference)
+            result = connection.execute(insert)
 
-        new_row = select(work_manifestations).where(work_manifestations.c.id == work_manifestation_id)
-        new_row = connection.execute(new_row).fetchone()
-        if new_row is not None:
-            new_row = new_row._asdict()
-        result = {
-            "msg": "Created new work_manifestation with ID {}".format(work_manifestation_id),
-            "row": new_row
-        }
-        return jsonify(result), 201
+            new_row = select(work_manifestations).where(work_manifestations.c.id == work_manifestation_id)
+            new_row = connection.execute(new_row).fetchone()
+            if new_row is not None:
+                new_row = new_row._asdict()
+            result = {
+                "msg": "Created new work_manifestation with ID {}".format(work_manifestation_id),
+                "row": new_row
+            }
+            return jsonify(result), 201
     except Exception as e:
         result = {
             "msg": "Failed to create new work_manifestation",
@@ -724,15 +735,16 @@ def edit_work_manifestation(project, man_id):
 
     if len(values) > 0:
         try:
-            update = manifestations.update().where(manifestations.c.id == int(man_id)).values(**values)
-            connection.execute(update)
-            if len(reference_values) > 0:
-                update_ref = references.update().where(references.c.id == int(reference_id)).values(**reference_values)
-                connection.execute(update_ref)
-            return jsonify({
-                "msg": "Updated manifestation {} with values {}".format(int(man_id), str(values)),
-                "man_id": int(man_id)
-            })
+            with connection.begin():
+                update = manifestations.update().where(manifestations.c.id == int(man_id)).values(**values)
+                connection.execute(update)
+                if len(reference_values) > 0:
+                    update_ref = references.update().where(references.c.id == int(reference_id)).values(**reference_values)
+                    connection.execute(update_ref)
+                return jsonify({
+                    "msg": "Updated manifestation {} with values {}".format(int(man_id), str(values)),
+                    "man_id": int(man_id)
+                })
         except Exception as e:
             result = {
                 "msg": "Failed to update manifestation.",
@@ -896,17 +908,18 @@ def add_new_event():
         "description": request_data.get("description", None),
     }
     try:
-        insert = events.insert().values(**new_event)
-        result = connection.execute(insert)
-        new_row = select(events).where(events.c.id == result.inserted_primary_key[0])
-        new_row = connection.execute(new_row).fetchone()
-        if new_row is not None:
-            new_row = new_row._asdict()
-        result = {
-            "msg": "Created new event with ID {}".format(result.inserted_primary_key[0]),
-            "row": new_row
-        }
-        return jsonify(result), 201
+        with connection.begin():
+            insert = events.insert().values(**new_event)
+            result = connection.execute(insert)
+            new_row = select(events).where(events.c.id == result.inserted_primary_key[0])
+            new_row = connection.execute(new_row).fetchone()
+            if new_row is not None:
+                new_row = new_row._asdict()
+            result = {
+                "msg": "Created new event with ID {}".format(result.inserted_primary_key[0]),
+                "row": new_row
+            }
+            return jsonify(result), 201
     except Exception as e:
         result = {
             "msg": "Failed to create new event",
@@ -951,17 +964,18 @@ def connect_event(event_id):
         "tag_id": int(request_data["tag_id"]) if request_data.get("tag_id", None) else None
     }
     try:
-        insert = event_connections.insert().values(**new_event_connection)
-        result = connection.execute(insert)
-        new_row = select(event_connections).where(event_connections.c.id == result.inserted_primary_key[0])
-        new_row = connection.execute(new_row).fetchone()
-        if new_row is not None:
-            new_row = new_row._asdict()
-        result = {
-            "msg": "Created new event_connection with ID {}".format(result.inserted_primary_key[0]),
-            "row": new_row
-        }
-        return jsonify(result), 201
+        with connection.begin():
+            insert = event_connections.insert().values(**new_event_connection)
+            result = connection.execute(insert)
+            new_row = select(event_connections).where(event_connections.c.id == result.inserted_primary_key[0])
+            new_row = connection.execute(new_row).fetchone()
+            if new_row is not None:
+                new_row = new_row._asdict()
+            result = {
+                "msg": "Created new event_connection with ID {}".format(result.inserted_primary_key[0]),
+                "row": new_row
+            }
+            return jsonify(result), 201
     except Exception as e:
         result = {
             "msg": "Failed to create new event_connection",
@@ -1055,17 +1069,18 @@ def new_event_occurrence(event_id):
         "publication_facsimile_page": int(request_data["publicationFacsimile_page"]) if request_data.get("publicationFacsimile_page", None) else None,
     }
     try:
-        insert = event_occurrences.insert().values(**new_occurrence)
-        result = connection.execute(insert)
-        new_row = select(event_occurrences).where(event_occurrences.c.id == result.inserted_primary_key[0])
-        new_row = connection.execute(new_row).fetchone()
-        if new_row is not None:
-            new_row = new_row._asdict()
-        result = {
-            "msg": "Created new event_occurrence with ID {}".format(result.inserted_primary_key[0]),
-            "row": new_row
-        }
-        return jsonify(result), 201
+        with connection.begin():
+            insert = event_occurrences.insert().values(**new_occurrence)
+            result = connection.execute(insert)
+            new_row = select(event_occurrences).where(event_occurrences.c.id == result.inserted_primary_key[0])
+            new_row = connection.execute(new_row).fetchone()
+            if new_row is not None:
+                new_row = new_row._asdict()
+            result = {
+                "msg": "Created new event_occurrence with ID {}".format(result.inserted_primary_key[0]),
+                "row": new_row
+            }
+            return jsonify(result), 201
     except Exception as e:
         result = {
             "msg": "Failed to create new event_occurrence",
@@ -1111,9 +1126,10 @@ def new_publication_event_occurrence(publication_id):
             "description": "publication->tag",
         }
         try:
-            insert = events.insert().values(**new_event)
-            result = connection.execute(insert)
-            event_id = result.inserted_primary_key[0]
+            with connection.begin():
+                insert = events.insert().values(**new_event)
+                result = connection.execute(insert)
+                event_id = result.inserted_primary_key[0]
         except Exception as e:
             result = {
                 "msg": "Failed to create new event",
@@ -1130,8 +1146,9 @@ def new_publication_event_occurrence(publication_id):
             "publication_facsimile_page": int(request_data["publication_facsimile_page"]) if request_data.get("publication_facsimile_page", None) else None,
         }
         try:
-            insert = event_occ.insert().values(**new_occurrence)
-            connection.execute(insert)
+            with connection.begin():
+                insert = event_occ.insert().values(**new_occurrence)
+                connection.execute(insert)
         except Exception as e:
             result = {
                 "msg": "Failed to create new event_occurrence",
@@ -1146,8 +1163,9 @@ def new_publication_event_occurrence(publication_id):
             "tag_id": request_data.get("tag_id", None)
         }
         try:
-            insert = event_conn.insert().values(**new_connection)
-            connection.execute(insert)
+            with connection.begin():
+                insert = event_conn.insert().values(**new_connection)
+                connection.execute(insert)
         except Exception as e:
             result = {
                 "msg": "Failed to create new event_connection",
@@ -1162,17 +1180,18 @@ def new_publication_event_occurrence(publication_id):
                 "event_id": int(event_id),
                 "tag_id": request_data.get("tag_id", None)
             }
-            event_conn = get_table("event_connection")
-            insert = event_conn.insert().values(**new_connection)
-            result = connection.execute(insert)
-            new_row = select(event_conn).where(event_conn.c.id == result.inserted_primary_key[0])
-            if new_row is not None:
-                new_row = new_row._asdict()
-            result = {
-                "msg": "Created new event_connection with ID {}".format(result.inserted_primary_key[0]),
-                "row": new_row
-            }
-            return jsonify(result), 201
+            with connection.begin():
+                event_conn = get_table("event_connection")
+                insert = event_conn.insert().values(**new_connection)
+                result = connection.execute(insert)
+                new_row = select(event_conn).where(event_conn.c.id == result.inserted_primary_key[0])
+                if new_row is not None:
+                    new_row = new_row._asdict()
+                result = {
+                    "msg": "Created new event_connection with ID {}".format(result.inserted_primary_key[0]),
+                    "row": new_row
+                }
+                return jsonify(result), 201
         except Exception as e:
             result = {
                 "msg": "Failed to create new event_connection",
@@ -1205,12 +1224,13 @@ def edit_event_occurrence(occ_id):
     connection = db_engine.connect()
     event_occurrences = get_table("event_occurrence")
     try:
-        update = event_occurrences.update().where(event_occurrences.c.id == int(occ_id)).values(**values)
-        connection.execute(update)
-        return jsonify({
-            "msg": "Updated event_occurrences {} with values {}".format(int(occ_id), str(values)),
-            "occ_id": int(occ_id)
-        })
+        with connection.begin():
+            update = event_occurrences.update().where(event_occurrences.c.id == int(occ_id)).values(**values)
+            connection.execute(update)
+            return jsonify({
+                "msg": "Updated event_occurrences {} with values {}".format(int(occ_id), str(values)),
+                "occ_id": int(occ_id)
+            })
     except Exception as e:
         result = {
             "msg": "Failed to update event_occurrences.",
@@ -1240,12 +1260,13 @@ def delete_event_occurrence(occ_id):
     connection = db_engine.connect()
     event_occurrences = get_table("event_occurrence")
     try:
-        update = event_occurrences.update().where(event_occurrences.c.id == int(occ_id)).values(**values)
-        connection.execute(update)
-        return jsonify({
-            "msg": "Delete event_occurrences {} with values {}".format(int(occ_id), str(values)),
-            "occ_id": int(occ_id)
-        })
+        with connection.begin():
+            update = event_occurrences.update().where(event_occurrences.c.id == int(occ_id)).values(**values)
+            connection.execute(update)
+            return jsonify({
+                "msg": "Delete event_occurrences {} with values {}".format(int(occ_id), str(values)),
+                "occ_id": int(occ_id)
+            })
     except Exception as e:
         result = {
             "msg": "Failed to delete event_occurrences.",

@@ -432,10 +432,11 @@ def get_content(project, folder, xml_filename, xsl_filename, parameters):
 # Create a stub for a translation
 def create_translation(neutral):
     connection = db_engine.connect()
-    stmt = """ INSERT INTO translation (neutral_text) VALUES(:neutral) RETURNING id """
-    statement = text(stmt).bindparams(neutral=neutral, )
-    result = connection.execute(statement)
-    row = result.fetchone()
+    with connection.begin():
+        stmt = """ INSERT INTO translation (neutral_text) VALUES(:neutral) RETURNING id """
+        statement = text(stmt).bindparams(neutral=neutral, )
+        result = connection.execute(statement)
+        row = result.fetchone()
     connection.close()
     if row is not None:
         return row.id
@@ -447,9 +448,10 @@ def create_translation(neutral):
 def create_translation_text(translation_id, table_name):
     connection = db_engine.connect()
     if translation_id is not None:
-        stmt = """ INSERT INTO translation_text (translation_id, text, table_name, field_name, language) VALUES(:t_id, 'placeholder', :table_name, 'language', 'not set') RETURNING id """
-        statement = text(stmt).bindparams(t_id=translation_id, table_name=table_name)
-        connection.execute(statement)
+        with connection.begin():
+            stmt = """ INSERT INTO translation_text (translation_id, text, table_name, field_name, language) VALUES(:t_id, 'placeholder', :table_name, 'language', 'not set') RETURNING id """
+            statement = text(stmt).bindparams(t_id=translation_id, table_name=table_name)
+            connection.execute(statement)
     connection.close()
 
 
@@ -471,8 +473,6 @@ def get_translation_text_id(translation_id, table_name, field_name, language):
         else:
             return None
     else:
-        connection = db_engine.connect()
-        connection.close()
         return None
 
 
