@@ -26,14 +26,15 @@ def add_new_project():
 
     projects = get_table("project")
     connection = db_engine.connect()
-    ins = projects.insert().values(name=name)
+    with connection.begin():
+        ins = projects.insert().values(name=name)
 
-    result = connection.execute(ins)
-    connection.close()
-    return jsonify({
-        "msg": "Created new project.",
-        "project_id": int(result.inserted_primary_key[0])
-    }), 201
+        result = connection.execute(ins)
+        connection.close()
+        return jsonify({
+            "msg": "Created new project.",
+            "project_id": int(result.inserted_primary_key[0])
+        }), 201
 
 
 @publishing_tools.route("/projects/<project_id>/edit/", methods=["POST"])
@@ -67,8 +68,9 @@ def edit_project(project_id):
     values["date_modified"] = datetime.now()
 
     if len(values) > 0:
-        update = projects.update().where(projects.c.id == int(project_id)).values(**values)
-        connection.execute(update)
+        with connection.begin():
+            update = projects.update().where(projects.c.id == int(project_id)).values(**values)
+            connection.execute(update)
         connection.close()
         return jsonify({
             "msg": "Updated project {} with values {}".format(project_id, str(values)),
@@ -121,31 +123,35 @@ def edit_publication_collection(project, collection_id):
 
     if collection_title_id is None and collection_title_filename is not None:
         # Create a new title and add the id to the Collection
-        ins = titles.insert().values(**new_title)
-        result = connection.execute(ins)
-        new_title_row = select(titles).where(titles.c.id == result.inserted_primary_key[0])
-        new_title_row = connection.execute(new_title_row).fetchone()
-        new_title_row = new_title_row._asdict()
-        collection_title_id = new_title_row["id"]
+        with connection.begin():
+            ins = titles.insert().values(**new_title)
+            result = connection.execute(ins)
+            new_title_row = select(titles).where(titles.c.id == result.inserted_primary_key[0])
+            new_title_row = connection.execute(new_title_row).fetchone()
+            new_title_row = new_title_row._asdict()
+            collection_title_id = new_title_row["id"]
 
     if collection_intro_id is None and collection_intro_filename is not None:
         # Create a new intro and add the id to the Collection
-        ins = introductions.insert().values(**new_intro)
-        result = connection.execute(ins)
-        new_intro_row = select(introductions).where(introductions.c.id == result.inserted_primary_key[0])
-        new_intro_row = connection.execute(new_intro_row).fetchone()
-        new_intro_row = new_intro_row._asdict()
-        collection_intro_id = new_intro_row["id"]
+        with connection.begin():
+            ins = introductions.insert().values(**new_intro)
+            result = connection.execute(ins)
+            new_intro_row = select(introductions).where(introductions.c.id == result.inserted_primary_key[0])
+            new_intro_row = connection.execute(new_intro_row).fetchone()
+            new_intro_row = new_intro_row._asdict()
+            collection_intro_id = new_intro_row["id"]
 
     if collection_title_id is not None:
         # Update the Title data
-        update = introductions.update().where(titles.c.id == collection_title_id).values(**new_title)
-        connection.execute(update)
+        with connection.begin():
+            update = introductions.update().where(titles.c.id == collection_title_id).values(**new_title)
+            connection.execute(update)
 
     if collection_intro_id is not None:
         # Update the Intro data
-        update = introductions.update().where(introductions.c.id == collection_intro_id).values(**new_intro)
-        connection.execute(update)
+        with connection.begin():
+            update = introductions.update().where(introductions.c.id == collection_intro_id).values(**new_intro)
+            connection.execute(update)
 
     values = {}
     if name is not None:
@@ -160,8 +166,9 @@ def edit_publication_collection(project, collection_id):
     values["date_modified"] = datetime.now()
 
     if len(values) > 0:
-        update = collections.update().where(collections.c.id == int(collection_id)).values(**values)
-        connection.execute(update)
+        with connection.begin():
+            update = collections.update().where(collections.c.id == int(collection_id)).values(**values)
+            connection.execute(update)
         connection.close()
         return jsonify({
             "msg": "Updated publication collection {} with values {}".format(collection_id, str(values)),
@@ -225,8 +232,9 @@ def edit_intro(project, collection_id):
 
     if len(values) > 0:
         intro_id = int(result[0])
-        update = introductions.update().where(introductions.c.id == intro_id).values(**values)
-        connection.execute(update)
+        with connection.begin():
+            update = introductions.update().where(introductions.c.id == intro_id).values(**values)
+            connection.execute(update)
         connection.close()
         return jsonify({
             "msg": "Updated publication collection introduction {} with values {}".format(intro_id, str(values)),
@@ -290,8 +298,9 @@ def edit_title(project, collection_id):
 
     if len(values) > 0:
         title_id = int(result[0])
-        update = titles.update().where(titles.c.id == title_id).values(**values)
-        connection.execute(update)
+        with connection.begin():
+            update = titles.update().where(titles.c.id == title_id).values(**values)
+            connection.execute(update)
         connection.close()
         return jsonify({
             "msg": "Updated publication collection title {} with values {}".format(title_id, str(values)),
@@ -339,8 +348,9 @@ def edit_publication(project, publication_id):
     values["date_modified"] = datetime.now()
 
     if len(values) > 0:
-        update = publications.update().where(publications.c.id == int(publication_id)).values(**values)
-        connection.execute(update)
+        with connection.begin():
+            update = publications.update().where(publications.c.id == int(publication_id)).values(**values)
+            connection.execute(update)
         connection.close()
         return jsonify({
             "msg": "Updated project {} with values {}".format(publication_id, str(values)),
@@ -387,19 +397,21 @@ def edit_comment(project, publication_id):
 
     if len(values) > 0:
         if comment_id is not None:
-            update = comments.update().where(comments.c.id == int(comment_id)).values(**values)
-            connection.execute(update)
+            with connection.begin():
+                update = comments.update().where(comments.c.id == int(comment_id)).values(**values)
+                connection.execute(update)
             connection.close()
             return jsonify({
                 "msg": "Updated comment {} with values {}".format(comment_id, str(values)),
                 "comment_id": comment_id
             })
         else:
-            insert = comments.insert().values(**values)
-            r = connection.execute(insert)
-            comment_id = r.inserted_primary_key[0]
-            update = publications.update().where(publications.c.id == int(publication_id)).values({"publication_comment_id": int(comment_id)})
-            connection.execute(update)
+            with connection.begin():
+                insert = comments.insert().values(**values)
+                r = connection.execute(insert)
+                comment_id = r.inserted_primary_key[0]
+                update = publications.update().where(publications.c.id == int(publication_id)).values({"publication_comment_id": int(comment_id)})
+                connection.execute(update)
             connection.close()
             return jsonify({
                 "msg": "Created comment {} for publication {} with values {}".format(comment_id, publication_id, str(values)),
@@ -444,13 +456,13 @@ def add_manuscript(project, publication_id):
         values["published"] = published
     if sort_order is not None:
         values["sort_order"] = sort_order
-
-    insert = manuscripts.insert().values(**values)
-    result = connection.execute(insert)
-    return jsonify({
-        "msg": "Created new manuscript object.",
-        "manuscript_id": int(result.inserted_primary_key[0])
-    }), 201
+    with connection.begin():
+        insert = manuscripts.insert().values(**values)
+        result = connection.execute(insert)
+        return jsonify({
+            "msg": "Created new manuscript object.",
+            "manuscript_id": int(result.inserted_primary_key[0])
+        }), 201
 
 
 @publishing_tools.route("/<project>/manuscripts/<manuscript_id>/edit/", methods=["POST"])
@@ -490,8 +502,9 @@ def edit_manuscript(project, manuscript_id):
     values["date_modified"] = datetime.now()
 
     if len(values) > 0:
-        update = manuscripts.update().where(manuscripts.c.id == int(manuscript_id)).values(**values)
-        connection.execute(update)
+        with connection.begin():
+            update = manuscripts.update().where(manuscripts.c.id == int(manuscript_id)).values(**values)
+            connection.execute(update)
         connection.close()
         return jsonify({
             "msg": "Updated manuscript {} with values {}".format(int(manuscript_id), str(values)),
@@ -541,12 +554,13 @@ def add_version(project, publication_id):
     if version_type is not None:
         values["type"] = version_type
 
-    insert = versions.insert().values(**values)
-    result = connection.execute(insert)
-    return jsonify({
-        "msg": "Created new version object.",
-        "version_id": int(result.inserted_primary_key[0])
-    }), 201
+    with connection.begin():
+        insert = versions.insert().values(**values)
+        result = connection.execute(insert)
+        return jsonify({
+            "msg": "Created new version object.",
+            "version_id": int(result.inserted_primary_key[0])
+        }), 201
 
 
 @publishing_tools.route("/<project>/versions/<version_id>/edit/", methods=["POST"])
@@ -590,8 +604,9 @@ def edit_version(project, version_id):
     values["date_modified"] = datetime.now()
 
     if len(values) > 0:
-        update = versions.update().where(versions.c.id == int(version_id)).values(**values)
-        connection.execute(update)
+        with connection.begin():
+            update = versions.update().where(versions.c.id == int(version_id)).values(**values)
+            connection.execute(update)
         connection.close()
         return jsonify({
             "msg": "Updated version {} with values {}".format(int(version_id), str(values)),
@@ -640,8 +655,9 @@ def edit_facsimile_collection(project, collection_id):
     values["date_modified"] = datetime.now()
 
     if len(values) > 0:
-        update = collections.update().where(collections.c.id == int(collection_id)).values(**values)
-        connection.execute(update)
+        with connection.begin():
+            update = collections.update().where(collections.c.id == int(collection_id)).values(**values)
+            connection.execute(update)
         connection.close()
         return jsonify({
             "msg": "Updated facsimile collection {} with values {}".format(int(collection_id), str(values)),

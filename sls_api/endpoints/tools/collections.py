@@ -44,19 +44,20 @@ def create_facsimile_collection(project):
     }
     insert = collections.insert().values(**new_collection)
     try:
-        result = connection.execute(insert)
-        new_row = select(collections).where(collections.c.id == result.inserted_primary_key[0])
+        with connection.begin():
+            result = connection.execute(insert)
+            new_row = select(collections).where(collections.c.id == result.inserted_primary_key[0])
 
-        new_row = connection.execute(new_row).fetchone()
-        if new_row is not None:
-            new_row = new_row._asdict()
-        else:
-            new_row = {}
-        result = {
-            "msg": "Created new publication_facsimile_collection with ID {}".format(result.inserted_primary_key[0]),
-            "row": new_row
-        }
-        return jsonify(result), 201
+            new_row = connection.execute(new_row).fetchone()
+            if new_row is not None:
+                new_row = new_row._asdict()
+            else:
+                new_row = {}
+            result = {
+                "msg": "Created new publication_facsimile_collection with ID {}".format(result.inserted_primary_key[0]),
+                "row": new_row
+            }
+            return jsonify(result), 201
     except Exception as e:
         result = {
             "msg": "Failed to create new publication_facsimile_collection",
@@ -115,12 +116,13 @@ def edit_facsimile_collection(project, facsimile_collection_id):
 
     if len(values) > 0:
         try:
-            update = facsimile_collections.update().where(facsimile_collections.c.id == int(facsimile_collection_id)).values(**values)
-            connection.execute(update)
-            return jsonify({
-                "msg": "Updated facsimile_collection {} with values {}".format(int(facsimile_collection_id), str(values)),
-                "facsimile_collection_id": int(facsimile_collection_id)
-            })
+            with connection.begin():
+                update = facsimile_collections.update().where(facsimile_collections.c.id == int(facsimile_collection_id)).values(**values)
+                connection.execute(update)
+                return jsonify({
+                    "msg": "Updated facsimile_collection {} with values {}".format(int(facsimile_collection_id), str(values)),
+                    "facsimile_collection_id": int(facsimile_collection_id)
+                })
         except Exception as e:
             result = {
                 "msg": "Failed to update facsimile_collections.",
@@ -239,19 +241,20 @@ def link_facsimile_collection_to_publication(project, collection_id):
         "type": request_data.get("type", 0)
     }
     try:
-        insert = publication_facsimiles.insert().values(**new_facsimile)
-        result = connection.execute(insert)
-        new_row = select(publication_facsimiles).where(publication_facsimiles.c.id == result.inserted_primary_key[0])
-        new_row = connection.execute(new_row).fetchone()
-        if new_row is not None:
-            new_row = new_row._asdict()
-        else:
-            new_row = {}
-        result = {
-            "msg": "Created new publication_facsimile with ID {}".format(result.inserted_primary_key[0]),
-            "row": new_row
-        }
-        return jsonify(result), 201
+        with connection.begin():
+            insert = publication_facsimiles.insert().values(**new_facsimile)
+            result = connection.execute(insert)
+            new_row = select(publication_facsimiles).where(publication_facsimiles.c.id == result.inserted_primary_key[0])
+            new_row = connection.execute(new_row).fetchone()
+            if new_row is not None:
+                new_row = new_row._asdict()
+            else:
+                new_row = {}
+            result = {
+                "msg": "Created new publication_facsimile with ID {}".format(result.inserted_primary_key[0]),
+                "row": new_row
+            }
+            return jsonify(result), 201
     except Exception as e:
         result = {
             "msg": "Failed to create new publication_facsimile",
@@ -301,12 +304,13 @@ def edit_facsimile(project):
 
     if len(values) > 0:
         try:
-            update = facsimile.update().where(facsimile.c.id == int(facsimile_id)).values(**values)
-            connection.execute(update)
-            return jsonify({
-                "msg": "Updated facsimile {} with values {}".format(int(facsimile_id), str(values)),
-                "facsimile_id": int(facsimile_id)
-            })
+            with connection.begin():
+                update = facsimile.update().where(facsimile.c.id == int(facsimile_id)).values(**values)
+                connection.execute(update)
+                return jsonify({
+                    "msg": "Updated facsimile {} with values {}".format(int(facsimile_id), str(values)),
+                    "facsimile_id": int(facsimile_id)
+                })
         except Exception as e:
             result = {
                 "msg": "Failed to update facsimile.",
@@ -350,8 +354,9 @@ def delete_facsimile_collection_link(project, f_pub_id):
         'deleted': 1,
         "date_modified": datetime.now()
     }
-    update = publication_facsimile.update().where(publication_facsimile.c.id == int(f_pub_id)).values(**values)
-    connection.execute(update)
+    with connection.begin():
+        update = publication_facsimile.update().where(publication_facsimile.c.id == int(f_pub_id)).values(**values)
+        connection.execute(update)
     connection.close()
     result = {
         "msg": "Deleted publication_facsimile"
@@ -572,19 +577,20 @@ def new_publication(project, collection_id):
         "publication_collection_id": int_or_none(collection_id)
     }
     try:
-        insert = publications.insert().values(**publication)
-        result = connection.execute(insert)
-        new_row = select(publications).where(publications.c.id == result.inserted_primary_key[0])
-        new_row = connection.execute(new_row).fetchone()
-        if new_row is not None:
-            new_row = new_row._asdict()
-        else:
-            new_row = {}
-        result = {
-            "msg": "Created new publication with ID {}".format(result.inserted_primary_key[0]),
-            "row": new_row
-        }
-        return jsonify(result), 201
+        with connection.begin():
+            insert = publications.insert().values(**publication)
+            result = connection.execute(insert)
+            new_row = select(publications).where(publications.c.id == result.inserted_primary_key[0])
+            new_row = connection.execute(new_row).fetchone()
+            if new_row is not None:
+                new_row = new_row._asdict()
+            else:
+                new_row = {}
+            result = {
+                "msg": "Created new publication with ID {}".format(result.inserted_primary_key[0]),
+                "row": new_row
+            }
+            return jsonify(result), 201
     except Exception as e:
         result = {
             "msg": "Failed to create new publication",

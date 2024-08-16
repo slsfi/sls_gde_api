@@ -123,17 +123,18 @@ def add_new_publication_group(project):
         "published": request_data.get("published", 0)
     }
     try:
-        insert = groups.insert().values(**new_group)
-        result = connection.execute(insert)
-        new_row = select(groups).where(groups.c.id == result.inserted_primary_key[0])
-        new_row = connection.execute(new_row).fetchone()
-        if new_row is not None:
-            new_row = new_row._asdict()
-        result = {
-            "msg": "Created new group with ID {}".format(result.inserted_primary_key[0]),
-            "row": new_row
-        }
-        return jsonify(result), 201
+        with connection.begin():
+            insert = groups.insert().values(**new_group)
+            result = connection.execute(insert)
+            new_row = select(groups).where(groups.c.id == result.inserted_primary_key[0])
+            new_row = connection.execute(new_row).fetchone()
+            if new_row is not None:
+                new_row = new_row._asdict()
+            result = {
+                "msg": "Created new group with ID {}".format(result.inserted_primary_key[0]),
+                "row": new_row
+            }
+            return jsonify(result), 201
     except Exception as e:
         result = {
             "msg": "Failed to create new group",
