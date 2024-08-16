@@ -204,9 +204,9 @@ def link_facsimile_collection_to_publication(project, collection_id):
     publication_facsimiles = get_table("publication_facsimile")
     publication_collections = get_table("publication_collection")
     publications = get_table("publication")
-
-    statement = select(publications.c.publication_collection_id).where(publications.c.id == publication_id)
-    result = connection.execute(statement).fetchall()
+    with connection.begin():
+        statement = select(publications.c.publication_collection_id).where(publications.c.id == publication_id)
+        result = connection.execute(statement).fetchall()
     if len(result) != 1:
         return jsonify(
             {
