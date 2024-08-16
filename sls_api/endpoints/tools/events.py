@@ -97,8 +97,9 @@ def edit_location(project, location_id):
     locations = get_table("location")
 
     connection = db_engine.connect()
-    location_query = select(locations.c.id).where(locations.c.id == int_or_none(location_id))
-    location_row = connection.execute(location_query).fetchone()
+    with connection.begin():
+        location_query = select(locations.c.id).where(locations.c.id == int_or_none(location_id))
+        location_row = connection.execute(location_query).fetchone()
     if location_row is None:
         return jsonify({"msg": "No location with an ID of {} exists.".format(location_id)}), 404
 
@@ -250,8 +251,9 @@ def edit_subject(project, subject_id):
     subjects = get_table("subject")
 
     connection = db_engine.connect()
-    subject_query = select(subjects.c.id).where(subjects.c.id == int_or_none(subject_id))
-    subject_row = connection.execute(subject_query).fetchone()
+    with connection.begin():
+        subject_query = select(subjects.c.id).where(subjects.c.id == int_or_none(subject_id))
+        subject_row = connection.execute(subject_query).fetchone()
     if subject_row is None:
         return jsonify({"msg": "No subject with an ID of {} exists.".format(subject_id)}), 404
 
@@ -529,8 +531,9 @@ def edit_tag(project, tag_id):
     tags = get_table("tag")
 
     connection = db_engine.connect()
-    tag_query = select(tags.c.id).where(tags.c.id == int_or_none(tag_id))
-    tag_row = connection.execute(tag_query).fetchone()
+    with connection.begin():
+        tag_query = select(tags.c.id).where(tags.c.id == int_or_none(tag_id))
+        tag_row = connection.execute(tag_query).fetchone()
     if tag_row is None:
         return jsonify({"msg": "No tag with an ID of {} exists.".format(tag_id)}), 404
 
@@ -676,8 +679,9 @@ def edit_work_manifestation(project, man_id):
     connection = db_engine.connect()
 
     # get manifestation data
-    query = select(manifestations.c.id).where(manifestations.c.id == int_or_none(man_id))
-    row = connection.execute(query).fetchone()
+    with connection.begin():
+        query = select(manifestations.c.id).where(manifestations.c.id == int_or_none(man_id))
+        row = connection.execute(query).fetchone()
     if row is None:
         return jsonify({"msg": "No manifestation with an ID of {} exists.".format(man_id)}), 404
 
@@ -948,8 +952,9 @@ def connect_event(event_id):
         return jsonify({"msg": "No data provided."}), 400
     events = get_table("event")
     connection = db_engine.connect()
-    select_event = select(events).where(events.c.id == int_or_none(event_id))
-    event_exists = connection.execute(select_event).fetchall()
+    with connection.begin():
+        select_event = select(events).where(events.c.id == int_or_none(event_id))
+        event_exists = connection.execute(select_event).fetchall()
     if len(event_exists) != 1:
         return jsonify(
             {
@@ -1047,8 +1052,9 @@ def new_event_occurrence(event_id):
         return jsonify({"msg": "No data provided."}), 400
     events = get_table("event")
     connection = db_engine.connect()
-    select_event = select(events).where(events.c.id == int_or_none(event_id))
-    event_exists = connection.execute(select_event).fetchall()
+    with connection.begin():
+        select_event = select(events).where(events.c.id == int_or_none(event_id))
+        event_exists = connection.execute(select_event).fetchall()
     if len(event_exists) != 1:
         return jsonify(
             {
@@ -1111,8 +1117,9 @@ def new_publication_event_occurrence(publication_id):
         return jsonify({"msg": "No data provided."}), 400
     event_occ = get_table("event_occurrence")
     connection = db_engine.connect()
-    select_event = select(event_occ.c.event_id).where(event_occ.c.publication_id == int_or_none(publication_id)).where(event_occ.c.deleted != 1)
-    result = connection.execute(select_event).fetchone()
+    with connection.begin():
+        select_event = select(event_occ.c.event_id).where(event_occ.c.publication_id == int_or_none(publication_id)).where(event_occ.c.deleted != 1)
+        result = connection.execute(select_event).fetchone()
     if int_or_none(result["event_id"]) is None:
         event_id = int_or_none(result)
     else:
