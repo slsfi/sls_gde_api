@@ -1,10 +1,10 @@
-from flask import Blueprint, jsonify, Response, send_file
+from flask import Blueprint, jsonify, Response, send_file, make_response, request
 import io
 import logging
 import sqlalchemy
 from werkzeug.security import safe_join
 
-from sls_api.endpoints.generics import db_engine, get_project_config, get_project_id_from_name
+from sls_api.endpoints.generics import db_engine, get_project_config, get_project_id_from_name, get_allowed_cors_origins
 
 media = Blueprint('media', __name__)
 logger = logging.getLogger("sls_api.media")
@@ -414,46 +414,63 @@ def get_pdf_file(project, collection_id, file_type, download_name, use_download_
     """
     Retrieve a single file from project root
     Currently only PDF or ePub
+    Only allow requests from *.sls.fi subdomains
     """
     config = get_project_config(project)
     if config is None:
         return jsonify({"msg": "No such project."}), 400
+
     connection = db_engine.connect()
-    # Check that the collection exists
-    statement = sqlalchemy.sql.text("SELECT * FROM publication_collection WHERE id=:coll_id").bindparams(
-        coll_id=collection_id)
-    row = connection.execute(statement).fetchone()
-    if row is None:
-        return jsonify({
-            "msg": "Desired publication collection was not found in database!"
-        }), 404
+    try:
+        # Check that the collection exists
+        statement = sqlalchemy.sql.text("SELECT * FROM publication_collection WHERE id=:coll_id").bindparams(
+            coll_id=collection_id)
+        row = connection.execute(statement).fetchone()
+        if row is None:
+            return jsonify({
+                "msg": "Desired publication collection was not found in database!"
+            }), 404
 
-    file_path = ""
+        file_path = ""
+        mimetype = None
 
-    if use_download_name and 'pdf' in str(file_type):
-        if '.pdf' in str(download_name):
-            direct_download_name = download_name.split('.pdf')[0]
-        else:
-            direct_download_name = download_name
+        if 'pdf' in str(file_type):
+            if use_download_name:
+                if '.pdf' in str(download_name):
+                    direct_download_name = download_name.split('.pdf')[0]
+                else:
+                    direct_download_name = download_name
+            else:
+                direct_download_name = int(collection_id)
 
-        file_path = safe_join(config["file_root"],
-                              "downloads",
-                              collection_id,
-                              "{}.pdf".format(direct_download_name))
-    elif 'pdf' in str(file_type):
-        file_path = safe_join(config["file_root"],
-                              "downloads",
-                              collection_id,
-                              "{}.pdf".format(int(collection_id)))
-    elif 'epub' in str(file_type):
-        file_path = safe_join(config["file_root"],
-                              "downloads",
-                              collection_id,
-                              "{}.epub".format(int(collection_id)))
-    connection.close()
+            mimetype = "application/pdf"
+            file_path = safe_join(config["file_root"],
+                                  "downloads",
+                                  collection_id,
+                                  "{}.pdf".format(direct_download_name))
+        elif 'epub' in str(file_type):
+            mimetype = "application/epub+zip"
+            file_path = safe_join(config["file_root"],
+                                  "downloads",
+                                  collection_id,
+                                  "{}.epub".format(int(collection_id)))
+    finally:
+        connection.close()
 
     try:
-        return send_file(file_path, download_name=download_name, conditional=True)
+        response = make_response(
+            send_file(file_path, mimetype=mimetype, download_name=download_name, conditional=True)
+        )
+        # Dynamically set the Access-Control-Allow-Origin header
+        # to the request origin if the origin is defined in the list
+        # of allowed CORS origins in the config.
+        # This makes it possible to embed PDFs served by the API on
+        # allowed sites.
+        origin = request.headers.get("Origin")
+        if origin and origin in get_allowed_cors_origins(project):
+            response.headers["Access-Control-Allow-Origin"] = origin
+            response.headers["Vary"] = "Origin"
+        return response
     except Exception:
         logger.exception(f"Failed sending file from {file_path}")
         return Response("File not found.", status=404, content_type="text/json")

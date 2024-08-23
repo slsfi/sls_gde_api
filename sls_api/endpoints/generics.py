@@ -561,3 +561,19 @@ def get_first_valid_item_from_toc(flattened_toc):
         if flattened_toc[i].get('itemId') is not None and flattened_toc[i].get('itemId') != '' and flattened_toc[i].get('type') is not None and flattened_toc[i].get('type') != 'subtitle' and flattened_toc[i].get('type') != 'section_title':
             return flattened_toc[i]
     return {}
+
+
+def get_allowed_cors_origins(project: str) -> list:
+    """
+    Retrieve the allowed CORS origins for a specific project.
+
+    Args:
+        project (str): The name of the project to get allowed CORS origins for.
+
+    Returns:
+        list: A list of allowed CORS origins for the project, or an empty list if none are found.
+    """
+    project_config = get_project_config(project)
+    if not project_config:
+        return []
+    return project_config.get("allowed_cors_origins", [])
