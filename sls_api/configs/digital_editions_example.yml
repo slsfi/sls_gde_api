@@ -22,15 +22,15 @@ parland:
     disabled_publications: [10,12,13,14,9,20,28]
     # SQLAlchemy engine string for comments (edith) database
     comments_database: 'mysql://${MYSQL_USER}:${MYSQL_PASSWORD}@mysql_server.example.com:3306?charset=utf8mb4/parland_comments'
-    # List of origins to allow CORS requests from. Typically, you would put
-    # at least the origin of the project frontend here. This list can include
-    # multiple origins if the project needs to be accessible from different
-    # domains or environments (e.g., staging, production).
-    # Ensure that only trusted origins are added to prevent unauthorized
-    # cross-origin requests.
-    # Currently only used to set response headers on downloadable PDFs and
-    # EPUBs in the `get_pdf_file` endpoint in `endpoints/media.py`.
-    allowed_cors_origins: ["https://parland.sls.fi"]
+    # Space separated list of host sources that are allowed to embed a file served by the
+    # API using <frame>, <iframe>, <object> or <embed> HTML elements. The list is
+    # currently used to set the Content-Security-Policy: frame-ancestors header on the
+    # responses from the following endpoints:
+    # - `get_pdf_file` in `endpoints/media.py` for downloading PDFs and EPUBs
+    # 'self' must not be included in the list here as it is set by default.
+    # Docs on the CSP: frame-ancestors header:
+    # https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Security-Policy/frame-ancestors
+    allowed_csp_frame_ancestors: 'https://parland.sls.fi'
 
 topelius:
     # First, settings about how the publication tools should communicate towards git
@@ -44,15 +44,15 @@ topelius:
     disabled_publications: [10,12,13,14,9,20,28]
     # SQLAlchemy engine string for comments (edith) database
     comments_database: 'mysql://${MYSQL_USER}:${MYSQL_PASSWORD}@mysql_server.example.com:3306?charset=utf8mb4/topelius_comments'
-    # List of origins to allow CORS requests from. Typically, you would put
-    # at least the origin of the project frontend here. This list can include
-    # multiple origins if the project needs to be accessible from different
-    # domains or environments (e.g., staging, production).
-    # Ensure that only trusted origins are added to prevent unauthorized
-    # cross-origin requests.
-    # Currently only used to set response headers on downloadable PDFs and
-    # EPUBs in the `get_pdf_file` endpoint in `endpoints/media.py`.
-    allowed_cors_origins: ["https://topelius.sls.fi"]
+    # Space separated list of host sources that are allowed to embed a file served by the
+    # API using <frame>, <iframe>, <object> or <embed> HTML elements. The list is
+    # currently used to set the Content-Security-Policy: frame-ancestors header on the
+    # responses from the following endpoints:
+    # - `get_pdf_file` in `endpoints/media.py` for downloading PDFs and EPUBs
+    # 'self' must not be included in the list here as it is set by default.
+    # Docs on the CSP: frame-ancestors header:
+    # https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Security-Policy/frame-ancestors
+    allowed_csp_frame_ancestors: 'https://topelius.sls.fi'
 
 # XML-to-HTML is somewhat computationally expensive, so HTML reading texts are cached for up to this amount of time
 cache_lifetime_seconds: 7200  # 2 hours

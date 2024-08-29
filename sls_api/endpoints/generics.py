@@ -563,17 +563,20 @@ def get_first_valid_item_from_toc(flattened_toc):
     return {}
 
 
-def get_allowed_cors_origins(project: str) -> list:
+def get_allowed_csp_frame_ancestors(project: str) -> str:
     """
-    Retrieve the allowed CORS origins for a specific project.
+    Retrieve the allowed host sources for setting the
+    Content-Security-Policy: frame-ancestors header
+    for a specific project.
 
     Args:
-        project (str): The name of the project to get allowed CORS origins for.
+        project (str): The name of the project to get allowed host sources for.
 
     Returns:
-        list: A list of allowed CORS origins for the project, or an empty list if none are found.
+        str: A space separated list of allowed CSP: frame-ancestors host
+        sources for the project, or an empty string if none are found.
     """
     project_config = get_project_config(project)
     if not project_config:
-        return []
-    return project_config.get("allowed_cors_origins", [])
+        return ''
+    return project_config.get('allowed_csp_frame_ancestors', '')

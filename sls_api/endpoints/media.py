@@ -1,10 +1,10 @@
-from flask import Blueprint, jsonify, Response, send_file, make_response, request
+from flask import Blueprint, jsonify, Response, send_file, make_response
 import io
 import logging
 import sqlalchemy
 from werkzeug.security import safe_join
 
-from sls_api.endpoints.generics import db_engine, get_project_config, get_project_id_from_name, get_allowed_cors_origins
+from sls_api.endpoints.generics import db_engine, get_project_config, get_project_id_from_name, get_allowed_csp_frame_ancestors
 
 media = Blueprint('media', __name__)
 logger = logging.getLogger("sls_api.media")
@@ -461,15 +461,20 @@ def get_pdf_file(project, collection_id, file_type, download_name, use_download_
         response = make_response(
             send_file(file_path, mimetype=mimetype, download_name=download_name, conditional=True)
         )
-        # Dynamically set the Access-Control-Allow-Origin header
-        # to the request origin if the origin is defined in the list
-        # of allowed CORS origins in the config.
-        # This makes it possible to embed PDFs served by the API on
-        # allowed sites.
-        origin = request.headers.get("Origin")
-        if origin and origin in get_allowed_cors_origins(project):
-            response.headers["Access-Control-Allow-Origin"] = origin
-            response.headers["Vary"] = "Origin"
+
+        # Set the Content-Security-Policy header with the frame-ancestors directive to
+        # allow embedding the file on allowed hosts. Embedding is allowed on the host
+        # sources defined in the project config and on the origin from which the file
+        # is being served (i.e. 'self'). If no host sources are defined in the config,
+        # the CSP header is not set, and the file will be served with the
+        # X-Frame-Options: SAMEORIGIN header, which prevents embedding on sites other
+        # than the one from which the file is being served.
+        host_sources = get_allowed_csp_frame_ancestors(project)
+
+        if host_sources:
+            frame_ancestors_value = f"frame-ancestors 'self' {host_sources}"
+            response.headers["Content-Security-Policy"] = frame_ancestors_value
+
         return response
     except Exception:
         logger.exception(f"Failed sending file from {file_path}")
