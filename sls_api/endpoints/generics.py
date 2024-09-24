@@ -7,10 +7,10 @@ import glob
 import hashlib
 import io
 import logging
-from lxml import etree
 import os
 import re
 from ruamel.yaml import YAML
+from saxonche import PySaxonProcessor
 from sqlalchemy import create_engine, MetaData, Table
 from sqlalchemy.sql import select, text
 import time
@@ -324,13 +324,7 @@ def get_collection_published_status(project, collection_id):
     return can_show, message
 
 
-class FileResolver(etree.Resolver):
-    def resolve(self, system_url, public_id, context):
-        logger.debug("Resolving {}".format(system_url))
-        return self.resolve_filename(system_url, context)
-
-
-def transform_xml(xsl_file_path, xml_file_path, replace_namespace=False, params=None):
+def transform_xml(xsl_file_path, xml_file_path, params=None):
     logger.debug("Transforming {} using {}".format(xml_file_path, xsl_file_path))
     if params is not None:
         logger.debug("Parameters are {}".format(params))
@@ -339,30 +333,21 @@ def transform_xml(xsl_file_path, xml_file_path, replace_namespace=False, params=
     if not os.path.exists(xml_file_path):
         return "XML file {!r} not found!".format(xml_file_path)
 
-    with io.open(xml_file_path, mode="rb") as xml_file:
-        xml_contents = xml_file.read()
-        if replace_namespace:
-            xml_contents = xml_contents.replace(b'xmlns="http://www.sls.fi/tei"',
-                                                b'xmlns="http://www.tei-c.org/ns/1.0"')
+    with PySaxonProcessor(license=False) as processor:
+        xslt_processor = processor.new_xslt30_processor()
+        xml_document = processor.parse_xml(xml_file_name=xml_file_path, encoding="utf-8")
+        xslt = xslt_processor.compile_stylesheet(stylesheet_file=xsl_file_path, encoding="utf-8")
 
-        xml_root = etree.fromstring(xml_contents)
+        if params is None:
+            result = xslt.transform_to_string(xdm_node=xml_document)
+        elif isinstance(params, dict) or isinstance(params, OrderedDict):
+            xslt.set_parameter(**params)
+            result = xslt.transform_to_string(xdm_node=xml_document)
+        else:
+            raise Exception(
+                "Invalid parameters for XSLT transformation, must be of type dict or OrderedDict, not {}".format(
+                    type(params)))
 
-    xsl_parser = etree.XMLParser()
-    xsl_parser.resolvers.add(FileResolver())
-    with io.open(xsl_file_path, encoding="UTF-8") as xsl_file:
-        xslt_root = etree.parse(xsl_file, parser=xsl_parser)
-        xsl_transform = etree.XSLT(xslt_root)
-
-    if params is None:
-        result = xsl_transform(xml_root)
-    elif isinstance(params, dict) or isinstance(params, OrderedDict):
-        result = xsl_transform(xml_root, **params)
-    else:
-        raise Exception(
-            "Invalid parameters for XSLT transformation, must be of type dict or OrderedDict, not {}".format(
-                type(params)))
-    if len(xsl_transform.error_log) > 0:
-        logging.debug(xsl_transform.error_log)
     return str(result)
 
 
