@@ -330,7 +330,7 @@ class FileResolver(etree.Resolver):
         return self.resolve_filename(system_url, context)
 
 
-def xml_to_html(xsl_file_path, xml_file_path, replace_namespace=False, params=None):
+def transform_xml(xsl_file_path, xml_file_path, replace_namespace=False, params=None):
     logger.debug("Transforming {} using {}".format(xml_file_path, xsl_file_path))
     if params is not None:
         logger.debug("Parameters are {}".format(params))
@@ -412,7 +412,7 @@ def get_content(project, folder, xml_filename, xsl_filename, parameters):
     if os.path.exists(xml_file_path) and content is None:
         logger.info("Getting contents from file and transforming...")
         try:
-            content = xml_to_html(xsl_file_path, xml_file_path, params=parameters).replace('\n', '').replace('\r', '')
+            content = transform_xml(xsl_file_path, xml_file_path, params=parameters).replace('\n', '').replace('\r', '')
             try:
                 with io.open(cache_file_path, mode="w", encoding="UTF-8") as cache_file:
                     cache_file.write(content)
@@ -486,7 +486,6 @@ def get_xml_content(project, folder, xml_filename, xsl_filename, parameters):
     else:
         xsl_file_path = None
 
-    content = None
     if os.path.exists(xml_file_path):
         logger.info("Getting contents from file ...")
         if xsl_file_path is not None:
@@ -507,42 +506,6 @@ def get_xml_content(project, folder, xml_filename, xsl_filename, parameters):
     else:
         content = "File not found"
     return content
-
-
-def transform_xml(xsl_file_path, xml_file_path, replace_namespace=False, params=None):
-    logger.debug("Transforming {} using {}".format(xml_file_path, xsl_file_path))
-    if params is not None:
-        logger.debug("Parameters are {}".format(params))
-    if not os.path.exists(xsl_file_path):
-        return "XSL file {!r} not found!".format(xsl_file_path)
-    if not os.path.exists(xml_file_path):
-        return "XML file {!r} not found!".format(xml_file_path)
-
-    with io.open(xml_file_path, mode="rb") as xml_file:
-        xml_contents = xml_file.read()
-        if replace_namespace:
-            xml_contents = xml_contents.replace(b'xmlns="http://www.sls.fi/tei"',
-                                                b'xmlns="http://www.tei-c.org/ns/1.0"')
-
-        xml_root = etree.fromstring(xml_contents)
-
-    xsl_parser = etree.XMLParser()
-    xsl_parser.resolvers.add(FileResolver())
-    with io.open(xsl_file_path, encoding="UTF-8") as xsl_file:
-        xslt_root = etree.parse(xsl_file, parser=xsl_parser)
-        xsl_transform = etree.XSLT(xslt_root)
-
-    if params is None:
-        result = xsl_transform(xml_root)
-    elif isinstance(params, dict) or isinstance(params, OrderedDict):
-        result = xsl_transform(xml_root, **params)
-    else:
-        raise Exception(
-            "Invalid parameters for XSLT transformation, must be of type dict or OrderedDict, not {}".format(
-                type(params)))
-    if len(xsl_transform.error_log) > 0:
-        logging.debug(xsl_transform.error_log)
-    return str(result)
 
 
 # Recursive function for flattening the given json, i.e. turning it into a one dimensional array, which is stored in "flattened"
