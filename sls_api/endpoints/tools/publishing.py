@@ -687,14 +687,16 @@ def get_publication_collection_info(project, collection_id):
     if collection_result is None:
         connection.close()
         return jsonify("No such publication collection exists"), 404
+    else:
+        collection_result = collection_result._asdict()
 
     intro_id = int_or_none(collection_result["publication_collection_introduction_id"])
     title_id = int_or_none(collection_result["publication_collection_title_id"])
     intro_query = select(intros.c.published, intros.c.original_filename).where(intros.c.id == intro_id)
     title_query = select(titles.c.published, titles.c.original_filename).where(titles.c.id == title_id)
 
-    intro_result = connection.execute(intro_query).fetchone()
-    title_result = connection.execute(title_query).fetchone()
+    intro_result = connection.execute(intro_query).fetchone()._asdict()
+    title_result = connection.execute(title_query).fetchone()._asdict()
 
     connection.close()
     result = {
