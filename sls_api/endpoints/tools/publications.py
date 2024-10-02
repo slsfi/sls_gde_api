@@ -182,8 +182,10 @@ def get_publication_comments(project, publication_id):
     publications = get_table("publication")
     publication_comments = get_table("publication_comment")
     statement = select(publications.c.publication_comment_id).where(publications.c.id == int_or_none(publication_id))
-    comment_ids = connection.execute(statement).fetchall()
-    comment_ids = [int(row[0]) for row in comment_ids]
+    comment_ids = []
+    for row in connection.execute(statement).fetchall():
+        if row:
+            comment_ids.append(int(row._asdict()['id']))
     statement = select(publication_comments).where(publication_comments.c.id.in_(comment_ids))
     rows = connection.execute(statement).fetchall()
     result = []
