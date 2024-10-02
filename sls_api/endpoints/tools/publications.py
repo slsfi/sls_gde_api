@@ -185,7 +185,7 @@ def get_publication_comments(project, publication_id):
     comment_ids = []
     for row in connection.execute(statement).fetchall():
         if row:
-            comment_ids.append(int(row._asdict()['id']))
+            comment_ids.append(int(row._asdict()['publication_comment_id']))
     statement = select(publication_comments).where(publication_comments.c.id.in_(comment_ids))
     rows = connection.execute(statement).fetchall()
     result = []
