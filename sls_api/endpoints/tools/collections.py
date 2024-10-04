@@ -389,6 +389,7 @@ def list_publication_collections(project):
             pc.publication_collection_title_id, 
             pc.publication_collection_introduction_id, 
             pc.name,
+            pc.name_translation_id,
             pct.original_filename AS collection_title_filename, 
             pci.original_filename AS collection_intro_filename,
             pct.published AS collection_title_published, 
