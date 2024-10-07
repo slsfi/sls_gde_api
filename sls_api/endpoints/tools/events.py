@@ -407,7 +407,7 @@ def edit_translation(project, translation_id):
     Edit a translation object in the database.
 
     POST data must be in JSON format.
-    
+
     POST data can include the following fields:
     - translation_text_id: int, id of the translation object in the `translation_text` table
     - table_name: str, name of the table being translated.
@@ -418,7 +418,7 @@ def edit_translation(project, translation_id):
 
     If translation_text_id is omitted, an attempt to find the translation object
     which is to be updated is made based on translation_id, table_name, field_name
-    and language. If that fails, a new tranlation object will be created. 
+    and language. If that fails, a new tranlation object will be created.
 
     Response:
     - 201: New translation created.
