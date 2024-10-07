@@ -377,35 +377,35 @@ def list_publication_collections(project):
     connection = db_engine.connect()
     # collections = get_table("publication_collection")
     statement = """
-        SELECT 
-            pc.id, 
-            pc.name AS title, 
-            pc.published, 
-            pc.date_created, 
-            pc.date_modified, 
-            pc.date_published_externally, 
+        SELECT
+            pc.id,
+            pc.name AS title,
+            pc.published,
+            pc.date_created,
+            pc.date_modified,
+            pc.date_published_externally,
             pc.legacy_id,
-            pc.project_id, 
-            pc.publication_collection_title_id, 
-            pc.publication_collection_introduction_id, 
+            pc.project_id,
+            pc.publication_collection_title_id,
+            pc.publication_collection_introduction_id,
             pc.name,
             pc.name_translation_id,
-            pct.original_filename AS collection_title_filename, 
+            pct.original_filename AS collection_title_filename,
             pci.original_filename AS collection_intro_filename,
-            pct.published AS collection_title_published, 
+            pct.published AS collection_title_published,
             pci.published AS collection_intro_published
-        FROM 
+        FROM
             publication_collection pc
-        LEFT JOIN 
-            publication_collection_title pct 
+        LEFT JOIN
+            publication_collection_title pct
             ON pct.id = pc.publication_collection_title_id
-        LEFT JOIN 
-            publication_collection_introduction pci 
+        LEFT JOIN
+            publication_collection_introduction pci
             ON pci.id = pc.publication_collection_introduction_id
-        WHERE 
-            pc.project_id = :project_id 
-            AND pc.published >= 1 
-        ORDER BY 
+        WHERE
+            pc.project_id = :project_id
+            AND pc.published >= 1
+        ORDER BY
             pc.id
     """
 
