@@ -317,16 +317,31 @@ def edit_title(project, collection_id):
 @project_permission_required
 def edit_publication(project, publication_id):
     """
-    Takes "title", "genre", "filename", "published" as JSON data
+    Edit a publication object.
+
+    POST data must be in JSON format and can include the following:
+    - title
+    - genre
+    - filename
+    - published
+    - language
+
     Returns "msg" and "publication_id" on success, otherwise 40x
     """
     request_data = request.get_json()
     if not request_data:
         return jsonify({"msg": "No data provided."}), 400
+
+    # TODO:
+    # The endpoint needs to support editing a few more fields: "deleted",
+    # "original_publication_date", "publication_collection_id", "publication_comment_id"
+    # Also, field values can't be set to NULL in the current implementation. In some
+    # cases this is desirable, for example to remove a publication_comment_id
     title = request_data.get("title", None)
     genre = request_data.get("genre", None)
     filename = request_data.get("filename", None)
     published = request_data.get("published", None)
+    language = request_data.get("language", None)
 
     publications = get_table("publication")
     connection = db_engine.connect()
@@ -346,6 +361,8 @@ def edit_publication(project, publication_id):
         values["original_filename"] = filename
     if published is not None:
         values["published"] = published
+    if language is not None:
+        values["language"] = language
 
     values["date_modified"] = datetime.now()
 
