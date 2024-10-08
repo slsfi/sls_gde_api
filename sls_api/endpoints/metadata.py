@@ -441,7 +441,7 @@ def get_project_subjects(project, language=None):
     project_id = get_project_id_from_name(project)
 
     if language is not None:
-        query = """select
+        query = """SELECT
             s.id, s.date_created, s.date_modified, s.deleted, s.type,
             s.translation_id, s.legacy_id, s.date_born, s.date_deceased,
             s.project_id, s.source,
@@ -453,10 +453,9 @@ def get_project_subjects(project, language=None):
             COALESCE(t_fln.text, s.full_name) as full_name,
             COALESCE(t_desc.text, s.description) as description,
             COALESCE(t_alias.text, s.alias) as alias,
-            COALESCE(t_prv.text, s.previous_last_name) as previous_last_name,
-            COALESCE(t_alt.text, s.alternative_form) as alternative_form
+            COALESCE(t_prv.text, s.previous_last_name) as previous_last_name
 
-            from subject s
+            FROM subject s
 
             LEFT JOIN translation_text t_fn ON t_fn.translation_id = s.translation_id and t_fn.language=:lang and t_fn.field_name='first_name'
             LEFT JOIN translation_text t_ln ON t_ln.translation_id = s.translation_id and t_ln.language=:lang and t_ln.field_name='last_name'
@@ -467,7 +466,6 @@ def get_project_subjects(project, language=None):
             LEFT JOIN translation_text t_desc ON t_desc.translation_id = s.translation_id and t_desc.language=:lang and t_desc.field_name='description'
             LEFT JOIN translation_text t_alias ON t_alias.translation_id = s.translation_id and t_alias.language=:lang and t_alias.field_name='alias'
             LEFT JOIN translation_text t_prv ON t_prv.translation_id = s.translation_id and t_prv.language=:lang and t_prv.field_name='previous_last_name'
-            LEFT JOIN translation_text t_alt ON t_alt.translation_id = s.translation_id and t_alt.language=:lang and t_alt.field_name='alternative_form'
 
             WHERE project_id = :p_id
         """
