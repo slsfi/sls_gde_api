@@ -1,6 +1,6 @@
 from flask import Blueprint, jsonify, request
 from flask_jwt_extended import jwt_required
-from sqlalchemy import cast, select, Text
+from sqlalchemy import cast, select, text, Text
 from datetime import datetime
 
 from sls_api.endpoints.generics import db_engine, get_project_id_from_name, get_table, int_or_none, \
@@ -454,6 +454,133 @@ def edit_translation(project, translation_id):
         else:
             connection.close()
             return jsonify("No valid update values given."), 400
+
+
+@event_tools.route("/<project>/translations/<translation_id>/list/", methods=["POST"])
+@project_permission_required
+def list_translations(project, translation_id):
+    """
+    List all translations for a given translation_id with optional filters.
+
+    Parameters:
+    - project (str): project name.
+    - translation_id (str): The id of the translation object in the `translation` table. Must be a valid integer.
+    - Optional POST data parameters in JSON format:
+        - table_name (str): Filter translations by a specific table name.
+        - field_name (str): Filter translations by a specific field name.
+        - language (str): Filter translations by a specific language.
+        - translation_text_id (int): Filter translations by a specific id in the `translation_text` table.
+
+    Returns:
+        JSON: A list of translation records or an error message.
+
+    Example Request:
+        POST /projectname/translations/1/list/
+        Body:
+        {
+            "table_name": "subject",
+            "field_name": "description",
+            "language": "en",
+            "translation_text_id": 123
+        }
+
+    Example Response:
+        [
+            {
+                "translation_text_id": 123,
+                "translation_id": 1,
+                "language": "en",
+                "text": "Some description in English",
+                "field_name": "description",
+                "table_name": "subject"
+            },
+            ...
+        ]
+
+    Status Codes:
+        200 - OK: Returns the list of translations.
+        400 - Bad Request: Invalid or missing translation_id.
+        500 - Internal Server Error: Query or execution failed.
+    """
+    # Convert translation_id to integer
+    translation_id = int_or_none(translation_id)
+    if not translation_id:
+        return jsonify({"msg": "Invalid translation_id parameter."}), 400
+
+    # Get optional filters from the request JSON body
+    filters = request.get_json(silent=True) or {}
+    translation_text_id = int_or_none(filters.get("translation_text_id"))
+
+    try:
+        with db_engine.connect() as connection:
+            with connection.begin():
+                # Base SQL query
+                query = """
+                    SELECT
+                        id AS translation_text_id,
+                        translation_id,
+                        language,
+                        text,
+                        field_name,
+                        table_name
+                    FROM
+                        translation_text
+                    WHERE
+                        translation_id = :translation_id
+                        AND deleted < 1
+                """
+                # Add additional filters dynamically if present
+                query_params = {"translation_id": translation_id}
+
+                # Check if 'table_name' exists in filters
+                if "table_name" in filters:
+                    if filters["table_name"] is None:
+                        query += " AND table_name IS NULL"
+                    else:
+                        query += " AND table_name = :table_name"
+                        query_params["table_name"] = filters["table_name"]
+
+                # Check if 'field_name' exists in filters
+                if "field_name" in filters:
+                    if filters["field_name"] is None:
+                        query += " AND field_name IS NULL"
+                    else:
+                        query += " AND field_name = :field_name"
+                        query_params["field_name"] = filters["field_name"]
+
+                # Check if 'language' exists in filters
+                if "language" in filters:
+                    if filters["language"] is None:
+                        query += " AND language IS NULL"
+                    else:
+                        query += " AND language = :language"
+                        query_params["language"] = filters["language"]
+
+                if translation_text_id:
+                    query += " AND id = :translation_text_id"
+                    query_params["translation_text_id"] = translation_text_id
+
+                # Add ordering to query
+                query += " ORDER BY field_name, language"
+
+                # Execute the query
+                statement = text(query).bindparams(**query_params)
+                rows = connection.execute(statement).fetchall()
+
+                # Convert rows to dictionary format
+                result = []
+                for row in rows:
+                    if row is not None:
+                        result.append(row._asdict())
+                return jsonify(result)
+
+    except Exception as e:
+        # Handle errors and return error response
+        result = {
+            "msg": "Failed to retrieve translations.",
+            "reason": str(e)
+        }
+        return jsonify(result), 500
 
 
 @event_tools.route("/<project>/tags/new/", methods=["POST"])
