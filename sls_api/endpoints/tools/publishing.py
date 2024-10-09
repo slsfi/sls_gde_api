@@ -355,7 +355,7 @@ def edit_publication(project, publication_id):
 
     Example Response (Error):
         {
-            "msg": "Field 'published' must be an integer with value 0, 1, or 2."
+            "msg": "Field 'published' must be an integer with value 0, 1 or 2."
         }
 
     Status Codes:
@@ -397,15 +397,15 @@ def edit_publication(project, publication_id):
                 set_clauses.append(f"{field} = NULL")
             else:
                 # Validate integer field values and ensure all other fields are strings
-                if (field in ["publication_collection_id", "publication_comment_id"] and
-                        (not isinstance(request_data[field], int) or request_data[field] < 1)):
-                    return jsonify({"msg": f"Field '{field}' must be a positive integer."}), 400
-                elif (field == "published" and
-                        (not isinstance(request_data[field], int) or request_data[field] < 0 or request_data[field] > 2)):
-                    return jsonify({"msg": f"Field '{field}' must be an integer with value 0, 1, or 2."}), 400
-                elif (field == "deleted" and
-                        (not isinstance(request_data[field], int) or request_data[field] < 0 or request_data[field] > 1)):
-                    return jsonify({"msg": f"Field '{field}' must be an integer with value 0 or 1."}), 400
+                if field in ["publication_collection_id", "publication_comment_id"]:
+                    if not isinstance(request_data[field], int) or request_data[field] < 1:
+                        return jsonify({"msg": f"Field '{field}' must be a positive integer."}), 400
+                elif field == "published":
+                    if not isinstance(request_data[field], int) or request_data[field] < 0 or request_data[field] > 2:
+                        return jsonify({"msg": f"Field '{field}' must be an integer with value 0, 1 or 2."}), 400
+                elif field == "deleted":
+                    if not isinstance(request_data[field], int) or request_data[field] < 0 or request_data[field] > 1:
+                        return jsonify({"msg": f"Field '{field}' must be an integer with value 0 or 1."}), 400
                 else:
                     # Convert remaining fields to string
                     request_data[field] = str(request_data[field])
