@@ -430,7 +430,7 @@ def new_publication_collection(project):
     - project (str): The name of the project.
 
     POST data parameters in JSON format:
-    - published (int, required): The publication status of the collection. Must be an integer with values 0, 1 or 2.
+    - published (int, required): The publication status of the collection. Must be an integer with values 0, 1 or 2. Recommended initial value is 1.
     - name (str): The name/title of the publication collection.
 
     Returns:
@@ -499,6 +499,10 @@ def new_publication_collection(project):
 
     if not field_names:
         return jsonify({"msg": "No valid fields provided for insertion."}), 400
+
+    # Add project_id to values to be inserted
+    field_names.append("project_id")
+    values["project_id"] = project_id
 
     # Complete the query construction
     query += ", ".join(field_names) + ") VALUES (:" + ", :".join(field_names) + ")"
