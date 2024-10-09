@@ -397,14 +397,14 @@ def edit_publication(project, publication_id):
                 set_clauses.append(f"{field} = NULL")
             else:
                 # Validate integer field values and ensure all other fields are strings
-                if (field in ["publication_collection_id", "publication_comment_id"] and 
-                    (not isinstance(request_data[field], int) or request_data[field] < 1)):
+                if (field in ["publication_collection_id", "publication_comment_id"] and
+                        (not isinstance(request_data[field], int) or request_data[field] < 1)):
                     return jsonify({"msg": f"Field '{field}' must be a positive integer."}), 400
-                elif (field == "published" and 
-                    (not isinstance(request_data[field], int) or request_data[field] < 0 or request_data[field] > 2)):
+                elif (field == "published" and
+                        (not isinstance(request_data[field], int) or request_data[field] < 0 or request_data[field] > 2)):
                     return jsonify({"msg": f"Field '{field}' must be an integer with value 0, 1, or 2."}), 400
-                elif (field == "deleted" and 
-                    (not isinstance(request_data[field], int) or request_data[field] < 0 or request_data[field] > 1)):
+                elif (field == "deleted" and
+                        (not isinstance(request_data[field], int) or request_data[field] < 0 or request_data[field] > 1)):
                     return jsonify({"msg": f"Field '{field}' must be an integer with value 0 or 1."}), 400
                 else:
                     # Convert remaining fields to string
@@ -427,7 +427,7 @@ def edit_publication(project, publication_id):
     values["publication_id"] = publication_id
 
     try:
-         with db_engine.connect() as connection:
+        with db_engine.connect() as connection:
             with connection.begin():
                 # Execute the update statement
                 statement = text(query).bindparams(**values)
