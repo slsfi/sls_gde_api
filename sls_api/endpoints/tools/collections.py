@@ -424,88 +424,98 @@ def list_publication_collections(project):
 @project_permission_required
 def new_publication_collection(project):
     """
-    Create a new publication_collection object and associated Introduction and Title objects.
+    Create a new publication collection in the specified project.
 
-    POST data MUST be in JSON format
+    Parameters:
+    - project (str): The name of the project.
 
-    POST data SHOULD contain the following:
-    name: publication collection name or title
-    datePublishedExternally: date of external publishing for collection
-    published: 0 or 1, is collection published or not
+    POST data parameters in JSON format:
+    - published (int, required): The publication status of the collection. Must be an integer with values 0, 1 or 2.
+    - name (str): The name/title of the publication collection.
 
-    POST data MAY also contain the following
-    intro_legacyID: legacy ID for publication_collection_introduction
-    title_legacyID: legacy ID for publication_collection_title
+    Returns:
+        JSON: A success message with the id of the inserted publication collection, or an error message.
+
+    Example Request:
+        POST /projectname/publication_collection/new/
+        Body:
+        {
+            "name": "My New Collection",
+            "published": 1
+        }
+
+    Example Response (Success):
+        {
+            "msg": "Publication collection inserted successfully.",
+            "id": 456
+        }
+
+    Example Response (Error):
+        {
+            "msg": "Field 'published' must be an integer with value 0, 1 or 2."
+        }
+
+    Status Codes:
+        201 - Created: The publication collection was inserted successfully.
+        400 - Bad Request: Invalid project name, invalid field values, or no valid fields provided for insertion.
+        500 - Internal Server Error: Database query or execution failed.
     """
+    # Verify that project is valid
+    project_id = get_project_id_from_name(project)
+    if not project_id:
+        return jsonify({"msg": "Invalid project name."}), 400
+
+    # Verify that request data was provided
     request_data = request.get_json()
     if not request_data:
         return jsonify({"msg": "No data provided."}), 400
 
-    collections = get_table("publication_collection")
-    introductions = get_table("publication_collection_introduction")
-    titles = get_table("publication_collection_title")
+    # Verify that the required 'published' field was provided
+    if "published" not in request_data:
+        return jsonify({"msg": "'published' field is required."}), 400
 
-    connection = db_engine.connect()
-    transaction = connection.begin()
+    # Start building the INSERT query
+    query = "INSERT INTO publication_collection ("
+    values = {}
+    field_names = []
+
+    # List of fields to check in request_data
+    fields = ["name", "published"]
+
+    # Loop over the fields list and check each one in request_data
+    for field in fields:
+        if field in request_data:
+            # Validate integer field values and ensure all other fields are strings
+            if field == "published":
+                if not isinstance(request_data[field], int) or request_data[field] < 0 or request_data[field] > 2:
+                    return jsonify({"msg": f"Field '{field}' must be an integer with value 0, 1 or 2."}), 400
+            else:
+                # Convert remaining fields to string
+                request_data[field] = str(request_data[field])
+
+            # Add the field to the field_names list for the query construction
+            field_names.append(field)
+            values[field] = request_data[field]
+
+    if not field_names:
+        return jsonify({"msg": "No valid fields provided for insertion."}), 400
+
+    # Complete the query construction
+    query += ", ".join(field_names) + ") VALUES (:" + ", :".join(field_names) + ")"
+
     try:
-        new_intro = {
-            "date_published_externally": request_data.get("datePublishedExternally", None),
-            "published": request_data.get("published", None),
-            "legacy_id": request_data.get("intro_legacyID", None)
-        }
+        with db_engine.connect() as connection:
+            with connection.begin():
+                # Execute the insert statement
+                statement = text(query).bindparams(**values)
+                result = connection.execute(statement)
 
-        new_title = {
-            "date_published_externally": request_data.get("datePublishedExternally", None),
-            "published": request_data.get("published", None),
-            "legacy_id": request_data.get("title_legacyID", None)
-        }
+                return jsonify({"msg": "Publication collection inserted successfully.",
+                                "id": result.inserted_primary_key[0]}), 201
 
-        ins = introductions.insert().values(**new_intro)
-        result = connection.execute(ins)
-        new_intro_row = select(introductions).where(introductions.c.id == result.inserted_primary_key[0])
-        new_intro_row = connection.execute(new_intro_row).fetchone()
-        if new_intro_row is not None:
-            new_intro_row = new_intro_row._asdict()
-
-        ins = titles.insert().values(**new_title)
-        result = connection.execute(ins)
-        new_title_row = select(titles).where(titles.c.id == result.inserted_primary_key[0])
-        new_title_row = connection.execute(new_title_row).fetchone()
-        if new_title_row is not None:
-            new_title_row = new_title_row._asdict()
-
-        new_collection = {
-            "project_id": get_project_id_from_name(project),
-            "name": request_data.get("name", None),
-            "date_published_externally": request_data.get("datePublishedExternally", None),
-            "published": request_data.get("published", None),
-            "publication_collection_introduction_id": new_intro_row["id"],
-            "publication_collection_title_id": new_title_row["id"]
-        }
-
-        ins = collections.insert().values(**new_collection)
-        result = connection.execute(ins)
-        new_collection_row = select(collections).where(collections.c.id == result.inserted_primary_key[0])
-        new_collection_row = connection.execute(new_collection_row).fetchone()
-        if new_collection_row is not None:
-            new_collection_row = new_collection_row._asdict()
-        transaction.commit()
-
-        return jsonify({
-            "msg": "New publication_collection created.",
-            "new_collection": new_collection_row,
-            "new_collection_intro": new_intro_row,
-            "new_collection_title": new_title_row
-        }), 201
     except Exception as e:
-        transaction.rollback()
-        result = {
-            "msg": "Failed to create new publication_collection object",
-            "reason": str(e)
-        }
-        return jsonify(result), 500
-    finally:
-        connection.close()
+        return jsonify({"msg": "Failed to insert new publication collection.",
+                        "reason": str(e)}), 500
 
 
 @collection_tools.route("/<project>/publication_collection/<collection_id>/publications/")
