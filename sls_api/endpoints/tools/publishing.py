@@ -4,7 +4,8 @@ from flask_jwt_extended import jwt_required
 from sqlalchemy import select, text
 from datetime import datetime
 
-from sls_api.endpoints.generics import db_engine, get_table, int_or_none, project_permission_required
+from sls_api.endpoints.generics import db_engine, get_project_id_from_name, get_table, int_or_none, \
+    project_permission_required
 
 
 publishing_tools = Blueprint("publishing_tools", __name__)
@@ -85,98 +86,121 @@ def edit_project(project_id):
 @project_permission_required
 def edit_publication_collection(project, collection_id):
     """
-    Takes "name" and/or "published" as JSON data
-    Returns "msg" and "publication_collection_id" on success, otherwise 40x
+    Edit a publication collection in the specified project by updating its fields.
+
+    Parameters:
+    - project (str): The name of the project.
+    - collection_id (str): The id of the publication collection to be updated. Must be a valid positive integer.
+
+    Optional POST data parameters in JSON format (at least one required):
+    - name (str or null): The name/title of the publication collection.
+    - published (int): The publication status. Must be an integer with values 0, 1 or 2.
+    - deleted (int): Soft delete flag. Must be an integer with values 0 or 1.
+
+    Returns:
+        JSON: A success message with the updated publication collection id, or an error message.
+
+    Example Request:
+        POST /projectname/publication_collection/456/edit/
+        Body:
+        {
+            "name": "Updated Collection Name",
+            "published": 1
+        }
+
+    Example Response (Success):
+        {
+            "msg": "Publication collection with id 456 updated successfully."
+        }
+
+    Example Response (Error):
+        {
+            "msg": "Field 'published' must be an integer with value 0, 1 or 2."
+        }
+
+    Status Codes:
+        200 - OK: The publication collection was updated successfully.
+        400 - Bad Request: Invalid collection_id, invalid field values, or no valid fields provided for the update.
+        404 - Not Found: No publication collection with the given collection_id exists or no changes were made.
+        500 - Internal Server Error: Database query or execution failed.
     """
+    # Verify that project is valid
+    project_id = get_project_id_from_name(project)
+    if not project_id:
+        return jsonify({"msg": "Invalid project name."}), 400
+
+    # Verify that collection_id is an integer
+    collection_id = int_or_none(collection_id)
+    if not collection_id or collection_id < 1:
+        return jsonify({"msg": "Invalid collection_id."}), 400
+
+    # Verify that request data was provided
     request_data = request.get_json()
     if not request_data:
         return jsonify({"msg": "No data provided."}), 400
-    name = request_data.get("name", None)
-    published = request_data.get("published", None)
 
-    collection_title_id = request_data.get("publication_collection_title_id", None)
-    collection_title_filename = request_data.get("collection_title_filename", None)
-    collection_intro_id = request_data.get("publication_collection_introduction_id", None)
-    collection_intro_filename = request_data.get("collection_intro_filename", None)
+    # List of fields to check in request_data
+    fields = ["name", "published", "deleted"]
 
-    collections = get_table("publication_collection")
-    connection = db_engine.connect()
-    with connection.begin():
-        query = select(collections.c.id).where(collections.c.id == int_or_none(collection_id))
-        result = connection.execute(query)
-    if len(result.fetchall()) != 1:
-        connection.close()
-        return jsonify("No such publication collection exists."), 404
-
-    introductions = get_table("publication_collection_introduction")
-    titles = get_table("publication_collection_title")
-
-    new_intro = {
-        "published": request_data.get("intro_published", 1),
-        "original_filename": request_data.get("collection_intro_filename", 1)
-    }
-
-    new_title = {
-        "published": request_data.get("title_published", 1),
-        "original_filename": request_data.get("collection_title_filename", 1)
-    }
-
-    if collection_title_id is None and collection_title_filename is not None:
-        # Create a new title and add the id to the Collection
-        with connection.begin():
-            ins = titles.insert().values(**new_title)
-            result = connection.execute(ins)
-            new_title_row = select(titles).where(titles.c.id == result.inserted_primary_key[0])
-            new_title_row = connection.execute(new_title_row).fetchone()
-            new_title_row = new_title_row._asdict()
-            collection_title_id = new_title_row["id"]
-
-    if collection_intro_id is None and collection_intro_filename is not None:
-        # Create a new intro and add the id to the Collection
-        with connection.begin():
-            ins = introductions.insert().values(**new_intro)
-            result = connection.execute(ins)
-            new_intro_row = select(introductions).where(introductions.c.id == result.inserted_primary_key[0])
-            new_intro_row = connection.execute(new_intro_row).fetchone()
-            new_intro_row = new_intro_row._asdict()
-            collection_intro_id = new_intro_row["id"]
-
-    if collection_title_id is not None:
-        # Update the Title data
-        with connection.begin():
-            update = introductions.update().where(titles.c.id == collection_title_id).values(**new_title)
-            connection.execute(update)
-
-    if collection_intro_id is not None:
-        # Update the Intro data
-        with connection.begin():
-            update = introductions.update().where(introductions.c.id == collection_intro_id).values(**new_intro)
-            connection.execute(update)
-
+    # Start building the update query
+    query = "UPDATE publication_collection SET "
     values = {}
-    if name is not None:
-        values["name"] = name
-    if published is not None:
-        values["published"] = published
-    if collection_intro_id is not None:
-        values["publication_collection_introduction_id"] = collection_intro_id
-    if collection_title_id is not None:
-        values["publication_collection_title_id"] = collection_title_id
+    set_clauses = []
 
+    # Loop over the fields list and check each one in request_data
+    for field in fields:
+        if field in request_data:
+            # Allow setting the 'name' field to NULL
+            if request_data[field] is None and field == "name":
+                set_clauses.append(f"{field} = NULL")
+            else:
+                # Validate integer field values and ensure all other fields are strings
+                if field == "published":
+                    if not isinstance(request_data[field], int) or request_data[field] < 0 or request_data[field] > 2:
+                        return jsonify({"msg": f"Field '{field}' must be an integer with value 0, 1 or 2."}), 400
+                elif field == "deleted":
+                    if not isinstance(request_data[field], int) or request_data[field] < 0 or request_data[field] > 1:
+                        return jsonify({"msg": f"Field '{field}' must be an integer with value 0 or 1."}), 400
+                else:
+                    # Convert remaining fields to string
+                    request_data[field] = str(request_data[field])
+
+                # Add the field to the set_clauses and values for the query
+                set_clauses.append(f"{field} = :{field}")
+                values[field] = request_data[field]
+
+    if not set_clauses:
+        return jsonify({"msg": "No valid fields provided to update."}), 400
+
+    # Add date_modified field to SET clauses
+    set_clauses.append("date_modified = :date_modified")
     values["date_modified"] = datetime.now()
 
-    if len(values) > 0:
-        with connection.begin():
-            update = collections.update().where(collections.c.id == int(collection_id)).values(**values)
-            connection.execute(update)
-        connection.close()
-        return jsonify({
-            "msg": "Updated publication collection {} with values {}".format(collection_id, str(values)),
-            "publication_collection_id": collection_id
-        })
-    else:
-        connection.close()
-        return jsonify("No valid update values given."), 400
+    # Join all SET clauses with commas
+    query += ", ".join(set_clauses)
+    query += " WHERE id = :collection_id AND project_id = :project_id"
+    values["collection_id"] = collection_id
+    values["project_id"] = project_id
+
+    try:
+        with db_engine.connect() as connection:
+            with connection.begin():
+                # Execute the update statement
+                statement = text(query).bindparams(**values)
+                result = connection.execute(statement)
+
+                # Check if any rows were affected
+                if result.rowcount < 1:
+                    return jsonify({"msg": f"No publication collection with id {collection_id} exists or no changes were made."}), 404
+
+                return jsonify({"msg": f"Publication collection with id {collection_id} updated successfully."}), 200
+
+    except Exception as e:
+        result = {
+            "msg": f"Failed to update publication collection with id {collection_id}.",
+            "reason": str(e)
+        }
+        return jsonify(result), 500
 
 
 @publishing_tools.route("<project>/publication_collection/<collection_id>/intro/")
