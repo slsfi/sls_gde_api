@@ -564,6 +564,7 @@ def new_publication(project, collection_id):
     genre: Genre for this publication
     publicationGroup_id: ID for related publicationGroup, used to group publications for easy publishing of large numbers of publications
     originalPublicationDate: Date of original publication for physical equivalent
+    language: language code (ISO 639-1) of the primary language of the publication text
     """
     request_data = request.get_json()
     if not request_data:
@@ -603,7 +604,8 @@ def new_publication(project, collection_id):
         "genre": request_data.get("genre", None),
         "publication_group_id": request_data.get("publicationGroup_id", None),
         "original_publication_date": request_data.get("originalPublicationDate", None),
-        "publication_collection_id": int_or_none(collection_id)
+        "publication_collection_id": int_or_none(collection_id),
+        "language": request_data.get("language", None)
     }
     try:
         with connection.begin():

@@ -1,7 +1,7 @@
 import logging
 from flask import Blueprint, jsonify, request
 from flask_jwt_extended import jwt_required
-from sqlalchemy import select
+from sqlalchemy import select, text
 from datetime import datetime
 
 from sls_api.endpoints.generics import db_engine, get_table, int_or_none, project_permission_required
@@ -317,50 +317,135 @@ def edit_title(project, collection_id):
 @project_permission_required
 def edit_publication(project, publication_id):
     """
-    Takes "title", "genre", "filename", "published" as JSON data
-    Returns "msg" and "publication_id" on success, otherwise 40x
+    Edit a publication in the specified project by updating its fields.
+
+    Parameters:
+    - project (str): The name of the project.
+    - publication_id (str): The ID of the publication to be updated. Must be a valid integer.
+
+    Optional POST data parameters in JSON format (at least one required):
+    - publication_collection_id (int): The ID of the publication collection. Must be a positive integer.
+    - publication_comment_id (int): The ID of the publication comment. Must be a positive integer.
+    - name (str): The name/title of the publication.
+    - original_filename (str): Path to the publication’s XML-file in the project GitHub repository.
+    - original_publication_date (str): The original publication date or year (formatted as a string).
+    - published (int): The publication status. Must be an integer with values 0, 1, or 2.
+    - language (str): The language code of the publication (ISO 639-1).
+    - genre (str): The genre of the publication.
+    - deleted (int): Soft delete flag. Must be an integer with values 0 or 1.
+
+    Additionally, all POST data parameter values can be set to null, except 'deleted'.
+
+    Returns:
+        JSON: A success message if the publication was updated, or an error message.
+
+    Example Request:
+        POST /projectname/publication/123/edit/
+        Body:
+        {
+            "name": "New Publication Name",
+            "published": 1,
+            "language": "en"
+        }
+
+    Example Response (Success):
+        {
+            "msg": "Publication with id 123 updated successfully."
+        }
+
+    Example Response (Error):
+        {
+            "msg": "Field 'published' must be an integer with value 0, 1 or 2."
+        }
+
+    Status Codes:
+        200 - OK: The publication was updated successfully.
+        400 - Bad Request: Invalid publication_id, invalid field values, or no valid fields provided for the update.
+        404 - Not Found: No publication with the given publication_id exists or no changes were made.
+        500 - Internal Server Error: Database query or execution failed.
     """
+    # Verify that publication_id is an integer
+    publication_id = int_or_none(publication_id)
+    if not publication_id or publication_id < 1:
+        return jsonify({"msg": "Invalid publication_id."}), 400
+
+    # Verify that request data was provided
     request_data = request.get_json()
     if not request_data:
         return jsonify({"msg": "No data provided."}), 400
-    title = request_data.get("title", None)
-    genre = request_data.get("genre", None)
-    filename = request_data.get("filename", None)
-    published = request_data.get("published", None)
 
-    publications = get_table("publication")
-    connection = db_engine.connect()
-    with connection.begin():
-        query = select(publications.c.id).where(publications.c.id == int_or_none(publication_id))
-        result = connection.execute(query)
-    if len(result.fetchall()) != 1:
-        connection.close()
-        return jsonify("No such publication exists."), 404
+    # List of fields to check in request_data
+    fields = ["publication_collection_id",
+              "publication_comment_id",
+              "name",
+              "original_filename",
+              "original_publication_date",
+              "published",
+              "language",
+              "genre",
+              "deleted"]
 
+    # Start building the update query
+    query = "UPDATE publication SET "
     values = {}
-    if title is not None:
-        values["name"] = title
-    if genre is not None:
-        values["genre"] = genre
-    if filename is not None:
-        values["original_filename"] = filename
-    if published is not None:
-        values["published"] = published
+    set_clauses = []
 
+    # Loop over the fields list and check each one in request_data
+    for field in fields:
+        if field in request_data:
+            if request_data[field] is None and field != "deleted":
+                set_clauses.append(f"{field} = NULL")
+            else:
+                # Validate integer field values and ensure all other fields are strings
+                if field in ["publication_collection_id", "publication_comment_id"]:
+                    if not isinstance(request_data[field], int) or request_data[field] < 1:
+                        return jsonify({"msg": f"Field '{field}' must be a positive integer."}), 400
+                elif field == "published":
+                    if not isinstance(request_data[field], int) or request_data[field] < 0 or request_data[field] > 2:
+                        return jsonify({"msg": f"Field '{field}' must be an integer with value 0, 1 or 2."}), 400
+                elif field == "deleted":
+                    if not isinstance(request_data[field], int) or request_data[field] < 0 or request_data[field] > 1:
+                        return jsonify({"msg": f"Field '{field}' must be an integer with value 0 or 1."}), 400
+                else:
+                    # Convert remaining fields to string
+                    request_data[field] = str(request_data[field])
+
+                # Add the field to the set_clauses and values for the query
+                set_clauses.append(f"{field} = :{field}")
+                values[field] = request_data[field]
+
+    if not set_clauses:
+        return jsonify({"msg": "No valid fields provided to update."}), 400
+
+    # Add date_modified field to SET clauses
+    set_clauses.append("date_modified = :date_modified")
     values["date_modified"] = datetime.now()
 
-    if len(values) > 0:
-        with connection.begin():
-            update = publications.update().where(publications.c.id == int(publication_id)).values(**values)
-            connection.execute(update)
-        connection.close()
-        return jsonify({
-            "msg": "Updated project {} with values {}".format(publication_id, str(values)),
-            "publication_id": publication_id
-        })
-    else:
-        connection.close()
-        return jsonify("No valid update values given."), 400
+    # Join all SET clauses with commas
+    query += ", ".join(set_clauses)
+    query += " WHERE id = :publication_id"
+    values["publication_id"] = publication_id
+
+    try:
+        with db_engine.connect() as connection:
+            with connection.begin():
+                # Execute the update statement
+                statement = text(query).bindparams(**values)
+                result = connection.execute(statement)
+
+                # Check if any rows were affected
+                if result.rowcount < 1:
+                    return jsonify({"msg": f"No publication with id {publication_id} exists or no changes were made."}), 404
+
+                return jsonify({"msg": f"Publication with id {publication_id} updated successfully."}), 200
+
+    except Exception as e:
+        # Handle errors and return error response
+        result = {
+            "msg": f"Failed to update publication with id {publication_id}.",
+            "reason": str(e)
+        }
+        return jsonify(result), 500
 
 
 @publishing_tools.route("/<project>/publication/<publication_id>/comment/edit/", methods=["POST"])
