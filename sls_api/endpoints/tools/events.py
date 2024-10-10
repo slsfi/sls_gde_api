@@ -315,24 +315,56 @@ def edit_subject(project, subject_id):
 @project_permission_required
 def add_new_translation(project):
     """
-    Add a new translation
+    Add a new translation, either for a record that has no previous
+    translations, or add a translation in a new language to a record
+    that has previous translations.
+
+    POST data MUST be in JSON format.
+
+    POST data SHOULD contain:
+    - table_name: str, name of the table containing the record to be translated.
+    - field_name: str, name of the field to be translated (if applicable).
+    - text: str, the translated text.
+    - language: str, the language code for the translation (ISO 639-1).
+
+    POST data CAN contain:
+    - translation_id: int, the id of an existing translation record in the `translation` table.
+      Required if you intend to add a translation in a new language to an entry that
+      already has one or more translations.
+    - parent_id: int, the id of the record in the table_name table.
+    - parent_translation_field: str, the name of the field holding the translation_id
+      (defaults to 'translation_id').
+    - neutral_text: str, the base text before translation.
+
+    Returns:
+    - 201: Created new translation.
+    - 400: Invalid input.
+    - 500: Internal server error.
     """
     request_data = request.get_json()
     if not request_data:
         return jsonify({"msg": "No data provided."}), 400
-    transaltion = get_table("translation_text")
+    translation_text = get_table("translation_text")
     connection = db_engine.connect()
     result = None
     translation_id = request_data.get("translation_id", None)
     # create a new translation if not supplied
-    if translation_id is None and request_data.get("parent_id", None) is not None:
-        translation_id = create_translation(request_data.get("text", None))
+    if translation_id is None:
+        if "table_name" not in request_data:
+            return jsonify({"msg": "No table_name in POST data, required when no translation_id"}), 400
+        if "parent_id" not in request_data:
+            return jsonify({"msg": "No parent_id in POST data, required when no translation_id"}), 400
+        translation_id = create_translation(request_data.get("neutral_text", None))
         # need to add the new id to the location, subject ... table
         # update table_name set translation_id = translation_id where id = ?
+        # if the field name is something else than translation_id it must be given
+        # in "parent_translation_field" in the request data (in some tables the
+        # field name is name_translation_id)
         target_table = get_table(request_data.get("table_name", None))
         values = {}
         if translation_id is not None:
-            values["translation_id"] = translation_id
+            translation_id_field_name = request_data.get("parent_translation_field", "translation_id")
+            values[translation_id_field_name] = translation_id
         with connection.begin():
             update = target_table.update().where(target_table.c.id == int(request_data.get("parent_id", None))).values(**values)
             connection.execute(update)
@@ -341,14 +373,14 @@ def add_new_translation(project):
         "table_name": request_data.get("table_name", None),
         "field_name": request_data.get("field_name", None),
         "text": request_data.get("text", None),
-        "language": request_data.get("language", 'not set'),
+        "language": request_data.get("language", None),
         "translation_id": translation_id
     }
     try:
         with connection.begin():
-            insert = transaltion.insert().values(**new_translation)
+            insert = translation_text.insert().values(**new_translation)
             result = connection.execute(insert)
-            new_row = select(transaltion).where(transaltion.c.id == result.inserted_primary_key[0])
+            new_row = select(translation_text).where(translation_text.c.id == result.inserted_primary_key[0])
             new_row = connection.execute(new_row).fetchone()
             if new_row is not None:
                 new_row = new_row._asdict()
@@ -372,15 +404,27 @@ def add_new_translation(project):
 @project_permission_required
 def edit_translation(project, translation_id):
     """
-    Edit a translation objects in the database
+    Edit a translation object in the database.
 
-    POST data MUST be in JSON format.
+    POST data must be in JSON format.
 
-    NB! We need to check if the combination of table_name & field_name already exists or not.
-    If it does not consist, add, otherwise update.
+    POST data can include the following fields:
+    - translation_text_id: int, id of the translation object in the `translation_text` table
+    - table_name: str, name of the table being translated.
+    - field_name: str, name of the field being translated.
+    - text: str, the translation text.
+    - language: str, language code of the translation (ISO 639-1).
+    - deleted: int, flag to mark as deleted (0 or 1).
 
-    SELECT the translation_text rows with the translation_id
-    Check if we have matches to language & table_name & field_name
+    If translation_text_id is omitted, an attempt to find the translation object
+    which is to be updated is made based on translation_id, table_name, field_name
+    and language. If that fails, a new tranlation object will be created.
+
+    Response:
+    - 201: New translation created.
+    - 200: Existing translation updated.
+    - 400: Invalid input.
+    - 500: Server error.
     """
     request_data = request.get_json()
     if not request_data:
@@ -388,30 +432,28 @@ def edit_translation(project, translation_id):
 
     translation_text = get_table("translation_text")
 
-    new_translation = {
-        "table_name": request_data.get("table_name", None),
-        "field_name": request_data.get("field_name", None),
-        "text": request_data.get("text", None),
-        "language": request_data.get("language", None),
-        "id": request_data.get("translation_text_id", None),
-        "translation_id": translation_id
-    }
-
-    if new_translation["id"] is not None and new_translation["field_name"] == 'language':
-        # We are updating the language
-        translation_text_id = new_translation["id"]
-    else:
-        # We are updating or creating a new translation
-        translation_text_id = get_translation_text_id(translation_id, new_translation["table_name"], new_translation["field_name"], new_translation["language"])
+    translation_text_id = request_data.get("translation_text_id", None)
+    if translation_text_id is None:
+        # Attempt to get the id of the record in translation_text based on translation id,
+        # table name, field name and language in the data
+        translation_text_id = get_translation_text_id(translation_id,
+                                                      request_data.get("table_name", None),
+                                                      request_data.get("field_name", None),
+                                                      request_data.get("language", None))
 
     connection = db_engine.connect()
 
     # if translation_text_id is None we should add a new row to the translation_text table
     if translation_text_id is None:
+        new_translation = {
+            "table_name": request_data.get("table_name", None),
+            "field_name": request_data.get("field_name", None),
+            "text": request_data.get("text", None),
+            "language": request_data.get("language", None),
+            "translation_id": translation_id
+        }
         try:
             with connection.begin():
-                # Make sure we add a new ID
-                del new_translation["id"]
                 insert = translation_text.insert().values(**new_translation)
                 result = connection.execute(insert)
                 new_row = select(translation_text).where(translation_text.c.id == result.inserted_primary_key[0])
@@ -433,14 +475,27 @@ def edit_translation(project, translation_id):
             connection.close()
     # if translation_text_id is not None, we should update the data
     else:
-        new_translation["date_modified"] = datetime.now()
-        if len(new_translation) > 0:
+        edited_translation = {}
+        # Update only fields that are provided in the POST data
+        if "table_name" in request_data:
+            edited_translation["table_name"] = request_data.get("table_name", None)
+        if "field_name" in request_data:
+            edited_translation["field_name"] = request_data.get("field_name", None)
+        if "text" in request_data:
+            edited_translation["text"] = request_data.get("text", None)
+        if "language" in request_data:
+            edited_translation["language"] = request_data.get("language", None)
+        if "deleted" in request_data:
+            edited_translation["deleted"] = request_data.get("deleted", 0)
+        edited_translation["date_modified"] = datetime.now()
+
+        if len(edited_translation) > 1:
             try:
                 with connection.begin():
-                    update = translation_text.update().where(translation_text.c.id == int(translation_text_id)).values(**new_translation)
+                    update = translation_text.update().where(translation_text.c.id == int(translation_text_id)).values(**edited_translation)
                     connection.execute(update)
                     return jsonify({
-                        "msg": "Updated translation_text {} with values {}".format(int(translation_text_id), str(new_translation)),
+                        "msg": "Updated translation_text {} with values {}".format(int(translation_text_id), str(edited_translation)),
                         "location_id": int(translation_text_id)
                     })
             except Exception as e:
