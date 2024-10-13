@@ -5,7 +5,7 @@ from sqlalchemy import select, text
 from datetime import datetime
 
 from sls_api.endpoints.generics import db_engine, get_project_id_from_name, get_table, int_or_none, \
-    project_permission_required
+    project_permission_required, validate_project_name, validate_int
 
 
 publishing_tools = Blueprint("publishing_tools", __name__)
@@ -20,7 +20,13 @@ def add_new_project():
     Create a new project.
 
     POST data parameters in JSON format:
-    - name (str, required): The name/title of the new project.
+    - name (str, required): The name/title of the new project. The name
+      can only contain lowercase letters (a-z), digits (0-9) and
+      underscores (_), and must be between 3 and 32 characters long
+      (inclusive).
+      The project name must be unique.
+    - published (int, required): The published status of the project.
+      Must be an integer with values 0, 1 or 2. Defaults to 1.
 
     Returns:
         JSON: A success message with the id of the inserted project (`project_id`), or an error message.
@@ -51,21 +57,49 @@ def add_new_project():
     request_data = request.get_json()
     if not request_data:
         return jsonify({"msg": "No data provided."}), 400
+
+    # Validate request data and construct dict with insert values
+    values = {}
     if "name" not in request_data:
         return jsonify({"msg": "Project name required."}), 400
-    name = request_data.get("name", None)
 
-    projects = get_table("project")
+    name = str(request_data.get("name"))
+
+    # Validate project name
+    is_valid_name, name_error_msg = validate_project_name(name)
+    if not is_valid_name:
+        return jsonify({"msg": name_error_msg}), 400
+
+    values["name"] = name
+
+    if "published" in request_data:
+        if not validate_int(request_data["published"], 0, 2):
+            return jsonify({"msg": f"Field 'published' must be an integer with value 0, 1 or 2."}), 400
+        else:
+            values["published"] = request_data["published"]
+    else:
+        values["published"] = 1
+
+    project_table = get_table("project")
 
     try:
         with db_engine.connect() as connection:
             with connection.begin():
-                ins = projects.insert().values(name=name)
-                result = connection.execute(ins)
+                # Check for existing project with the same name
+                select_stmt = select(project_table.c.id).where(project_table.c.name == name)
+                result = connection.execute(select_stmt).first()
+
+                if result:
+                    return jsonify({"msg": "A project with this name already exists."}), 400
+
+                # Proceed to insert the new project
+                insert_stmt = project_table.insert().values(**values).returning(project_table.c.id)
+                result = connection.execute(insert_stmt)
+                project_id = result.fetchone()[0]
 
                 return jsonify({
                     "msg": "Created new project.",
-                    "project_id": int(result.inserted_primary_key[0])
+                    "project_id": project_id
                 }), 201
     except Exception as e:
         return jsonify({"msg": "Failed to create new project.",
