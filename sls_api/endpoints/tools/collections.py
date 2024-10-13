@@ -371,24 +371,66 @@ def delete_facsimile_collection_link(project, f_pub_id):
 @project_permission_required
 def list_publication_collections(project):
     """
-    List all publication_collection objects for a given project
+    List all publication collections for a given project.
+
+    URL Path Parameter:
+    - project (str, required): The name of the project to retrieve publication collections for.
+
+    Returns:
+        JSON: A list of all publication collection objects associated with the given project, or an error message.
+
+    Example Request:
+        GET /<project>/publication_collection/list/
+
+    Example Response (Success):
+        [
+            {
+                "id": 1,
+                "name": "Collection Title",
+                "published": 1,
+                "date_created": "2023-05-12T12:34:56",
+                "date_modified": "2023-06-01T08:22:11",
+                "date_published_externally": null,
+                "deleted": 0,
+                "legacy_id": null,
+                "project_id": 101,
+                "publication_collection_title_id": 55,
+                "publication_collection_introduction_id": 75,
+                "name_translation_id": null,
+                "collection_title_filename": "title_file.xml",
+                "collection_intro_filename": "intro_file.xml",
+                "collection_title_published": 1,
+                "collection_intro_published": 1
+            }
+        ]
+
+    Example Response (Error):
+        {
+            "msg": "No such project exists."
+        }
+
+    Status Codes:
+        200 - OK: The request was successful, and the publication collections are returned.
+        400 - Bad Request: The project does not exist.
+        500 - Internal Server Error: Failed to retrieve the publication collections.
     """
     project_id = get_project_id_from_name(project)
-    connection = db_engine.connect()
-    # collections = get_table("publication_collection")
+    if not project_id:
+        return jsonify({"msg": "No such project exists."}), 400
+
     statement = """
         SELECT
             pc.id,
-            pc.name AS title,
+            pc.name,
             pc.published,
             pc.date_created,
             pc.date_modified,
             pc.date_published_externally,
+            pc.deleted,
             pc.legacy_id,
             pc.project_id,
             pc.publication_collection_title_id,
             pc.publication_collection_introduction_id,
-            pc.name,
             pc.name_translation_id,
             pct.original_filename AS collection_title_filename,
             pci.original_filename AS collection_intro_filename,
@@ -404,20 +446,21 @@ def list_publication_collections(project):
             ON pci.id = pc.publication_collection_introduction_id
         WHERE
             pc.project_id = :project_id
-            AND pc.published >= 1
         ORDER BY
             pc.id
     """
 
-    statement = text(statement).bindparams(project_id=int_or_none(project_id))
-    # statement = select(collections).where(collections.c.project_id == int_or_none(project_id))
-    rows = connection.execute(statement).fetchall()
-    result = []
-    for row in rows:
-        if row is not None:
-            result.append(row._asdict())
-    connection.close()
-    return jsonify(result)
+    try:
+        with db_engine.connect() as connection:
+            rows = connection.execute(
+                text(statement),
+                {"project_id": project_id}
+            ).fetchall()
+            result = [row._asdict() for row in rows]
+            return jsonify(result)
+    except Exception as e:
+        return jsonify({"msg": "Failed to retrieve project publication collections.",
+                        "reason": str(e)}), 500
 
 
 @collection_tools.route("/<project>/publication_collection/new/", methods=["POST"])
