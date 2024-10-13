@@ -17,25 +17,59 @@ logger = logging.getLogger("sls_api.tools.publishing")
 @jwt_required()
 def add_new_project():
     """
-    Takes project name as JSON data
-    Returns "msg" and "project_id" on success
+    Create a new project.
+
+    POST data parameters in JSON format:
+    - name (str, required): The name/title of the new project.
+
+    Returns:
+        JSON: A success message with the id of the inserted project (`project_id`), or an error message.
+
+    Example Request:
+        POST /projects/new/
+        Body:
+        {
+            "name": "My New Project"
+        }
+
+    Example Response (Success):
+        {
+            "msg": "Created new project.",
+            "project_id": 123
+        }
+
+    Example Response (Error):
+        {
+            "msg": "No data provided."
+        }
+
+    Status Codes:
+        201 - Created: The project was inserted successfully.
+        400 - Bad Request: No data was provided in the request, or required fields are missing.
+        500 - Internal Server Error: Database query or execution failed.
     """
     request_data = request.get_json()
     if not request_data:
         return jsonify({"msg": "No data provided."}), 400
+    if "name" not in request_data:
+        return jsonify({"msg": "Project name required."}), 400
     name = request_data.get("name", None)
 
     projects = get_table("project")
-    connection = db_engine.connect()
-    with connection.begin():
-        ins = projects.insert().values(name=name)
 
-        result = connection.execute(ins)
-        connection.close()
-        return jsonify({
-            "msg": "Created new project.",
-            "project_id": int(result.inserted_primary_key[0])
-        }), 201
+    try:
+        with db_engine.connect() as connection:
+            with connection.begin():
+                ins = projects.insert().values(name=name)
+                result = connection.execute(ins)
+
+                return jsonify({
+                    "msg": "Created new project.",
+                    "project_id": int(result.inserted_primary_key[0])
+                }), 201
+    except Exception as e:
+        return jsonify({"msg": "Failed to create new project.",
+                        "reason": str(e)}), 500
 
 
 @publishing_tools.route("/projects/<project_id>/edit/", methods=["POST"])
