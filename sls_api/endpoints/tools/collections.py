@@ -473,9 +473,9 @@ def new_publication_collection(project):
     - project (str): The name of the project.
 
     POST data parameters in JSON format:
-    - published (int, required): The publication status of the collection. Must be an
-      integer with values 0, 1 or 2. Recommended initial value is 1.
-    - name (str): The name/title of the publication collection.
+    - name (str, required): The name/title of the publication collection. Must be non-empty.
+    - published (int): The publication status of the collection. Must be an
+      integer with values 0, 1 or 2. Default value is 1.
 
     Returns:
         JSON: A success message with the id of the inserted publication collection,
@@ -491,8 +491,13 @@ def new_publication_collection(project):
 
     Example Response (Success):
         {
-            "msg": "Publication collection inserted successfully.",
-            "id": 456
+            "msg": "Publication collection created successfully.",
+            "row": {
+                "id": 789,
+                "name": "My New Collection",
+                "published": 1,
+                ...
+            }
         }
 
     Example Response (Error):
@@ -516,9 +521,9 @@ def new_publication_collection(project):
     if not request_data:
         return jsonify({"msg": "No data provided."}), 400
 
-    # Verify that the required 'published' field was provided
-    if "published" not in request_data:
-        return jsonify({"msg": "'published' field is required."}), 400
+    # Verify that the required 'name' field was provided
+    if "name" not in request_data or not request_data["name"]:
+        return jsonify({"msg": "'name' field is required and must be non-empty."}), 400
 
     # Start building values dictionary for the insert
     values = {}
@@ -540,8 +545,9 @@ def new_publication_collection(project):
             # Add the field to the field_names list for the query construction
             values[field] = request_data[field]
 
-    if not values:
-        return jsonify({"msg": "No valid fields provided for insertion."}), 400
+    # Set published to default value 1 if not in provided values
+    if "published" not in values:
+        values["published"] = 1
 
     # Add project_id to insert values
     values["project_id"] = project_id
@@ -555,16 +561,26 @@ def new_publication_collection(project):
                 statement = (
                     publication_collection.insert()
                     .values(**values)
-                    .returning(publication_collection.c.id)
+                    .returning(*publication_collection.c)  # Return the inserted row
                 )
                 result = connection.execute(statement)
-                pc_id = result.fetchone()[0]
+                inserted_row = result.fetchone()  # Fetch the inserted row
+
+                if inserted_row is None:
+                    # No row was returned; handle accordingly
+                    return jsonify({
+                        "msg": "Insertion failed: no row returned.",
+                        "reason": "The insert statement did not return any data."
+                    }), 500
+
+                # Convert the inserted_row to a dictionary for JSON serialization
+                inserted_row_dict = inserted_row._asdict()
 
                 return jsonify({"msg": "Publication collection inserted successfully.",
-                                "id": pc_id}), 201
+                                "row": inserted_row_dict}), 201
 
     except Exception as e:
-        return jsonify({"msg": "Failed to insert new publication collection.",
+        return jsonify({"msg": "Failed to create new publication collection.",
                         "reason": str(e)}), 500
 
 
@@ -642,7 +658,7 @@ def new_publication(project, collection_id):
 
     Example Response (Success):
         {
-            "msg": "Publication inserted successfully.",
+            "msg": "Publication created successfully.",
             "row": {
                 "id": 789,
                 "name": "New Publication",
