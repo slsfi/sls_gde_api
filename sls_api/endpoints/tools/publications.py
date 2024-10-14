@@ -93,16 +93,87 @@ def get_publications(project):
 @project_permission_required
 def get_publication(project, publication_id):
     """
-    Get a publication object from the database
+    Retrieve a single publication for a given project.
+
+    URL Path Parameters:
+    - project (str, required): The name of the project to which the
+      publication belongs.
+    - publication_id (int, required): The id of the publication to retrieve.
+
+    Returns:
+        JSON: A publication object within the specified project, or an error
+        message if the publication is not found.
+
+    Example Request:
+        GET /projectname/publication/123/
+
+    Example Response (Success):
+        {
+            "id": 123,
+            "publication_collection_id": 456,
+            "publication_comment_id": 789,
+            "date_created": "2023-05-12T12:34:56",
+            "date_modified": "2023-06-01T08:22:11",
+            "date_published_externally": null,
+            "deleted": 0,
+            "published": 1,
+            "legacy_id": null,
+            "published_by": null,
+            "original_filename": "/path/to/file.xml",
+            "name": "Publication Title",
+            "genre": "fiction",
+            "publication_group_id": null,
+            "original_publication_date": "1854",
+            "zts_id": null,
+            "language": "en"
+        }
+
+    Example Response (Error):
+        {
+            "msg": "Publication not found. Either project name or
+                    publication_id is invalid."
+        }
+
+    Status Codes:
+        200 - OK: The request was successful, and the publication is returned.
+        400 - Bad Request: The project name or publication_id is invalid.
+        404 - Not Found: The publication was not found within the specified
+              project.
+        500 - Internal Server Error: Database query or execution failed.
     """
-    connection = db_engine.connect()
-    publications = get_table("publication")
-    statement = select(publications).where(publications.c.id == int_or_none(publication_id))
-    result = connection.execute(statement).first()
-    if result is not None:
-        result = result._asdict()
-    connection.close()
-    return jsonify(result)
+    # Verify that project name is valid and get project_id
+    project_id = get_project_id_from_name(project)
+    if not project_id:
+        return jsonify({"msg": "Invalid project name."}), 400
+
+    # Convert publication_id to integer and verify
+    publication_id = int_or_none(publication_id)
+    if not publication_id or publication_id < 1:
+        return jsonify({"msg": "Invalid publication_id, must be a positive integer."}), 400
+
+    collection_table = get_table("publication_collection")
+    publication_table = get_table("publication")
+
+    try:
+        with db_engine.connect() as connection:
+            # Left join collection table on publication table and
+            # select only the columns from the publication table
+            # with matching publication_id and project_id
+            statement = (
+                select(*publication_table.c)
+                .join(collection_table, publication_table.c.publication_collection_id == collection_table.c.id)
+                .where(collection_table.c.project_id == project_id)
+                .where(publication_table.c.id == publication_id)
+            )
+            result = connection.execute(statement).first()
+
+            if result is None:
+                return jsonify({"msg": "Publication not found. Either project name or publication_id is invalid."}), 404
+            return jsonify(result._asdict())
+
+    except Exception as e:
+        return jsonify({"msg": "Failed to retrieve publication.",
+                        "reason": str(e)}), 500
 
 
 @publication_tools.route("/<project>/publication/manuscript/<publication_id>/")
