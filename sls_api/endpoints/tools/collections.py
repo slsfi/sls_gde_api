@@ -546,13 +546,17 @@ def new_publication_collection(project):
     # Add project_id to insert values
     values["project_id"] = project_id
 
-    pc_table = get_table("publication_collection")
+    publication_collection = get_table("publication_collection")
 
     try:
         with db_engine.connect() as connection:
             with connection.begin():
                 # Execute the insert statement
-                statement = pc_table.insert().values(**values).returning(pc_table.c.id)
+                statement = (
+                    publication_collection.insert()
+                    .values(**values)
+                    .returning(publication_collection.c.id)
+                )
                 result = connection.execute(statement)
                 pc_id = result.fetchone()[0]
 

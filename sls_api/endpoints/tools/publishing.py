@@ -74,7 +74,7 @@ def add_new_project():
 
     if "published" in request_data:
         if not validate_int(request_data["published"], 0, 2):
-            return jsonify({"msg": f"Field 'published' must be an integer with value 0, 1 or 2."}), 400
+            return jsonify({"msg": "Field 'published' must be an integer with value 0, 1 or 2."}), 400
         else:
             values["published"] = request_data["published"]
     else:
