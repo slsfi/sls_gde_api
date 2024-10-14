@@ -86,14 +86,21 @@ def add_new_project():
         with db_engine.connect() as connection:
             with connection.begin():
                 # Check for existing project with the same name
-                select_stmt = select(project_table.c.id).where(project_table.c.name == name)
+                select_stmt = (
+                    select(project_table.c.id)
+                    .where(project_table.c.name == name)
+                )
                 result = connection.execute(select_stmt).first()
 
                 if result:
                     return jsonify({"msg": "A project with this name already exists."}), 400
 
                 # Proceed to insert the new project
-                insert_stmt = project_table.insert().values(**values).returning(project_table.c.id)
+                insert_stmt = (
+                    project_table.insert()
+                    .values(**values)
+                    .returning(project_table.c.id)
+                )
                 result = connection.execute(insert_stmt)
                 project_id = result.fetchone()[0]
 
