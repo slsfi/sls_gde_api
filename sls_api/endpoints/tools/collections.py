@@ -589,34 +589,104 @@ def new_publication_collection(project):
 @project_permission_required
 def list_publications(project, collection_id, order_by="id"):
     """
-    List all publications in a given collection
+    List all publications within a specific publication collection for a given project.
+
+    URL Path Parameters:
+    - project (str, required): The name of the project for which to retrieve publications.
+    - collection_id (int, required): The id of the publication collection to retrieve
+      publications from.
+    - order_by (str, optional): The column by which to order the publications. Must be one
+      of "id", "name", "original_filename", "genre", "language". Defaults to "id".
+
+    Returns:
+        JSON: A list of publication objects in the specified collection, an empty list
+        if there are no publications, or an error message.
+
+    Example Request:
+        GET /projectname/publication_collection/123/publications/
+        GET /projectname/publication_collection/123/publications/name/
+
+    Example Response (Success):
+        [
+            {
+                "id": 1,
+                "publication_collection_id": 123,
+                "publication_comment_id": 5487,
+                "date_created": "2023-05-12T12:34:56",
+                "date_modified": "2023-06-01T08:22:11",
+                "date_published_externally": null,
+                "deleted": 0,
+                "published": 1,
+                "legacy_id": null,
+                "published_by": null,
+                "original_filename": "/path/to/file.xml",
+                "name": "Publication Title",
+                "genre": "non-fiction",
+                "publication_group_id": null,
+                "original_publication_date": "1854",
+                "zts_id": null,
+                "language": "en"
+            },
+            ...
+        ]
+
+    Example Response (Error):
+        {
+            "msg": "Invalid collection_id, does not exist."
+        }
+
+    Status Codes:
+        200 - OK: The request was successful, and the publications are returned.
+        400 - Bad Request: The project name or collection_id is invalid.
+        500 - Internal Server Error: Failed to retrieve publications due to a server error.
     """
+    # Verify that project name is valid and get project_id
     project_id = get_project_id_from_name(project)
-    connection = db_engine.connect()
-    collections = get_table("publication_collection")
-    publications = get_table("publication")
-    statement = select(collections).where(collections.c.id == int_or_none(collection_id)).order_by(str(order_by))
-    rows = connection.execute(statement).fetchall()
-    if len(rows) != 1:
-        return jsonify(
-            {
-                "msg": "Could not find collection in database."
-            }
-        ), 404
-    elif rows[0].project_id != int_or_none(project_id):
-        return jsonify(
-            {
-                "msg": "Found collection not part of project {!r} with ID {}.".format(project, project_id)
-            }
-        ), 400
-    statement = select(publications).where(publications.c.publication_collection_id == int_or_none(collection_id)).order_by(str(order_by))
-    rows = connection.execute(statement).fetchall()
-    result = []
-    for row in rows:
-        if row is not None:
-            result.append(row._asdict())
-    connection.close()
-    return jsonify(result)
+    if not project_id:
+        return jsonify({"msg": "Invalid project name."}), 400
+
+    # Convert collection_id to integer and verify
+    collection_id = int_or_none(collection_id)
+    if not collection_id or collection_id < 1:
+        return jsonify({"msg": "Invalid collection_id, must be an integer."}), 400
+
+    # Verify that order_by is an allowed column name
+    allowed_order_columns = ["id", "name", "original_filename", "genre", "language"]
+    if order_by not in allowed_order_columns:
+        return jsonify({"msg": "Invalid order_by field."}), 400
+
+    collection_table = get_table("publication_collection")
+    publication_table = get_table("publication")
+
+    try:
+        with db_engine.connect() as connection:
+            # Check for publication_collection existence
+            select_coll_stmt = (
+                select(collection_table.c.project_id)
+                .where(collection_table.c.id == collection_id)
+            )
+            result = connection.execute(select_coll_stmt).first()
+
+            if not result:
+                return jsonify({"msg": "Invalid collection_id, does not exist."}), 400
+
+            # Check that the publication collection belongs to the provided project
+            if project_id != result[0]:
+                return jsonify({"msg": f"The publication collection with id '{collection_id}' does not belong to project '{project}'."}), 400
+
+            # Proceed to selecting the publications
+            select_pub_stmt = (
+                select(publication_table)
+                .where(publication_table.c.publication_collection_id == collection_id)
+                .order_by(str(order_by))
+            )
+            rows = connection.execute(select_pub_stmt).fetchall()
+            result = [row._asdict() for row in rows]
+            return jsonify(result)
+
+    except Exception as e:
+        return jsonify({"msg": "Failed to retrieve publications.",
+                        "reason": str(e)}), 500
 
 
 @collection_tools.route("/<project>/publication_collection/<collection_id>/publications/new/", methods=["POST"])
