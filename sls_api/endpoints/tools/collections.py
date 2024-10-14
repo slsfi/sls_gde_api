@@ -2,8 +2,8 @@ from flask import Blueprint, jsonify, request
 from sqlalchemy import select, text
 from datetime import datetime
 
-from sls_api.endpoints.generics import db_engine, get_project_id_from_name, get_table, int_or_none, \
-     project_permission_required
+from sls_api.endpoints.generics import db_engine, get_project_id_from_name, get_table, \
+    int_or_none, project_permission_required, validate_int
 
 
 collection_tools = Blueprint("collection_tools", __name__)
@@ -473,11 +473,13 @@ def new_publication_collection(project):
     - project (str): The name of the project.
 
     POST data parameters in JSON format:
-    - published (int, required): The publication status of the collection. Must be an integer with values 0, 1 or 2. Recommended initial value is 1.
+    - published (int, required): The publication status of the collection. Must be an
+      integer with values 0, 1 or 2. Recommended initial value is 1.
     - name (str): The name/title of the publication collection.
 
     Returns:
-        JSON: A success message with the id of the inserted publication collection, or an error message.
+        JSON: A success message with the id of the inserted publication collection,
+        or an error message.
 
     Example Request:
         POST /projectname/publication_collection/new/
@@ -500,7 +502,8 @@ def new_publication_collection(project):
 
     Status Codes:
         201 - Created: The publication collection was inserted successfully.
-        400 - Bad Request: Invalid project name, invalid field values, or no valid fields provided for insertion.
+        400 - Bad Request: Invalid project name, invalid field values, or no valid
+              fields provided for insertion.
         500 - Internal Server Error: Database query or execution failed.
     """
     # Verify that project is valid
@@ -517,10 +520,8 @@ def new_publication_collection(project):
     if "published" not in request_data:
         return jsonify({"msg": "'published' field is required."}), 400
 
-    # Start building the INSERT query
-    query = "INSERT INTO publication_collection ("
+    # Start building values dictionary for the insert
     values = {}
-    field_names = []
 
     # List of fields to check in request_data
     fields = ["name", "published"]
@@ -530,35 +531,33 @@ def new_publication_collection(project):
         if field in request_data:
             # Validate integer field values and ensure all other fields are strings
             if field == "published":
-                if not isinstance(request_data[field], int) or request_data[field] < 0 or request_data[field] > 2:
-                    return jsonify({"msg": f"Field '{field}' must be an integer with value 0, 1 or 2."}), 400
+                if not validate_int(request_data["published"], 0, 2):
+                    return jsonify({"msg": "Field 'published' must be an integer with value 0, 1 or 2."}), 400
             else:
                 # Convert remaining fields to string
                 request_data[field] = str(request_data[field])
 
             # Add the field to the field_names list for the query construction
-            field_names.append(field)
             values[field] = request_data[field]
 
-    if not field_names:
+    if not values:
         return jsonify({"msg": "No valid fields provided for insertion."}), 400
 
-    # Add project_id to values to be inserted
-    field_names.append("project_id")
+    # Add project_id to insert values
     values["project_id"] = project_id
 
-    # Complete the query construction
-    query += ", ".join(field_names) + ") VALUES (:" + ", :".join(field_names) + ")"
+    pc_table = get_table("publication_collection")
 
     try:
         with db_engine.connect() as connection:
             with connection.begin():
                 # Execute the insert statement
-                statement = text(query).bindparams(**values)
+                statement = pc_table.insert().values(**values).returning(pc_table.c.id)
                 result = connection.execute(statement)
+                pc_id = result.fetchone()[0]
 
                 return jsonify({"msg": "Publication collection inserted successfully.",
-                                "id": result.inserted_primary_key[0]}), 201
+                                "id": pc_id}), 201
 
     except Exception as e:
         return jsonify({"msg": "Failed to insert new publication collection.",
