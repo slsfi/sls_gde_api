@@ -13,23 +13,80 @@ publication_tools = Blueprint("publication_tools", __name__)
 @jwt_required()
 def get_publications(project):
     """
-    List all available publications in the given project
+    List all publications for a given project.
+
+    URL Path Parameters:
+    - project (str, required): The name of the project for which to retrieve
+      publications.
+
+    Returns:
+        JSON: A list of publication objects within the specified project,
+        an empty list if there are no publications, or an error message.
+
+    Example Request:
+        GET /projectname/publications/
+
+    Example Response (Success):
+        [
+            {
+                "id": 1,
+                "publication_collection_id": 123,
+                "publication_comment_id": 5487,
+                "date_created": "2023-05-12T12:34:56",
+                "date_modified": "2023-06-01T08:22:11",
+                "date_published_externally": null,
+                "deleted": 0,
+                "published": 1,
+                "legacy_id": null,
+                "published_by": null,
+                "original_filename": "/path/to/file.xml",
+                "name": "Publication Title",
+                "genre": "non-fiction",
+                "publication_group_id": null,
+                "original_publication_date": "1854",
+                "zts_id": null,
+                "language": "en"
+            },
+            ...
+        ]
+
+    Example Response (Error):
+        {
+            "msg": "Invalid project name."
+        }
+
+    Status Codes:
+        200 - OK: The request was successful, and the publications are
+              returned.
+        400 - Bad Request: The project name is invalid.
+        500 - Internal Server Error: Failed to retrieve publications due
+              to a server error.
     """
+    # Verify that project name is valid and get project_id
     project_id = get_project_id_from_name(project)
-    connection = db_engine.connect()
-    publication_collections = get_table("publication_collection")
-    publications = get_table("publication")
-    statement = select(publication_collections.c.id).where(publication_collections.c.project_id == project_id)
-    collection_ids = connection.execute(statement).fetchall()
-    collection_ids = [int(row["id"]) for row in collection_ids]
-    statement = select(publications).where(publications.c.id.in_(collection_ids))
-    rows = connection.execute(statement).fetchall()
-    result = []
-    for row in rows:
-        if row is not None:
-            result.append(row._asdict())
-    connection.close()
-    return jsonify(result)
+    if not project_id:
+        return jsonify({"msg": "Invalid project name."}), 400
+    
+    collection_table = get_table("publication_collection")
+    publication_table = get_table("publication")
+
+    try:
+        with db_engine.connect() as connection:
+            # Left join collection table on publication table and
+            # select only the columns from the publication table
+            statement = (
+                select(*publication_table.c)
+                .join(collection_table, publication_table.c.publication_collection_id == collection_table.c.id)
+                .where(collection_table.c.project_id == project_id)
+                .order_by(publication_table.c.publication_collection_id)
+            )
+            rows = connection.execute(statement).fetchall()
+            result = [row._asdict() for row in rows]
+            return jsonify(result)
+
+    except Exception as e:
+        return jsonify({"msg": "Failed to retrieve project publications.",
+                        "reason": str(e)}), 500
 
 
 @publication_tools.route("/<project>/publication/<publication_id>/")
