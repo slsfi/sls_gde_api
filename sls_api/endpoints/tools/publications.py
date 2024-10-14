@@ -66,7 +66,7 @@ def get_publications(project):
     project_id = get_project_id_from_name(project)
     if not project_id:
         return jsonify({"msg": "Invalid project name."}), 400
-    
+
     collection_table = get_table("publication_collection")
     publication_table = get_table("publication")
 
