@@ -176,42 +176,6 @@ def get_publication(project, publication_id):
                         "reason": str(e)}), 500
 
 
-@publication_tools.route("/<project>/publication/manuscript/<publication_id>/")
-@project_permission_required
-def get_publication_manuscript(project, publication_id):
-    """
-    Get a publication object from the database
-    """
-    connection = db_engine.connect()
-    publication_ms = get_table("publication_manuscript")
-    statement = select(publication_ms).where(publication_ms.c.publication_id == int_or_none(publication_id))
-    rows = connection.execute(statement).fetchall()
-    result = []
-    for row in rows:
-        if row is not None:
-            result.append(row._asdict())
-    connection.close()
-    return jsonify(result)
-
-
-@publication_tools.route("/<project>/publication/version/<publication_id>/")
-@project_permission_required
-def get_publication_version(project, publication_id):
-    """
-    Get a publication object from the database
-    """
-    connection = db_engine.connect()
-    publication_v = get_table("publication_version")
-    statement = select(publication_v).where(publication_v.c.publication_id == int_or_none(publication_id))
-    rows = connection.execute(statement).fetchall()
-    result = []
-    for row in rows:
-        if row is not None:
-            result.append(row._asdict())
-    connection.close()
-    return jsonify(result)
-
-
 @publication_tools.route("/<project>/publication/<publication_id>/versions/")
 @jwt_required()
 def get_publication_versions(project, publication_id):
