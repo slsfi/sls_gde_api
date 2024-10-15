@@ -1,6 +1,6 @@
 from flask import Blueprint, jsonify, request
 from flask_jwt_extended import jwt_required
-from sqlalchemy import join, select, text
+from sqlalchemy import select, text
 
 from sls_api.endpoints.generics import db_engine, get_project_id_from_name, get_table, int_or_none, \
      project_permission_required
@@ -280,8 +280,8 @@ def get_publication_manuscripts(project, publication_id):
 
     Returns:
 
-        JSON: A list of publication manuscripts objects for the specified
-        publication, or an error message.
+        JSON: A list of manuscript objects for the specified publication,
+        or an error message.
 
     Example Request:
 
@@ -376,7 +376,7 @@ def get_publication_tags(project, publication_id):
     Example Request:
 
         GET /projectname/publication/456/tags/
-    
+
     Status Codes:
         200 - OK: The request was successful, and the publication tags are returned.
         400 - Bad Request: The project name or publication_id is invalid.
@@ -429,27 +429,69 @@ def get_publication_tags(project, publication_id):
 @jwt_required()
 def get_publication_facsimiles(project, publication_id):
     """
-    List all fascimilies for the given publication
+    List all fascimiles for the specified publication in the given project.
+
+    URL Path Parameters:
+
+    - project (str, required): The name of the project for which to retrieve
+      fascimiles.
+    - publication_id (int, required): The id of the publication to retrieve
+      fascimiles for. Must be a positive integer.
+
+    Returns:
+
+        JSON: A list of fascimile objects for the specified publication,
+        or an error message.
+
+    Example Request:
+
+        GET /projectname/publication/456/fascimiles/
+
+    Status Codes:
+
+    - 200 - OK: The request was successful, and the publication facsimiles
+            are returned.
+    - 400 - Bad Request: The project name or publication_id is invalid.
+    - 500 - Internal Server Error: Database query or execution failed.
     """
-    connection = db_engine.connect()
-    publication_facsimiles = get_table("publication_facsimile")
-    facsimile_collections = get_table("publication_facsimile_collection")
+    # Verify that project name is valid and get project_id
+    project_id = get_project_id_from_name(project)
+    if not project_id:
+        return jsonify({"msg": "Invalid project name."}), 400
 
-    # join in facsimile_collections to we can get the collection title as well
-    tables = join(publication_facsimiles, facsimile_collections, publication_facsimiles.c.publication_facsimile_collection_id == facsimile_collections.c.id)
+    # Convert publication_id to integer and verify
+    publication_id = int_or_none(publication_id)
+    if not publication_id or publication_id < 1:
+        return jsonify({"msg": "Invalid publication_id, must be a positive integer."}), 400
 
-    statement = select(publication_facsimiles, facsimile_collections.c.title)\
-        .where(publication_facsimiles.c.publication_id == int_or_none(publication_id))\
-        .where(publication_facsimiles.c.deleted != 1)\
-        .select_from(tables)
+    facs_table = get_table("publication_facsimile")
+    facs_collection_table = get_table("publication_facsimile_collection")
 
-    rows = connection.execute(statement).fetchall()
-    result = []
-    for row in rows:
-        if row is not None:
-            result.append(row._asdict())
-    connection.close()
-    return jsonify(result)
+    try:
+        with db_engine.connect() as connection:
+            stmt = (
+                select(
+                    facs_table,
+                    facs_collection_table.c.title,
+                    facs_collection_table.c.description,
+                    facs_collection_table.c.external_url
+                )
+                .join(
+                    facs_collection_table,
+                    facs_table.c.publication_facsimile_collection_id == facs_collection_table.c.id
+                )
+                .where(facs_table.c.publication_id == publication_id)
+                .where(facs_table.c.deleted < 1)
+                .where(facs_collection_table.c.deleted < 1)
+                .order_by(facs_table.c.priority)
+            )
+            rows = connection.execute(stmt).fetchall()
+            result = [row._asdict() for row in rows]
+            return jsonify(result)
+
+    except Exception as e:
+        return jsonify({"msg": "Failed to retrieve publication facsimiles.",
+                        "reason": str(e)}), 500
 
 
 @publication_tools.route("/<project>/publication/<publication_id>/comments/")
