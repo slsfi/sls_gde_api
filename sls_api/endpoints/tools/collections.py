@@ -660,29 +660,30 @@ def list_publications(project, collection_id, order_by="id"):
 
     try:
         with db_engine.connect() as connection:
-            # Check for publication_collection existence
-            select_coll_stmt = (
-                select(collection_table.c.project_id)
-                .where(collection_table.c.id == collection_id)
-            )
-            result = connection.execute(select_coll_stmt).first()
+            with connection.begin():
+                # Check for publication_collection existence
+                select_coll_stmt = (
+                    select(collection_table.c.project_id)
+                    .where(collection_table.c.id == collection_id)
+                )
+                result = connection.execute(select_coll_stmt).first()
 
-            if not result:
-                return jsonify({"msg": "Invalid collection_id, does not exist."}), 400
+                if not result:
+                    return jsonify({"msg": "Invalid collection_id, does not exist."}), 400
 
-            # Check that the publication collection belongs to the provided project
-            if project_id != result[0]:
-                return jsonify({"msg": f"The publication collection with id '{collection_id}' does not belong to project '{project}'."}), 400
+                # Check that the publication collection belongs to the provided project
+                if project_id != result[0]:
+                    return jsonify({"msg": f"The publication collection with id '{collection_id}' does not belong to project '{project}'."}), 400
 
-            # Proceed to selecting the publications
-            select_pub_stmt = (
-                select(publication_table)
-                .where(publication_table.c.publication_collection_id == collection_id)
-                .order_by(str(order_by))
-            )
-            rows = connection.execute(select_pub_stmt).fetchall()
-            result = [row._asdict() for row in rows]
-            return jsonify(result)
+                # Proceed to selecting the publications
+                select_pub_stmt = (
+                    select(publication_table)
+                    .where(publication_table.c.publication_collection_id == collection_id)
+                    .order_by(str(order_by))
+                )
+                rows = connection.execute(select_pub_stmt).fetchall()
+                result = [row._asdict() for row in rows]
+                return jsonify(result)
 
     except Exception as e:
         return jsonify({"msg": "Failed to retrieve publications.",
