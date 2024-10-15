@@ -1,6 +1,6 @@
 from flask import Blueprint, jsonify, request
 from flask_jwt_extended import jwt_required
-from sqlalchemy import join, select, sql
+from sqlalchemy import join, select, text
 
 from sls_api.endpoints.generics import db_engine, get_project_id_from_name, get_table, int_or_none, \
      project_permission_required
@@ -59,8 +59,7 @@ def get_publications(project):
         200 - OK: The request was successful, and the publications are
               returned.
         400 - Bad Request: The project name is invalid.
-        500 - Internal Server Error: Failed to retrieve publications due
-              to a server error.
+        500 - Internal Server Error: Database query or execution failed.
     """
     # Verify that project name is valid and get project_id
     project_id = get_project_id_from_name(project)
@@ -232,8 +231,7 @@ def get_publication_versions(project, publication_id):
     - 200 - OK: The request was successful, and the publication versions
             are returned.
     - 400 - Bad Request: The project name or publication_id is invalid.
-    - 500 - Internal Server Error: Failed to retrieve publication versions
-            due to a server error.
+    - 500 - Internal Server Error: Database query or execution failed.
     """
     # Verify that project name is valid and get project_id
     project_id = get_project_id_from_name(project)
@@ -323,8 +321,7 @@ def get_publication_manuscripts(project, publication_id):
     - 200 - OK: The request was successful, and the publication manuscripts
             are returned.
     - 400 - Bad Request: The project name or publication_id is invalid.
-    - 500 - Internal Server Error: Failed to retrieve publication manuscripts
-            due to a server error.
+    - 500 - Internal Server Error: Database query or execution failed.
     """
     # Verify that project name is valid and get project_id
     project_id = get_project_id_from_name(project)
@@ -362,25 +359,70 @@ def get_publication_manuscripts(project, publication_id):
 @jwt_required()
 def get_publication_tags(project, publication_id):
     """
-    List all tags for the given publication
-    """
-    connection = db_engine.connect()
-    sql_text = """ select t.*, e_o.* from event_occurrence e_o
-    join event_connection e_c on e_o.event_id = e_c.event_id
-    join tag t on t.id = e_c.tag_id
-    where e_o.publication_id = :pub_id
-    and e_c.tag_id is not null
-    and e_c.deleted != 1 and e_o.deleted != 1
-    and t.deleted != 1 """
+    List all tags for the specified publication.
 
-    statement = sql.text(sql_text).bindparams(pub_id=publication_id)
-    rows = connection.execute(statement).fetchall()
-    result = []
-    for row in rows:
-        if row is not None:
-            result.append(row._asdict())
-    connection.close()
-    return jsonify(result)
+    URL Path Parameters:
+
+    - project (str, required): The name of the project for which to retrieve
+      publication tags.
+    - publication_id (int, required): The id of the publication to retrieve
+      tags for. Must be a positive integer.
+
+    Returns:
+
+        JSON: A list of tag objects for the specified publication, or an
+        error message.
+
+    Example Request:
+
+        GET /projectname/publication/456/tags/
+    
+    Status Codes:
+        200 - OK: The request was successful, and the publication tags are returned.
+        400 - Bad Request: The project name or publication_id is invalid.
+        500 - Internal Server Error: Database query or execution failed.
+    """
+    # Verify that project name is valid and get project_id
+    project_id = get_project_id_from_name(project)
+    if not project_id:
+        return jsonify({"msg": "Invalid project name."}), 400
+
+    # Convert publication_id to integer and verify
+    publication_id = int_or_none(publication_id)
+    if not publication_id or publication_id < 1:
+        return jsonify({"msg": "Invalid publication_id, must be a positive integer."}), 400
+
+    statement = """
+        SELECT
+            t.*, e_o.*
+        FROM
+            event_occurrence e_o
+        JOIN
+            event_connection e_c
+            ON e_o.event_id = e_c.event_id
+        JOIN
+            tag t
+            ON t.id = e_c.tag_id
+        WHERE
+            e_o.publication_id = :pub_id
+            AND e_c.tag_id IS NOT NULL
+            AND e_c.deleted < 1
+            AND e_o.deleted < 1
+            AND t.deleted < 1
+    """
+
+    try:
+        with db_engine.connect() as connection:
+            rows = connection.execute(
+                text(statement),
+                {"pub_id": publication_id}
+            ).fetchall()
+            result = [row._asdict() for row in rows]
+            return jsonify(result)
+
+    except Exception as e:
+        return jsonify({"msg": "Failed to retrieve publication tags.",
+                        "reason": str(e)}), 500
 
 
 @publication_tools.route("/<project>/publication/<publication_id>/facsimiles/")
