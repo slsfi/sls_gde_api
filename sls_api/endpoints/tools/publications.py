@@ -180,43 +180,189 @@ def get_publication(project, publication_id):
 @jwt_required()
 def get_publication_versions(project, publication_id):
     """
-    List all versions of the given publication
+    List all versions (i.e. variants) of the specified publication in a
+    given project.
+
+    URL Path Parameters:
+
+    - project (str, required): The name of the project for which to retrieve
+      publication versions.
+    - publication_id (int, required): The id of the publication to retrieve
+      versions for. Must be a positive integer.
+
+    Returns:
+
+        JSON: A list of publication version objects for the specified
+        publication, or an error message.
+
+    Example Request:
+
+        GET /projectname/publication/456/versions/
+
+    Example Response (Success):
+
+        [
+            {
+                "id": 1,
+                "publication_id": 456,
+                "date_created": "2023-07-12T09:23:45",
+                "date_modified": "2023-07-13T10:00:00",
+                "date_published_externally": null,
+                "deleted": 0,
+                "published": 1,
+                "legacy_id": null,
+                "published_by": null,
+                "original_filename": "path/to/file.xml",
+                "name": "Publication Title version 2",
+                "type": 1,
+                "section_id": 5,
+                "sort_order": 1
+            },
+            ...
+        ]
+
+    Example Response (Error):
+
+        {
+            "msg": "Invalid publication_id, must be a positive integer."
+        }
+
+    Status Codes:
+
+    - 200 - OK: The request was successful, and the publication versions
+            are returned.
+    - 400 - Bad Request: The project name or publication_id is invalid.
+    - 500 - Internal Server Error: Failed to retrieve publication versions
+            due to a server error.
     """
-    connection = db_engine.connect()
-    publication_versions = get_table("publication_version")
-    statement = select(publication_versions).where(publication_versions.c.publication_id == int_or_none(publication_id))
-    rows = connection.execute(statement).fetchall()
-    result = []
-    for row in rows:
-        if row is not None:
-            result.append(row._asdict())
-    connection.close()
-    return jsonify(result)
+    # Verify that project name is valid and get project_id
+    project_id = get_project_id_from_name(project)
+    if not project_id:
+        return jsonify({"msg": "Invalid project name."}), 400
+
+    # Convert publication_id to integer and verify
+    publication_id = int_or_none(publication_id)
+    if not publication_id or publication_id < 1:
+        return jsonify({"msg": "Invalid publication_id, must be a positive integer."}), 400
+
+    publication_version = get_table("publication_version")
+
+    try:
+        with db_engine.connect() as connection:
+            # We are simply retrieving matching rows based on
+            # publication_id, not verifying that the publication
+            # actually belongs to the project.
+            stmt = (
+                select(publication_version)
+                .where(publication_version.c.publication_id == publication_id)
+                .where(publication_version.c.deleted < 1)
+                .order_by(publication_version.c.sort_order)
+            )
+            rows = connection.execute(stmt).fetchall()
+            result = [row._asdict() for row in rows]
+            return jsonify(result)
+
+    except Exception as e:
+        return jsonify({"msg": "Failed to retrieve publication versions.",
+                        "reason": str(e)}), 500
 
 
 @publication_tools.route("/<project>/publication/<publication_id>/manuscripts/")
 @jwt_required()
 def get_publication_manuscripts(project, publication_id):
     """
-    List all manuscripts for the given publication
+    List all manuscripts of the specified publication in a given project.
+
+    URL Path Parameters:
+
+    - project (str, required): The name of the project for which to retrieve
+      publication manuscripts.
+    - publication_id (int, required): The id of the publication to retrieve
+      manuscripts for. Must be a positive integer.
+
+    Returns:
+
+        JSON: A list of publication manuscripts objects for the specified
+        publication, or an error message.
+
+    Example Request:
+
+        GET /projectname/publication/456/manuscripts/
+
+    Example Response (Success):
+
+        [
+            {
+                "id": 1,
+                "publication_id": 456,
+                "date_created": "2023-07-12T09:23:45",
+                "date_modified": "2023-07-13T10:00:00",
+                "date_published_externally": null,
+                "deleted": 0,
+                "published": 1,
+                "legacy_id": null,
+                "published_by": null,
+                "original_filename": "path/to/file.xml",
+                "name": "Publication Title manuscript 1",
+                "type": 1,
+                "section_id": 5,
+                "sort_order": 1,
+                "language": "en"
+            },
+            ...
+        ]
+
+    Example Response (Error):
+
+        {
+            "msg": "Invalid publication_id, must be a positive integer."
+        }
+
+    Status Codes:
+
+    - 200 - OK: The request was successful, and the publication manuscripts
+            are returned.
+    - 400 - Bad Request: The project name or publication_id is invalid.
+    - 500 - Internal Server Error: Failed to retrieve publication manuscripts
+            due to a server error.
     """
-    connection = db_engine.connect()
-    publication_manuscripts = get_table("publication_manuscript")
-    statement = select(publication_manuscripts).where(publication_manuscripts.c.publication_id == int_or_none(publication_id))
-    rows = connection.execute(statement).fetchall()
-    result = []
-    for row in rows:
-        if row is not None:
-            result.append(row._asdict())
-    connection.close()
-    return jsonify(result)
+    # Verify that project name is valid and get project_id
+    project_id = get_project_id_from_name(project)
+    if not project_id:
+        return jsonify({"msg": "Invalid project name."}), 400
+
+    # Convert publication_id to integer and verify
+    publication_id = int_or_none(publication_id)
+    if not publication_id or publication_id < 1:
+        return jsonify({"msg": "Invalid publication_id, must be a positive integer."}), 400
+
+    publication_manuscript = get_table("publication_manuscript")
+
+    try:
+        with db_engine.connect() as connection:
+            # We are simply retrieving matching rows based on
+            # publication_id, not verifying that the publication
+            # actually belongs to the project.
+            stmt = (
+                select(publication_manuscript)
+                .where(publication_manuscript.c.publication_id == publication_id)
+                .where(publication_manuscript.c.deleted < 1)
+                .order_by(publication_manuscript.c.sort_order)
+            )
+            rows = connection.execute(stmt).fetchall()
+            result = [row._asdict() for row in rows]
+            return jsonify(result)
+
+    except Exception as e:
+        return jsonify({"msg": "Failed to retrieve publication manuscripts.",
+                        "reason": str(e)}), 500
 
 
 @publication_tools.route("/<project>/publication/<publication_id>/tags/")
 @jwt_required()
 def get_publication_tags(project, publication_id):
     """
-    List all manuscripts for the given publication
+    List all tags for the given publication
     """
     connection = db_engine.connect()
     sql_text = """ select t.*, e_o.* from event_occurrence e_o
