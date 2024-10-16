@@ -535,7 +535,7 @@ def edit_title(project, collection_id):
 @project_permission_required
 def edit_publication(project, publication_id):
     """
-    Edit a publication in the specified project by updating its fields.
+    Edit a publication in the specified project by updating it's fields.
 
     URL Path Parameters:
 
@@ -555,11 +555,11 @@ def edit_publication(project, publication_id):
     - original_publication_date (str): The original publication date or
       year (formatted as a string).
     - published (int): The publication status. Must be an integer with
-      values 0, 1 or 2.
+      value 0, 1 or 2.
     - language (str): The language code of the main language of the
       publication (ISO 639-1).
     - genre (str): The genre of the publication.
-    - deleted (int): Soft delete flag. Must be an integer with values 0 or 1.
+    - deleted (int): Soft delete flag. Must be an integer with value 0 or 1.
 
     Additionally, all POST data parameter values can be set to null, except 'deleted'.
 
@@ -713,61 +713,167 @@ def edit_publication(project, publication_id):
 @project_permission_required
 def edit_comment(project, publication_id):
     """
-    Takes "filename" and/or "published" as JSON data
-    If there is no publication_comment in the database, creates one
-    Returns "msg" and "comment_id" on success, otherwise 40x
+    Edit a comment of the specified publication in the given project by updating its fields.
+
+    URL Path Parameters:
+
+    - project (str): The name of the project.
+    - publication_id (str): The ID of the publication whose comment is
+      to be updated. Must be a valid integer.
+
+    POST Data Parameters in JSON Format (at least one required):
+
+    - deleted (int): Soft delete flag. Must be an integer with value 0 or 1.
+    - published (int): The publication status of the comment. Must be an
+      integer with value 0, 1, or 2.
+    - original_filename (str): Path to the comment’s XML-file in the
+      project GitHub repository.
+
+    Returns:
+
+        JSON: A success message and the updated comment data if the
+        comment was updated, or an error message.
+
+    Example Request:
+
+        POST /projectname/publication/123/comment/edit/
+        Body:
+        {
+            "published": 1,
+            "deleted": 0,
+            "original_filename": "path/to/updated_comment_file.xml"
+        }
+
+    Example Response (Success):
+
+        {
+            "msg": "Updated comment of publication with ID 123 successfully.",
+            "row": {
+                "id": 456,
+                "date_created": "2023-07-12T09:23:45",
+                "date_modified": "2023-08-14T14:29:02",
+                "date_published_externally": null,
+                "deleted": 0,
+                "published": 1,
+                "legacy_id": null,
+                "published_by": null,
+                "original_filename": "path/to/updated_comment_file.xml"
+            }
+        }
+
+    Example Response (Error):
+
+        {
+            "msg": "Field 'published' must be an integer with value 0, 1 or 2."
+        }
+
+    Status Codes:
+
+    - 200 - OK: The comment was updated successfully.
+    - 400 - Bad Request: Invalid publication_id, invalid field values,
+            no data provided, or no valid fields provided to update.
+    - 404 - Not Found: Publication not found in project, or comment
+            linked to publication not found.
+    - 500 - Internal Server Error: Database query or execution failed.
     """
+    # Verify that project name is valid and get project_id
+    project_id = get_project_id_from_name(project)
+    if not project_id:
+        return jsonify({"msg": "Invalid project name."}), 400
+
+    # Verify that publication_id is an integer
+    publication_id = int_or_none(publication_id)
+    if not publication_id or publication_id < 1:
+        return jsonify({"msg": "Invalid publication_id."}), 400
+
+    # Verify that request data was provided
     request_data = request.get_json()
     if not request_data:
         return jsonify({"msg": "No data provided."}), 400
-    filename = request_data.get("filename", None)
-    published = request_data.get("published", None)
 
-    publications = get_table("publication")
-    comments = get_table("publication_comment")
-    connection = db_engine.connect()
-    with connection.begin():
-        query = select(publications.c.publication_comment_id).where(publications.c.id == int_or_none(publication_id))
-        result = connection.execute(query).fetchone()
-    if result is None:
-        connection.close()
-        return jsonify("No such publication exists."), 404
+    # List of fields to check in request_data
+    fields = ["deleted", "published", "original_filename"]
 
-    comment_id = result[0]
-
+    # Start building values dictionary for update statement
     values = {}
-    if filename is not None:
-        values["original_filename"] = filename
-    if published is not None:
-        values["published"] = published
 
+    # Loop over the fields list and check each one in request_data
+    for field in fields:
+        if field in request_data:
+            # Validate integer field values and ensure all other
+            # fields are strings
+            if field == "published":
+                if not validate_int(request_data[field], 0, 2):
+                    return jsonify({"msg": f"Field '{field}' must be an integer with value 0, 1 or 2."}), 400
+            elif field == "deleted":
+                if not validate_int(request_data[field], 0, 1):
+                    return jsonify({"msg": f"Field '{field}' must be an integer with value 0 or 1."}), 400
+            else:
+                # Convert remaining fields to string if not None
+                if request_data[field] is not None:
+                    request_data[field] = str(request_data[field])
+
+            # Add the field to the values list for the query construction
+            values[field] = request_data[field]
+    
+    if not values:
+        return jsonify({"msg": "No valid fields provided to update."}), 400
+    
+    # Add date_modified
     values["date_modified"] = datetime.now()
 
-    if len(values) > 0:
-        if comment_id is not None:
+    try:
+        with db_engine.connect() as connection:
             with connection.begin():
-                update = comments.update().where(comments.c.id == int(comment_id)).values(**values)
-                connection.execute(update)
-            connection.close()
-            return jsonify({
-                "msg": "Updated comment {} with values {}".format(comment_id, str(values)),
-                "comment_id": comment_id
-            })
-        else:
-            with connection.begin():
-                insert = comments.insert().values(**values)
-                r = connection.execute(insert)
-                comment_id = r.inserted_primary_key[0]
-                update = publications.update().where(publications.c.id == int(publication_id)).values({"publication_comment_id": int(comment_id)})
-                connection.execute(update)
-            connection.close()
-            return jsonify({
-                "msg": "Created comment {} for publication {} with values {}".format(comment_id, publication_id, str(values)),
-                "comment_id": comment_id
-            })
-    else:
-        connection.close()
-        return jsonify("No valid update values given."), 400
+                collection_table = get_table("publication_collection")
+                publication_table = get_table("publication")
+                comment_table = get_table("publication_comment")
+
+                # Get publicatiom_comment_id
+                stmt = (
+                    select(publication_table.c.publication_comment_id)
+                    .join(collection_table, publication_table.c.publication_collection_id == collection_table.c.id)
+                    .where(collection_table.c.project_id == project_id)
+                    .where(publication_table.c.id == publication_id)
+                )
+                result = connection.execute(stmt).first()
+
+                if result is None:
+                    return jsonify({"msg": "Publication not found in project. Either project name or publication_id is invalid."}), 404
+                
+                com_id = result["publication_comment_id"]
+
+                # Execute the update statement
+                upd_stmt = (
+                    comment_table.update()
+                    .where(comment_table.c.id == com_id)
+                    .values(**values)
+                    .returning(*comment_table.c)  # Return the updated row
+                )
+                result = connection.execute(upd_stmt)
+                updated_row = result.fetchone()  # Fetch the updated row
+
+                if updated_row is None:
+                    # No row was returned; handle accordingly
+                    return jsonify({
+                        "msg": "Update failed: could not find comment linked to publication."
+                    }), 404
+
+                # Convert the inserted row to a dict for JSON serialization
+                updated_row_dict = updated_row._asdict()
+
+                return jsonify({
+                    "msg": f"Updated comment of publication with ID {publication_id} successfully.",
+                    "row": updated_row_dict
+                })
+
+    except Exception as e:
+        # Handle errors and return error response
+        result = {
+            "msg": f"Failed to update comment for publication with ID {publication_id}.",
+            "reason": str(e)
+        }
+        return jsonify(result), 500
 
 
 @publishing_tools.route("/<project>/publication/<publication_id>/manuscripts/new/", methods=["POST"])
