@@ -602,9 +602,9 @@ def get_publication_comments(project, publication_id):
                         "reason": str(e)}), 500
 
 
-@publication_tools.route("/<project>/publication/<publication_id>/link_file/", methods=["POST"])
+@publication_tools.route("/<project>/publication/<publication_id>/link_text/", methods=["POST"])
 @project_permission_required
-def link_file_to_publication(project, publication_id):
+def link_text_to_publication(project, publication_id):
     """
     Create a new comment, manuscript or version for the specified publication
     in the given project.
@@ -617,12 +617,12 @@ def link_file_to_publication(project, publication_id):
 
     POST Data Parameters in JSON Format:
 
-    - file_type (str, required): The type of text to create.
+    - text_type (str, required): The type of text to create.
       Must be one of "comment", "manuscript" or "version".
     - original_filename (str, required): File path to the XML file of the
       text. Cannot be empty.
 
-    Optional POST data parameters (depending on file_type):
+    Optional POST data parameters (depending on text_type):
 
     For "manuscript" and "version":
 
@@ -656,7 +656,7 @@ def link_file_to_publication(project, publication_id):
         POST /projectname/publication/456/link_file/
         Body:
         {
-            "file_type": "manuscript",
+            "text_type": "manuscript",
             "original_filename": "path/to/ms_file1.xml",
             "name": "Publication Title manuscript 1",
             "language": "en",
@@ -689,7 +689,7 @@ def link_file_to_publication(project, publication_id):
     Example Response (Error):
 
         {
-            "msg": "POST data is invalid: required fields are missing or empty, or 'file_type' has an invalid value."
+            "msg": "POST data is invalid: required fields are missing or empty, or 'text_type' has an invalid value."
         }
 
     Status Codes:
@@ -717,7 +717,7 @@ def link_file_to_publication(project, publication_id):
         return jsonify({"msg": "No data provided."}), 400
 
     # List required and optional fields in POST data
-    required_fields = ["file_type", "original_filename"]
+    required_fields = ["text_type", "original_filename"]
     optional_fields = [
         "name",         # only manuscript and version
         "published",
@@ -729,17 +729,17 @@ def link_file_to_publication(project, publication_id):
         "language"      # only manuscript
     ]
 
-    file_type = request_data.get("file_type", None)
+    text_type = request_data.get("text_type", None)
 
     # Check that required fields are in the request data,
     # that their values are non-empty
-    # and that file_type is among valid values
-    valid_file_types = ["comment", "manuscript", "version"]
+    # and that text_type is among valid values
+    valid_text_types = ["comment", "manuscript", "version"]
     if (
         any(field not in request_data or not request_data[field] for field in required_fields)
-        or file_type not in valid_file_types
+        or text_type not in valid_text_types
     ):
-        return jsonify({"msg": "POST data is invalid: required fields are missing or empty, or 'file_type' has an invalid value."}), 400
+        return jsonify({"msg": "POST data is invalid: required fields are missing or empty, or 'text_type' has an invalid value."}), 400
 
     # Start building values dictionary for insert statement
     values = {}
@@ -749,12 +749,12 @@ def link_file_to_publication(project, publication_id):
         if field in request_data:
             # Skip inapplicable fields
             if (
-                field == "file_type"
+                field == "text_type"
                 or (
-                    file_type == "comment"
+                    text_type == "comment"
                     and field in ["name", "type", "section_id", "sort_order", "language"]
                 )
-                or (file_type == "version" and field == "language")
+                or (text_type == "version" and field == "language")
             ):
                 continue
 
@@ -779,11 +779,11 @@ def link_file_to_publication(project, publication_id):
 
     # For manuscript and version set publication_id and default values
     # for sort_order and type (version only)
-    if file_type != "comment":
+    if text_type != "comment":
         values["publication_id"] = publication_id
         if "sort_order" not in values:
             values["sort_order"] = 1
-        if file_type == "version" and "type" not in values:
+        if text_type == "version" and "type" not in values:
             values["type"] = 1
 
     try:
@@ -804,7 +804,7 @@ def link_file_to_publication(project, publication_id):
                 if result is None:
                     return jsonify({"msg": "Publication not found. Either project name or publication_id is invalid."}), 404
 
-                table = get_table(f"publication_{file_type}")
+                table = get_table(f"publication_{text_type}")
                 ins_stmt = (
                     table.insert()
                     .values(**values)
@@ -820,7 +820,7 @@ def link_file_to_publication(project, publication_id):
                         "reason": "The insert statement did not return any data."
                     }), 500
 
-                if file_type == "comment":
+                if text_type == "comment":
                     # Update the publication with the comment id
                     upd_stmt = (
                         publication_table.update()
@@ -833,12 +833,12 @@ def link_file_to_publication(project, publication_id):
                 inserted_row_dict = inserted_row._asdict()
 
                 return jsonify({
-                    "msg": f"Publication {file_type} with ID {inserted_row['id']} created successfully.",
+                    "msg": f"Publication {text_type} with ID {inserted_row['id']} created successfully.",
                     "row": inserted_row_dict
                 }), 201
 
     except Exception as e:
         return jsonify({
-            "msg": f"Failed to create new publication {file_type}.",
+            "msg": f"Failed to create new publication {text_type}.",
             "reason": str(e)
         }), 500
