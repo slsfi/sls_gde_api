@@ -557,7 +557,7 @@ def get_publication_comments(project, publication_id):
     publication_id = int_or_none(publication_id)
     if not publication_id or publication_id < 1:
         return jsonify({"msg": "Invalid publication_id, must be a positive integer."}), 400
-    
+
     publication_table = get_table("publication")
     comment_table = get_table("publication_comment")
 
@@ -570,7 +570,7 @@ def get_publication_comments(project, publication_id):
             # Left join publication table on publication_comment
             # table and filter on publication_id and non-deleted
             # comments. Publications can have only one comment,
-            # so this should return only one row.
+            # so this should return only one row (or none).
             stmt = (
                 select(*comment_table.c)
                 .join(publication_table, comment_table.c.id == publication_table.c.publication_comment_id)
