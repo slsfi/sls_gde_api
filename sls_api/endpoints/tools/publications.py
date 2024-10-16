@@ -2,8 +2,8 @@ from flask import Blueprint, jsonify, request
 from flask_jwt_extended import jwt_required
 from sqlalchemy import select, text
 
-from sls_api.endpoints.generics import db_engine, get_project_id_from_name, get_table, int_or_none, \
-     project_permission_required
+from sls_api.endpoints.generics import db_engine, get_project_id_from_name, \
+    get_table, int_or_none, validate_int, project_permission_required
 
 
 publication_tools = Blueprint("publication_tools", __name__)
@@ -590,107 +590,239 @@ def get_publication_comments(project, publication_id):
 @project_permission_required
 def link_file_to_publication(project, publication_id):
     """
-    Link an XML file to a publication,
-    creating the appropriate publication_comment, publication_manuscript, or publication_version object.
+    Create a new comment, manuscript or version for the specified publication
+    in the given project.
 
-    POST data MUST be in JSON format
+    URL path parameters:
 
-    POST data MUST contain the following:
-    file_type: one of [comment, manuscript, version] indicating which type of file the given file_path points to
-    file_path: path to the file to be linked
+    - project (str): The name of the project.
+    - publication_id (int): The ID of the publication to which the comment,
+      manuscript or version will be linked.
 
-    POST data SHOULD also contain the following:
-    datePublishedExternally: date of external publication
-    published: 0 or 1, is this file published and ready for viewing
-    publishedBy: person responsible for publishing
+    POST data parameters in JSON format:
 
-    POST data MAY also contain:
-    legacyId: legacy ID for this publication file object
-    type: Type of file link, for Manuscripts and Versions
-    sectionId: Publication section or chapter number, for Manuscripts and Versions
+    - file_type (str, required): The type of text to create.
+      Must be one of "comment", "manuscript" or "version".
+    - original_filename (str, required): File path to the XML file of the
+      text. Cannot be empty.
+
+    Optional POST data parameters (depending on file_type):
+
+    For "manuscript" and "version":
+
+    - name (str, optional): The name or title of the text.
+    - type (int, optional): A non-negative integer representing the type of
+      the file. Defaults to 1 for "version".
+    - section_id (int, optional): A non-negative integer representing the
+      section ID.
+    - sort_order (int, optional): A non-negative integer indicating the
+      sort order. Defaults to 1.
+
+    For "manuscript" only:
+
+    - language (str, optional): The language code (ISO 639-1) of the main
+      language in the manuscript text.
+
+    For all file types:
+
+    - published (int, optional): The publication status. Must be an integer
+      with value 0, 1 or 2. Defaults to 1.
+    - published_by (str, optional): The name of the person who published
+      the text.
+    - legacy_id (str, optional): A legacy identifier for the text.
+
+    Returns:
+
+        JSON: A success message with the inserted row data or an error message.
+
+    Example Request:
+
+        POST /projectname/publication/456/link_file/
+        Body:
+        {
+            "file_type": "manuscript",
+            "original_filename": "path/to/ms_file1.xml",
+            "name": "Publication Title manuscript 1",
+            "language": "en",
+            "published": 1
+        }
+
+    Example Response (Success):
+
+        {
+            "msg": "Publication manuscript with ID 123 created successfully.",
+            "row": {
+                "id": 284,
+                "publication_id": 456,
+                "date_created": "2023-07-12T09:23:45",
+                "date_modified": null,
+                "date_published_externally": null,
+                "deleted": 0,
+                "published": 1,
+                "legacy_id": null,
+                "published_by": null,
+                "original_filename": "path/to/ms_file1.xml",
+                "name": "Publication Title manuscript 1",
+                "type": null,
+                "section_id": null,
+                "sort_order": null,
+                "language": "en"
+            }
+        }
+
+    Example Response (Error):
+
+        {
+            "msg": "POST data is invalid: required fields are missing or empty, or 'file_type' has an invalid value."
+        }
+
+    Status Codes:
+
+    - 201 - Created: The publication text type was created successfully.
+    - 400 - Bad Request: Invalid project name, publication ID, field values,
+            or no data provided.
+    - 404 - Not Found: Publication not found or does not belong to the
+            specified project.
+    - 500 - Internal Server Error: Database query or execution failed.
     """
+    # Verify that project name is valid and get project_id
+    project_id = get_project_id_from_name(project)
+    if not project_id:
+        return jsonify({"msg": "Invalid project name."}), 400
+
+    # Convert publication_id to integer and verify
+    publication_id = int_or_none(publication_id)
+    if not publication_id or publication_id < 1:
+        return jsonify({"msg": "Invalid publication_id, must be a positive integer."}), 400
+
+    # Verify that request data was provided
     request_data = request.get_json()
     if not request_data:
         return jsonify({"msg": "No data provided."}), 400
-    if "file_path" not in request_data or "file_type" not in request_data or request_data.get("file_type", None) not in ["comment", "manuscript", "version"]:
-        return jsonify({"msg": "POST data JSON doesn't contain required data."}), 400
 
-    file_type = request_data["file_type"]
+    # List required and optional fields in POST data
+    required_fields = ["file_type", "original_filename"]
+    optional_fields = [
+        "name",         # only manuscript and version
+        "published",
+        "published_by",
+        "legacy_id",
+        "type",         # only manuscript and version
+        "section_id",   # only manuscript and version
+        "sort_order",   # only manuscript and version
+        "language"      # only manuscript
+    ]
 
-    connection = db_engine.connect()
+    file_type = request_data.get("file_type", None)
 
-    if file_type == "comment":
-        comments = get_table("publication_comment")
-        publications = get_table("publication")
-        transaction = connection.begin()
-        new_comment = {
-            "original_file_name": request_data.get("file_path"),
-            "date_published_externally": request_data.get("datePublishedExternally", None),
-            "published": request_data.get("published", None),
-            "published_by": request_data.get("publishedBy", None),
-            "legacy_id": request_data.get("legacyId", None)
-        }
-        try:
-            ins = comments.insert().values(**new_comment)
-            result = connection.execute(ins)
-            new_row = select(comments).where(comments.c.id == result.inserted_primary_key[0])
-            new_row = connection.execute(new_row).fetchone()
-            if new_row is not None:
-                new_row = new_row._asdict()
+    # Check that required fields are in the request data,
+    # that their values are non-empty
+    # and that file_type is among valid values
+    valid_file_types = ["comment", "manuscript", "version"]
+    if (
+        any(field not in request_data or not request_data[field] for field in required_fields)
+        or file_type not in valid_file_types
+    ):
+        return jsonify({"msg": "POST data is invalid: required fields are missing or empty, or 'file_type' has an invalid value."}), 400
 
-            # update publication object in database with new publication_comment ID
-            update_stmt = publications.update().where(publications.c.id == int_or_none(publication_id)). \
-                values(publications.c.publication_comment_id == result.inserted_primary_key[0])
-            connection.execute(update_stmt)
+    # Start building values dictionary for insert statement
+    values = {}
 
-            transaction.commit()
-            result = {
-                "msg": "Created new publication_comment with ID {}".format(result.inserted_primary_key[0]),
-                "row": new_row
-            }
-            return jsonify(result), 201
-        except Exception as e:
-            transaction.rollback()
-            result = {
-                "msg": "Failed to create new publication_comment object",
+    # Loop over all fields and validate them
+    for field in required_fields + optional_fields:
+        if field in request_data:
+            # Skip inapplicable fields
+            if (
+                field == "file_type"
+                or (
+                    file_type == "comment"
+                    and field in ["name", "type", "section_id", "sort_order", "language"]
+                )
+                or (file_type == "version" and field == "language")
+            ):
+                continue
+
+            # Validate integer field values and ensure all other fields are
+            # strings
+            if field == "published":
+                if not validate_int(request_data[field], 0, 2):
+                    return jsonify({"msg": f"Field '{field}' must be an integer with value 0, 1 or 2."}), 400
+            elif field in ["type", "section_id", "sort_order"]:
+                if not validate_int(request_data[field], 0):
+                    return jsonify({"msg": f"Field '{field}' must be a non-negative integer."}), 400
+            else:
+                # Convert remaining fields to string
+                request_data[field] = str(request_data[field])
+
+            # Add the field to the field_names list for the query construction
+            values[field] = request_data[field]
+
+    # Set published to default value 1 if not in provided values
+    if "published" not in values:
+        values["published"] = 1
+
+    # For manuscript and version set publication_id and default values
+    # for sort_order and type (version only)
+    if file_type != "comment":
+        values["publication_id"] = publication_id
+        if "sort_order" not in values:
+            values["sort_order"] = 1
+        if file_type == "version" and "type" not in values:
+            values["type"] = 1
+
+    try:
+        with db_engine.connect() as connection:
+            with connection.begin():
+                # Verify publication_id and that the publication is
+                # in the project
+                collection_table = get_table("publication_collection")
+                publication_table = get_table("publication")
+                stmt = (
+                    select(publication_table.c.id)
+                    .join(collection_table, publication_table.c.publication_collection_id == collection_table.c.id)
+                    .where(collection_table.c.project_id == project_id)
+                    .where(publication_table.c.id == publication_id)
+                )
+                result = connection.execute(stmt).first()
+
+                if result is None:
+                    return jsonify({"msg": "Publication not found. Either project name or publication_id is invalid."}), 404
+
+                table = get_table(f"publication_{file_type}")
+                ins_stmt = (
+                    table.insert()
+                    .values(**values)
+                    .returning(*table.c)  # Return the inserted row
+                )
+                result = connection.execute(ins_stmt)
+                inserted_row = result.fetchone()  # Fetch the inserted row
+
+                if inserted_row is None:
+                    # No row was returned; handle accordingly
+                    return jsonify({
+                        "msg": "Insertion failed: no row returned.",
+                        "reason": "The insert statement did not return any data."
+                    }), 500
+
+                if file_type == "comment":
+                    # Update the publication with the comment id
+                    upd_stmt = (
+                        publication_table.update()
+                        .where(publication_table.c.id == publication_id)
+                        .values(publication_comment_id=inserted_row["id"])
+                    )
+                    connection.execute(upd_stmt)
+
+                # Convert the inserted row to a dict for JSON serialization
+                inserted_row_dict = inserted_row._asdict()
+
+                return jsonify({
+                    "msg": f"Publication {file_type} with ID {inserted_row['id']} created successfully.",
+                    "row": inserted_row_dict
+                }), 201
+
+    except Exception as e:
+            return jsonify({
+                "msg": f"Failed to create new publication {file_type}.",
                 "reason": str(e)
-            }
-            return jsonify(result), 500
-        finally:
-            connection.close()
-    else:
-        new_object = {
-            "original_file_name": request_data.get("file_path"),
-            "publication_id": int(publication_id),
-            "date_published_externally": request_data.get("datePublishedExternally", None),
-            "published": request_data.get("published", None),
-            "published_by": request_data.get("publishedBy", None),
-            "legacy_id": request_data.get("legacyId", None),
-            "type": request_data.get("type", None),
-            "section_id": request_data.get("sectionId", None)
-        }
-        if file_type == "manuscript":
-            table = get_table("publication_manuscript")
-        else:
-            table = get_table("publication_version")
-        try:
-            ins = table.insert().values(**new_object)
-            result = connection.execute(ins)
-            new_row = select(table).where(table.c.id == result.inserted_primary_key[0])
-            new_row = connection.execute(new_row).fetchone()
-            if new_row is not None:
-                new_row = new_row._asdict()
-            result = {
-                "msg": "Created new publication{} with ID {}".format(file_type.capitalize(), result.inserted_primary_key[0]),
-                "row": new_row
-            }
-            return jsonify(result), 201
-        except Exception as e:
-            result = {
-                "msg": "Failed to create new object",
-                "reason": str(e)
-            }
-            return jsonify(result), 500
-
-        finally:
-            connection.close()
+            }), 500
