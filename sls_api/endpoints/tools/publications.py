@@ -16,17 +16,21 @@ def get_publications(project):
     List all publications for a given project.
 
     URL Path Parameters:
+
     - project (str, required): The name of the project for which to retrieve
       publications.
 
     Returns:
+
         JSON: A list of publication objects within the specified project,
         an empty list if there are no publications, or an error message.
 
     Example Request:
+
         GET /projectname/publications/
 
     Example Response (Success):
+
         [
             {
                 "id": 1,
@@ -51,15 +55,16 @@ def get_publications(project):
         ]
 
     Example Response (Error):
+
         {
             "msg": "Invalid project name."
         }
 
     Status Codes:
-        200 - OK: The request was successful, and the publications are
-              returned.
-        400 - Bad Request: The project name is invalid.
-        500 - Internal Server Error: Database query or execution failed.
+
+    - 200 - OK: The request was successful, and the publications are returned.
+    - 400 - Bad Request: The project name is invalid.
+    - 500 - Internal Server Error: Database query or execution failed.
     """
     # Verify that project name is valid and get project_id
     project_id = get_project_id_from_name(project)
@@ -95,18 +100,22 @@ def get_publication(project, publication_id):
     Retrieve a single publication for a given project.
 
     URL Path Parameters:
+
     - project (str, required): The name of the project to which the
       publication belongs.
     - publication_id (int, required): The id of the publication to retrieve.
 
     Returns:
+
         JSON: A publication object within the specified project, or an error
         message if the publication is not found.
 
     Example Request:
+
         GET /projectname/publication/123/
 
     Example Response (Success):
+
         {
             "id": 123,
             "publication_collection_id": 456,
@@ -128,17 +137,19 @@ def get_publication(project, publication_id):
         }
 
     Example Response (Error):
+
         {
             "msg": "Publication not found. Either project name or
                     publication_id is invalid."
         }
 
     Status Codes:
-        200 - OK: The request was successful, and the publication is returned.
-        400 - Bad Request: The project name or publication_id is invalid.
-        404 - Not Found: The publication was not found within the specified
-              project.
-        500 - Internal Server Error: Database query or execution failed.
+
+    - 200 - OK: The request was successful, and the publication is returned.
+    - 400 - Bad Request: The project name or publication_id is invalid.
+    - 404 - Not Found: The publication was not found within the specified
+            project.
+    - 500 - Internal Server Error: Database query or execution failed.
     """
     # Verify that project name is valid and get project_id
     project_id = get_project_id_from_name(project)
@@ -378,9 +389,10 @@ def get_publication_tags(project, publication_id):
         GET /projectname/publication/456/tags/
 
     Status Codes:
-        200 - OK: The request was successful, and the publication tags are returned.
-        400 - Bad Request: The project name or publication_id is invalid.
-        500 - Internal Server Error: Database query or execution failed.
+
+    - 200 - OK: The request was successful, and the publication tags are returned.
+    - 400 - Bad Request: The project name or publication_id is invalid.
+    - 500 - Internal Server Error: Database query or execution failed.
     """
     # Verify that project name is valid and get project_id
     project_id = get_project_id_from_name(project)
@@ -593,13 +605,13 @@ def link_file_to_publication(project, publication_id):
     Create a new comment, manuscript or version for the specified publication
     in the given project.
 
-    URL path parameters:
+    URL Path Parameters:
 
     - project (str): The name of the project.
     - publication_id (int): The ID of the publication to which the comment,
       manuscript or version will be linked.
 
-    POST data parameters in JSON format:
+    POST Data Parameters in JSON Format:
 
     - file_type (str, required): The type of text to create.
       Must be one of "comment", "manuscript" or "version".
@@ -612,7 +624,7 @@ def link_file_to_publication(project, publication_id):
 
     - name (str, optional): The name or title of the text.
     - type (int, optional): A non-negative integer representing the type of
-      the file. Defaults to 1 for "version".
+      the file. Defaults to 1 for "version" (1=base text, 2=other variant).
     - section_id (int, optional): A non-negative integer representing the
       section ID.
     - sort_order (int, optional): A non-negative integer indicating the
@@ -822,7 +834,7 @@ def link_file_to_publication(project, publication_id):
                 }), 201
 
     except Exception as e:
-            return jsonify({
-                "msg": f"Failed to create new publication {file_type}.",
-                "reason": str(e)
-            }), 500
+        return jsonify({
+            "msg": f"Failed to create new publication {file_type}.",
+            "reason": str(e)
+        }), 500

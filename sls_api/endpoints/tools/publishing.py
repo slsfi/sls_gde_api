@@ -19,19 +19,21 @@ def add_new_project():
     """
     Create a new project.
 
-    POST data parameters in JSON format:
+    POST Data Parameters in JSON Format:
+
     - name (str, required): The name/title of the new project. The name
       can only contain lowercase letters (a-z), digits (0-9) and
       underscores (_), and must be between 3 and 32 characters long
-      (inclusive).
-      The project name must be unique.
+      (inclusive). The project name must be unique.
     - published (int, required): The published status of the project.
       Must be an integer with values 0, 1 or 2. Defaults to 1.
 
     Returns:
+
         JSON: A success message with the id of the inserted project (`project_id`), or an error message.
 
     Example Request:
+
         POST /projects/new/
         Body:
         {
@@ -39,20 +41,24 @@ def add_new_project():
         }
 
     Example Response (Success):
+
         {
             "msg": "Created new project.",
             "project_id": 123
         }
 
     Example Response (Error):
+
         {
             "msg": "No data provided."
         }
 
     Status Codes:
-        201 - Created: The project was inserted successfully.
-        400 - Bad Request: No data was provided in the request, or required fields are missing.
-        500 - Internal Server Error: Database query or execution failed.
+
+    - 201 - Created: The project was inserted successfully.
+    - 400 - Bad Request: No data was provided in the request,
+            or required fields are missing.
+    - 500 - Internal Server Error: Database query or execution failed.
     """
     request_data = request.get_json()
     if not request_data:
@@ -163,19 +169,26 @@ def edit_publication_collection(project, collection_id):
     """
     Edit a publication collection in the specified project by updating its fields.
 
-    Parameters:
-    - project (str): The name of the project.
-    - collection_id (str): The id of the publication collection to be updated. Must be a valid positive integer.
+    URL Path Parameters:
 
-    Optional POST data parameters in JSON format (at least one required):
+    - project (str): The name of the project.
+    - collection_id (str): The id of the publication collection to be updated.
+      Must be a valid positive integer.
+
+    POST Data Parameters in JSON Format (at least one required):
+
     - name (str or null): The name/title of the publication collection.
-    - published (int): The publication status. Must be an integer with values 0, 1 or 2.
+    - published (int): The publication status. Must be an integer with
+      values 0, 1 or 2.
     - deleted (int): Soft delete flag. Must be an integer with values 0 or 1.
 
     Returns:
-        JSON: A success message with the updated publication collection id, or an error message.
+
+        JSON: A success message with the updated publication collection id,
+        or an error message.
 
     Example Request:
+
         POST /projectname/publication_collection/456/edit/
         Body:
         {
@@ -184,20 +197,25 @@ def edit_publication_collection(project, collection_id):
         }
 
     Example Response (Success):
+
         {
             "msg": "Publication collection with id 456 updated successfully."
         }
 
     Example Response (Error):
+
         {
             "msg": "Field 'published' must be an integer with value 0, 1 or 2."
         }
 
     Status Codes:
-        200 - OK: The publication collection was updated successfully.
-        400 - Bad Request: Invalid collection_id, invalid field values, or no valid fields provided for the update.
-        404 - Not Found: No publication collection with the given collection_id exists or no changes were made.
-        500 - Internal Server Error: Database query or execution failed.
+
+    - 200 - OK: The publication collection was updated successfully.
+    - 400 - Bad Request: Invalid collection_id, invalid field values,
+            or no valid fields provided for the update.
+    - 404 - Not Found: No publication collection with the given collection_id
+            exists or no changes were made.
+    - 500 - Internal Server Error: Database query or execution failed.
     """
     # Verify that project is valid
     project_id = get_project_id_from_name(project)
@@ -418,27 +436,38 @@ def edit_publication(project, publication_id):
     """
     Edit a publication in the specified project by updating its fields.
 
-    Parameters:
-    - project (str): The name of the project.
-    - publication_id (str): The ID of the publication to be updated. Must be a valid integer.
+    URL Path Parameters:
 
-    Optional POST data parameters in JSON format (at least one required):
-    - publication_collection_id (int): The ID of the publication collection. Must be a positive integer.
-    - publication_comment_id (int): The ID of the publication comment. Must be a positive integer.
+    - project (str): The name of the project.
+    - publication_id (str): The ID of the publication to be updated.
+      Must be a valid integer.
+
+    POST Data Parameters in JSON Format (at least one required):
+
+    - publication_collection_id (int): The ID of the publication collection.
+      Must be a positive integer.
+    - publication_comment_id (int): The ID of the publication comment.
+      Must be a positive integer.
     - name (str): The name/title of the publication.
-    - original_filename (str): Path to the publication’s XML-file in the project GitHub repository.
-    - original_publication_date (str): The original publication date or year (formatted as a string).
-    - published (int): The publication status. Must be an integer with values 0, 1, or 2.
-    - language (str): The language code of the publication (ISO 639-1).
+    - original_filename (str): Path to the publication’s XML-file in the
+      project GitHub repository.
+    - original_publication_date (str): The original publication date or
+      year (formatted as a string).
+    - published (int): The publication status. Must be an integer with
+      values 0, 1 or 2.
+    - language (str): The language code of the main language of the
+      publication (ISO 639-1).
     - genre (str): The genre of the publication.
     - deleted (int): Soft delete flag. Must be an integer with values 0 or 1.
 
     Additionally, all POST data parameter values can be set to null, except 'deleted'.
 
     Returns:
+
         JSON: A success message if the publication was updated, or an error message.
 
     Example Request:
+
         POST /projectname/publication/123/edit/
         Body:
         {
@@ -448,20 +477,25 @@ def edit_publication(project, publication_id):
         }
 
     Example Response (Success):
+
         {
             "msg": "Publication with id 123 updated successfully."
         }
 
     Example Response (Error):
+
         {
             "msg": "Field 'published' must be an integer with value 0, 1 or 2."
         }
 
     Status Codes:
-        200 - OK: The publication was updated successfully.
-        400 - Bad Request: Invalid publication_id, invalid field values, or no valid fields provided for the update.
-        404 - Not Found: No publication with the given publication_id exists or no changes were made.
-        500 - Internal Server Error: Database query or execution failed.
+
+    - 200 - OK: The publication was updated successfully.
+    - 400 - Bad Request: Invalid publication_id, invalid field values,
+            or no valid fields provided for the update.
+    - 404 - Not Found: No publication with the given publication_id exists
+            or no changes were made.
+    - 500 - Internal Server Error: Database query or execution failed.
     """
     # Verify that publication_id is an integer
     publication_id = int_or_none(publication_id)
@@ -614,6 +648,8 @@ def add_manuscript(project, publication_id):
     """
     Takes "title", "filename", "published", "sort_order" as JSON data
     Returns "msg" and "manuscript_id" on success, otherwise 40x
+
+    Att! Use the "/<project>/publication/<publication_id>/link_file/" endpoint instead.
     """
     request_data = request.get_json()
     if not request_data:
@@ -708,6 +744,8 @@ def add_version(project, publication_id):
     Takes "title", "filename", "published", "sort_order", "type" as JSON data
     "type" denotes version type, 1=base text, 2=other variant
     Returns "msg" and "version_id" on success, otherwise 40x
+
+    Att! Use the "/<project>/publication/<publication_id>/link_file/" endpoint instead.
     """
     request_data = request.get_json()
     if not request_data:

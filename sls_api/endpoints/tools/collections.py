@@ -374,15 +374,19 @@ def list_publication_collections(project):
     List all publication collections for a given project.
 
     URL Path Parameter:
+
     - project (str, required): The name of the project to retrieve publication collections for.
 
     Returns:
+
         JSON: A list of all publication collection objects associated with the given project, or an error message.
 
     Example Request:
+
         GET /<project>/publication_collection/list/
 
     Example Response (Success):
+
         [
             {
                 "id": 1,
@@ -405,14 +409,17 @@ def list_publication_collections(project):
         ]
 
     Example Response (Error):
+
         {
             "msg": "No such project exists."
         }
 
     Status Codes:
-        200 - OK: The request was successful, and the publication collections are returned.
-        400 - Bad Request: The project does not exist.
-        500 - Internal Server Error: Failed to retrieve the publication collections.
+
+    - 200 - OK: The request was successful, and the publication collections
+            are returned.
+    - 400 - Bad Request: The project does not exist.
+    - 500 - Internal Server Error: Database query or execution failed.
     """
     project_id = get_project_id_from_name(project)
     if not project_id:
@@ -469,19 +476,24 @@ def new_publication_collection(project):
     """
     Create a new publication collection in the specified project.
 
-    Parameters:
+    URL Path Parameters:
+
     - project (str): The name of the project.
 
-    POST data parameters in JSON format:
-    - name (str, required): The name/title of the publication collection. Must be non-empty.
+    POST Data Parameters in JSON Format:
+
+    - name (str, required): The name/title of the publication collection.
+      Cannot be empty.
     - published (int): The publication status of the collection. Must be an
       integer with values 0, 1 or 2. Default value is 1.
 
     Returns:
-        JSON: A success message with the id of the inserted publication collection,
-        or an error message.
+
+        JSON: A success message with the id of the inserted publication
+        collection, or an error message.
 
     Example Request:
+
         POST /projectname/publication_collection/new/
         Body:
         {
@@ -490,6 +502,7 @@ def new_publication_collection(project):
         }
 
     Example Response (Success):
+
         {
             "msg": "Publication collection created successfully.",
             "row": {
@@ -501,15 +514,17 @@ def new_publication_collection(project):
         }
 
     Example Response (Error):
+
         {
             "msg": "Field 'published' must be an integer with value 0, 1 or 2."
         }
 
     Status Codes:
-        201 - Created: The publication collection was inserted successfully.
-        400 - Bad Request: Invalid project name, invalid field values, or no valid
-              fields provided for insertion.
-        500 - Internal Server Error: Database query or execution failed.
+
+    - 201 - Created: The publication collection was inserted successfully.
+    - 400 - Bad Request: Invalid project name, invalid field values, or no
+            valid fields provided for insertion.
+    - 500 - Internal Server Error: Database query or execution failed.
     """
     # Verify that project is valid
     project_id = get_project_id_from_name(project)
@@ -592,21 +607,27 @@ def list_publications(project, collection_id, order_by="id"):
     List all publications within a specific publication collection for a given project.
 
     URL Path Parameters:
-    - project (str, required): The name of the project for which to retrieve publications.
-    - collection_id (int, required): The id of the publication collection to retrieve
-      publications from.
-    - order_by (str, optional): The column by which to order the publications. Must be one
-      of "id", "name", "original_filename", "genre", "language". Defaults to "id".
+
+    - project (str, required): The name of the project for which to
+      retrieve publications.
+    - collection_id (int, required): The id of the publication collection
+      to retrieve publications from.
+    - order_by (str, optional): The column by which to order the publications.
+      Must be one of "id", "name", "original_filename", "genre", "language".
+      Defaults to "id".
 
     Returns:
-        JSON: A list of publication objects in the specified collection, an empty list
-        if there are no publications, or an error message.
+
+        JSON: A list of publication objects in the specified collection, an
+        empty list if there are no publications, or an error message.
 
     Example Request:
+
         GET /projectname/publication_collection/123/publications/
         GET /projectname/publication_collection/123/publications/name/
 
     Example Response (Success):
+
         [
             {
                 "id": 1,
@@ -631,14 +652,16 @@ def list_publications(project, collection_id, order_by="id"):
         ]
 
     Example Response (Error):
+
         {
             "msg": "Invalid collection_id, does not exist."
         }
 
     Status Codes:
-        200 - OK: The request was successful, and the publications are returned.
-        400 - Bad Request: The project name or collection_id is invalid.
-        500 - Internal Server Error: Failed to retrieve publications due to a server error.
+
+    - 200 - OK: The request was successful, and the publications are returned.
+    - 400 - Bad Request: The project name or collection_id is invalid.
+    - 500 - Internal Server Error: Database query or execution failed.
     """
     # Verify that project name is valid and get project_id
     project_id = get_project_id_from_name(project)
@@ -696,30 +719,34 @@ def new_publication(project, collection_id):
     """
     Create a new publication as part of the specified publication collection.
 
-    Parameters:
-    - project (str): The name of the project.
-    - collection_id (int): The id of the publication collection to which the new
-      publication will be added.
+    URL Path Parameters:
 
-    POST data parameters in JSON format:
+    - project (str): The name of the project.
+    - collection_id (int): The id of the publication collection to which
+      the new publication will be added.
+
+    POST Data Parameters in JSON Format:
+
     - name (str, required): The name/title of the publication. Cannot be empty.
-    - publication_comment_id (int, optional): id of the associated publication comment.
-      Must be a positive integer, and the comment must exist in the 'publication_comment'
-      table.
-    - published (int, optional): The publication status. Must be an integer with value 0,
-      1 or 2. Defaults to 1.
+    - publication_comment_id (int, optional): id of the associated
+      publication comment. Must be a positive integer, and the comment must
+      exist in the 'publication_comment' table.
+    - published (int, optional): The publication status. Must be an integer
+      with value 0, 1 or 2. Defaults to 1.
     - legacy_id (str, optional): Legacy id for the publication.
     - original_filename (str, optional): File path to the publication XML file.
     - genre (str, optional): The genre of the publication.
-    - original_publication_date (str, optional): Date when the publication was originally
-      published.
-    - language (str, optional): Language code (ISO 639-1) of the principal language of the
-      publication.
+    - original_publication_date (str, optional): Date when the publication
+      was originally published.
+    - language (str, optional): Language code (ISO 639-1) of the main
+      language of the publication.
 
     Returns:
+
         JSON: A success message with the inserted row or an error message.
 
     Example Request:
+
         POST /projectname/publication_collection/123/publications/new/
         Body:
         {
@@ -728,6 +755,7 @@ def new_publication(project, collection_id):
         }
 
     Example Response (Success):
+
         {
             "msg": "Publication created successfully.",
             "row": {
@@ -739,15 +767,17 @@ def new_publication(project, collection_id):
         }
 
     Example Response (Error):
+
         {
             "msg": "Field 'published' must be an integer with value 0, 1 or 2."
         }
 
     Status Codes:
-        201 - Created: The publication was inserted successfully.
-        400 - Bad Request: Invalid project name, collection id, field values,
-              or no data provided.
-        500 - Internal Server Error: Database query or execution failed.
+
+    - 201 - Created: The publication was inserted successfully.
+    - 400 - Bad Request: Invalid project name, collection id, field values,
+            or no data provided.
+    - 500 - Internal Server Error: Database query or execution failed.
     """
     # Verify that project name is valid and get project_id
     project_id = get_project_id_from_name(project)
