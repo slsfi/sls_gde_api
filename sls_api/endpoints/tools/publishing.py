@@ -26,11 +26,11 @@ def add_new_project():
       underscores (_), and must be between 3 and 32 characters long
       (inclusive). The project name must be unique.
     - published (int): The published status of the project.
-      Must be an integer with values 0, 1 or 2. Defaults to 1.
+      Must be an integer with value 0, 1 or 2. Defaults to 1.
 
     Returns:
 
-        JSON: A success message with the id of the inserted project (`project_id`), or an error message.
+        JSON: A success message with the inserted row, or an error message.
 
     Example Request:
 
@@ -149,15 +149,14 @@ def edit_project(project_id):
 
     POST Data Parameters in JSON Format (at least one required):
 
-    - deleted (int, optional): Set to `1` to mark the project as deleted,
-      or `0` to mark it as not deleted. Must be `0` or `1`.
-    - published (int, optional): The publication status of the project.
+    - deleted (int): Soft delete flag. Must be an integer with value 0 or 1.
+    - published (int): The publication status of the project.
       Must be an integer with value 0, 1 or 2.
 
     Returns:
 
         JSON: A message indicating the result of the operation and the
-        updated project data, or an error message.
+        updated project row, or an error message.
 
     Example Request:
 
@@ -225,8 +224,9 @@ def edit_project(project_id):
                 if not validate_int(request_data[field], 0, 1):
                     return jsonify({"msg": f"Field '{field}' must be an integer with value 0 or 1."}), 400
             else:
-                # Convert remaining fields to string
-                request_data[field] = str(request_data[field])
+                # Convert remaining fields to string if not None
+                if request_data[field] is not None:
+                    request_data[field] = str(request_data[field])
 
             # Add the field to the field_names list for the query construction
             values[field] = request_data[field]
@@ -268,7 +268,8 @@ def edit_project(project_id):
 @project_permission_required
 def edit_publication_collection(project, collection_id):
     """
-    Edit a publication collection in the specified project by updating its fields.
+    Edit a publication collection in the specified project by updating
+    it’s fields.
 
     URL Path Parameters:
 
@@ -280,12 +281,12 @@ def edit_publication_collection(project, collection_id):
 
     - name (str or null): The name/title of the publication collection.
     - published (int): The publication status. Must be an integer with
-      values 0, 1 or 2.
-    - deleted (int): Soft delete flag. Must be an integer with values 0 or 1.
+      value 0, 1 or 2.
+    - deleted (int): Soft delete flag. Must be an integer with value 0 or 1.
 
     Returns:
 
-        JSON: A success message with the updated publication collection id,
+        JSON: A success message with the updated publication collection row,
         or an error message.
 
     Example Request:
@@ -300,7 +301,21 @@ def edit_publication_collection(project, collection_id):
     Example Response (Success):
 
         {
-            "msg": "Publication collection with id 456 updated successfully."
+            "msg": "Publication collection with id 456 updated successfully.",
+            "row": {
+                "id": 456,
+                "publication_collection_introduction_id": null,
+                "publication_collection_title_id": null,
+                "project_id": 4,
+                "date_created": "2023-07-12T09:23:45",
+                "date_modified": "2023-08-14T14:29:02",
+                "date_published_externally": null,
+                "deleted": 0,
+                "published": 1,
+                "name": "Updated Collection Name",
+                "legacy_id": null,
+                "name_translation_id": 4297
+            }
         }
 
     Example Response (Error):
@@ -336,62 +351,65 @@ def edit_publication_collection(project, collection_id):
     # List of fields to check in request_data
     fields = ["name", "published", "deleted"]
 
-    # Start building the update query
-    query = "UPDATE publication_collection SET "
+    # Start building values dictionary for update statement
     values = {}
-    set_clauses = []
 
     # Loop over the fields list and check each one in request_data
     for field in fields:
         if field in request_data:
-            # Allow setting the 'name' field to NULL
-            if request_data[field] is None and field == "name":
-                set_clauses.append(f"{field} = NULL")
+            # Validate integer field values and ensure all other
+            # fields are strings or None
+            if field == "published":
+                if not validate_int(request_data[field], 0, 2):
+                    return jsonify({"msg": f"Field '{field}' must be an integer with value 0, 1 or 2."}), 400
+            elif field == "deleted":
+                if not validate_int(request_data[field], 0, 1):
+                    return jsonify({"msg": f"Field '{field}' must be an integer with value 0 or 1."}), 400
             else:
-                # Validate integer field values and ensure all other fields are strings
-                if field == "published":
-                    if not isinstance(request_data[field], int) or request_data[field] < 0 or request_data[field] > 2:
-                        return jsonify({"msg": f"Field '{field}' must be an integer with value 0, 1 or 2."}), 400
-                elif field == "deleted":
-                    if not isinstance(request_data[field], int) or request_data[field] < 0 or request_data[field] > 1:
-                        return jsonify({"msg": f"Field '{field}' must be an integer with value 0 or 1."}), 400
-                else:
-                    # Convert remaining fields to string
+                # Convert remaining fields to string if not None
+                if request_data[field] is not None:
                     request_data[field] = str(request_data[field])
 
-                # Add the field to the set_clauses and values for the query
-                set_clauses.append(f"{field} = :{field}")
-                values[field] = request_data[field]
+            # Add the field to the values list for the query construction
+            values[field] = request_data[field]
 
-    if not set_clauses:
+    if not values:
         return jsonify({"msg": "No valid fields provided to update."}), 400
 
-    # Add date_modified field to SET clauses
-    set_clauses.append("date_modified = :date_modified")
+    # Add date_modified
     values["date_modified"] = datetime.now()
-
-    # Join all SET clauses with commas
-    query += ", ".join(set_clauses)
-    query += " WHERE id = :collection_id AND project_id = :project_id"
-    values["collection_id"] = collection_id
-    values["project_id"] = project_id
 
     try:
         with db_engine.connect() as connection:
             with connection.begin():
-                # Execute the update statement
-                statement = text(query).bindparams(**values)
-                result = connection.execute(statement)
+                collection_table = get_table("publication_collection")
+                upd_stmt = (
+                    collection_table.update()
+                    .where(collection_table.c.id == collection_id)
+                    .where(collection_table.c.project_id == project_id)
+                    .values(**values)
+                    .returning(*collection_table.c)  # Return the updated row
+                )
+                result = connection.execute(upd_stmt)
+                updated_row = result.fetchone()  # Fetch the updated row
 
-                # Check if any rows were affected
-                if result.rowcount < 1:
-                    return jsonify({"msg": f"No publication collection with id {collection_id} exists or no changes were made."}), 404
+                if updated_row is None:
+                    # No row was returned; handle accordingly
+                    return jsonify({
+                        "msg": f"Update failed: No publication collection with ID {collection_id} exists in project with ID {project_id} or no changes were made."
+                    }), 404
 
-                return jsonify({"msg": f"Publication collection with id {collection_id} updated successfully."}), 200
+                # Convert the inserted row to a dict for JSON serialization
+                updated_row_dict = updated_row._asdict()
+
+                return jsonify({
+                    "msg": f"Publication collection with ID {collection_id} updated successfully.",
+                    "row": updated_row_dict
+                })
 
     except Exception as e:
         result = {
-            "msg": f"Failed to update publication collection with id {collection_id}.",
+            "msg": f"Failed to update publication collection with ID {collection_id}.",
             "reason": str(e)
         }
         return jsonify(result), 500
@@ -801,7 +819,7 @@ def edit_comment(project, publication_id):
     for field in fields:
         if field in request_data:
             # Validate integer field values and ensure all other
-            # fields are strings
+            # fields are strings or None
             if field == "published":
                 if not validate_int(request_data[field], 0, 2):
                     return jsonify({"msg": f"Field '{field}' must be an integer with value 0, 1 or 2."}), 400
@@ -815,10 +833,10 @@ def edit_comment(project, publication_id):
 
             # Add the field to the values list for the query construction
             values[field] = request_data[field]
-    
+
     if not values:
         return jsonify({"msg": "No valid fields provided to update."}), 400
-    
+
     # Add date_modified
     values["date_modified"] = datetime.now()
 
@@ -840,7 +858,7 @@ def edit_comment(project, publication_id):
 
                 if result is None:
                     return jsonify({"msg": "Publication not found in project. Either project name or publication_id is invalid."}), 404
-                
+
                 com_id = result["publication_comment_id"]
 
                 # Execute the update statement
