@@ -371,7 +371,7 @@ def delete_facsimile_collection_link(project, f_pub_id):
 @project_permission_required
 def list_publication_collections(project):
     """
-    List all publication collections for a given project.
+    List all (non-deleted) publication collections for a given project.
 
     URL Path Parameter:
 
@@ -453,6 +453,7 @@ def list_publication_collections(project):
             ON pci.id = pc.publication_collection_introduction_id
         WHERE
             pc.project_id = :project_id
+            AND pc.deleted < 1
         ORDER BY
             pc.id
     """
@@ -604,7 +605,8 @@ def new_publication_collection(project):
 @project_permission_required
 def list_publications(project, collection_id, order_by="id"):
     """
-    List all publications within a specific publication collection for a given project.
+    List all (non-deleted) publications within a specific publication
+    collection for a given project.
 
     URL Path Parameters:
 
@@ -686,6 +688,7 @@ def list_publications(project, collection_id, order_by="id"):
                 select_coll_stmt = (
                     select(collection_table.c.project_id)
                     .where(collection_table.c.id == collection_id)
+                    .where(collection_table.c.deleted < 1)
                 )
                 result = connection.execute(select_coll_stmt).first()
 
@@ -700,6 +703,7 @@ def list_publications(project, collection_id, order_by="id"):
                 select_pub_stmt = (
                     select(publication_table)
                     .where(publication_table.c.publication_collection_id == collection_id)
+                    .where(publication_table.c.deleted < 1)
                     .order_by(publication_table.c[order_by])
                 )
                 rows = connection.execute(select_pub_stmt).fetchall()

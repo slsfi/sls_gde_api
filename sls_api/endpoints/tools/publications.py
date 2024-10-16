@@ -13,7 +13,7 @@ publication_tools = Blueprint("publication_tools", __name__)
 @jwt_required()
 def get_publications(project):
     """
-    List all publications for a given project.
+    List all (non-deleted) publications for a given project.
 
     URL Path Parameters:
 
@@ -82,6 +82,7 @@ def get_publications(project):
                 select(*publication_table.c)
                 .join(collection_table, publication_table.c.publication_collection_id == collection_table.c.id)
                 .where(collection_table.c.project_id == project_id)
+                .where(publication_table.c.deleted < 1)
                 .order_by(publication_table.c.publication_collection_id)
             )
             rows = connection.execute(statement).fetchall()
@@ -190,8 +191,8 @@ def get_publication(project, publication_id):
 @jwt_required()
 def get_publication_versions(project, publication_id):
     """
-    List all versions (i.e. variants) of the specified publication in a
-    given project.
+    List all (non-deleted) versions (i.e. variants) of the specified
+    publication in a given project.
 
     URL Path Parameters:
 
@@ -280,7 +281,8 @@ def get_publication_versions(project, publication_id):
 @jwt_required()
 def get_publication_manuscripts(project, publication_id):
     """
-    List all manuscripts of the specified publication in a given project.
+    List all (non-deleted) manuscripts of the specified publication in
+    a given project.
 
     URL Path Parameters:
 
@@ -370,7 +372,7 @@ def get_publication_manuscripts(project, publication_id):
 @jwt_required()
 def get_publication_tags(project, publication_id):
     """
-    List all tags for the specified publication.
+    List all (non-deleted) tags for the specified publication.
 
     URL Path Parameters:
 
@@ -441,7 +443,8 @@ def get_publication_tags(project, publication_id):
 @jwt_required()
 def get_publication_facsimiles(project, publication_id):
     """
-    List all fascimiles for the specified publication in the given project.
+    List all (non-deleted) fascimiles for the specified publication in
+    the given project.
 
     URL Path Parameters:
 
@@ -510,7 +513,8 @@ def get_publication_facsimiles(project, publication_id):
 @jwt_required()
 def get_publication_comments(project, publication_id):
     """
-    List all comments of the specified publication in a given project.
+    List all (non-deleted) comments of the specified publication
+    in a given project.
 
     URL Path Parameters:
 

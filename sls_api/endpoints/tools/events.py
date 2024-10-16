@@ -515,7 +515,8 @@ def edit_translation(project, translation_id):
 @project_permission_required
 def list_translations(project, translation_id):
     """
-    List all translations for a given translation_id with optional filters.
+    List all (non-deleted) translations for a given translation_id
+    with optional filters.
 
     URL Path Parameters:
 
