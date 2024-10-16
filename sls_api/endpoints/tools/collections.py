@@ -613,7 +613,7 @@ def list_publications(project, collection_id, order_by="id"):
     - collection_id (int, required): The id of the publication collection
       to retrieve publications from.
     - order_by (str, optional): The column by which to order the publications.
-      Must be one of "id", "name", "original_filename", "genre", "language".
+      For example "id", "name", "original_filename" or "date_modified".
       Defaults to "id".
 
     Returns:
@@ -673,13 +673,11 @@ def list_publications(project, collection_id, order_by="id"):
     if not collection_id or collection_id < 1:
         return jsonify({"msg": "Invalid collection_id, must be an integer."}), 400
 
-    # Verify that order_by is an allowed column name
-    allowed_order_columns = ["id", "name", "original_filename", "genre", "language"]
-    if order_by not in allowed_order_columns:
-        return jsonify({"msg": "Invalid order_by field."}), 400
-
     collection_table = get_table("publication_collection")
     publication_table = get_table("publication")
+
+    if order_by not in publication_table.c:
+        return jsonify({"msg": "Invalid order_by field."}), 400
 
     try:
         with db_engine.connect() as connection:
@@ -702,7 +700,7 @@ def list_publications(project, collection_id, order_by="id"):
                 select_pub_stmt = (
                     select(publication_table)
                     .where(publication_table.c.publication_collection_id == collection_id)
-                    .order_by(str(order_by))
+                    .order_by(publication_table.c[order_by])
                 )
                 rows = connection.execute(select_pub_stmt).fetchall()
                 result = [row._asdict() for row in rows]
