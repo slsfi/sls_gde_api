@@ -141,44 +141,127 @@ def add_new_project():
 @jwt_required()
 def edit_project(project_id):
     """
-    Takes "name" and/or "published" as JSON data
-    Returns "msg" and "project_id" on success, otherwise 40x
+    Edit fields of the specified project.
+
+    URL Path Parameters:
+
+    - project_id (int, required): The ID of the project to edit.
+
+    POST Data Parameters in JSON Format (at least one required):
+
+    - deleted (int, optional): Set to `1` to mark the project as deleted,
+      or `0` to mark it as not deleted. Must be `0` or `1`.
+    - published (int, optional): The publication status of the project.
+      Must be an integer with value 0, 1 or 2.
+
+    Returns:
+
+        JSON: A message indicating the result of the operation and the
+        updated project data, or an error message.
+
+    Example Request:
+
+        POST /projects/123/edit/
+        Body:
+        {
+            "deleted": 0,
+            "published": 1
+        }
+
+    Example Response (Success):
+
+        {
+            "msg": "Updated project with ID 123 successfully.",
+            "row": {
+                "id": 123,
+                "date_created": "2023-01-01T10:00:00",
+                "date_modified": "2023-10-17T12:34:56",
+                "deleted": 0,
+                "published": 1,
+                "name": "projectname"
+            }
+        }
+
+    Example Response (Error):
+
+        {
+            "msg": "Invalid project_id, must be a positive integer."
+        }
+
+    Status Codes:
+
+    - 200: The project was successfully updated.
+    - 400 - Bad Request: Invalid `project_id`, field values or no data provided.
+    - 404 - Not Found: No project exists with the specified `project_id`.
+    - 500 - Internal Server Error: Database query or execution failed.
     """
+    # Convert project_id to integer and verify
+    project_id = int_or_none(project_id)
+    if not project_id or project_id < 1:
+        return jsonify({"msg": "Invalid project_id, must be a positive integer."}), 400
+
+    # Verify that request data was provided
     request_data = request.get_json()
     if not request_data:
         return jsonify({"msg": "No data provided."}), 400
-    name = request_data.get("name", None)
-    published = request_data.get("published", None)
 
-    projects = get_table("project")
-    connection = db_engine.connect()
-    with connection.begin():
-        query = select(projects.c.id).where(projects.c.id == int_or_none(project_id))
-        result = connection.execute(query)
-    if len(result.fetchall()) != 1:
-        connection.close()
-        return jsonify("No such project exists."), 404
+    # List allowed fields in POST data
+    fields = ["deleted", "published"]
 
+    # Verify that POST data contains at least one valid field
+    if all(field not in request_data for field in fields):
+        return jsonify({"msg": "POST data contains no valid fields."}), 400
+    
+    # Start building values dictionary for update statement
     values = {}
-    if name is not None:
-        values["name"] = name
-    if published is not None:
-        values["published"] = published
 
-    values["date_modified"] = datetime.now()
+    # Loop over all fields and validate them
+    for field in fields:
+        if field in request_data:
+            if field == "published":
+                if not validate_int(request_data[field], 0, 2):
+                    return jsonify({"msg": f"Field '{field}' must be an integer with value 0, 1 or 2."}), 400
+            elif field == "deleted":
+                if not validate_int(request_data[field], 0, 1):
+                    return jsonify({"msg": f"Field '{field}' must be an integer with value 0 or 1."}), 400
+            else:
+                # Convert remaining fields to string
+                request_data[field] = str(request_data[field])
 
-    if len(values) > 0:
-        with connection.begin():
-            update = projects.update().where(projects.c.id == int(project_id)).values(**values)
-            connection.execute(update)
-        connection.close()
-        return jsonify({
-            "msg": "Updated project {} with values {}".format(project_id, str(values)),
-            "project_id": project_id
-        })
-    else:
-        connection.close()
-        return jsonify("No valid update values given."), 400
+            # Add the field to the field_names list for the query construction
+            values[field] = request_data[field]
+
+    if values:
+        values["date_modified"] = datetime.now()
+
+    try:
+        with db_engine.connect() as connection:
+            with connection.begin():
+                project_table = get_table("project")
+                stmt = (
+                    project_table.update()
+                    .where(project_table.c.id == project_id)
+                    .values(**values)
+                    .returning(*project_table.c)  # Return the updated row
+                )
+                result = connection.execute(stmt)
+                updated_row = result.fetchone()  # Fetch the updated row
+
+                if updated_row is None:
+                    # No row was returned; project_id invalid
+                    return jsonify({"msg": "Invalid project_id."}), 404
+
+                # Convert the inserted row to a dict for JSON serialization
+                updated_row_dict = updated_row._asdict()
+
+                return jsonify({
+                    "msg": f"Updated project with ID {project_id} successfully.",
+                    "row": updated_row_dict
+                })
+
+    except Exception as e:
+        return jsonify({"msg": "Failed to update project.",
+                        "reason": str(e)}), 500
 
 
 @publishing_tools.route("/<project>/publication_collection/<collection_id>/edit/", methods=["POST"])
