@@ -25,7 +25,7 @@ def add_new_project():
       can only contain lowercase letters (a-z), digits (0-9) and
       underscores (_), and must be between 3 and 32 characters long
       (inclusive). The project name must be unique.
-    - published (int, required): The published status of the project.
+    - published (int): The published status of the project.
       Must be an integer with values 0, 1 or 2. Defaults to 1.
 
     Returns:
@@ -44,7 +44,14 @@ def add_new_project():
 
         {
             "msg": "Created new project.",
-            "project_id": 123
+            "row": {
+                "id": 123,
+                "date_created": "2023-07-12T09:23:45",
+                "date_modified": null,
+                "deleted": 0,
+                "published": 1,
+                "name": "My New Project"
+            }
         }
 
     Example Response (Error):
@@ -105,15 +112,26 @@ def add_new_project():
                 insert_stmt = (
                     project_table.insert()
                     .values(**values)
-                    .returning(project_table.c.id)
+                    .returning(*project_table.c)  # Return the inserted row
                 )
                 result = connection.execute(insert_stmt)
-                project_id = result.fetchone()[0]
+                inserted_row = result.fetchone()  # Fetch the inserted row
+
+                if inserted_row is None:
+                    # No row was returned; handle accordingly
+                    return jsonify({
+                        "msg": "Insertion failed: no row returned.",
+                        "reason": "The insert statement did not return any data."
+                    }), 500
+
+                # Convert the inserted row to a dict for JSON serialization
+                inserted_row_dict = inserted_row._asdict()
 
                 return jsonify({
-                    "msg": "Created new project.",
-                    "project_id": project_id
+                    "msg": f"New project with ID {inserted_row['id']} created successfully.",
+                    "row": inserted_row_dict
                 }), 201
+
     except Exception as e:
         return jsonify({"msg": "Failed to create new project.",
                         "reason": str(e)}), 500
