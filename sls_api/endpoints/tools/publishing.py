@@ -598,6 +598,11 @@ def edit_publication(project, publication_id):
             or no changes were made.
     - 500 - Internal Server Error: Database query or execution failed.
     """
+    # Verify that project name is valid and get project_id
+    project_id = get_project_id_from_name(project)
+    if not project_id:
+        return jsonify({"msg": "Invalid project name."}), 400
+
     # Verify that publication_id is an integer
     publication_id = int_or_none(publication_id)
     if not publication_id or publication_id < 1:
@@ -619,64 +624,86 @@ def edit_publication(project, publication_id):
               "genre",
               "deleted"]
 
-    # Start building the update query
-    query = "UPDATE publication SET "
+    # Start building values dictionary for update statement
     values = {}
-    set_clauses = []
 
     # Loop over the fields list and check each one in request_data
     for field in fields:
         if field in request_data:
             if request_data[field] is None and field != "deleted":
-                set_clauses.append(f"{field} = NULL")
+                values[field] = None
             else:
-                # Validate integer field values and ensure all other fields are strings
+                # Validate integer field values and ensure all other
+                # fields are strings
                 if field in ["publication_collection_id", "publication_comment_id"]:
-                    if not isinstance(request_data[field], int) or request_data[field] < 1:
+                    if not validate_int(request_data[field], 1):
                         return jsonify({"msg": f"Field '{field}' must be a positive integer."}), 400
                 elif field == "published":
-                    if not isinstance(request_data[field], int) or request_data[field] < 0 or request_data[field] > 2:
+                    if not validate_int(request_data[field], 0, 2):
                         return jsonify({"msg": f"Field '{field}' must be an integer with value 0, 1 or 2."}), 400
                 elif field == "deleted":
-                    if not isinstance(request_data[field], int) or request_data[field] < 0 or request_data[field] > 1:
+                    if not validate_int(request_data[field], 0, 1):
                         return jsonify({"msg": f"Field '{field}' must be an integer with value 0 or 1."}), 400
                 else:
                     # Convert remaining fields to string
                     request_data[field] = str(request_data[field])
 
-                # Add the field to the set_clauses and values for the query
-                set_clauses.append(f"{field} = :{field}")
+                # Add the field to the values list for the query construction
                 values[field] = request_data[field]
 
-    if not set_clauses:
+    if not values:
         return jsonify({"msg": "No valid fields provided to update."}), 400
 
-    # Add date_modified field to SET clauses
-    set_clauses.append("date_modified = :date_modified")
+    # Add date_modified
     values["date_modified"] = datetime.now()
-
-    # Join all SET clauses with commas
-    query += ", ".join(set_clauses)
-    query += " WHERE id = :publication_id"
-    values["publication_id"] = publication_id
 
     try:
         with db_engine.connect() as connection:
             with connection.begin():
+                # Verify publication_id and that the publication is
+                # in the project
+                collection_table = get_table("publication_collection")
+                publication_table = get_table("publication")
+                stmt = (
+                    select(publication_table.c.id)
+                    .join(collection_table, publication_table.c.publication_collection_id == collection_table.c.id)
+                    .where(collection_table.c.project_id == project_id)
+                    .where(publication_table.c.id == publication_id)
+                )
+                result = connection.execute(stmt).first()
+
+                if result is None:
+                    return jsonify({"msg": "Publication not found in project. Either project name or publication_id is invalid."}), 404
+
                 # Execute the update statement
-                statement = text(query).bindparams(**values)
-                result = connection.execute(statement)
+                upd_stmt = (
+                    publication_table.update()
+                    .where(publication_table.c.id == publication_id)
+                    .values(**values)
+                    .returning(*publication_table.c)  # Return the updated row
+                )
+                result = connection.execute(upd_stmt)
+                updated_row = result.fetchone()  # Fetch the updated row
 
-                # Check if any rows were affected
-                if result.rowcount < 1:
-                    return jsonify({"msg": f"No publication with id {publication_id} exists or no changes were made."}), 404
+                if updated_row is None:
+                    # No row was returned; handle accordingly
+                    return jsonify({
+                        "msg": "Update failed: no row returned.",
+                        "reason": "The update statement did not return any data."
+                    }), 500
 
-                return jsonify({"msg": f"Publication with id {publication_id} updated successfully."}), 200
+                # Convert the inserted row to a dict for JSON serialization
+                updated_row_dict = updated_row._asdict()
+
+                return jsonify({
+                    "msg": f"Updated publication with ID {publication_id} successfully.",
+                    "row": updated_row_dict
+                })
 
     except Exception as e:
         # Handle errors and return error response
         result = {
-            "msg": f"Failed to update publication with id {publication_id}.",
+            "msg": f"Failed to update publication with ID {publication_id}.",
             "reason": str(e)
         }
         return jsonify(result), 500

@@ -770,7 +770,7 @@ def link_file_to_publication(project, publication_id):
                 # Convert remaining fields to string
                 request_data[field] = str(request_data[field])
 
-            # Add the field to the field_names list for the query construction
+            # Add the field to the values list for the query construction
             values[field] = request_data[field]
 
     # Set published to default value 1 if not in provided values
