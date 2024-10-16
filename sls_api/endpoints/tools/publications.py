@@ -498,24 +498,92 @@ def get_publication_facsimiles(project, publication_id):
 @jwt_required()
 def get_publication_comments(project, publication_id):
     """
-    List all comments for the given publication
+    List all comments of the specified publication in a given project.
+
+    URL Path Parameters:
+
+    - project (str, required): The name of the project for which to retrieve
+      publication comments.
+    - publication_id (int, required): The id of the publication to retrieve
+      comments for. Must be a positive integer.
+
+    Returns:
+
+        JSON: A list of publication comment objects for the specified
+        publication, or an error message. Currently, publications can have
+        only one comment, so the list will have either only one item or no
+        items.
+
+    Example Request:
+
+        GET /projectname/publication/456/comments/
+
+    Example Response (Success):
+
+        [
+            {
+                "id": 2582,
+                "publication_id": 456,
+                "date_created": "2023-07-12T09:23:45",
+                "date_modified": "2023-07-13T10:00:00",
+                "date_published_externally": null,
+                "deleted": 0,
+                "published": 1,
+                "legacy_id": null,
+                "published_by": null,
+                "original_filename": "path/to/comment_file.xml"
+            }
+        ]
+
+    Example Response (Error):
+
+        {
+            "msg": "Invalid publication_id, must be a positive integer."
+        }
+
+    Status Codes:
+
+    - 200 - OK: The request was successful, and the publication comments
+            are returned.
+    - 400 - Bad Request: The project name or publication_id is invalid.
+    - 500 - Internal Server Error: Database query or execution failed.
     """
-    connection = db_engine.connect()
-    publications = get_table("publication")
-    publication_comments = get_table("publication_comment")
-    statement = select(publications.c.publication_comment_id).where(publications.c.id == int_or_none(publication_id))
-    comment_ids = []
-    for row in connection.execute(statement).fetchall():
-        if row:
-            comment_ids.append(int(row._asdict()['publication_comment_id']))
-    statement = select(publication_comments).where(publication_comments.c.id.in_(comment_ids))
-    rows = connection.execute(statement).fetchall()
-    result = []
-    for row in rows:
-        if row is not None:
-            result.append(row._asdict())
-    connection.close()
-    return jsonify(result)
+    # Verify that project name is valid and get project_id
+    project_id = get_project_id_from_name(project)
+    if not project_id:
+        return jsonify({"msg": "Invalid project name."}), 400
+
+    # Convert publication_id to integer and verify
+    publication_id = int_or_none(publication_id)
+    if not publication_id or publication_id < 1:
+        return jsonify({"msg": "Invalid publication_id, must be a positive integer."}), 400
+    
+    publication_table = get_table("publication")
+    comment_table = get_table("publication_comment")
+
+    try:
+        with db_engine.connect() as connection:
+            # We are simply retrieving matching rows based on
+            # publication_id, not verifying that the publication
+            # actually belongs to the project.
+
+            # Left join publication table on publication_comment
+            # table and filter on publication_id and non-deleted
+            # comments. Publications can have only one comment,
+            # so this should return only one row.
+            stmt = (
+                select(*comment_table.c)
+                .join(publication_table, comment_table.c.id == publication_table.c.publication_comment_id)
+                .where(publication_table.c.id == publication_id)
+                .where(comment_table.c.deleted < 1)
+            )
+            rows = connection.execute(stmt).fetchall()
+            result = [row._asdict() for row in rows]
+            return jsonify(result)
+
+    except Exception as e:
+        return jsonify({"msg": "Failed to retrieve publication comments.",
+                        "reason": str(e)}), 500
 
 
 @publication_tools.route("/<project>/publication/<publication_id>/link_file/", methods=["POST"])
