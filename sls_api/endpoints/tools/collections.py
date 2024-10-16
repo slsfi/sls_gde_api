@@ -375,11 +375,14 @@ def list_publication_collections(project):
 
     URL Path Parameter:
 
-    - project (str, required): The name of the project to retrieve publication collections for.
+    - project (str, required): The name of the project to retrieve
+      publication collections for.
 
     Returns:
 
-        JSON: A list of all publication collection objects associated with the given project, or an error message.
+        JSON: A list of all publication collection objects associated
+        with the given project, an empty list if there are none,
+        or an error message.
 
     Example Request:
 
@@ -405,7 +408,8 @@ def list_publication_collections(project):
                 "collection_intro_filename": "intro_file.xml",
                 "collection_title_published": 1,
                 "collection_intro_published": 1
-            }
+            },
+            ...
         ]
 
     Example Response (Error):
@@ -486,12 +490,12 @@ def new_publication_collection(project):
     - name (str, required): The name/title of the publication collection.
       Cannot be empty.
     - published (int): The publication status of the collection. Must be an
-      integer with values 0, 1 or 2. Default value is 1.
+      integer with value 0, 1 or 2. Default value is 1.
 
     Returns:
 
-        JSON: A success message with the id of the inserted publication
-        collection, or an error message.
+        JSON: A success message and the inserted publication collection
+        row, or an error message.
 
     Example Request:
 
@@ -861,8 +865,8 @@ def new_publication(project, collection_id):
                 if project_id != result[0]:
                     return jsonify({"msg": f"The publication collection with id '{collection_id}' does not belong to project '{project}'."}), 400
 
-                # If a publication_comment_id was provided, check that it exists and is
-                # not deleted
+                # If a publication_comment_id was provided, check that it
+                # exists and is not deleted
                 if "publication_comment_id" in values:
                     comment_table = get_table("publication_comment")
                     select_com_stmt = (

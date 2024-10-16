@@ -759,7 +759,7 @@ def link_text_to_publication(project, publication_id):
                 continue
 
             # Validate integer field values and ensure all other fields are
-            # strings
+            # strings or None
             if field == "published":
                 if not validate_int(request_data[field], 0, 2):
                     return jsonify({"msg": f"Field '{field}' must be an integer with value 0, 1 or 2."}), 400
@@ -767,8 +767,9 @@ def link_text_to_publication(project, publication_id):
                 if not validate_int(request_data[field], 0):
                     return jsonify({"msg": f"Field '{field}' must be a non-negative integer."}), 400
             else:
-                # Convert remaining fields to string
-                request_data[field] = str(request_data[field])
+                # Convert remaining fields to string if not None
+                if request_data[field] is not None:
+                    request_data[field] = str(request_data[field])
 
             # Add the field to the values list for the query construction
             values[field] = request_data[field]
