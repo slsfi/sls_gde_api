@@ -211,7 +211,7 @@ def edit_project(project_id):
     # Verify that POST data contains at least one valid field
     if all(field not in request_data for field in fields):
         return jsonify({"msg": "POST data contains no valid fields."}), 400
-    
+
     # Start building values dictionary for update statement
     values = {}
 
