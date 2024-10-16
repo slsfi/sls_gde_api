@@ -583,7 +583,8 @@ def edit_publication(project, publication_id):
 
     Returns:
 
-        JSON: A success message if the publication was updated, or an error message.
+        JSON: A success message and the updated row if the publication was
+        updated, or an error message.
 
     Example Request:
 
@@ -598,7 +599,26 @@ def edit_publication(project, publication_id):
     Example Response (Success):
 
         {
-            "msg": "Publication with id 123 updated successfully."
+            "msg": "Publication with id 123 updated successfully.",
+            "row": {
+                "id": 123,
+                "publication_collection_id": 585,
+                "publication_comment_id": 5487,
+                "date_created": "2023-05-12T12:34:56",
+                "date_modified": "2023-06-01T08:22:11",
+                "date_published_externally": null,
+                "deleted": 0,
+                "published": 1,
+                "legacy_id": null,
+                "published_by": null,
+                "original_filename": "/path/to/file.xml",
+                "name": "New Publication Name",
+                "genre": "non-fiction",
+                "publication_group_id": null,
+                "original_publication_date": "1854",
+                "zts_id": null,
+                "language": "en"
+            }
         }
 
     Example Response (Error):
@@ -708,7 +728,7 @@ def edit_publication(project, publication_id):
                     return jsonify({
                         "msg": "Update failed: no row returned.",
                         "reason": "The update statement did not return any data."
-                    }), 500
+                    }), 404
 
                 # Convert the inserted row to a dict for JSON serialization
                 updated_row_dict = updated_row._asdict()
