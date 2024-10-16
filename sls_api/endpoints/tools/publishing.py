@@ -1,7 +1,7 @@
 import logging
 from flask import Blueprint, jsonify, request
 from flask_jwt_extended import jwt_required
-from sqlalchemy import select, text
+from sqlalchemy import select
 from datetime import datetime
 
 from sls_api.endpoints.generics import db_engine, get_project_id_from_name, get_table, int_or_none, \
