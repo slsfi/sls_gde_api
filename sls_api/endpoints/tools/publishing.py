@@ -1113,54 +1113,194 @@ def edit_manuscript(project, manuscript_id):
 @project_permission_required
 def edit_version(project, version_id):
     """
-    Takes "title", "filename", "published", "sort_order", "type" as JSON data
-    "type" denotes version type, 1=base text, 2=other variant
-    Returns "msg" and "version_id" on success, otherwise 40x
+    Edit a publication version of the specified project by updating its fields.
+
+    URL Path Parameters:
+
+    - project (str): The name of the project.
+    - version_id (str): The ID of the publication version to be updated.
+      Must be a valid integer.
+
+    POST Data Parameters in JSON Format (at least one required):
+
+    - publication_id (int): The ID of the publication linked to the version.
+      Must be a positive integer or null.
+    - deleted (int): Soft delete flag. Must be an integer with value 0 or 1.
+    - published (int): The publication status of the version. Must be an
+      integer with value 0, 1 or 2.
+    - original_filename (str): Path to the version’s XML file in the
+      project repository.
+    - name (str): The name of the version.
+    - type (int): The type of the version. Must be a non-negative integer.
+      1 denotes a base text and 2 some other variant.
+    - section_id (int): The ID of the section/chapter of the version.
+      Must be a non-negative integer.
+    - sort_order (int): The sorting order of the version. Must be a
+      non-negative integer.
+
+    Returns:
+
+        JSON: A success message and the updated publication version row
+        if the version was updated, or an error message.
+
+    Example Request:
+
+        POST /projectname/versions/123/edit/
+        Body:
+        {
+            "published": 1,
+            "deleted": 0,
+            "original_filename": "path/to/updated_version.xml",
+            "name": "Updated Version Title"
+        }
+
+    Example Response (Success):
+
+        {
+            "msg": "Updated version with ID 123 successfully.",
+            "row": {
+                "id": 123,
+                "publication_id": 456,
+                "date_created": "2024-08-02T05:13:49",
+                "date_modified": "2024-10-17T14:23:01",
+                "date_published_externally": null,
+                "deleted": 0,
+                "published": 1,
+                "legacy_id": null,
+                "published_by": null,
+                "original_filename": "path/to/updated_version.xml",
+                "name": "Updated Version Title",
+                "type": 1,
+                "section_id": 2,
+                "sort_order": 3
+            }
+        }
+
+    Example Response (Error):
+
+        {
+            "msg": "Field 'published' must be an integer with value 0, 1 or 2."
+        }
+
+    Status Codes:
+
+    - 200 - OK: The version was updated successfully.
+    - 400 - Bad Request: Invalid version_id, invalid field values, no data
+            provided, or no valid fields provided to update.
+    - 500 - Internal Server Error: Database query or execution failed.
     """
+    # Verify that project name is valid and get project_id
+    project_id = get_project_id_from_name(project)
+    if not project_id:
+        return jsonify({"msg": "Invalid project name."}), 400
+
+    # Verify that version_id is an integer
+    version_id = int_or_none(version_id)
+    if not version_id or version_id < 1:
+        return jsonify({"msg": "Invalid version_id."}), 400
+
+    # Verify that request data was provided
     request_data = request.get_json()
     if not request_data:
         return jsonify({"msg": "No data provided."}), 400
-    title = request_data.get("title", None)
-    filename = request_data.get("filename", None)
-    published = request_data.get("published", None)
-    sort_order = request_data.get("sort_order", None)
-    version_type = request_data.get("type", None)
 
-    versions = get_table("publication_version")
-    connection = db_engine.connect()
-    with connection.begin():
-        query = select(versions).where(versions.c.id == int_or_none(version_id))
-        result = connection.execute(query).fetchone()
-    if result is None:
-        connection.close()
-        return jsonify("No such version exists."), 404
+    # List of fields to check in request_data
+    fields = ["publication_id",
+              "deleted",
+              "published",
+              "original_filename",
+              "name",
+              "type",
+              "section_id",
+              "sort_order"]
 
+    # Start building values dictionary for update statement
     values = {}
-    if title is not None:
-        values["name"] = title
-    if filename is not None:
-        values["original_filename"] = filename
-    if published is not None:
-        values["published"] = published
-    if sort_order is not None:
-        values["sort_order"] = sort_order
-    if version_type is not None:
-        values["type"] = version_type
 
+    # Loop over all fields and validate them
+    for field in fields:
+        if field in request_data:
+            if request_data[field] is None and field != "deleted":
+                values[field] = None
+            else:
+                # Validate integer field values and ensure all other
+                # fields are strings
+                if field == "publication_id":
+                    if not validate_int(request_data[field], 1):
+                        return jsonify({"msg": f"Field '{field}' must be a positive integer (or null)."}), 400
+                elif field == "published":
+                    if not validate_int(request_data[field], 0, 2):
+                        return jsonify({"msg": f"Field '{field}' must be an integer with value 0, 1 or 2."}), 400
+                elif field == "deleted":
+                    if not validate_int(request_data[field], 0, 1):
+                        return jsonify({"msg": f"Field '{field}' must be an integer with value 0 or 1."}), 400
+                elif field in ["type", "section_id", "sort_order"]:
+                    if not validate_int(request_data[field], 0):
+                        return jsonify({"msg": f"Field '{field}' must be a non-negative integer."}), 400
+                else:
+                    # Convert remaining fields to string
+                    request_data[field] = str(request_data[field])
+
+                # Add the field to the values list for the query construction
+                values[field] = request_data[field]
+
+    if not values:
+        return jsonify({"msg": "No valid fields provided to update."}), 400
+
+    # Add date_modified
     values["date_modified"] = datetime.now()
 
-    if len(values) > 0:
-        with connection.begin():
-            update = versions.update().where(versions.c.id == int(version_id)).values(**values)
-            connection.execute(update)
-        connection.close()
-        return jsonify({
-            "msg": "Updated version {} with values {}".format(int(version_id), str(values)),
-            "manuscript_id": int(version_id)
-        })
-    else:
-        connection.close()
-        return jsonify("No valid update values given."), 400
+    try:
+        with db_engine.connect() as connection:
+            with connection.begin():
+                # ! We are not verifying that the version belongs to
+                # ! a publication in the specified project.
+
+                # Verify that publication_id is valid if it is updated
+                if (
+                    "publication_id" in values
+                    and values["publication_id"] is not None
+                ):
+                    publication_table = get_table("publication")
+                    stmt = (
+                        select(publication_table.c.id)
+                        .where(publication_table.c.id == values["publication_id"])
+                    )
+                    result = connection.execute(stmt).first()
+
+                    if result is None:
+                        return jsonify({"msg": f"Invalid publication_id in provided data. No publication with ID {values['publication_id']} exists."}), 400
+
+                # Proceed to updating the version
+                version_table = get_table("publication_version")
+                upd_stmt = (
+                    version_table.update()
+                    .where(version_table.c.id == version_id)
+                    .values(**values)
+                    .returning(*version_table.c)  # Return the updated row
+                )
+                result = connection.execute(upd_stmt)
+                updated_row = result.fetchone()  # Fetch the updated row
+
+                if updated_row is None:
+                    # No row was returned; handle accordingly
+                    return jsonify({"msg": "Update failed: invalid version_id or no changes were made."}), 400
+
+                # Convert the inserted row to a dict for JSON serialization
+                updated_row_dict = updated_row._asdict()
+
+                return jsonify({
+                    "msg": f"Updated version with ID {version_id} successfully.",
+                    "row": updated_row_dict
+                })
+
+    except Exception as e:
+        # Handle errors and return error response
+        result = {
+            "msg": f"Failed to update version with ID {version_id}.",
+            "reason": str(e)
+        }
+        return jsonify(result), 500
 
 
 @publishing_tools.route("/<project>/facsimile_collection/<collection_id>/edit/", methods=["POST"])
