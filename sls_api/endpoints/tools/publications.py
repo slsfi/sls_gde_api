@@ -607,7 +607,9 @@ def get_publication_comments(project, publication_id):
 def link_text_to_publication(project, publication_id):
     """
     Create a new comment, manuscript or version for the specified publication
-    in the given project.
+    in the given project. Observe that publications can have only one comment.
+    Attempting to create a new comment for a publication that already has one
+    will fail.
 
     URL Path Parameters:
 
@@ -795,7 +797,10 @@ def link_text_to_publication(project, publication_id):
                 collection_table = get_table("publication_collection")
                 publication_table = get_table("publication")
                 stmt = (
-                    select(publication_table.c.id)
+                    select(
+                        publication_table.c.id,
+                        publication_table.c.publication_comment_id
+                    )
                     .join(collection_table, publication_table.c.publication_collection_id == collection_table.c.id)
                     .where(collection_table.c.project_id == project_id)
                     .where(publication_table.c.id == publication_id)
@@ -804,6 +809,14 @@ def link_text_to_publication(project, publication_id):
 
                 if result is None:
                     return jsonify({"msg": "Publication not found. Either project name or publication_id is invalid."}), 404
+
+                # Since publications can have only one comment linked to them,
+                # we need to check if the publication already has a comment.
+                if (
+                    text_type == "comment"
+                    and result["publication_comment_id"] is not None
+                ):
+                    return jsonify({"msg": "Comment already linked to publication. Publications can have only one comment."}), 400
 
                 table = get_table(f"publication_{text_type}")
                 ins_stmt = (
