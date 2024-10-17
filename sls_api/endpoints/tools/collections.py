@@ -122,7 +122,7 @@ def create_facsimile_collection(project):
                 else:
                     # Ensure remaining fields are strings
                     request_data[field] = str(request_data[field])
-                
+
                 # Add the field to the insert values
                 values[field] = request_data[field]
 
