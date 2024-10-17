@@ -145,6 +145,11 @@ def list_facsimile_collections(project):
     """
     project_id = get_project_id_from_name(project)
     connection = db_engine.connect()
+    # Select all publication_collection objects that are linked to the
+    # project through publication_facsimile -> publication ->
+    # publication_collection
+    # AND all publication_collection objects that are orphans, i.e. they
+    # are not linked to any publication_collection
     statement = """ select * from publication_facsimile_collection where deleted != 1 AND (
                     id in
                     (
