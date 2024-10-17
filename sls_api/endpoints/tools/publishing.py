@@ -914,51 +914,6 @@ def edit_comment(project, publication_id):
         return jsonify(result), 500
 
 
-@publishing_tools.route("/<project>/publication/<publication_id>/manuscripts/new/", methods=["POST"])
-@project_permission_required
-def add_manuscript(project, publication_id):
-    """
-    Takes "title", "filename", "published", "sort_order" as JSON data
-    Returns "msg" and "manuscript_id" on success, otherwise 40x
-
-    Att! Use the "/<project>/publication/<publication_id>/link_file/" endpoint instead.
-    """
-    request_data = request.get_json()
-    if not request_data:
-        return jsonify({"msg": "No data provided."}), 400
-    title = request_data.get("title", None)
-    filename = request_data.get("filename", None)
-    published = request_data.get("published", None)
-    sort_order = request_data.get("sort_order", None)
-
-    publications = get_table("publication")
-    manuscripts = get_table("publication_manuscript")
-    connection = db_engine.connect()
-    with connection.begin():
-        query = select(publications).where(publications.c.id == int_or_none(publication_id))
-        result = connection.execute(query).fetchone()
-    if result is None:
-        connection.close()
-        return jsonify("No such publication exists."), 404
-
-    values = {"publication_id": int(publication_id)}
-    if title is not None:
-        values["name"] = title
-    if filename is not None:
-        values["original_filename"] = filename
-    if published is not None:
-        values["published"] = published
-    if sort_order is not None:
-        values["sort_order"] = sort_order
-    with connection.begin():
-        insert = manuscripts.insert().values(**values)
-        result = connection.execute(insert)
-        return jsonify({
-            "msg": "Created new manuscript object.",
-            "manuscript_id": int(result.inserted_primary_key[0])
-        }), 201
-
-
 @publishing_tools.route("/<project>/manuscripts/<manuscript_id>/edit/", methods=["POST"])
 @project_permission_required
 def edit_manuscript(project, manuscript_id):
@@ -1007,56 +962,6 @@ def edit_manuscript(project, manuscript_id):
     else:
         connection.close()
         return jsonify("No valid update values given."), 400
-
-
-@publishing_tools.route("/<project>/publication/<publication_id>/versions/new/", methods=["POST"])
-@project_permission_required
-def add_version(project, publication_id):
-    """
-    Takes "title", "filename", "published", "sort_order", "type" as JSON data
-    "type" denotes version type, 1=base text, 2=other variant
-    Returns "msg" and "version_id" on success, otherwise 40x
-
-    Att! Use the "/<project>/publication/<publication_id>/link_file/" endpoint instead.
-    """
-    request_data = request.get_json()
-    if not request_data:
-        return jsonify({"msg": "No data provided."}), 400
-    title = request_data.get("title", None)
-    filename = request_data.get("filename", None)
-    published = request_data.get("published", None)
-    sort_order = request_data.get("sort_order", None)
-    version_type = request_data.get("type", None)
-
-    publications = get_table("publication")
-    versions = get_table("publication_version")
-    connection = db_engine.connect()
-    with connection.begin():
-        query = select(publications).where(publications.c.id == int_or_none(publication_id))
-        result = connection.execute(query).fetchone()
-    if result is None:
-        connection.close()
-        return jsonify("No such publication exists."), 404
-
-    values = {"publication_id": int(publication_id)}
-    if title is not None:
-        values["name"] = title
-    if filename is not None:
-        values["original_filename"] = filename
-    if published is not None:
-        values["published"] = published
-    if sort_order is not None:
-        values["sort_order"] = sort_order
-    if version_type is not None:
-        values["type"] = version_type
-
-    with connection.begin():
-        insert = versions.insert().values(**values)
-        result = connection.execute(insert)
-        return jsonify({
-            "msg": "Created new version object.",
-            "version_id": int(result.inserted_primary_key[0])
-        }), 201
 
 
 @publishing_tools.route("/<project>/versions/<version_id>/edit/", methods=["POST"])
