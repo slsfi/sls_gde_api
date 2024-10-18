@@ -1303,57 +1303,6 @@ def edit_version(project, version_id):
         return jsonify(result), 500
 
 
-@publishing_tools.route("/<project>/facsimile_collection/<collection_id>/edit/", methods=["POST"])
-@project_permission_required
-def edit_facsimile_collection(project, collection_id):
-    """
-    Takes "title", "numberOfPages", "startPageNumber", "description" as JSON data
-    Returns "msg" and "facs_coll_id" on success, otherwise 40x
-    """
-    request_data = request.get_json()
-    if not request_data:
-        return jsonify({"msg": "No data provided."}), 400
-    title = request_data.get("title", None)
-    page_count = request_data.get("numberOfPages", None)
-    start_page = request_data.get("startPageNumber", None)
-    description = request_data.get("description", None)
-    external_url = request_data.get("external_url", None)
-    collections = get_table("publication_facsimile_collection")
-    connection = db_engine.connect()
-    with connection.begin():
-        query = select(collections).where(collections.c.id == int_or_none(collection_id))
-        result = connection.execute(query).fetchone()
-    if result is None:
-        connection.close()
-        return jsonify("No such facsimile collection exists."), 404
-
-    values = {}
-    if title is not None:
-        values["title"] = title
-    if page_count is not None:
-        values["number_of_pages"] = page_count
-    if start_page is not None:
-        values["start_page_number"] = start_page
-    if description is not None:
-        values["description"] = description
-    if external_url is not None:
-        values["external_url"] = external_url
-    values["date_modified"] = datetime.now()
-
-    if len(values) > 0:
-        with connection.begin():
-            update = collections.update().where(collections.c.id == int(collection_id)).values(**values)
-            connection.execute(update)
-        connection.close()
-        return jsonify({
-            "msg": "Updated facsimile collection {} with values {}".format(int(collection_id), str(values)),
-            "facs_coll_id": int(collection_id)
-        })
-    else:
-        connection.close()
-        return jsonify("No valid update values given."), 400
-
-
 @publishing_tools.route("/<project>/publication_collection/<collection_id>/info")
 @project_permission_required
 def get_publication_collection_info(project, collection_id):
