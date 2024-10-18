@@ -1,5 +1,5 @@
 from flask import Blueprint, jsonify, request
-from sqlalchemy import select, text
+from sqlalchemy import select, text, and_, or_, not_
 from datetime import datetime
 
 from sls_api.endpoints.generics import db_engine, get_project_id_from_name, get_table, \
@@ -333,41 +333,162 @@ def edit_facsimile_collection(project, facsimile_collection_id):
 @project_permission_required
 def list_facsimile_collections(project):
     """
-    List all publication_collection objects for a given project
+    List all facsimile collections linked to the specified project and
+    all orphan facsimile collections (i.e. not linked to any project).
+
+    URL Path Parameters:
+
+    - project (str): The name of the project to retrieve facsimile
+      collections for (must be a valid project name).
+
+    Returns:
+
+        JSON: A list with facsimile collection objects, an empty list
+        or an error message.
+
+    Example Request:
+
+        GET /projectname/facsimile_collection/list/
+
+    Example Response (Success):
+
+        [
+            {
+                "id": 123,
+                "date_created": "2023-05-12T12:34:56",
+                "date_modified": "2023-06-01T08:22:11",
+                "deleted": 0,
+                "title": "Facsimile Collection",
+                "number_of_pages": 150,
+                "start_page_number": 0,
+                "description": "Description of the collection.",
+                "folder_path": null,
+                "page_comment": null,
+                "external_url": null
+            },
+            ...
+        ]
+
+    Example Response (Error):
+
+        {
+            "msg": "Invalid project name."
+        }
+
+    Status Codes:
+
+    - 200 - OK: The facsimile collections are retrieved successfully.
+    - 400 - Bad Request: Invalid project name.
+    - 500 - Internal Server Error: Database query or execution failed.
     """
+    # Verify that project name is valid and get project_id
     project_id = get_project_id_from_name(project)
-    connection = db_engine.connect()
+    if not project_id:
+        return jsonify({"msg": "Invalid project name."}), 400
+
+    publication_facsimile_collection = get_table("publication_facsimile_collection")
+    publication_facsimile = get_table("publication_facsimile")
+    publication = get_table("publication")
+    publication_collection = get_table("publication_collection")
+
+    # The endpoint has been refactored to use SQLAlchemy's Core methods
+    # to build the query statement. The original raw SQL query is below
+    # for reference.
+    # The query does the following:
     # Select all publication_collection objects that are linked to the
     # project through publication_facsimile -> publication ->
     # publication_collection
     # AND all publication_collection objects that are orphans, i.e. they
     # are not linked to any publication_collection
-    statement = """ select * from publication_facsimile_collection where deleted != 1 AND (
-                    id in
-                    (
-                        select publication_facsimile_collection_id from publication_facsimile where publication_id in (
-                            select id from publication where publication_collection_id in (
-                                select id from publication_collection where project_id = :project_id and deleted != 1
-                            )
-                        )
-                    ) or
-                    id not in
-                    (
-                        select publication_facsimile_collection_id from publication_facsimile where publication_id in (
-                            select id from publication where publication_collection_id in (
-                                select id from publication_collection where deleted != 1
-                            )
-                        )
+    """
+    SELECT *
+    FROM publication_facsimile_collection
+    WHERE deleted != 1 AND (
+        id IN (
+            SELECT publication_facsimile_collection_id
+            FROM publication_facsimile
+            WHERE publication_id IN (
+                SELECT id
+                FROM publication
+                WHERE publication_collection_id IN (
+                    SELECT id
+                    FROM publication_collection
+                    WHERE project_id = :project_id AND deleted != 1
+                )
+            )
+        )
+        OR id NOT IN (
+            SELECT publication_facsimile_collection_id
+            FROM publication_facsimile
+            WHERE publication_id IN (
+                SELECT id
+                FROM publication
+                WHERE publication_collection_id IN (
+                    SELECT id
+                    FROM publication_collection
+                    WHERE deleted != 1
+                )
+            )
+        )
+    )
+    """
+
+    try:
+        with db_engine.connect() as connection:
+            # Subquery to get publication_collection IDs for the project
+            pub_coll_subq = select(publication_collection.c.id).where(
+                and_(
+                    publication_collection.c.project_id == project_id,
+                    publication_collection.c.deleted < 1
+                )
+            )
+
+            # Subquery to get publication IDs linked to the
+            # publication_collections
+            publication_subq = select(publication.c.id).where(
+                publication.c.publication_collection_id.in_(pub_coll_subq)
+            )
+
+            # Subquery to get publication_facsimile_collection_ids linked
+            # to the publications
+            facsimile_coll_linked_subq = select(publication_facsimile.c.publication_facsimile_collection_id).where(
+                publication_facsimile.c.publication_id.in_(publication_subq)
+            )
+
+            # Subquery to get all publication_collection IDs where deleted < 1
+            all_pub_coll_subq = select(publication_collection.c.id).where(
+                publication_collection.c.deleted < 1
+            )
+
+            # Subquery to get publication IDs linked to all 
+            # publication_collections
+            all_publication_subq = select(publication.c.id).where(
+                publication.c.publication_collection_id.in_(all_pub_coll_subq)
+            )
+
+            # Subquery to get all publication_facsimile_collection_ids
+            # linked to any publication_collection
+            facsimile_coll_all_linked_subq = select(publication_facsimile.c.publication_facsimile_collection_id).where(
+                publication_facsimile.c.publication_id.in_(all_publication_subq)
+            )
+
+            # Main query
+            stmt = select(publication_facsimile_collection).where(
+                and_(
+                    publication_facsimile_collection.c.deleted < 1,
+                    or_(
+                        publication_facsimile_collection.c.id.in_(facsimile_coll_linked_subq),
+                        not_(publication_facsimile_collection.c.id.in_(facsimile_coll_all_linked_subq))
                     )
-                )"""
-    statement = text(statement).bindparams(project_id=project_id)
-    rows = connection.execute(statement).fetchall()
-    result = []
-    for row in rows:
-        if row is not None:
-            result.append(row._asdict())
-    connection.close()
-    return jsonify(result)
+                )
+            )
+            result = connection.execute(stmt).fetchall()
+            result = [row._asdict() for row in rows]
+            return jsonify(result)
+
+    except Exception as e:
+        return jsonify({"msg": "Error trying to retrieve facsimile collections.",
+                        "reason": str(e)}), 500
 
 
 @collection_tools.route("/<project>/facsimile_collection/<collection_id>/link/", methods=["POST"])
