@@ -482,7 +482,7 @@ def list_facsimile_collections(project):
                     )
                 )
             )
-            result = connection.execute(stmt).fetchall()
+            rows = connection.execute(stmt).fetchall()
             result = [row._asdict() for row in rows]
             return jsonify(result)
 
