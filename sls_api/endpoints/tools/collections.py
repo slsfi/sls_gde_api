@@ -460,7 +460,7 @@ def list_facsimile_collections(project):
                 publication_collection.c.deleted < 1
             )
 
-            # Subquery to get publication IDs linked to all 
+            # Subquery to get publication IDs linked to all
             # publication_collections
             all_publication_subq = select(publication.c.id).where(
                 publication.c.publication_collection_id.in_(all_pub_coll_subq)
