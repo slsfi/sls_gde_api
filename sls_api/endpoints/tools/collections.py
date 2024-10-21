@@ -335,7 +335,8 @@ def edit_facsimile_collection(project, facsimile_collection_id):
 def list_facsimile_collections(project, order_by="id", direction="desc"):
     """
     List all facsimile collections linked to the specified project and
-    all orphan facsimile collections (i.e. not linked to any project).
+    all orphan facsimile collections (i.e. not linked to any project),
+    with optional sorting by facsimile collection table columns.
 
     URL Path Parameters:
 
@@ -667,21 +668,115 @@ def edit_facsimile(project):
 
 
 @collection_tools.route("/<project>/facsimile_collection/<collection_id>/list_links/")
+@collection_tools.route("/<project>/facsimile_collection/<collection_id>/list_links/<order_by>/<direction>/")
 @project_permission_required
-def list_facsimile_collection_links(project, collection_id):
+def list_facsimile_collection_links(project, collection_id, order_by="id", direction="asc"):
     """
-    List all publication_facsimile objects in the given publication_facsimile_collection
+    List all publication facsimile objects in the specified publication
+    facsimile collection, with optional sorting by facsimile table columns
+    or the publication name.
+
+    URL Path Parameters:
+
+    - project (str, required): The name of the project associated with the
+      publication facsimile collection (must be a valid project name).
+    - collection_id (int, required): The ID of the publication facsimile
+      collection to retrieve facsimiles for (must be a positive integer).
+    - order_by (str, optional): The column by which to order the facsimile
+      objects. Valid options include columns from the publication_facsimile
+      table like "id", "page_number", as well as "publication_name" for the name of the publication. Defaults to "id".
+    - direction (str, optional): The sort direction, valid values are `asc`
+      (ascending, default) and `desc` (descending).
+
+    Returns:
+
+        JSON: A list of facsimile objects with details or an error message.
+
+    Example Request:
+
+        GET /projectname/facsimile_collection/123/list_links/
+
+    Example Response (Success):
+
+        [
+            {
+                "id": 456,
+                "publication_id": 789,
+                "publication_name": "Publication Title",
+                "page_number": 12,
+                "date_created": "2023-07-01T14:22:33",
+                "deleted": 0
+            },
+            ...
+        ]
+
+    Example Response (Error):
+
+        {
+            "msg": "Invalid collection_id, must be a positive integer."
+        }
+
+    Status Codes:
+
+    - 200 - OK: The facsimiles are retrieved successfully.
+    - 400 - Bad Request: Invalid project name or collection ID.
+    - 500 - Internal Server Error: Database query or execution failed.
     """
-    connection = db_engine.connect()
-    facsimiles = get_table("publication_facsimile")
-    statement = select(facsimiles).where(facsimiles.c.publication_facsimile_collection_id == int_or_none(collection_id))
-    rows = connection.execute(statement).fetchall()
-    result = []
-    for row in rows:
-        if row is not None:
-            result.append(row._asdict())
-    connection.close()
-    return jsonify(result)
+    # Verify that project name is valid and get project_id
+    project_id = get_project_id_from_name(project)
+    if not project_id:
+        return jsonify({"msg": "Invalid project name."}), 400
+
+    # Convert collection_id to integer and verify
+    collection_id = int_or_none(collection_id)
+    if not collection_id or collection_id < 1:
+        return jsonify({"msg": "Invalid collection_id, must be a positive integer."}), 400
+
+    facsimile_table = get_table("publication_facsimile")
+    publication_table = get_table("publication")
+
+    valid_order_columns = list(facsimile_table.c.keys()) + ["publication_name"]
+
+    if order_by not in valid_order_columns:
+        return jsonify({"msg": "Invalid order_by field."}), 400
+
+    if direction not in ["asc", "desc"]:
+        return jsonify({"msg": "Invalid sort order, must be either 'asc' or 'desc'."}), 400
+
+    try:
+        with db_engine.connect() as connection:
+            # Select facsimiles in the facsimile collection and join in
+            # the publication table so we can also get the publication
+            # name.
+            stmt = (
+                select(
+                    *facsimile_table.c,
+                    publication_table.c.name.label("publication_name")
+                )
+                .join(publication_table, facsimile_table.c.publication_id == publication_table.c.id)
+                .where(facsimile_table.c.publication_facsimile_collection_id == collection_id)
+                .where(facsimile_table.c.deleted < 1)
+                .where(publication_table.c.deleted < 1)
+            )
+
+            # Order by facsimile table column or publication name
+            if order_by == "publication_name":
+                order_column = publication_table.c.name
+            else:
+                order_column = facsimile_table.c[order_by]
+
+            if direction == "asc":
+                stmt = stmt.order_by(asc(order_column))
+            else:
+                stmt = stmt.order_by(desc(order_column))
+
+            rows = connection.execute(stmt).fetchall()
+            result = [row._asdict() for row in rows]
+            return jsonify(result)
+
+    except Exception as e:
+        return jsonify({"msg": f"Error trying to retrieve facsimiles for facsimile collection with ID {collection_id}.",
+                        "reason": str(e)}), 500
 
 
 @collection_tools.route("/<project>/facsimile_publication/delete/<f_pub_id>", methods=["DELETE"])
