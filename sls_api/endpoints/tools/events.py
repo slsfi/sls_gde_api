@@ -183,7 +183,7 @@ def list_project_subjects(project, order_by="last_name", direction="asc"):
 
     Returns:
 
-        JSON: A list of subject objects within the specified project, 
+        JSON: A list of subject objects within the specified project,
         an empty list if there are no subjects, or an error message.
 
     Example Request:
@@ -290,62 +290,177 @@ def list_project_subjects(project, order_by="last_name", direction="asc"):
 @project_permission_required
 def add_new_subject(project):
     """
-    Add a new subject object to the database
+    Add a new subject (person) object to the specified project.
 
-    POST data MUST be in JSON format
+    URL Path Parameters:
 
-    POST data SHOULD contain:
-    type: subject type
-    description: subject description
+    - project (str, required): The name of the project to which the new person will
+      be added.
 
-    POST data CAN also contain:
-    first_name: Subject first or given name
-    last_name Subject surname
-    preposition: preposition for subject
-    full_name: Subject full name
-    legacy_id: Legacy id for subject
-    date_born: Subject date of birth
-    date_deceased: Subject date of death
+    POST Data Parameters in JSON Format:
+
+    - type (str): The type of person.
+    - first_name (str): The first name of the person.
+    - last_name (str): The last name of the person.
+    - place_of_birth (str): The place where the person was born.
+    - occupation (str): The person's occupation.
+    - preposition (str): Prepositional or nobiliary particle used in the surname of the person.
+    - full_name (str): The full name of the person.
+    - description (str): A brief description of the person.
+    - legacy_id (str): An identifier from a legacy system.
+    - date_born (str, optional): The birth date or year of the person (max length 30 characters),
+      in YYYY-MM-DD or YYYY format.
+    - date_deceased (str, optional): The date of death of the person (max length 30 characters),
+      in YYYY-MM-DD or YYYY format.
+    - source (str): The source of the information.
+    - alias (str, optional): An alias for the person.
+    - previous_last_name (str, optional): The person's previous last name.
+
+    Returns:
+
+        JSON: A message indicating the success of the operation, along with the created
+        subject object, or an error message if the operation fails.
+
+    Example Request:
+
+        POST /projectname/subjects/new/
+        {
+            "type": "Historical person",
+            "first_name": "Jane",
+            "last_name": "Doe",
+            "place_of_birth": "Fantasytown",
+            "occupation": "Scientist",
+            "preposition": "van",
+            "full_name": "Jane van Doe",
+            "description": "A brief description about the person.",
+            "legacy_id": "pe2",
+            "date_born": "1850",
+            "date_deceased": "1920",
+            "source": "Historical Archive",
+            "alias": "JD",
+            "previous_last_name": "Smith"
+        }
+
+    Example Response (Success):
+
+        {
+            "msg": "Subject with ID 123 created successfully.",
+            "row": {
+                "id": 123,
+                "date_created": "2023-05-12T12:34:56",
+                "date_modified": "2023-06-01T08:22:11",
+                "deleted": 0,
+                "type": "Historical person",
+                "first_name": "Jane",
+                "last_name": "Doe",
+                "place_of_birth": "Fantasytown",
+                "occupation": "Scientist",
+                "preposition": "van",
+                "full_name": "Jane van Doe",
+                "description": "A brief description about the person.",
+                "legacy_id": "pe2",
+                "date_born": "1850",
+                "date_deceased": "1920",
+                "project_id": 123,
+                "source": "Historical Archive",
+                "alias": "JD",
+                "previous_last_name": "Smith",
+                "translation_id": 4288
+            }
+        }
+
+    Example Response (Error):
+
+        {
+            "msg": "Invalid project name."
+        }
+
+    Status Codes:
+
+    - 201 - Created: The subject was created successfully.
+    - 400 - Bad Request: No data provided or fields are invalid.
+    - 500 - Internal Server Error: Database query or execution failed.
     """
+    # Verify that project name is valid and get project_id
+    project_id = get_project_id_from_name(project)
+    if not project_id:
+        return jsonify({"msg": "Invalid project name."}), 400
+
+    # Verify that request data was provided
     request_data = request.get_json()
     if not request_data:
         return jsonify({"msg": "No data provided."}), 400
-    subjects = get_table("subject")
-    connection = db_engine.connect()
 
-    new_subject = {
-        "type": request_data.get("type", None),
-        "description": request_data.get("description", None),
-        "project_id": get_project_id_from_name(project),
-        "first_name": request_data.get("first_name", None),
-        "last_name": request_data.get("last_name", None),
-        "preposition": request_data.get("preposition", None),
-        "full_name": request_data.get("full_name", None),
-        "legacy_id": request_data.get("legacy_id", None),
-        "date_born": request_data.get("date_born", None),
-        "date_deceased": request_data.get("date_deceased", None)
-    }
+    # Verify that "date_born" and "date_deceased" fields are within length limits.
+    if "date_born" in request_data and len(request_data.get("date_born", "")) > 30:
+        return jsonify({"msg": "Field 'date_born' must be 30 or less characters in length."}), 400
+
+    if "date_deceased" in request_data and len(request_data.get("date_deceased", "")) > 30:
+        return jsonify({"msg": "Field 'date_deceased' must be 30 or less characters in length."}), 400
+
+    # List of fields to check in request_data
+    fields = ["type",
+              "first_name",
+              "last_name",
+              "place_of_birth",
+              "occupation",
+              "preposition",
+              "full_name",
+              "description",
+              "legacy_id",
+              "date_born",
+              "date_deceased",
+              "source",
+              "alias",
+              "previous_last_name"]
+
+    # Start building the dictionary of inserted values
+    values = {}
+
+    # Loop over the fields list, check each one in request_data and validate
+    for field in fields:
+        if field in request_data:
+            if request_data[field] is None:
+                values[field] = None
+            else:
+                # Ensure remaining fields are strings
+                request_data[field] = str(request_data[field])
+
+                # Add the field to the insert values
+                values[field] = request_data[field]
+
+    values["project_id"] = project_id
+
     try:
-        with connection.begin():
-            insert = subjects.insert().values(**new_subject)
-            result = connection.execute(insert)
-            new_row = select(subjects).where(subjects.c.id == result.inserted_primary_key[0])
-            new_row = connection.execute(new_row).fetchone()
-            if new_row is not None:
-                new_row = new_row._asdict()
-            result = {
-                "msg": "Created new subject with ID {}".format(result.inserted_primary_key[0]),
-                "row": new_row
-            }
-            return jsonify(result), 201
+        with db_engine.connect() as connection:
+            with connection.begin():
+                subject_table = get_table("subject")
+                stmt = (
+                    subject_table.insert()
+                    .values(**values)
+                    .returning(*subject_table.c)  # Return the inserted row
+                )
+                result = connection.execute(stmt)
+                inserted_row = result.fetchone()  # Fetch the inserted row
+
+                if inserted_row is None:
+                    # No row was returned; handle accordingly
+                    return jsonify({
+                        "msg": "Insertion failed: no row returned.",
+                        "reason": "The insert statement did not return any data."
+                    }), 500
+
+                # Convert the inserted_row to a dictionary for JSON serialization
+                inserted_row_dict = inserted_row._asdict()
+
+                return jsonify({
+                    "msg": f"Subject with ID {inserted_row['id']} created successfully.",
+                    "row": inserted_row_dict
+                }), 201
+
     except Exception as e:
-        result = {
-            "msg": "Failed to create new subject.",
-            "reason": str(e)
-        }
-        return jsonify(result), 500
-    finally:
-        connection.close()
+        return jsonify({"msg": "Failed to create new subject.",
+                        "reason": str(e)}), 500
 
 
 @event_tools.route("/<project>/subjects/<subject_id>/edit/", methods=["POST"])
