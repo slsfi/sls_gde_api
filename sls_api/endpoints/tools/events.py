@@ -1,6 +1,6 @@
 from flask import Blueprint, jsonify, request
 from flask_jwt_extended import jwt_required
-from sqlalchemy import cast, select, text, Text
+from sqlalchemy import asc, cast, desc, select, text, Text
 from datetime import datetime
 
 from sls_api.endpoints.generics import db_engine, get_project_id_from_name, get_table, int_or_none, \
@@ -161,6 +161,129 @@ def edit_location(project, location_id):
     else:
         connection.close()
         return jsonify("No valid update values given."), 400
+
+
+@event_tools.route("/<project>/subjects/list/")
+@event_tools.route("/<project>/subjects/list/<order_by>/<direction>/")
+@project_permission_required
+def list_project_subjects(project, order_by="last_name", direction="asc"):
+    """
+    List all (non-deleted) subjects for a specified project, with optional sorting
+    by subject table columns.
+
+    URL Path Parameters:
+
+    - project (str, required): The name of the project for which to
+      retrieve subjects.
+    - order_by (str, optional): The column by which to order the subjects.
+      For example "last_name" or "first_name". Defaults to "last_name"
+      (which applies secondary ordering by the "full_name" column).
+    - direction (str, optional): The sort direction, valid values are `asc`
+      (ascending, default) and `desc` (descending).
+
+    Returns:
+
+        JSON: A list of subject objects within the specified project, 
+        an empty list if there are no subjects, or an error message.
+
+    Example Request:
+
+        GET /projectname/subjects/list/
+        GET /projectname/subjects/list/last_name/asc/
+
+    Example Response (Success):
+
+        [
+            {
+                "id": 1,
+                "date_created": "2023-05-12T12:34:56",
+                "date_modified": "2023-06-01T08:22:11",
+                "deleted": 0,
+                "type": "Historical person",
+                "first_name": "John",
+                "last_name": "Doe",
+                "place_of_birth": "Fantasytown",
+                "occupation": "Doctor",
+                "preposition": "von",
+                "full_name": "John von Doe",
+                "description": "a brief description about the person.",
+                "legacy_id": "pe1",
+                "date_born": "1870",
+                "date_deceased": "1915",
+                "project_id": 123,
+                "source": "Encyclopaedia Britannica",
+                "alias": "JD",
+                "previous_last_name": "Crow",
+                "translation_id": 4287
+            },
+            ...
+        ]
+
+    Example Response (Error):
+
+        {
+            "msg": "Invalid project name."
+        }
+
+    Status Codes:
+
+    - 200 - OK: The request was successful, and the subjects are returned.
+    - 400 - Bad Request: The project name, order_by field, or sort direction is invalid.
+    - 500 - Internal Server Error: Database query or execution failed.
+    """
+    # Verify that project name is valid and get project_id
+    project_id = get_project_id_from_name(project)
+    if not project_id:
+        return jsonify({"msg": "Invalid project name."}), 400
+
+    subject_table = get_table("subject")
+
+    # Verify order_by and direction
+    if order_by not in subject_table.c:
+        return jsonify({"msg": "Invalid order_by field."}), 400
+
+    if direction not in ["asc", "desc"]:
+        return jsonify({"msg": "Invalid sort order, must be either 'asc' or 'desc'."}), 400
+
+    try:
+        with db_engine.connect() as connection:
+            stmt = (
+                select(subject_table)
+                .where(subject_table.c.deleted < 1)
+                .where(subject_table.c.project_id == project_id)
+            )
+
+            # Build the order_by clause based on multiple columns
+            # if ordering by last_name
+            order_columns = []
+
+            if direction == "asc":
+                order_columns.append(
+                    asc(subject_table.c[order_by])
+                )
+                if order_by == "last_name":
+                    order_columns.append(
+                        asc(subject_table.c.full_name)
+                    )
+            else:
+                order_columns.append(
+                    desc(subject_table.c[order_by])
+                )
+                if order_by == "last_name":
+                    order_columns.append(
+                        desc(subject_table.c.full_name)
+                    )
+
+            # Apply multiple order_by clauses
+            stmt = stmt.order_by(*order_columns)
+
+            rows = connection.execute(stmt).fetchall()
+            result = [row._asdict() for row in rows]
+            return jsonify(result)
+
+    except Exception as e:
+        return jsonify({"msg": "Failed to retrieve project subjects.",
+                        "reason": str(e)}), 500
 
 
 @event_tools.route("/<project>/subjects/new/", methods=["POST"])
