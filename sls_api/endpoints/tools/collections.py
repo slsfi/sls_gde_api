@@ -690,7 +690,7 @@ def link_facsimile_collection_to_publication(project, collection_id):
                     }), 201
 
                 except Exception as e:
-                    return jsonify({"msg": f"Failed to create new publication facsimile.",
+                    return jsonify({"msg": "Failed to create new publication facsimile.",
                                     "reason": str(e)}), 400
 
     except Exception as e:
