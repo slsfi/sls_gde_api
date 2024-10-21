@@ -5,7 +5,7 @@ from datetime import datetime
 
 from sls_api.endpoints.generics import db_engine, get_project_id_from_name, get_table, int_or_none, \
     project_permission_required, select_all_from_table, create_translation, create_translation_text, \
-    get_translation_text_id
+    get_translation_text_id, validate_int
 
 event_tools = Blueprint("event_tools", __name__)
 
@@ -304,22 +304,23 @@ def add_new_subject(project):
     - last_name (str): The last name of the person.
     - place_of_birth (str): The place where the person was born.
     - occupation (str): The person's occupation.
-    - preposition (str): Prepositional or nobiliary particle used in the surname of the person.
+    - preposition (str): Prepositional or nobiliary particle used in the surname of
+      the person.
     - full_name (str): The full name of the person.
     - description (str): A brief description of the person.
     - legacy_id (str): An identifier from a legacy system.
-    - date_born (str, optional): The birth date or year of the person (max length 30 characters),
-      in YYYY-MM-DD or YYYY format.
-    - date_deceased (str, optional): The date of death of the person (max length 30 characters),
-      in YYYY-MM-DD or YYYY format.
+    - date_born (str, optional): The birth date or year of the person (max length
+      30 characters), in YYYY-MM-DD or YYYY format.
+    - date_deceased (str, optional): The date of death of the person (max length
+      30 characters), in YYYY-MM-DD or YYYY format.
     - source (str): The source of the information.
     - alias (str, optional): An alias for the person.
     - previous_last_name (str, optional): The person's previous last name.
 
     Returns:
 
-        JSON: A message indicating the success of the operation, along with the created
-        subject object, or an error message if the operation fails.
+        JSON: A message indicating the success of the operation, along with the
+        created subject object, or an error message if the operation fails.
 
     Example Request:
 
@@ -467,86 +468,189 @@ def add_new_subject(project):
 @project_permission_required
 def edit_subject(project, subject_id):
     """
-    Edit a subject object in the database
+    Edit an existing subject (person) object in the specified project by
+    updating its fields.
 
-    POST data MUST be in JSON format
+    URL Path Parameters:
 
-    POST data CAN contain:
-    type: subject type
-    description: subject description
-    first_name: Subject first or given name
-    last_name: Subject surname
-    preposition: preposition for subject
-    full_name: Subject full name
-    legacy_id: Legacy id for subject
-    date_born: Subject date of birth
-    date_deceased: Subject date of death
+    - project (str, required): The name of the project containing the subject
+      to be edited.
+    - subject_id (int, required): The unique identifier of the subject to be
+      updated.
+
+    POST Data Parameters in JSON Format (at least one required):
+
+    - deleted (int): Indicates if the subject is deleted (0 for no, 1 for yes).
+    - type (str): The type of person.
+    - first_name (str): The first name of the person.
+    - last_name (str): The last name of the person.
+    - place_of_birth (str): The place where the person was born.
+    - occupation (str): The person's occupation.
+    - preposition (str): Prepositional or nobiliary particle used in the surname
+      of the person.
+    - full_name (str): The full name of the person.
+    - description (str): A brief description of the person.
+    - legacy_id (str): An identifier from a legacy system.
+    - date_born (str, optional): The birth date or year of the person (max length
+      30 characters), in YYYY-MM-DD or YYYY format.
+    - date_deceased (str, optional): The date of death of the person (max length
+      30 characters), in YYYY-MM-DD or YYYY format.
+    - source (str): The source of the information.
+    - alias (str, optional): An alias for the person.
+    - previous_last_name (str, optional): The person's previous last name.
+
+    Returns:
+
+        JSON: A message indicating the success of the operation, along with the updated
+        subject object, or an error message if the operation fails.
+
+    Example Request:
+
+        POST /projectname/subjects/123/edit/
+        {
+            "type": "Historical person",
+            "first_name": "Jane",
+            "last_name": "Doe",
+            "place_of_birth": "Fantasytown",
+            "occupation": "Scientist",
+            "preposition": "van",
+            "full_name": "Jane van Doe",
+            "description": "An updated description about the person.",
+            "legacy_id": "pe2",
+            "date_born": "1850",
+            "date_deceased": "1920",
+            "source": "Historical Archive",
+            "alias": "JD",
+            "previous_last_name": "Smith",
+            "deleted": 0
+        }
+
+    Example Response (Success):
+
+        {
+            "msg": "Updated subject with ID 123 successfully.",
+            "row": {
+                "id": 123,
+                "date_created": "2023-05-12T12:34:56",
+                "date_modified": "2024-01-01T09:00:00",
+                "deleted": 0,
+                "type": "Historical person",
+                "first_name": "Jane",
+                "last_name": "Doe",
+                "place_of_birth": "Fantasytown",
+                "occupation": "Scientist",
+                "preposition": "van",
+                "full_name": "Jane van Doe",
+                "description": "An updated description about the person.",
+                "legacy_id": "pe2",
+                "date_born": "1850",
+                "date_deceased": "1920",
+                "project_id": 123,
+                "source": "Historical Archive",
+                "alias": "JD",
+                "previous_last_name": "Smith",
+                "translation_id": 4288
+            }
+        }
+
+    Example Response (Error):
+
+        {
+            "msg": "Invalid project name."
+        }
+
+    Status Codes:
+
+    - 200 - OK: The subject was updated successfully.
+    - 400 - Bad Request: No data provided or fields are invalid.
+    - 500 - Internal Server Error: Database query or execution failed.
     """
+    # Verify that project name is valid and get project_id
+    project_id = get_project_id_from_name(project)
+    if not project_id:
+        return jsonify({"msg": "Invalid project name."}), 400
+
+    # Convert subject_id to integer and verify
+    subject_id = int_or_none(subject_id)
+    if not subject_id or subject_id < 1:
+        return jsonify({"msg": "Invalid subject_id, must be a positive integer."}), 400
+
+    # Verify that request data was provided
     request_data = request.get_json()
     if not request_data:
         return jsonify({"msg": "No data provided."}), 400
 
-    subjects = get_table("subject")
+    # List of fields to check in request_data
+    fields = ["deleted",
+              "type",
+              "first_name",
+              "last_name",
+              "place_of_birth",
+              "occupation",
+              "preposition",
+              "full_name",
+              "description",
+              "legacy_id",
+              "date_born",
+              "date_deceased",
+              "source",
+              "alias",
+              "previous_last_name"]
 
-    connection = db_engine.connect()
-    with connection.begin():
-        subject_query = select(subjects.c.id).where(subjects.c.id == int_or_none(subject_id))
-        subject_row = connection.execute(subject_query).fetchone()
-    if subject_row is None:
-        return jsonify({"msg": "No subject with an ID of {} exists.".format(subject_id)}), 404
-
-    subject_type = request_data.get("type", None)
-    description = request_data.get("description", None)
-    first_name = request_data.get("first_name", None)
-    last_name = request_data.get("last_name", None)
-    preposition = request_data.get("preposition", None)
-    full_name = request_data.get("full_name", None)
-    legacy_id = request_data.get("legacy_id", None)
-    date_born = request_data.get("date_born", None)
-    date_deceased = request_data.get("date_deceased", None)
-
+    # Start building the dictionary of inserted values
     values = {}
-    if subject_type is not None:
-        values["type"] = subject_type
-    if description is not None:
-        values["description"] = description
-    if first_name is not None:
-        values["first_name"] = first_name
-    if last_name is not None:
-        values["last_name"] = last_name
-    if preposition is not None:
-        values["preposition"] = preposition
-    if full_name is not None:
-        values["full_name"] = full_name
-    if legacy_id is not None:
-        values["legacy_id"] = legacy_id
-    if date_born is not None:
-        values["date_born"] = date_born
-    if date_deceased is not None:
-        values["date_deceased"] = date_deceased
 
+    # Loop over the fields list, check each one in request_data and validate
+    for field in fields:
+        if field in request_data:
+            if request_data[field] is None and field != "deleted":
+                values[field] = None
+            else:
+                if field == "deleted":
+                    if not validate_int(request_data[field], 0, 1):
+                        return jsonify({"msg": f"Field '{field}' must be an integer with value 0 or 1."}), 400
+                else:
+                    # Ensure remaining fields are strings
+                    request_data[field] = str(request_data[field])
+
+                # Add the field to the insert values
+                values[field] = request_data[field]
+
+    if not values:
+        return jsonify({"msg": "No valid fields provided to update."}), 400
+
+    # Add date_modified
     values["date_modified"] = datetime.now()
 
-    if len(values) > 0:
-        try:
+    try:
+        with db_engine.connect() as connection:
             with connection.begin():
-                update = subjects.update().where(subjects.c.id == int(subject_id)).values(**values)
-                connection.execute(update)
+                subject_table = get_table("subject")
+                stmt = (
+                    subject_table.update()
+                    .where(subject_table.c.id == subject_id)
+                    .where(subject_table.c.project_id == project_id)
+                    .values(**values)
+                    .returning(*subject_table.c)  # Return the updated row
+                )
+                result = connection.execute(stmt)
+                updated_row = result.fetchone()  # Fetch the updated row
+
+                if updated_row is None:
+                    # No row was returned: invalid subject_id or project name
+                    return jsonify({"msg": "Update failed: invalid subject_id or project name."}), 400
+
+                # Convert the inserted row to a dict for JSON serialization
+                updated_row_dict = updated_row._asdict()
+
                 return jsonify({
-                    "msg": "Updated subject {} with values {}".format(int(subject_id), str(values)),
-                    "subject_id": int(subject_id)
+                    "msg": f"Updated subject with ID {subject_id} successfully.",
+                    "row": updated_row_dict
                 })
-        except Exception as e:
-            result = {
-                "msg": "Failed to update subject.",
-                "reason": str(e)
-            }
-            return jsonify(result), 500
-        finally:
-            connection.close()
-    else:
-        connection.close()
-        return jsonify("No valid update values given."), 400
+
+    except Exception as e:
+        return jsonify({"msg": f"Failed to update subject with ID {subject_id}.",
+                        "reason": str(e)}), 500
 
 
 @event_tools.route("/<project>/translation/new/", methods=["POST"])
