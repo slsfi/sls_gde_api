@@ -1,6 +1,6 @@
 from flask import Blueprint, jsonify, request
 from flask_jwt_extended import jwt_required
-from sqlalchemy import select, text
+from sqlalchemy import asc, desc, select, text
 
 from sls_api.endpoints.generics import db_engine, get_project_id_from_name, \
     get_table, int_or_none, validate_int, project_permission_required
@@ -10,15 +10,21 @@ publication_tools = Blueprint("publication_tools", __name__)
 
 
 @publication_tools.route("/<project>/publications/")
+@publication_tools.route("/<project>/publications/<order_by>/<direction>/")
 @jwt_required()
-def get_publications(project):
+def get_publications(project, order_by="id", direction="asc"):
     """
-    List all (non-deleted) publications for a given project.
+    List all (non-deleted) publications for a given project, with optional
+    sorting by publication table columns.
 
     URL Path Parameters:
 
     - project (str, required): The name of the project for which to retrieve
       publications.
+    - order_by (str, optional): The column by which to order the publications.
+      For example "id" or "name". Defaults to "id".
+    - direction (str, optional): The sort direction, valid values are `asc`
+      (ascending, default) and `desc` (descending).
 
     Returns:
 
@@ -28,6 +34,7 @@ def get_publications(project):
     Example Request:
 
         GET /projectname/publications/
+        GET /projectname/publications/date_modified/desc/
 
     Example Response (Success):
 
@@ -74,18 +81,35 @@ def get_publications(project):
     collection_table = get_table("publication_collection")
     publication_table = get_table("publication")
 
+    # Verify order_by and direction
+    if order_by not in publication_table.c:
+        return jsonify({"msg": "Invalid order_by field."}), 400
+
+    if direction not in ["asc", "desc"]:
+        return jsonify({"msg": "Invalid sort order, must be either 'asc' or 'desc'."}), 400
+
     try:
         with db_engine.connect() as connection:
             # Left join collection table on publication table and
             # select only the columns from the publication table
-            statement = (
+            stmt = (
                 select(*publication_table.c)
                 .join(collection_table, publication_table.c.publication_collection_id == collection_table.c.id)
                 .where(collection_table.c.project_id == project_id)
                 .where(publication_table.c.deleted < 1)
                 .order_by(publication_table.c.publication_collection_id)
             )
-            rows = connection.execute(statement).fetchall()
+
+            if direction == "asc":
+                stmt = stmt.order_by(
+                    asc(publication_table.c[order_by])
+                )
+            else:
+                stmt = stmt.order_by(
+                    desc(publication_table.c[order_by])
+                )
+
+            rows = connection.execute(stmt).fetchall()
             result = [row._asdict() for row in rows]
             return jsonify(result)
 
