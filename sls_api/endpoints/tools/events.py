@@ -744,7 +744,8 @@ def add_new_translation(project):
                         connection.execute(upd_stmt)
 
                     except Exception as e:
-                        return jsonify({"msg": f"No record with ID {parent_id} exists in table {table_name}."}), 400
+                        return jsonify({"msg": f"No record with ID {parent_id} exists in table {table_name}.",
+                                        "reason": str(e)}), 400
 
                 # The translation_id has been provided in the POST data.
                 # Validate translation_id
@@ -783,7 +784,8 @@ def add_new_translation(project):
                     return jsonify({"msg": "New translation created successfully.",
                                     "row": inserted_row_dict}), 201
                 except Exception as e:
-                    return jsonify({"msg": "Failed to insert new translation."}), 500
+                    return jsonify({"msg": "Failed to insert new translation.",
+                                    "reason": str(e)}), 500
 
     except Exception as e:
         return jsonify({"msg": "Unexpected error occurred while creating translation.",
@@ -796,109 +798,162 @@ def edit_translation(project, translation_id):
     """
     Edit a translation object in the database.
 
-    POST data must be in JSON format.
+    URL Path Parameters:
 
-    POST data can include the following fields:
-    - translation_text_id: int, id of the translation object in the `translation_text` table
-    - table_name: str, name of the table being translated.
-    - field_name: str, name of the field being translated.
-    - text: str, the translation text.
-    - language: str, language code of the translation (ISO 639-1).
-    - deleted: int, flag to mark as deleted (0 or 1).
+    - project (str, required): The name of the project.
+    - translation_id (int, required): The unique identifier of the translation to be
+      updated.
+
+    POST Data Parameters in JSON Format (at least one required):
+
+    - translation_text_id (int): ID of the translation object in the
+      `translation_text` table.
+    - table_name (str): name of the table being translated.
+    - field_name (str): name of the field being translated.
+    - text (str) the translation text.
+    - language (str): language code of the translation (ISO 639-1).
+    - deleted (int): flag to mark as deleted (0 for no and 1 for yes).
 
     If translation_text_id is omitted, an attempt to find the translation object
     which is to be updated is made based on translation_id, table_name, field_name
     and language. If that fails, a new tranlation object will be created.
 
-    Response:
+    Response Codes:
+
     - 201: New translation created.
     - 200: Existing translation updated.
     - 400: Invalid input.
     - 500: Server error.
     """
+    # Verify that project name is valid and get project_id
+    project_id = get_project_id_from_name(project)
+    if not project_id:
+        return jsonify({"msg": "Invalid project name."}), 400
+
+    # Convert translation_id to integer and verify
+    translation_id = int_or_none(translation_id)
+    if translation_id is None or translation_id < 1:
+        return jsonify({"msg": "Invalid translation_id, must be a positive integer."}), 400
+
+    # Verify that request data was provided
     request_data = request.get_json()
     if not request_data:
         return jsonify({"msg": "No data provided."}), 400
 
-    translation_text = get_table("translation_text")
+    # List of fields to check in request_data
+    fields = ["translation_text_id",
+              "table_name",
+              "field_name",
+              "text",
+              "language",
+              "deleted"]
 
-    translation_text_id = request_data.get("translation_text_id", None)
+    values = {}
+
+    # Loop over the fields list, check each one in request_data and validate
+    for field in fields:
+        if field in request_data:
+            if field == "translation_text_id":
+                continue
+            elif request_data[field] is None and field != "deleted":
+                values[field] = None
+            else:
+                if field == "deleted":
+                    if not validate_int(request_data[field], 0, 1):
+                        return jsonify({"msg": f"Field '{field}' must be an integer with value 0 or 1."}), 400
+                else:
+                    # Ensure remaining fields are strings
+                    request_data[field] = str(request_data[field])
+
+                # Add the field to the insert values
+                values[field] = request_data[field]
+
+    if not values:
+        return jsonify({"msg": "No valid fields provided to update."}), 400
+
+    translation_text_id = request_data.get("translation_text_id")
     if translation_text_id is None:
         # Attempt to get the id of the record in translation_text based on translation id,
         # table name, field name and language in the data
         translation_text_id = get_translation_text_id(translation_id,
-                                                      request_data.get("table_name", None),
-                                                      request_data.get("field_name", None),
-                                                      request_data.get("language", None))
-
-    connection = db_engine.connect()
-
-    # if translation_text_id is None we should add a new row to the translation_text table
-    if translation_text_id is None:
-        new_translation = {
-            "table_name": request_data.get("table_name", None),
-            "field_name": request_data.get("field_name", None),
-            "text": request_data.get("text", None),
-            "language": request_data.get("language", None),
-            "translation_id": translation_id
-        }
-        try:
+                                                      values.get("table_name"),
+                                                      values.get("field_name"),
+                                                      values.get("language"))
+    try:
+        with db_engine.connect() as connection:
             with connection.begin():
-                insert = translation_text.insert().values(**new_translation)
-                result = connection.execute(insert)
-                new_row = select(translation_text).where(translation_text.c.id == result.inserted_primary_key[0])
-                new_row = connection.execute(new_row).fetchone()
-                if new_row is not None:
-                    new_row = new_row._asdict()
-                result = {
-                    "msg": "Created new translation_text with ID {}".format(result.inserted_primary_key[0]),
-                    "row": new_row
-                }
-                return jsonify(result), 201
-        except Exception as e:
-            result = {
-                "msg": "Failed to create new translation_text.",
-                "reason": str(e)
-            }
-            return jsonify(result), 500
-        finally:
-            connection.close()
-    # if translation_text_id is not None, we should update the data
-    else:
-        edited_translation = {}
-        # Update only fields that are provided in the POST data
-        if "table_name" in request_data:
-            edited_translation["table_name"] = request_data.get("table_name", None)
-        if "field_name" in request_data:
-            edited_translation["field_name"] = request_data.get("field_name", None)
-        if "text" in request_data:
-            edited_translation["text"] = request_data.get("text", None)
-        if "language" in request_data:
-            edited_translation["language"] = request_data.get("language", None)
-        if "deleted" in request_data:
-            edited_translation["deleted"] = request_data.get("deleted", 0)
-        edited_translation["date_modified"] = datetime.now()
+                translation_text = get_table("translation_text")
+                if translation_text_id is None:
+                    # Add new row to the translation_text table
+                    values["deleted"] = 0
+                    values["translation_id"] = translation_id
 
-        if len(edited_translation) > 1:
-            try:
-                with connection.begin():
-                    update = translation_text.update().where(translation_text.c.id == int(translation_text_id)).values(**edited_translation)
-                    connection.execute(update)
-                    return jsonify({
-                        "msg": "Updated translation_text {} with values {}".format(int(translation_text_id), str(edited_translation)),
-                        "location_id": int(translation_text_id)
-                    })
-            except Exception as e:
-                result = {
-                    "msg": "Failed to update translation_text.",
-                    "reason": str(e)
-                }
-                return jsonify(result), 500
-            finally:
-                connection.close()
-        else:
-            connection.close()
-            return jsonify("No valid update values given."), 400
+                    try:
+                        ins_stmt = (
+                            translation_text.insert()
+                            .values(**values)
+                            .returning(*translation_text.c)  # Return the inserted row
+                        )
+                        result = connection.execute(ins_stmt)
+                        inserted_row = result.fetchone()  # Fetch the inserted row
+
+                        if inserted_row is None:
+                            # No row was returned; handle accordingly
+                            return jsonify({
+                                "msg": "Insertion failed: no row returned.",
+                                "reason": "The insert statement did not return any data."
+                            }), 500
+
+                        # Convert the inserted_row to a dictionary for JSON serialization
+                        inserted_row_dict = inserted_row._asdict()
+
+                        return jsonify({
+                            "msg": f"Translation text with ID {inserted_row['id']} created successfully.",
+                            "row": inserted_row_dict
+                        }), 201
+                    except Exception as e:
+                        return jsonify({"msg": "Failed to create new translation text.",
+                                        "reason": str(e)}), 500
+
+                else:
+                    # Update data of existing translation
+
+                    # Validate translation_text_id
+                    translation_text_id = int_or_none(translation_text_id)
+                    if translation_text_id is None or validate_int(translation_text_id, 1):
+                        return jsonify({"msg": "Field 'translation_text_id' must be a positive integer."}), 400
+
+                    # Add date_modified
+                    values["date_modified"] = datetime.now()
+
+                    try:
+                        upd_stmt = (
+                            translation_text.update()
+                            .where(translation_text.c.id == translation_text_id)
+                            .values(**values)
+                            .returning(*translation_text.c)  # Return the updated row
+                        )
+                        result = connection.execute(upd_stmt)
+                        updated_row = result.fetchone()  # Fetch the updated row
+
+                        if updated_row is None:
+                            # No row was returned: invalid translation_text_id
+                            return jsonify({"msg": "Update failed: invalid translation_text_id."}), 400
+
+                        # Convert the inserted row to a dict for JSON serialization
+                        updated_row_dict = updated_row._asdict()
+
+                        return jsonify({
+                            "msg": f"Updated translation text with ID {translation_text_id} successfully.",
+                            "row": updated_row_dict
+                        })
+                    except Exception as e:
+                        return jsonify({"msg": "Failed to update translation text.",
+                                        "reason": str(e)}), 500
+
+    except Exception as e:
+        return jsonify({"msg": "Unexpected error occurred while updating translation text.",
+                        "reason": str(e)}), 500
 
 
 @event_tools.route("/<project>/translations/<translation_id>/list/", methods=["POST"])
