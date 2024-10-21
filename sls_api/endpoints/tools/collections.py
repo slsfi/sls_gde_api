@@ -1,5 +1,5 @@
 from flask import Blueprint, jsonify, request
-from sqlalchemy import select, text, and_, or_, not_
+from sqlalchemy import select, text, and_, or_, not_, asc, desc
 from datetime import datetime
 
 from sls_api.endpoints.generics import db_engine, get_project_id_from_name, get_table, \
@@ -330,16 +330,21 @@ def edit_facsimile_collection(project, facsimile_collection_id):
 
 
 @collection_tools.route("/<project>/facsimile_collection/list/")
+@collection_tools.route("/<project>/facsimile_collection/list/<order_by>/<direction>/")
 @project_permission_required
-def list_facsimile_collections(project):
+def list_facsimile_collections(project, order_by="id", direction="desc"):
     """
     List all facsimile collections linked to the specified project and
     all orphan facsimile collections (i.e. not linked to any project).
 
     URL Path Parameters:
 
-    - project (str): The name of the project to retrieve facsimile
+    - project (str, required): The name of the project to retrieve facsimile
       collections for (must be a valid project name).
+    - order_by (str, optional): The column by which to order the facsimile
+      collections. For example "id", "title", "date_modified". Defaults to "id".
+    - direction (str, optional): The sort direction, valid values are `asc`
+      (ascending) and `desc` (descending, default).
 
     Returns:
 
@@ -390,6 +395,12 @@ def list_facsimile_collections(project):
     publication_facsimile = get_table("publication_facsimile")
     publication = get_table("publication")
     publication_collection = get_table("publication_collection")
+
+    if order_by not in publication_facsimile_collection.c:
+        return jsonify({"msg": "Invalid order_by field."}), 400
+
+    if direction not in ["asc", "desc"]:
+        return jsonify({"msg": "Invalid sort order, must be either 'asc' or 'desc'."}), 400
 
     # The endpoint has been refactored to use SQLAlchemy's Core methods
     # to build the query statement. The original raw SQL query is below
@@ -482,6 +493,16 @@ def list_facsimile_collections(project):
                     )
                 )
             )
+
+            if direction == "desc":
+                stmt = stmt.order_by(
+                    desc(publication_facsimile_collection.c[order_by])
+                )
+            else:
+                stmt = stmt.order_by(
+                    asc(publication_facsimile_collection.c[order_by])
+                )
+
             rows = connection.execute(stmt).fetchall()
             result = [row._asdict() for row in rows]
             return jsonify(result)
