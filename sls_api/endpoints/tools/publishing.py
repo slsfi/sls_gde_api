@@ -84,6 +84,7 @@ def list_user_projects():
 def add_new_project():
     """
     Create a new project.
+    TODO: grant the current user permission to the new project.
 
     POST Data Parameters in JSON Format:
 
@@ -133,29 +134,31 @@ def add_new_project():
             or required fields are missing.
     - 500 - Internal Server Error: Database query or execution failed.
     """
+    # Verify that request data was provided
     request_data = request.get_json()
     if not request_data:
         return jsonify({"msg": "No data provided."}), 400
 
     # Validate request data and construct dict with insert values
     values = {}
-    if "name" not in request_data:
-        return jsonify({"msg": "Project name required."}), 400
-
-    name = str(request_data.get("name"))
 
     # Validate project name
+    name = request_data.get("name")
+    if name is None:
+        return jsonify({"msg": "Project name required."}), 400
+
+    name = str(name)
     is_valid_name, name_error_msg = validate_project_name(name)
     if not is_valid_name:
         return jsonify({"msg": name_error_msg}), 400
 
     values["name"] = name
 
-    if "published" in request_data:
-        if not validate_int(request_data["published"], 0, 2):
+    published = request_data.get("published")
+    if published is not None:
+        if not validate_int(published, 0, 2):
             return jsonify({"msg": "Field 'published' must be an integer with value 0, 1 or 2."}), 400
-        else:
-            values["published"] = request_data["published"]
+        values["published"] = published
     else:
         values["published"] = 1
 
@@ -180,8 +183,7 @@ def add_new_project():
                     .values(**values)
                     .returning(*project_table.c)  # Return the inserted row
                 )
-                result = connection.execute(insert_stmt)
-                inserted_row = result.fetchone()  # Fetch the inserted row
+                inserted_row = connection.execute(insert_stmt).first()
 
                 if inserted_row is None:
                     # No row was returned; handle accordingly
