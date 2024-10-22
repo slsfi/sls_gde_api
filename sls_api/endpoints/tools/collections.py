@@ -702,60 +702,167 @@ def link_facsimile_collection_to_publication(project, collection_id):
 @project_permission_required
 def edit_facsimile(project):
     """
-    Edit a facsimile object in the database
+    Edit a publication facsimile object by updating its fields.
 
-    POST data MUST be in JSON format.
+    URL Path Parameters:
 
+    - project (str): The name of the project. Must be a valid project name
+      and associated with the facsimile.
+
+    POST Data Parameters in JSON Format:
+
+    - id (int, required): The ID of the facsimile to be updated. Must be a
+      positive integer.
+    - page_nr (int, optional): The page number of the facsimile. Must be an integer.
+    - section_id (int, optional): The section ID where the facsimile is categorized.
+      Must be a non-negative integer.
+    - priority (int, optional): The sort order of the facsimile. Must be a
+      non-negative integer.
+    - type (int, optional): The type of the facsimile. Must be a non-negative integer.
+    - deleted (int, optional): Marks the facsimile as deleted. Must be 0 (not
+      deleted) or 1 (deleted).
+
+    Returns:
+
+        JSON: A success message with the updated row or an error message.
+
+    Example Request:
+
+        POST /projectname/facsimile_collection/facsimile/edit/
+        Body:
+        {
+            "id": 789,
+            "page_nr": 12,
+            "priority": 2
+        }
+
+    Example Response (Success):
+
+        {
+            "msg": "Publication facsimile with ID 789 updated successfully.",
+            "row": {
+                "id": 789,
+                "publication_facsimile_collection_id": 123,
+                "publication_id": 456,
+                "publication_manuscript_id": null,
+                "publication_version_id": null,
+                "date_created": "2023-06-01T08:00:00",
+                "date_modified": "2023-07-13T10:00:00",
+                "deleted": 0,
+                "page_nr": 12,
+                "section_id": 0,
+                "priority": 2,
+                "type": 0
+            }
+        }
+
+    Example Response (Error):
+
+        {
+            "msg": "Invalid 'id' field, must be a positive integer."
+        }
+
+    Status Codes:
+
+    - 200 - OK: The facsimile was updated successfully.
+    - 400 - Bad Request: Invalid project name, facsimile ID, or no valid data provided.
+    - 404 - Not Found: The facsimile was not found for the given project or ID.
+    - 500 - Internal Server Error: Database query or execution failed.
     """
+    # Verify that project name is valid and get project_id
+    project_id = get_project_id_from_name(project)
+    if not project_id:
+        return jsonify({"msg": "Invalid project name."}), 400
+
+    # Verify that request data was provided
     request_data = request.get_json()
     if not request_data:
         return jsonify({"msg": "No data provided."}), 400
 
-    facsimile_id = request_data.get("id", None)
-    facsimile = get_table("publication_facsimile")
+    # Verify that required id field in request data
+    facsimile_id = int_or_none(request_data.get("id"))
+    if facsimile_id is None or facsimile_id < 1:
+        return jsonify({"msg": "Invalid 'id' field, must be a positive integer."}), 400
 
-    connection = db_engine.connect()
-    with connection.begin():
-        facsimile_query = select(facsimile.c.id).where(facsimile.c.id == int_or_none(facsimile_id))
-        facsimile_row = connection.execute(facsimile_query).fetchone()
-    if facsimile_row is None:
-        return jsonify({"msg": "No facsimile with an ID of {} exists.".format(facsimile_id)}), 404
+    # List of fields to check in request_data
+    fields = ["page_nr",
+              "section_id",
+              "priority",
+              "type",
+              "deleted"]
 
-    # facsimile_collection_id = request_data.get("facsimile_collection_id", None)
-    page = request_data.get("page", None)
-    priority = request_data.get("priority", None)
-    type = request_data.get("type", None)
-
+    # Start building the dictionary of updated values
     values = {}
-    if page is not None:
-        values["page_nr"] = page
-    if type is not None:
-        values["type"] = type
-    if priority is not None:
-        values["priority"] = priority
 
+    # Loop over the fields list, check each one in request_data and validate
+    for field in fields:
+        if field in request_data:
+            if field == "page_nr":
+                if not validate_int(request_data[field]):
+                    return jsonify({"msg": f"Field '{field}' must be an integer."}), 400
+            elif field in ["section_id", "priority", "type"]:
+                if not validate_int(request_data[field], 0):
+                    return jsonify({"msg": f"Field '{field}' must be a non-negative integer."}), 400
+            elif field == "deleted":
+                if not validate_int(request_data[field], 0, 1):
+                    return jsonify({"msg": f"Field '{field}' must be an integer with value 0 or 1."}), 400
+
+            # Add the field to the insert values
+            values[field] = request_data[field]
+
+    if not values:
+        return jsonify({"msg": "No valid fields provided to update."}), 400
+
+    # Add date_modified
     values["date_modified"] = datetime.now()
 
-    if len(values) > 0:
-        try:
+    try:
+        with db_engine.connect() as connection:
             with connection.begin():
-                update = facsimile.update().where(facsimile.c.id == int(facsimile_id)).values(**values)
-                connection.execute(update)
+                facsimile_table = get_table("publication_facsimile")
+                publication_table = get_table("publication")
+                pub_collection_table = get_table("publication_collection")
+
+                # Verify that facsimile id is valid and belongs to project
+                stmt = (
+                    select(facsimile_table.c.id)
+                    .join(publication_table, facsimile_table.c.publication_id == publication_table.c.id)
+                    .join(pub_collection_table, publication_table.c.publication_collection_id == pub_collection_table.c.id)
+                    .where(facsimile_table.c.deleted < 1)
+                    .where(facsimile_table.c.id == facsimile_id)
+                    .where(pub_collection_table.c.project_id == project_id)
+                )
+                result = connection.execute(stmt).first()
+
+                if result is None:
+                    return jsonify({"msg": "Facsimile not found. Either project name or facsimile ID is invalid."}), 404
+
+                # Proceed to updating the facsimile
+                upd_stmt = (
+                    facsimile_table.update()
+                    .where(facsimile_table.c.id == facsimile_id)
+                    .values(**values)
+                    .returning(*facsimile_table.c)  # Return the updated row
+                )
+                updated_row = connection.execute(upd_stmt).first()
+
+                if updated_row is None:
+                    # No row was returned; handle accordingly
+                    return jsonify({
+                        "msg": f"Update failed: No facsimile with ID {facsimile_id} exists in project with ID {project_id}."
+                    }), 404
+
+                # Convert the inserted row to a dict for JSON serialization
+                updated_row_dict = updated_row._asdict()
+
                 return jsonify({
-                    "msg": "Updated facsimile {} with values {}".format(int(facsimile_id), str(values)),
-                    "facsimile_id": int(facsimile_id)
+                    "msg": f"Publication facsimile with ID {facsimile_id} updated successfully.",
+                    "row": updated_row_dict
                 })
-        except Exception as e:
-            result = {
-                "msg": "Failed to update facsimile.",
-                "reason": str(e)
-            }
-            return jsonify(result), 500
-        finally:
-            connection.close()
-    else:
-        connection.close()
-        return jsonify("No valid update values given."), 400
+
+    except Exception as e:
+        return jsonify({"msg": f"Unexpected error occurred while updating publication facsimile with ID {facsimile_id}.",
+                        "reason": str(e)}), 500
 
 
 @collection_tools.route("/<project>/facsimile_collection/<collection_id>/list_links/")
