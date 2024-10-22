@@ -977,28 +977,6 @@ def list_facsimile_collection_links(project, collection_id, order_by="id", direc
                         "reason": str(e)}), 500
 
 
-@collection_tools.route("/<project>/facsimile_publication/delete/<f_pub_id>", methods=["DELETE"])
-@project_permission_required
-def delete_facsimile_collection_link(project, f_pub_id):
-    """
-    Delete the specified publication facsimile.
-    """
-    connection = db_engine.connect()
-    publication_facsimile = get_table("publication_facsimile")
-    values = {
-        'deleted': 1,
-        "date_modified": datetime.now()
-    }
-    with connection.begin():
-        update = publication_facsimile.update().where(publication_facsimile.c.id == int(f_pub_id)).values(**values)
-        connection.execute(update)
-    connection.close()
-    result = {
-        "msg": "Deleted publication_facsimile"
-    }
-    return jsonify(result), 200
-
-
 @collection_tools.route("/<project>/publication_collection/list/")
 @project_permission_required
 def list_publication_collections(project):
