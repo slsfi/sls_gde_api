@@ -1,6 +1,6 @@
 import calendar
 from collections import OrderedDict
-from flask import jsonify
+from flask import jsonify, Response
 from flask_jwt_extended import get_jwt_identity, verify_jwt_in_request
 from functools import wraps
 import glob
@@ -14,7 +14,7 @@ from ruamel.yaml import YAML
 from sqlalchemy import create_engine, MetaData, Table
 from sqlalchemy.sql import select, text
 import time
-from typing import Any, Tuple, Optional
+from typing import Any, Optional, Tuple
 from werkzeug.security import safe_join
 
 ALLOWED_EXTENSIONS_FOR_FACSIMILE_UPLOAD = ["tif", "tiff", "png", "jpg", "jpeg"]
@@ -596,3 +596,51 @@ def validate_int(
     ):
         return False
     return True
+
+
+def create_success_response(
+    message: str,
+    data: Optional[Any] = None,
+    status_code: int = 200
+) -> Tuple[Response, int]:
+    """
+    Create a standardized JSON success response.
+
+    Args:
+
+        message (str): A message describing the success.
+        data (Any, optional): The data to include in the response. Defaults to None.
+        status_code (int, optional): The HTTP status code for the response. Defaults to 200.
+
+    Returns:
+
+        A tuple containing the Flask Response object with JSON data and the HTTP status code.
+    """
+    return jsonify({
+        "success": True,
+        "message": message,
+        "data": data
+    }), status_code
+
+
+def create_error_response(
+    message: str,
+    status_code: int = 400
+) -> Tuple[Response, int]:
+    """
+    Create a standardized JSON error response.
+
+    Args:
+
+        message (str): A message describing the error.
+        status_code (int, optional): The HTTP status code for the response. Defaults to 400.
+
+    Returns:
+
+        A tuple containing the Flask Response object with JSON data and the HTTP status code.
+    """
+    return jsonify({
+        "success": False,
+        "message": message,
+        "data": None
+    }), status_code
