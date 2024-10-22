@@ -1,6 +1,6 @@
 import logging
 from flask import Blueprint, jsonify, request
-from flask_jwt_extended import jwt_required
+from flask_jwt_extended import get_jwt_identity, jwt_required
 from sqlalchemy import select
 from datetime import datetime
 
@@ -11,6 +11,72 @@ from sls_api.endpoints.generics import db_engine, get_project_id_from_name, get_
 publishing_tools = Blueprint("publishing_tools", __name__)
 
 logger = logging.getLogger("sls_api.tools.publishing")
+
+
+@publishing_tools.route("/projects/list/")
+@jwt_required()
+def list_user_projects():
+    """
+    List all (non-deleted) projects the current user has access to.
+
+    Returns:
+
+        JSON: A list of project objects the user has access to
+        or an error message.
+
+    Example Response (Success):
+
+        [
+            {
+                "id": 1,
+                "date_created": "2023-05-12T12:34:56",
+                "date_modified": "2023-06-01T08:22:11",
+                "deleted": 0,
+                "published": 1,
+                "name": "project_name"
+            },
+            ...
+        ]
+
+    Status Codes:
+
+    - 200 - OK: The request was successful, and the projects are returned.
+    - 403 - Forbidden: The user doesn't have project permissions.
+    - 404 - Not Found: The user doesn't have access to any (non-deleted) project.
+    - 500 - Internal Server Error: Database query or execution failed.
+    """
+    # Get identity of current JWT user along with projects the user
+    # has permissions to.
+    identity = get_jwt_identity()
+
+    if "projects" not in identity:
+        return jsonify({"msg": "User lacks project permissions."}), 403
+
+    if not identity["projects"]:
+        return jsonify({"msg": "User lacks access to any project."}), 404
+
+    project_table = get_table("project")
+
+    try:
+        with db_engine.connect() as connection:
+            # Get projects from the database and filter by
+            # non-deleted and names of projects the user has access to.
+            stmt = (
+                select(project_table)
+                .where(project_table.c.deleted < 1)
+                .where(project_table.c.name.in_(identity["projects"]))
+            )
+            rows = connection.execute(stmt).fetchall()
+
+            if not rows:
+                return jsonify({"msg": "User lacks access to any project."}), 404
+
+            result = [row._asdict() for row in rows]
+            return jsonify(result)
+
+    except Exception as e:
+        return jsonify({"msg": "Failed to retrieve user projects.",
+                        "reason": str(e)}), 500
 
 
 @publishing_tools.route("/projects/new/", methods=["POST"])
