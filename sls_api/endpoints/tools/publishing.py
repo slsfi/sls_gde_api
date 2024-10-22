@@ -464,7 +464,7 @@ def edit_publication_collection(project, collection_id):
                 if updated_row is None:
                     # No row was returned; handle accordingly
                     return jsonify({
-                        "msg": f"Update failed: No publication collection with ID {collection_id} exists in project with ID {project_id} or no changes were made."
+                        "msg": f"Update failed: No publication collection with ID {collection_id} exists in project with ID {project_id}."
                     }), 404
 
                 # Convert the inserted row to a dict for JSON serialization

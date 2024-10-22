@@ -970,6 +970,7 @@ def list_translations(project, translation_id):
       `translation` table. Must be a valid integer.
 
     POST Data Parameters in JSON Format (optional):
+
     - table_name (str): Filter translations by a specific table name.
     - field_name (str): Filter translations by a specific field name.
     - language (str): Filter translations by a specific language.
