@@ -430,22 +430,47 @@ def get_content(project, folder, xml_filename, xsl_filename, parameters):
     return content
 
 
-# Create a stub for a translation
-def create_translation(neutral):
-    connection = db_engine.connect()
-    with connection.begin():
+def create_translation(neutral, connection=None):
+    """
+    Inserts a new translation record with the provided neutral text and
+    returns the generated ID.
+    
+    If a connection is provided, it uses the existing connection. If no
+    connection is provided, a new connection is created for the operation,
+    and it will be closed automatically once the insertion is completed.
+
+    Args:
+        neutral (str): The neutral text to be inserted into the 'translation' table.
+        connection (optional, sqlalchemy.engine.Connection): An existing database connection. If None, a new connection will be created.
+
+    Returns:
+        int/None: The ID of the newly created translation record, or None if no ID is returned.
+    """
+    # If no connection is provided, create a new one
+    if connection is None:
+        connection = db_engine.connect()
+        new_connection = True
+    else:
+        new_connection = False
+
+    try:
+        # Use the provided or newly created connection
         stmt = """ INSERT INTO translation (neutral_text) VALUES(:neutral) RETURNING id """
-        statement = text(stmt).bindparams(neutral=neutral, )
+        statement = text(stmt).bindparams(neutral=neutral)
         result = connection.execute(statement)
         row = result.fetchone()
-    connection.close()
-    if row is not None:
-        return row.id
-    else:
+
+        # Return the translation ID if available
+        return row.id if row else None
+    except Exception:
         return None
+    finally:
+        # Close the connection only if it was created inside this function
+        if new_connection:
+            connection.close()
 
 
-# Create a stub for a translation
+# Create a stub for a translation text
 def create_translation_text(translation_id, table_name):
     connection = db_engine.connect()
     if translation_id is not None:

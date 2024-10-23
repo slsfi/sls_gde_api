@@ -829,7 +829,10 @@ def add_new_translation(project):
                         return create_error_response("Validation error: 'parent_id' must be a positive integer.")
 
                     # Create a new translation base object
-                    translation_id = create_translation(request_data.get("neutral_text"))
+                    translation_id = create_translation(
+                        request_data.get("neutral_text"),
+                        connection
+                    )
 
                     if translation_id is None:
                         return create_error_response("Unexpected error: failed to create new translation.", 500)
