@@ -5,11 +5,11 @@ from sqlalchemy import select
 from datetime import datetime
 
 from sls_api.endpoints.generics import db_engine, get_project_id_from_name, get_table, int_or_none, \
-    project_permission_required, validate_project_name, validate_int
+    project_permission_required, validate_project_name, validate_int, create_error_response, \
+    create_success_response
 
 
 publishing_tools = Blueprint("publishing_tools", __name__)
-
 logger = logging.getLogger("sls_api.tools.publishing")
 
 
@@ -50,11 +50,12 @@ def list_user_projects():
     identity = get_jwt_identity()
 
     if "projects" not in identity:
-        return jsonify({"msg": "User lacks project permissions."}), 403
+        return create_error_response("Permissions error: user lacks project permissions.", 403)
 
     if not identity["projects"]:
-        return jsonify({"msg": "User lacks access to any project."}), 404
+        return create_error_response("Permissions error: user lacks access to any project.", 404)
 
+    user_projects = [str(project) for project in identity["projects"]]
     project_table = get_table("project")
 
     try:
@@ -64,19 +65,18 @@ def list_user_projects():
             stmt = (
                 select(project_table)
                 .where(project_table.c.deleted < 1)
-                .where(project_table.c.name.in_(identity["projects"]))
+                .where(project_table.c.name.in_(user_projects))
             )
             rows = connection.execute(stmt).fetchall()
 
-            if not rows:
-                return jsonify({"msg": "User lacks access to any project."}), 404
-
-            result = [row._asdict() for row in rows]
-            return jsonify(result)
+            return create_success_response(
+                message=f"Retrieved {len(rows)} records.",
+                data=[row._asdict() for row in rows]
+            )
 
     except Exception as e:
-        return jsonify({"msg": "Failed to retrieve user projects.",
-                        "reason": str(e)}), 500
+        logger.exception(f"Exception retrieving user projects: {str(e)}")
+        return create_error_response("Unexpected error: failed to retrieve user projects.", 500)
 
 
 @publishing_tools.route("/projects/new/", methods=["POST"])
@@ -137,7 +137,7 @@ def add_new_project():
     # Verify that request data was provided
     request_data = request.get_json()
     if not request_data:
-        return jsonify({"msg": "No data provided."}), 400
+        return create_error_response("No data provided.")
 
     # Validate request data and construct dict with insert values
     values = {}
@@ -145,19 +145,19 @@ def add_new_project():
     # Validate project name
     name = request_data.get("name")
     if name is None:
-        return jsonify({"msg": "Project name required."}), 400
+        return create_error_response("Validation error: 'name' required.")
 
     name = str(name)
     is_valid_name, name_error_msg = validate_project_name(name)
     if not is_valid_name:
-        return jsonify({"msg": name_error_msg}), 400
+        return create_error_response(f"Validation error: {name_error_msg}.")
 
     values["name"] = name
 
     published = request_data.get("published")
     if published is not None:
         if not validate_int(published, 0, 2):
-            return jsonify({"msg": "Field 'published' must be an integer with value 0, 1 or 2."}), 400
+            return create_error_response("Validation error: 'published' must be either 0, 1 or 2.")
         values["published"] = published
     else:
         values["published"] = 1
@@ -175,7 +175,7 @@ def add_new_project():
                 result = connection.execute(select_stmt).first()
 
                 if result:
-                    return jsonify({"msg": "A project with this name already exists."}), 400
+                    return create_error_response("Validation error: a project with the provided name already exists.")
 
                 # Proceed to insert the new project
                 insert_stmt = (
@@ -187,22 +187,20 @@ def add_new_project():
 
                 if inserted_row is None:
                     # No row was returned; handle accordingly
-                    return jsonify({
-                        "msg": "Insertion failed: no row returned.",
-                        "reason": "The insert statement did not return any data."
-                    }), 500
+                    return create_error_response("Insertion failed: no row returned.", 500)
 
                 # Convert the inserted row to a dict for JSON serialization
                 inserted_row_dict = inserted_row._asdict()
 
-                return jsonify({
-                    "msg": f"New project with ID {inserted_row['id']} created successfully.",
-                    "row": inserted_row_dict
-                }), 201
+                return create_success_response(
+                    message="Project created.",
+                    data=inserted_row_dict,
+                    status_code=201
+                )
 
     except Exception as e:
-        return jsonify({"msg": "Failed to create new project.",
-                        "reason": str(e)}), 500
+        logger.exception(f"Exception creating new project: {str(e)}")
+        return create_error_response("Unexpected error: failed to create new project.", 500)
 
 
 @publishing_tools.route("/projects/<project_id>/edit/", methods=["POST"])
@@ -265,19 +263,19 @@ def edit_project(project_id):
     # Convert project_id to integer and verify
     project_id = int_or_none(project_id)
     if not project_id or project_id < 1:
-        return jsonify({"msg": "Invalid project_id, must be a positive integer."}), 400
+        return create_error_response("Validation error: 'project_id' must be a positive integer.")
 
     # Verify that request data was provided
     request_data = request.get_json()
     if not request_data:
-        return jsonify({"msg": "No data provided."}), 400
+        return create_error_response("No data provided.")
 
     # List allowed fields in POST data
     fields = ["deleted", "published"]
 
     # Verify that POST data contains at least one valid field
     if all(field not in request_data for field in fields):
-        return jsonify({"msg": "POST data contains no valid fields."}), 400
+        return create_error_response("Validation error: either 'deleted' or 'published' required.")
 
     # Start building values dictionary for update statement
     values = {}
@@ -287,10 +285,10 @@ def edit_project(project_id):
         if field in request_data:
             if field == "published":
                 if not validate_int(request_data[field], 0, 2):
-                    return jsonify({"msg": f"Field '{field}' must be an integer with value 0, 1 or 2."}), 400
+                    return create_error_response(f"Validation error: '{field}' must be either 0, 1 or 2.")
             elif field == "deleted":
                 if not validate_int(request_data[field], 0, 1):
-                    return jsonify({"msg": f"Field '{field}' must be an integer with value 0 or 1."}), 400
+                    return create_error_response(f"Validation error: '{field}' must be either 0 or 1.")
             else:
                 # Convert remaining fields to string if not None
                 if request_data[field] is not None:
@@ -312,24 +310,23 @@ def edit_project(project_id):
                     .values(**values)
                     .returning(*project_table.c)  # Return the updated row
                 )
-                result = connection.execute(stmt)
-                updated_row = result.fetchone()  # Fetch the updated row
+                updated_row = connection.execute(stmt).first()
 
                 if updated_row is None:
                     # No row was returned; project_id invalid
-                    return jsonify({"msg": "Invalid project_id."}), 404
+                    return create_error_response("Update failed: no project with the provided 'project_id' found.")
 
                 # Convert the inserted row to a dict for JSON serialization
                 updated_row_dict = updated_row._asdict()
 
-                return jsonify({
-                    "msg": f"Updated project with ID {project_id} successfully.",
-                    "row": updated_row_dict
-                })
+                return create_success_response(
+                    message="Project updated.",
+                    data=updated_row_dict
+                )
 
     except Exception as e:
-        return jsonify({"msg": "Failed to update project.",
-                        "reason": str(e)}), 500
+        logger.exception(f"Exception updating project: {str(e)}")
+        return create_error_response("Unexpected error: failed to update project.", 500)
 
 
 @publishing_tools.route("/<project>/publication_collection/<collection_id>/edit/", methods=["POST"])
@@ -404,17 +401,17 @@ def edit_publication_collection(project, collection_id):
     # Verify that project is valid
     project_id = get_project_id_from_name(project)
     if not project_id:
-        return jsonify({"msg": "Invalid project name."}), 400
+        return create_error_response("Validation error: 'project' does not exist.")
 
     # Verify that collection_id is an integer
     collection_id = int_or_none(collection_id)
     if not collection_id or collection_id < 1:
-        return jsonify({"msg": "Invalid collection_id."}), 400
+        return create_error_response("Validation error: 'collection_id' must be a positive integer.")
 
     # Verify that request data was provided
     request_data = request.get_json()
     if not request_data:
-        return jsonify({"msg": "No data provided."}), 400
+        return create_error_response("No data provided.")
 
     # List of fields to check in request_data
     fields = ["name", "published", "deleted"]
@@ -429,10 +426,10 @@ def edit_publication_collection(project, collection_id):
             # fields are strings or None
             if field == "published":
                 if not validate_int(request_data[field], 0, 2):
-                    return jsonify({"msg": f"Field '{field}' must be an integer with value 0, 1 or 2."}), 400
+                    return create_error_response(f"Validation error: '{field}' must be either 0, 1 or 2.")
             elif field == "deleted":
                 if not validate_int(request_data[field], 0, 1):
-                    return jsonify({"msg": f"Field '{field}' must be an integer with value 0 or 1."}), 400
+                    return create_error_response(f"Validation error: '{field}' must be either 0 or 1.")
             else:
                 # Convert remaining fields to string if not None
                 if request_data[field] is not None:
@@ -442,7 +439,7 @@ def edit_publication_collection(project, collection_id):
             values[field] = request_data[field]
 
     if not values:
-        return jsonify({"msg": "No valid fields provided to update."}), 400
+        return create_error_response(f"Validation error: no valid fields provided to update.")
 
     # Add date_modified
     values["date_modified"] = datetime.now()
@@ -458,29 +455,23 @@ def edit_publication_collection(project, collection_id):
                     .values(**values)
                     .returning(*collection_table.c)  # Return the updated row
                 )
-                result = connection.execute(upd_stmt)
-                updated_row = result.fetchone()  # Fetch the updated row
+                updated_row = connection.execute(upd_stmt).first()
 
                 if updated_row is None:
                     # No row was returned; handle accordingly
-                    return jsonify({
-                        "msg": f"Update failed: No publication collection with ID {collection_id} exists in project with ID {project_id}."
-                    }), 404
+                    return create_error_response("Update failed: no publication collection with the provided 'collection_id' and 'project' found.")
 
                 # Convert the inserted row to a dict for JSON serialization
                 updated_row_dict = updated_row._asdict()
 
-                return jsonify({
-                    "msg": f"Publication collection with ID {collection_id} updated successfully.",
-                    "row": updated_row_dict
-                })
+                return create_success_response(
+                    message="Publication collection updated.",
+                    data=updated_row_dict
+                )
 
     except Exception as e:
-        result = {
-            "msg": f"Failed to update publication collection with ID {collection_id}.",
-            "reason": str(e)
-        }
-        return jsonify(result), 500
+        logger.exception(f"Exception updating publication collection: {str(e)}")
+        return create_error_response("Unexpected error: failed to update publication collection.", 500)
 
 
 @publishing_tools.route("<project>/publication_collection/<collection_id>/intro/")
@@ -707,17 +698,17 @@ def edit_publication(project, publication_id):
     # Verify that project name is valid and get project_id
     project_id = get_project_id_from_name(project)
     if not project_id:
-        return jsonify({"msg": "Invalid project name."}), 400
+        return create_error_response("Validation error: 'project' does not exist.")
 
     # Verify that publication_id is an integer
     publication_id = int_or_none(publication_id)
     if not publication_id or publication_id < 1:
-        return jsonify({"msg": "Invalid publication_id."}), 400
+        return create_error_response("Validation error: 'publication_id' must be a positive integer.")
 
     # Verify that request data was provided
     request_data = request.get_json()
     if not request_data:
-        return jsonify({"msg": "No data provided."}), 400
+        return create_error_response("No data provided.")
 
     # List of fields to check in request_data
     fields = ["publication_collection_id",
@@ -743,13 +734,13 @@ def edit_publication(project, publication_id):
                 # fields are strings
                 if field in ["publication_collection_id", "publication_comment_id"]:
                     if not validate_int(request_data[field], 1):
-                        return jsonify({"msg": f"Field '{field}' must be a positive integer."}), 400
+                        return create_error_response(f"Validation error: '{field}' must be a positive integer.")
                 elif field == "published":
                     if not validate_int(request_data[field], 0, 2):
-                        return jsonify({"msg": f"Field '{field}' must be an integer with value 0, 1 or 2."}), 400
+                        return create_error_response(f"Validation error: '{field}' must be either 0, 1 or 2.")
                 elif field == "deleted":
                     if not validate_int(request_data[field], 0, 1):
-                        return jsonify({"msg": f"Field '{field}' must be an integer with value 0 or 1."}), 400
+                        return create_error_response(f"Validation error: '{field}' must be either 0 or 1.")
                 else:
                     # Convert remaining fields to string
                     request_data[field] = str(request_data[field])
@@ -758,7 +749,7 @@ def edit_publication(project, publication_id):
                 values[field] = request_data[field]
 
     if not values:
-        return jsonify({"msg": "No valid fields provided to update."}), 400
+        return create_error_response(f"Validation error: no valid fields provided to update.")
 
     # Add date_modified
     values["date_modified"] = datetime.now()
@@ -779,7 +770,7 @@ def edit_publication(project, publication_id):
                 result = connection.execute(stmt).first()
 
                 if result is None:
-                    return jsonify({"msg": "Publication not found in project. Either project name or publication_id is invalid."}), 404
+                    return create_error_response("Validation error: could not find publication, either 'project' or 'publication_id' is invalid.")
 
                 # Execute the update statement
                 upd_stmt = (
@@ -788,31 +779,23 @@ def edit_publication(project, publication_id):
                     .values(**values)
                     .returning(*publication_table.c)  # Return the updated row
                 )
-                result = connection.execute(upd_stmt)
-                updated_row = result.fetchone()  # Fetch the updated row
+                updated_row = connection.execute(upd_stmt).first()
 
                 if updated_row is None:
                     # No row was returned; handle accordingly
-                    return jsonify({
-                        "msg": "Update failed: no row returned.",
-                        "reason": "The update statement did not return any data."
-                    }), 404
+                    return create_error_response("Update failed: no publication with the provided 'publication_id' found.")
 
                 # Convert the inserted row to a dict for JSON serialization
                 updated_row_dict = updated_row._asdict()
 
-                return jsonify({
-                    "msg": f"Updated publication with ID {publication_id} successfully.",
-                    "row": updated_row_dict
-                })
+                return create_success_response(
+                    message="Publication updated.",
+                    data=updated_row_dict
+                )
 
     except Exception as e:
-        # Handle errors and return error response
-        result = {
-            "msg": f"Failed to update publication with ID {publication_id}.",
-            "reason": str(e)
-        }
-        return jsonify(result), 500
+        logger.exception(f"Exception updating publication: {str(e)}")
+        return create_error_response("Unexpected error: failed to update publication.", 500)
 
 
 @publishing_tools.route("/<project>/publication/<publication_id>/comment/edit/", methods=["POST"])
@@ -885,17 +868,17 @@ def edit_comment(project, publication_id):
     # Verify that project name is valid and get project_id
     project_id = get_project_id_from_name(project)
     if not project_id:
-        return jsonify({"msg": "Invalid project name."}), 400
+        return create_error_response("Validation error: 'project' does not exist.")
 
     # Verify that publication_id is an integer
     publication_id = int_or_none(publication_id)
     if not publication_id or publication_id < 1:
-        return jsonify({"msg": "Invalid publication_id."}), 400
+        return create_error_response("Validation error: 'publication_id' must be a positive integer.")
 
     # Verify that request data was provided
     request_data = request.get_json()
     if not request_data:
-        return jsonify({"msg": "No data provided."}), 400
+        return create_error_response("No data provided.")
 
     # List of fields to check in request_data
     fields = ["deleted", "published", "original_filename"]
@@ -910,10 +893,10 @@ def edit_comment(project, publication_id):
             # fields are strings or None
             if field == "published":
                 if not validate_int(request_data[field], 0, 2):
-                    return jsonify({"msg": f"Field '{field}' must be an integer with value 0, 1 or 2."}), 400
+                    return create_error_response(f"Validation error: '{field}' must be either 0, 1 or 2.")
             elif field == "deleted":
                 if not validate_int(request_data[field], 0, 1):
-                    return jsonify({"msg": f"Field '{field}' must be an integer with value 0 or 1."}), 400
+                    return create_error_response(f"Validation error: '{field}' must be either 0 or 1.")
             else:
                 # Convert remaining fields to string if not None
                 if request_data[field] is not None:
@@ -923,7 +906,7 @@ def edit_comment(project, publication_id):
             values[field] = request_data[field]
 
     if not values:
-        return jsonify({"msg": "No valid fields provided to update."}), 400
+        return create_error_response(f"Validation error: no valid fields provided to update.")
 
     # Add date_modified
     values["date_modified"] = datetime.now()
@@ -945,7 +928,7 @@ def edit_comment(project, publication_id):
                 result = connection.execute(stmt).first()
 
                 if result is None:
-                    return jsonify({"msg": "Publication not found in project. Either project name or publication_id is invalid."}), 404
+                    return create_error_response("Validation error: could not find publication, either 'project' or 'publication_id' is invalid.")
 
                 com_id = result["publication_comment_id"]
 
@@ -956,30 +939,22 @@ def edit_comment(project, publication_id):
                     .values(**values)
                     .returning(*comment_table.c)  # Return the updated row
                 )
-                result = connection.execute(upd_stmt)
-                updated_row = result.fetchone()  # Fetch the updated row
+                updated_row = connection.execute(upd_stmt).first()
 
                 if updated_row is None:
-                    # No row was returned; handle accordingly
-                    return jsonify({
-                        "msg": "Update failed: could not find comment linked to publication."
-                    }), 404
+                    return create_error_response("Update failed: no comment linked to the publication with the provided 'publication_id' found.")
 
                 # Convert the inserted row to a dict for JSON serialization
                 updated_row_dict = updated_row._asdict()
 
-                return jsonify({
-                    "msg": f"Updated comment of publication with ID {publication_id} successfully.",
-                    "row": updated_row_dict
-                })
+                return create_success_response(
+                    message="Publication comment updated.",
+                    data=updated_row_dict
+                )
 
     except Exception as e:
-        # Handle errors and return error response
-        result = {
-            "msg": f"Failed to update comment for publication with ID {publication_id}.",
-            "reason": str(e)
-        }
-        return jsonify(result), 500
+        logger.exception(f"Exception updating publication comment: {str(e)}")
+        return create_error_response("Unexpected error: failed to update publication comment.", 500)
 
 
 @publishing_tools.route("/<project>/manuscripts/<manuscript_id>/edit/", methods=["POST"])
@@ -1066,17 +1041,17 @@ def edit_manuscript(project, manuscript_id):
     # Verify that project name is valid and get project_id
     project_id = get_project_id_from_name(project)
     if not project_id:
-        return jsonify({"msg": "Invalid project name."}), 400
+        return create_error_response("Validation error: 'project' does not exist.")
 
     # Verify that manuscript_id is an integer
     manuscript_id = int_or_none(manuscript_id)
     if not manuscript_id or manuscript_id < 1:
-        return jsonify({"msg": "Invalid manuscript_id."}), 400
+        return create_error_response("Validation error: 'manuscript_id' must be a positive integer.")
 
     # Verify that request data was provided
     request_data = request.get_json()
     if not request_data:
-        return jsonify({"msg": "No data provided."}), 400
+        return create_error_response("No data provided.")
 
     # List of fields to check in request_data
     fields = ["publication_id",
@@ -1101,16 +1076,16 @@ def edit_manuscript(project, manuscript_id):
                 # fields are strings
                 if field == "publication_id":
                     if not validate_int(request_data[field], 1):
-                        return jsonify({"msg": f"Field '{field}' must be a positive integer (or null)."}), 400
+                        return create_error_response(f"Validation error: '{field}' must be either a positive integer or null.")
                 elif field == "published":
                     if not validate_int(request_data[field], 0, 2):
-                        return jsonify({"msg": f"Field '{field}' must be an integer with value 0, 1 or 2."}), 400
+                        return create_error_response(f"Validation error: '{field}' must be either 0, 1 or 2.")
                 elif field == "deleted":
                     if not validate_int(request_data[field], 0, 1):
-                        return jsonify({"msg": f"Field '{field}' must be an integer with value 0 or 1."}), 400
+                        return create_error_response(f"Validation error: '{field}' must be either 0 or 1.")
                 elif field in ["section_id", "sort_order"]:
                     if not validate_int(request_data[field], 0):
-                        return jsonify({"msg": f"Field '{field}' must be a non-negative integer."}), 400
+                        return create_error_response(f"Validation error: '{field}' must be an integer greater than or equal to 0.")
                 else:
                     # Convert remaining fields to string
                     request_data[field] = str(request_data[field])
@@ -1119,7 +1094,7 @@ def edit_manuscript(project, manuscript_id):
                 values[field] = request_data[field]
 
     if not values:
-        return jsonify({"msg": "No valid fields provided to update."}), 400
+        return create_error_response(f"Validation error: no valid fields provided to update.")
 
     # Add date_modified
     values["date_modified"] = datetime.now()
@@ -1127,8 +1102,8 @@ def edit_manuscript(project, manuscript_id):
     try:
         with db_engine.connect() as connection:
             with connection.begin():
-                # ! We are not verifying that the manuscript belongs to
-                # ! a publication in the specified project.
+                # We are not verifying that the manuscript belongs to
+                # a publication in the specified project.
 
                 # Verify that publication_id is valid if it is updated
                 if (
@@ -1143,7 +1118,7 @@ def edit_manuscript(project, manuscript_id):
                     result = connection.execute(stmt).first()
 
                     if result is None:
-                        return jsonify({"msg": f"Invalid publication_id in provided data. No publication with ID {values['publication_id']} exists."}), 400
+                        return create_error_response("Validation error: could not find publication with the provided 'publication_id'.")
 
                 # Proceed to updating the manuscript
                 manuscript_table = get_table("publication_manuscript")
@@ -1153,28 +1128,23 @@ def edit_manuscript(project, manuscript_id):
                     .values(**values)
                     .returning(*manuscript_table.c)  # Return the updated row
                 )
-                result = connection.execute(upd_stmt)
-                updated_row = result.fetchone()  # Fetch the updated row
+                updated_row = connection.execute(upd_stmt).first()
 
                 if updated_row is None:
                     # No row was returned; handle accordingly
-                    return jsonify({"msg": "Update failed: invalid manuscript_id or no changes were made."}), 400
+                    return create_error_response("Update failed: no publication manuscript with the provided 'manuscript_id' found.")
 
                 # Convert the inserted row to a dict for JSON serialization
                 updated_row_dict = updated_row._asdict()
 
-                return jsonify({
-                    "msg": f"Updated manuscript with ID {manuscript_id} successfully.",
-                    "row": updated_row_dict
-                })
+                return create_success_response(
+                    message="Publication manuscript updated.",
+                    data=updated_row_dict
+                )
 
     except Exception as e:
-        # Handle errors and return error response
-        result = {
-            "msg": f"Failed to update manuscript with ID {manuscript_id}.",
-            "reason": str(e)
-        }
-        return jsonify(result), 500
+        logger.exception(f"Exception updating publication manuscript: {str(e)}")
+        return create_error_response("Unexpected error: failed to update publication manuscript.", 500)
 
 
 @publishing_tools.route("/<project>/versions/<version_id>/edit/", methods=["POST"])
@@ -1260,17 +1230,17 @@ def edit_version(project, version_id):
     # Verify that project name is valid and get project_id
     project_id = get_project_id_from_name(project)
     if not project_id:
-        return jsonify({"msg": "Invalid project name."}), 400
+        return create_error_response("Validation error: 'project' does not exist.")
 
     # Verify that version_id is an integer
     version_id = int_or_none(version_id)
     if not version_id or version_id < 1:
-        return jsonify({"msg": "Invalid version_id."}), 400
+        return create_error_response("Validation error: 'version_id' must be a positive integer.")
 
     # Verify that request data was provided
     request_data = request.get_json()
     if not request_data:
-        return jsonify({"msg": "No data provided."}), 400
+        return create_error_response("No data provided.")
 
     # List of fields to check in request_data
     fields = ["publication_id",
@@ -1295,16 +1265,16 @@ def edit_version(project, version_id):
                 # fields are strings
                 if field == "publication_id":
                     if not validate_int(request_data[field], 1):
-                        return jsonify({"msg": f"Field '{field}' must be a positive integer (or null)."}), 400
+                        return create_error_response(f"Validation error: '{field}' must be either a positive integer or null.")
                 elif field == "published":
                     if not validate_int(request_data[field], 0, 2):
-                        return jsonify({"msg": f"Field '{field}' must be an integer with value 0, 1 or 2."}), 400
+                        return create_error_response(f"Validation error: '{field}' must be either 0, 1 or 2.")
                 elif field == "deleted":
                     if not validate_int(request_data[field], 0, 1):
-                        return jsonify({"msg": f"Field '{field}' must be an integer with value 0 or 1."}), 400
+                        return create_error_response(f"Validation error: '{field}' must be either 0 or 1.")
                 elif field in ["type", "section_id", "sort_order"]:
                     if not validate_int(request_data[field], 0):
-                        return jsonify({"msg": f"Field '{field}' must be a non-negative integer."}), 400
+                        return create_error_response(f"Validation error: '{field}' must be an integer greater than or equal to 0.")
                 else:
                     # Convert remaining fields to string
                     request_data[field] = str(request_data[field])
@@ -1313,7 +1283,7 @@ def edit_version(project, version_id):
                 values[field] = request_data[field]
 
     if not values:
-        return jsonify({"msg": "No valid fields provided to update."}), 400
+        return create_error_response(f"Validation error: no valid fields provided to update.")
 
     # Add date_modified
     values["date_modified"] = datetime.now()
@@ -1321,8 +1291,8 @@ def edit_version(project, version_id):
     try:
         with db_engine.connect() as connection:
             with connection.begin():
-                # ! We are not verifying that the version belongs to
-                # ! a publication in the specified project.
+                # We are not verifying that the version belongs to
+                # a publication in the specified project.
 
                 # Verify that publication_id is valid if it is updated
                 if (
@@ -1337,7 +1307,7 @@ def edit_version(project, version_id):
                     result = connection.execute(stmt).first()
 
                     if result is None:
-                        return jsonify({"msg": f"Invalid publication_id in provided data. No publication with ID {values['publication_id']} exists."}), 400
+                        return create_error_response("Validation error: could not find publication with the provided 'publication_id'.")
 
                 # Proceed to updating the version
                 version_table = get_table("publication_version")
@@ -1347,28 +1317,23 @@ def edit_version(project, version_id):
                     .values(**values)
                     .returning(*version_table.c)  # Return the updated row
                 )
-                result = connection.execute(upd_stmt)
-                updated_row = result.fetchone()  # Fetch the updated row
+                updated_row = connection.execute(upd_stmt).first()
 
                 if updated_row is None:
                     # No row was returned; handle accordingly
-                    return jsonify({"msg": "Update failed: invalid version_id or no changes were made."}), 400
+                    return create_error_response("Update failed: no publication version with the provided 'version_id' found.")
 
                 # Convert the inserted row to a dict for JSON serialization
                 updated_row_dict = updated_row._asdict()
 
-                return jsonify({
-                    "msg": f"Updated version with ID {version_id} successfully.",
-                    "row": updated_row_dict
-                })
+                return create_success_response(
+                    message="Publication version updated.",
+                    data=updated_row_dict
+                )
 
     except Exception as e:
-        # Handle errors and return error response
-        result = {
-            "msg": f"Failed to update version with ID {version_id}.",
-            "reason": str(e)
-        }
-        return jsonify(result), 500
+        logger.exception(f"Exception updating publication version: {str(e)}")
+        return create_error_response("Unexpected error: failed to update publication version.", 500)
 
 
 @publishing_tools.route("/<project>/publication_collection/<collection_id>/info")

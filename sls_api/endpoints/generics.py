@@ -562,11 +562,11 @@ def validate_project_name(name: str) -> Tuple[bool, Optional[str]]:
     """
     # Check length constraint
     if len(name) < 3 or len(name) > 32:
-        return False, "Project name must be no less than 3 and no more than 32 characters long."
+        return False, "'name' must be minimum 3 and maximum 32 characters in length."
 
     # Check allowed characters (lowercase letters a-z, digits 0-9 and underscores _)
     if not re.fullmatch(r'[a-z0-9_]+', name):
-        return False, "Project name can only contain lowercase letters a-z and digits 0-9."
+        return False, "'name' can only contain lowercase letters a-z and digits 0-9."
 
     return True, None
 

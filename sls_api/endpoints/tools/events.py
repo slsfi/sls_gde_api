@@ -1,3 +1,4 @@
+import logging
 from flask import Blueprint, jsonify, request
 from flask_jwt_extended import jwt_required
 from sqlalchemy import asc, cast, desc, select, text, Text
@@ -5,9 +6,11 @@ from datetime import datetime
 
 from sls_api.endpoints.generics import db_engine, get_project_id_from_name, get_table, int_or_none, \
     project_permission_required, select_all_from_table, create_translation, create_translation_text, \
-    get_translation_text_id, validate_int
+    get_translation_text_id, validate_int, create_error_response, create_success_response
+
 
 event_tools = Blueprint("event_tools", __name__)
+logger = logging.getLogger("sls_api.tools.events")
 
 
 @event_tools.route("/<project>/locations/new/", methods=["POST"])
@@ -234,16 +237,16 @@ def list_project_subjects(project, order_by="last_name", direction="asc"):
     # Verify that project name is valid and get project_id
     project_id = get_project_id_from_name(project)
     if not project_id:
-        return jsonify({"msg": "Invalid project name."}), 400
+        return create_error_response("Validation error: 'project' does not exist.")
 
     subject_table = get_table("subject")
 
     # Verify order_by and direction
     if order_by not in subject_table.c:
-        return jsonify({"msg": "Invalid order_by field."}), 400
+        return create_error_response("Validation error: 'order_by' must be a valid column in the subject table.")
 
     if direction not in ["asc", "desc"]:
-        return jsonify({"msg": "Invalid sort order, must be either 'asc' or 'desc'."}), 400
+        return create_error_response("Validation error: 'direction' must be either 'asc' or 'desc'.")
 
     try:
         with db_engine.connect() as connection:
@@ -276,14 +279,16 @@ def list_project_subjects(project, order_by="last_name", direction="asc"):
 
             # Apply multiple order_by clauses
             stmt = stmt.order_by(*order_columns)
-
             rows = connection.execute(stmt).fetchall()
-            result = [row._asdict() for row in rows]
-            return jsonify(result)
+
+            return create_success_response(
+                message=f"Retrieved {len(rows)} records.",
+                data=[row._asdict() for row in rows]
+            )
 
     except Exception as e:
-        return jsonify({"msg": "Failed to retrieve project subjects.",
-                        "reason": str(e)}), 500
+        logger.exception(f"Exception retrieving project subjects: {str(e)}")
+        return create_error_response("Unexpected error: failed to retrieve person records in project.", 500)
 
 
 @event_tools.route("/<project>/subjects/new/", methods=["POST"])
@@ -385,19 +390,21 @@ def add_new_subject(project):
     # Verify that project name is valid and get project_id
     project_id = get_project_id_from_name(project)
     if not project_id:
-        return jsonify({"msg": "Invalid project name."}), 400
+        return create_error_response("Validation error: 'project' does not exist.")
 
     # Verify that request data was provided
     request_data = request.get_json()
     if not request_data:
-        return jsonify({"msg": "No data provided."}), 400
+        return create_error_response("No data provided.")
 
     # Verify that "date_born" and "date_deceased" fields are within length limits.
-    if "date_born" in request_data and len(request_data.get("date_born", "")) > 30:
-        return jsonify({"msg": "Field 'date_born' must be 30 or less characters in length."}), 400
+    date_born = request_data.get("date_born")
+    if date_born is not None and len(str(date_born)) > 30:
+        return create_error_response("Validation error: 'date_born' must be 30 or less characters in length.")
 
-    if "date_deceased" in request_data and len(request_data.get("date_deceased", "")) > 30:
-        return jsonify({"msg": "Field 'date_deceased' must be 30 or less characters in length."}), 400
+    date_deceased = request_data.get("date_deceased")
+    if date_deceased is not None and len(str(date_deceased)) > 30:
+        return create_error_response("Validation error: 'date_deceased' must be 30 or less characters in length.")
 
     # List of fields to check in request_data
     fields = ["type",
@@ -441,27 +448,24 @@ def add_new_subject(project):
                     .values(**values)
                     .returning(*subject_table.c)  # Return the inserted row
                 )
-                result = connection.execute(stmt)
-                inserted_row = result.fetchone()  # Fetch the inserted row
+                inserted_row = connection.execute(stmt).first()
 
                 if inserted_row is None:
                     # No row was returned; handle accordingly
-                    return jsonify({
-                        "msg": "Insertion failed: no row returned.",
-                        "reason": "The insert statement did not return any data."
-                    }), 500
+                    return create_error_response("Insertion failed: no row returned.", 500)
 
                 # Convert the inserted_row to a dictionary for JSON serialization
                 inserted_row_dict = inserted_row._asdict()
 
-                return jsonify({
-                    "msg": f"Subject with ID {inserted_row['id']} created successfully.",
-                    "row": inserted_row_dict
-                }), 201
+                return create_success_response(
+                    message="Person record created.",
+                    data=inserted_row_dict,
+                    status_code=201
+                )
 
     except Exception as e:
-        return jsonify({"msg": "Failed to create new subject.",
-                        "reason": str(e)}), 500
+        logger.exception(f"Exception creating new subject: {str(e)}")
+        return create_error_response("Unexpected error: failed to create new person record.", 500)
 
 
 @event_tools.route("/<project>/subjects/<subject_id>/edit/", methods=["POST"])
@@ -568,17 +572,17 @@ def edit_subject(project, subject_id):
     # Verify that project name is valid and get project_id
     project_id = get_project_id_from_name(project)
     if not project_id:
-        return jsonify({"msg": "Invalid project name."}), 400
+        return create_error_response("Validation error: 'project' does not exist.")
 
     # Convert subject_id to integer and verify
     subject_id = int_or_none(subject_id)
     if not subject_id or subject_id < 1:
-        return jsonify({"msg": "Invalid subject_id, must be a positive integer."}), 400
+        return create_error_response("Validation error: 'subject_id' must be a positive integer.")
 
     # Verify that request data was provided
     request_data = request.get_json()
     if not request_data:
-        return jsonify({"msg": "No data provided."}), 400
+        return create_error_response("No data provided.")
 
     # List of fields to check in request_data
     fields = ["deleted",
@@ -608,7 +612,7 @@ def edit_subject(project, subject_id):
             else:
                 if field == "deleted":
                     if not validate_int(request_data[field], 0, 1):
-                        return jsonify({"msg": f"Field '{field}' must be an integer with value 0 or 1."}), 400
+                        return create_error_response(f"Validation error: '{field}' must be either 0 or 1.")
                 else:
                     # Ensure remaining fields are strings
                     request_data[field] = str(request_data[field])
@@ -617,7 +621,7 @@ def edit_subject(project, subject_id):
                 values[field] = request_data[field]
 
     if not values:
-        return jsonify({"msg": "No valid fields provided to update."}), 400
+        return create_error_response(f"Validation error: no valid fields provided to update.")
 
     # Add date_modified
     values["date_modified"] = datetime.now()
@@ -633,24 +637,23 @@ def edit_subject(project, subject_id):
                     .values(**values)
                     .returning(*subject_table.c)  # Return the updated row
                 )
-                result = connection.execute(stmt)
-                updated_row = result.fetchone()  # Fetch the updated row
+                updated_row = connection.execute(stmt).first()
 
                 if updated_row is None:
                     # No row was returned: invalid subject_id or project name
-                    return jsonify({"msg": "Update failed: invalid subject_id or project name."}), 400
+                    return create_error_response("Update failed: no person record with the provided 'subject_id' found in project.")
 
                 # Convert the inserted row to a dict for JSON serialization
                 updated_row_dict = updated_row._asdict()
 
-                return jsonify({
-                    "msg": f"Updated subject with ID {subject_id} successfully.",
-                    "row": updated_row_dict
-                })
+                return create_success_response(
+                    message="Person record updated.",
+                    data=updated_row_dict
+                )
 
     except Exception as e:
-        return jsonify({"msg": f"Failed to update subject with ID {subject_id}.",
-                        "reason": str(e)}), 500
+        logger.exception(f"Exception updating subject: {str(e)}")
+        return create_error_response("Unexpected error: failed to update person record.", 500)
 
 
 @event_tools.route("/<project>/translation/new/", methods=["POST"])
@@ -690,12 +693,12 @@ def add_new_translation(project):
     # Verify that project name is valid and get project_id
     project_id = get_project_id_from_name(project)
     if not project_id:
-        return jsonify({"msg": "Invalid project name."}), 400
+        return create_error_response("Validation error: 'project' does not exist.")
 
     # Verify that request data was provided
     request_data = request.get_json()
     if not request_data:
-        return jsonify({"msg": "No data provided."}), 400
+        return create_error_response("No data provided.")
 
     # List required and optional fields in POST data
     required_fields = ["text", "language"]
@@ -703,7 +706,7 @@ def add_new_translation(project):
     # Check that required fields are in the request data,
     # and that their values are non-empty
     if any(field not in request_data or not request_data[field] for field in required_fields):
-        return jsonify({"msg": "POST data is invalid: required fields are missing or empty."}), 400
+        return create_error_response("Validation error: 'text' and 'language' required.")
 
     table_name = request_data.get("table_name")
     translation_id = request_data.get("translation_id")
@@ -714,82 +717,95 @@ def add_new_translation(project):
                 # Create a new translation base object if not provided
                 if translation_id is None:
                     if table_name is None:
-                        return jsonify({"msg": "Field 'table_name' is required when no translation_id."}), 400
+                        return create_error_response("Validation error: 'table_name' required when no 'translation_id' provided.")
+                    table_name = str(table_name)
 
                     parent_id = int_or_none(request_data.get("parent_id"))
                     if not validate_int(parent_id, 1):
-                        return jsonify({"msg": "Field 'parent_id' must be a positive integer."}), 400
+                        return create_error_response("Validation error: 'parent_id' must be a positive integer.")
 
                     # Create a new translation base object
                     translation_id = create_translation(request_data.get("neutral_text"))
 
                     if translation_id is None:
-                        return jsonify({"msg": "Failed to create new translation."}), 500
+                        return create_error_response("Unexpected error: failed to create new translation.", 500)
 
                     # Add the translation_id to the record in the parent table.
-                    # If the field name for translation_id is something else than 'translation_id'
-                    # it must be given in the "parent_translation_field" in the request data
+                    # If the field name for translation_id is something else than
+                    # 'translation_id' it must be given in the
+                    # "parent_translation_field" in the request data
                     # (in some tables the field name is 'name_translation_id').
-                    try:
-                        target_table = get_table(table_name)
+                    target_table = get_table(table_name)
+                    upd_values = {
+                        str(request_data.get("parent_translation_field", "translation_id")): translation_id,
+                        "date_modified": datetime.now()
+                    }
+                    upd_stmt = (
+                        target_table.update()
+                        .where(target_table.c.id == parent_id)
+                        .values(**upd_values)
+                        .returning(*target_table.c)
+                    )
+                    upd_result = connection.execute(upd_stmt).first()
+
+                    # Check if the update in the parent table was successful,
+                    # if not, clean up ...
+                    if upd_result is None:
+                        translation_table = get_table("translation")
                         upd_values = {
-                            request_data.get("parent_translation_field", "translation_id"): translation_id,
+                            "deleted": 1,
                             "date_modified": datetime.now()
                         }
-                        upd_stmt = (
-                            target_table.update()
-                            .where(target_table.c.id == parent_id)
+                        upd_stmt2 = (
+                            translation_table.update()
+                            .where(translation_table.c.id == translation_id)
                             .values(**upd_values)
+                            .returning(*translation_table.c)
                         )
-                        connection.execute(upd_stmt)
+                        upd_result2 = connection.execute(upd_stmt2).first()
 
-                    except Exception as e:
-                        return jsonify({"msg": f"No record with ID {parent_id} exists in table {table_name}.",
-                                        "reason": str(e)}), 400
+                        upd_error_message = "Update failed: could not link translation to record with 'parent_id' in 'table_name'."
+                        if upd_result2 is None:
+                            upd_error_message += f" Also failed to mark a created base translation object with ID {translation_id} in the table `translation` as deleted. Please contact support."
+                        return create_error_response(upd_error_message, 500)
 
                 # The translation_id has been provided in the POST data.
                 # Validate translation_id
                 if not validate_int(translation_id, 1):
-                    return jsonify({"msg": "Field 'translation_id' must be a positive integer."}), 400
+                    return create_error_response("Validation error: 'translation_id' must be a positive integer.")
 
-                try:
-                    ins_values = {
-                        "table_name": table_name,
-                        "field_name": request_data.get("field_name"),
-                        "text": request_data.get("text"),
-                        "language": request_data.get("language"),
-                        "translation_id": translation_id
-                    }
+                ins_values = {
+                    "table_name": table_name,
+                    "field_name": request_data.get("field_name"),
+                    "text": request_data.get("text"),
+                    "language": request_data.get("language"),
+                    "translation_id": translation_id
+                }
 
-                    translation_text = get_table("translation_text")
+                translation_text = get_table("translation_text")
 
-                    ins_stmt = (
-                        translation_text.insert()
-                        .values(**ins_values)
-                        .returning(*translation_text.c)  # Return the inserted row
-                    )
-                    result = connection.execute(ins_stmt)
-                    inserted_row = result.fetchone()  # Fetch the inserted row
+                ins_stmt = (
+                    translation_text.insert()
+                    .values(**ins_values)
+                    .returning(*translation_text.c)  # Return the inserted row
+                )
+                inserted_row = connection.execute(ins_stmt).first()
 
-                    if inserted_row is None:
-                        # No row was returned; handle accordingly
-                        return jsonify({
-                            "msg": "Insertion failed: no row returned.",
-                            "reason": "The insert statement did not return any data."
-                        }), 500
+                if inserted_row is None:
+                    return create_error_response("Insertion failed: no row returned.", 500)
 
-                    # Convert the inserted_row to a dictionary for JSON serialization
-                    inserted_row_dict = inserted_row._asdict()
+                # Convert the inserted_row to a dictionary for JSON serialization
+                inserted_row_dict = inserted_row._asdict()
 
-                    return jsonify({"msg": "New translation created successfully.",
-                                    "row": inserted_row_dict}), 201
-                except Exception as e:
-                    return jsonify({"msg": "Failed to insert new translation.",
-                                    "reason": str(e)}), 500
+                return create_success_response(
+                    message="Translation created.",
+                    data=inserted_row_dict,
+                    status_code=201
+                )
 
     except Exception as e:
-        return jsonify({"msg": "Unexpected error occurred while creating translation.",
-                        "reason": str(e)}), 500
+        logger.exception(f"Exception creating new translation: {str(e)}")
+        return create_error_response("Unexpected error: failed to create new translation.", 500)
 
 
 @event_tools.route("/<project>/translations/<translation_id>/edit/", methods=["POST"])
@@ -828,17 +844,17 @@ def edit_translation(project, translation_id):
     # Verify that project name is valid and get project_id
     project_id = get_project_id_from_name(project)
     if not project_id:
-        return jsonify({"msg": "Invalid project name."}), 400
+        return create_error_response("Validation error: 'project' does not exist.")
 
     # Convert translation_id to integer and verify
     translation_id = int_or_none(translation_id)
     if translation_id is None or translation_id < 1:
-        return jsonify({"msg": "Invalid translation_id, must be a positive integer."}), 400
+        return create_error_response("Validation error: 'translation_id' must be a positive integer.")
 
     # Verify that request data was provided
     request_data = request.get_json()
     if not request_data:
-        return jsonify({"msg": "No data provided."}), 400
+        return create_error_response("No data provided.")
 
     # List of fields to check in request_data
     fields = ["translation_text_id",
@@ -860,7 +876,7 @@ def edit_translation(project, translation_id):
             else:
                 if field == "deleted":
                     if not validate_int(request_data[field], 0, 1):
-                        return jsonify({"msg": f"Field '{field}' must be an integer with value 0 or 1."}), 400
+                        return create_error_response(f"Validation error: '{field}' must be either 0 or 1.")
                 else:
                     # Ensure remaining fields are strings
                     request_data[field] = str(request_data[field])
@@ -869,7 +885,7 @@ def edit_translation(project, translation_id):
                 values[field] = request_data[field]
 
     if not values:
-        return jsonify({"msg": "No valid fields provided to update."}), 400
+        return create_error_response(f"Validation error: no valid fields provided to update.")
 
     translation_text_id = request_data.get("translation_text_id")
     if translation_text_id is None:
@@ -894,26 +910,23 @@ def edit_translation(project, translation_id):
                             .values(**values)
                             .returning(*translation_text.c)  # Return the inserted row
                         )
-                        result = connection.execute(ins_stmt)
-                        inserted_row = result.fetchone()  # Fetch the inserted row
+                        inserted_row = connection.execute(ins_stmt).first()
 
                         if inserted_row is None:
-                            # No row was returned; handle accordingly
-                            return jsonify({
-                                "msg": "Insertion failed: no row returned.",
-                                "reason": "The insert statement did not return any data."
-                            }), 500
+                            return create_error_response("Insertion failed: no row returned.", 500)
 
                         # Convert the inserted_row to a dictionary for JSON serialization
                         inserted_row_dict = inserted_row._asdict()
 
-                        return jsonify({
-                            "msg": f"Translation text with ID {inserted_row['id']} created successfully.",
-                            "row": inserted_row_dict
-                        }), 201
+                        return create_success_response(
+                            message="Translation text created.",
+                            data=inserted_row_dict,
+                            status_code=201
+                        )
+
                     except Exception as e:
-                        return jsonify({"msg": "Failed to create new translation text.",
-                                        "reason": str(e)}), 500
+                        logger.exception(f"Exception creating new translation text: {str(e)}")
+                        return create_error_response("Unexpected error: failed to create new translation text.", 500)
 
                 else:
                     # Update data of existing translation
@@ -921,39 +934,33 @@ def edit_translation(project, translation_id):
                     # Validate translation_text_id
                     translation_text_id = int_or_none(translation_text_id)
                     if translation_text_id is None or validate_int(translation_text_id, 1):
-                        return jsonify({"msg": "Field 'translation_text_id' must be a positive integer."}), 400
+                        return create_error_response("Validation error: 'translation_text_id' must be a positive integer.")
 
                     # Add date_modified
                     values["date_modified"] = datetime.now()
 
-                    try:
-                        upd_stmt = (
-                            translation_text.update()
-                            .where(translation_text.c.id == translation_text_id)
-                            .values(**values)
-                            .returning(*translation_text.c)  # Return the updated row
-                        )
-                        result = connection.execute(upd_stmt)
-                        updated_row = result.fetchone()  # Fetch the updated row
+                    upd_stmt = (
+                        translation_text.update()
+                        .where(translation_text.c.id == translation_text_id)
+                        .values(**values)
+                        .returning(*translation_text.c)  # Return the updated row
+                    )
+                    updated_row = connection.execute(upd_stmt).first()
 
-                        if updated_row is None:
-                            # No row was returned: invalid translation_text_id
-                            return jsonify({"msg": "Update failed: invalid translation_text_id."}), 400
+                    if updated_row is None:
+                        return create_error_response("Update failed: no translation text with the provided 'translation_text_id' found.")
 
-                        # Convert the inserted row to a dict for JSON serialization
-                        updated_row_dict = updated_row._asdict()
+                    # Convert the inserted row to a dict for JSON serialization
+                    updated_row_dict = updated_row._asdict()
 
-                        return jsonify({
-                            "msg": f"Updated translation text with ID {translation_text_id} successfully.",
-                            "row": updated_row_dict
-                        })
-                    except Exception as e:
-                        return jsonify({"msg": "Failed to update translation text.",
-                                        "reason": str(e)}), 500
+                    return create_success_response(
+                        message="Translation text updated.",
+                        data=updated_row_dict
+                    )
 
     except Exception as e:
-        return jsonify({"msg": "Unexpected error occurred while updating translation text.",
-                        "reason": str(e)}), 500
+        logger.exception(f"Exception updating translation text: {str(e)}")
+        return create_error_response("Unexpected error: failed to update translation text.", 500)
 
 
 @event_tools.route("/<project>/translations/<translation_id>/list/", methods=["POST"])
@@ -1014,8 +1021,8 @@ def list_translations(project, translation_id):
     """
     # Convert translation_id to integer
     translation_id = int_or_none(translation_id)
-    if not translation_id:
-        return jsonify({"msg": "Invalid translation_id parameter."}), 400
+    if translation_id is None or translation_id < 1:
+        return create_error_response("Validation error: 'translation_id' must be a positive integer.")
 
     # Get optional filters from the request JSON body
     filters = request.get_json(silent=True) or {}
@@ -1077,20 +1084,14 @@ def list_translations(project, translation_id):
                 statement = text(query).bindparams(**query_params)
                 rows = connection.execute(statement).fetchall()
 
-                # Convert rows to dictionary format
-                result = []
-                for row in rows:
-                    if row is not None:
-                        result.append(row._asdict())
-                return jsonify(result)
+                return create_success_response(
+                    message=f"Retrieved {len(rows)} records.",
+                    data=[row._asdict() for row in rows]
+                )
 
     except Exception as e:
-        # Handle errors and return error response
-        result = {
-            "msg": "Failed to retrieve translations.",
-            "reason": str(e)
-        }
-        return jsonify(result), 500
+        logger.exception(f"Exception retrieving translations: {str(e)}")
+        return create_error_response("Unexpected error: failed to retrieve translations.", 500)
 
 
 @event_tools.route("/<project>/tags/new/", methods=["POST"])

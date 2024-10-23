@@ -1,12 +1,15 @@
-from flask import Blueprint, jsonify, request
+import logging
+from flask import Blueprint, request
 from flask_jwt_extended import jwt_required
 from sqlalchemy import asc, desc, select, text
 
 from sls_api.endpoints.generics import db_engine, get_project_id_from_name, \
-    get_table, int_or_none, validate_int, project_permission_required
+    get_table, int_or_none, validate_int, project_permission_required, \
+    create_error_response, create_success_response
 
 
 publication_tools = Blueprint("publication_tools", __name__)
+logger = logging.getLogger("sls_api.tools.publications")
 
 
 @publication_tools.route("/<project>/publications/")
@@ -76,17 +79,17 @@ def get_publications(project, order_by="id", direction="asc"):
     # Verify that project name is valid and get project_id
     project_id = get_project_id_from_name(project)
     if not project_id:
-        return jsonify({"msg": "Invalid project name."}), 400
+        return create_error_response("Validation error: 'project' does not exist.")
 
     collection_table = get_table("publication_collection")
     publication_table = get_table("publication")
 
     # Verify order_by and direction
     if order_by not in publication_table.c:
-        return jsonify({"msg": "Invalid order_by field."}), 400
+        return create_error_response("Validation error: 'order_by' must be a valid column in the publication table.")
 
     if direction not in ["asc", "desc"]:
-        return jsonify({"msg": "Invalid sort order, must be either 'asc' or 'desc'."}), 400
+        return create_error_response("Validation error: 'direction' must be either 'asc' or 'desc'.")
 
     try:
         with db_engine.connect() as connection:
@@ -110,12 +113,15 @@ def get_publications(project, order_by="id", direction="asc"):
                 )
 
             rows = connection.execute(stmt).fetchall()
-            result = [row._asdict() for row in rows]
-            return jsonify(result)
+
+            return create_success_response(
+                message=f"Retrieved {len(rows)} records.",
+                data=[row._asdict() for row in rows]
+            )
 
     except Exception as e:
-        return jsonify({"msg": "Failed to retrieve project publications.",
-                        "reason": str(e)}), 500
+        logger.exception(f"Exception retrieving publications: {str(e)}")
+        return create_error_response("Unexpected error: failed to retrieve publications.", 500)
 
 
 @publication_tools.route("/<project>/publication/<publication_id>/")
@@ -179,12 +185,12 @@ def get_publication(project, publication_id):
     # Verify that project name is valid and get project_id
     project_id = get_project_id_from_name(project)
     if not project_id:
-        return jsonify({"msg": "Invalid project name."}), 400
+        return create_error_response("Validation error: 'project' does not exist.")
 
     # Convert publication_id to integer and verify
     publication_id = int_or_none(publication_id)
     if not publication_id or publication_id < 1:
-        return jsonify({"msg": "Invalid publication_id, must be a positive integer."}), 400
+        return create_error_response("Validation error: 'publication_id' must be a positive integer.")
 
     collection_table = get_table("publication_collection")
     publication_table = get_table("publication")
@@ -203,12 +209,16 @@ def get_publication(project, publication_id):
             result = connection.execute(statement).first()
 
             if result is None:
-                return jsonify({"msg": "Publication not found. Either project name or publication_id is invalid."}), 404
-            return jsonify(result._asdict())
+                return create_error_response("Validation error: could not find publication, either 'project' or 'publication_id' is invalid.")
+
+            return create_success_response(
+                message="Retrieved 1 record.",
+                data=result._asdict()
+            )
 
     except Exception as e:
-        return jsonify({"msg": "Failed to retrieve publication.",
-                        "reason": str(e)}), 500
+        logger.exception(f"Exception retrieving publication: {str(e)}")
+        return create_error_response("Unexpected error: failed to retrieve publication.", 500)
 
 
 @publication_tools.route("/<project>/publication/<publication_id>/versions/")
@@ -272,12 +282,12 @@ def get_publication_versions(project, publication_id):
     # Verify that project name is valid and get project_id
     project_id = get_project_id_from_name(project)
     if not project_id:
-        return jsonify({"msg": "Invalid project name."}), 400
+        return create_error_response("Validation error: 'project' does not exist.")
 
     # Convert publication_id to integer and verify
     publication_id = int_or_none(publication_id)
     if not publication_id or publication_id < 1:
-        return jsonify({"msg": "Invalid publication_id, must be a positive integer."}), 400
+        return create_error_response("Validation error: 'publication_id' must be a positive integer.")
 
     publication_version = get_table("publication_version")
 
@@ -293,12 +303,15 @@ def get_publication_versions(project, publication_id):
                 .order_by(publication_version.c.sort_order)
             )
             rows = connection.execute(stmt).fetchall()
-            result = [row._asdict() for row in rows]
-            return jsonify(result)
+
+            return create_success_response(
+                message=f"Retrieved {len(rows)} records.",
+                data=[row._asdict() for row in rows]
+            )
 
     except Exception as e:
-        return jsonify({"msg": "Failed to retrieve publication versions.",
-                        "reason": str(e)}), 500
+        logger.exception(f"Exception retrieving publication versions: {str(e)}")
+        return create_error_response("Unexpected error: failed to retrieve publication versions.", 500)
 
 
 @publication_tools.route("/<project>/publication/<publication_id>/manuscripts/")
@@ -363,12 +376,12 @@ def get_publication_manuscripts(project, publication_id):
     # Verify that project name is valid and get project_id
     project_id = get_project_id_from_name(project)
     if not project_id:
-        return jsonify({"msg": "Invalid project name."}), 400
+        return create_error_response("Validation error: 'project' does not exist.")
 
     # Convert publication_id to integer and verify
     publication_id = int_or_none(publication_id)
     if not publication_id or publication_id < 1:
-        return jsonify({"msg": "Invalid publication_id, must be a positive integer."}), 400
+        return create_error_response("Validation error: 'publication_id' must be a positive integer.")
 
     publication_manuscript = get_table("publication_manuscript")
 
@@ -384,12 +397,15 @@ def get_publication_manuscripts(project, publication_id):
                 .order_by(publication_manuscript.c.sort_order)
             )
             rows = connection.execute(stmt).fetchall()
-            result = [row._asdict() for row in rows]
-            return jsonify(result)
+
+            return create_success_response(
+                message=f"Retrieved {len(rows)} records.",
+                data=[row._asdict() for row in rows]
+            )
 
     except Exception as e:
-        return jsonify({"msg": "Failed to retrieve publication manuscripts.",
-                        "reason": str(e)}), 500
+        logger.exception(f"Exception retrieving publication manuscripts: {str(e)}")
+        return create_error_response("Unexpected error: failed to retrieve publication manuscripts.", 500)
 
 
 @publication_tools.route("/<project>/publication/<publication_id>/tags/")
@@ -423,12 +439,12 @@ def get_publication_tags(project, publication_id):
     # Verify that project name is valid and get project_id
     project_id = get_project_id_from_name(project)
     if not project_id:
-        return jsonify({"msg": "Invalid project name."}), 400
+        return create_error_response("Validation error: 'project' does not exist.")
 
     # Convert publication_id to integer and verify
     publication_id = int_or_none(publication_id)
     if not publication_id or publication_id < 1:
-        return jsonify({"msg": "Invalid publication_id, must be a positive integer."}), 400
+        return create_error_response("Validation error: 'publication_id' must be a positive integer.")
 
     statement = """
         SELECT
@@ -455,12 +471,15 @@ def get_publication_tags(project, publication_id):
                 text(statement),
                 {"pub_id": publication_id}
             ).fetchall()
-            result = [row._asdict() for row in rows]
-            return jsonify(result)
+
+            return create_success_response(
+                message=f"Retrieved {len(rows)} records.",
+                data=[row._asdict() for row in rows]
+            )
 
     except Exception as e:
-        return jsonify({"msg": "Failed to retrieve publication tags.",
-                        "reason": str(e)}), 500
+        logger.exception(f"Exception retrieving publication tags: {str(e)}")
+        return create_error_response("Unexpected error: failed to retrieve publication tags.", 500)
 
 
 @publication_tools.route("/<project>/publication/<publication_id>/facsimiles/")
@@ -496,12 +515,12 @@ def get_publication_facsimiles(project, publication_id):
     # Verify that project name is valid and get project_id
     project_id = get_project_id_from_name(project)
     if not project_id:
-        return jsonify({"msg": "Invalid project name."}), 400
+        return create_error_response("Validation error: 'project' does not exist.")
 
     # Convert publication_id to integer and verify
     publication_id = int_or_none(publication_id)
     if not publication_id or publication_id < 1:
-        return jsonify({"msg": "Invalid publication_id, must be a positive integer."}), 400
+        return create_error_response("Validation error: 'publication_id' must be a positive integer.")
 
     facs_table = get_table("publication_facsimile")
     facs_collection_table = get_table("publication_facsimile_collection")
@@ -525,12 +544,15 @@ def get_publication_facsimiles(project, publication_id):
                 .order_by(facs_table.c.priority)
             )
             rows = connection.execute(stmt).fetchall()
-            result = [row._asdict() for row in rows]
-            return jsonify(result)
+
+            return create_success_response(
+                message=f"Retrieved {len(rows)} records.",
+                data=[row._asdict() for row in rows]
+            )
 
     except Exception as e:
-        return jsonify({"msg": "Failed to retrieve publication facsimiles.",
-                        "reason": str(e)}), 500
+        logger.exception(f"Exception retrieving publication facsimiles: {str(e)}")
+        return create_error_response("Unexpected error: failed to retrieve publication facsimiles.", 500)
 
 
 @publication_tools.route("/<project>/publication/<publication_id>/comments/")
@@ -591,12 +613,12 @@ def get_publication_comments(project, publication_id):
     # Verify that project name is valid and get project_id
     project_id = get_project_id_from_name(project)
     if not project_id:
-        return jsonify({"msg": "Invalid project name."}), 400
+        return create_error_response("Validation error: 'project' does not exist.")
 
     # Convert publication_id to integer and verify
     publication_id = int_or_none(publication_id)
     if not publication_id or publication_id < 1:
-        return jsonify({"msg": "Invalid publication_id, must be a positive integer."}), 400
+        return create_error_response("Validation error: 'publication_id' must be a positive integer.")
 
     publication_table = get_table("publication")
     comment_table = get_table("publication_comment")
@@ -618,12 +640,15 @@ def get_publication_comments(project, publication_id):
                 .where(comment_table.c.deleted < 1)
             )
             rows = connection.execute(stmt).fetchall()
-            result = [row._asdict() for row in rows]
-            return jsonify(result)
+
+            return create_success_response(
+                message=f"Retrieved {len(rows)} records.",
+                data=[row._asdict() for row in rows]
+            )
 
     except Exception as e:
-        return jsonify({"msg": "Failed to retrieve publication comments.",
-                        "reason": str(e)}), 500
+        logger.exception(f"Exception retrieving publication comments: {str(e)}")
+        return create_error_response("Unexpected error: failed to retrieve publication comments.", 500)
 
 
 @publication_tools.route("/<project>/publication/<publication_id>/link_text/", methods=["POST"])
@@ -730,17 +755,17 @@ def link_text_to_publication(project, publication_id):
     # Verify that project name is valid and get project_id
     project_id = get_project_id_from_name(project)
     if not project_id:
-        return jsonify({"msg": "Invalid project name."}), 400
+        return create_error_response("Validation error: 'project' does not exist.")
 
     # Convert publication_id to integer and verify
     publication_id = int_or_none(publication_id)
     if not publication_id or publication_id < 1:
-        return jsonify({"msg": "Invalid publication_id, must be a positive integer."}), 400
+        return create_error_response("Validation error: 'publication_id' must be a positive integer.")
 
     # Verify that request data was provided
     request_data = request.get_json()
     if not request_data:
-        return jsonify({"msg": "No data provided."}), 400
+        return create_error_response("No data provided.")
 
     # List required and optional fields in POST data
     required_fields = ["text_type", "original_filename"]
@@ -765,7 +790,7 @@ def link_text_to_publication(project, publication_id):
         any(field not in request_data or not request_data[field] for field in required_fields)
         or text_type not in valid_text_types
     ):
-        return jsonify({"msg": "POST data is invalid: required fields are missing or empty, or 'text_type' has an invalid value."}), 400
+        return create_error_response("Validation error: 'original_filename' and 'text_type' required. Valid values for 'text_type' are 'comment', 'manuscript' or 'version'.")
 
     # Start building values dictionary for insert statement
     values = {}
@@ -788,10 +813,10 @@ def link_text_to_publication(project, publication_id):
             # strings or None
             if field == "published":
                 if not validate_int(request_data[field], 0, 2):
-                    return jsonify({"msg": f"Field '{field}' must be an integer with value 0, 1 or 2."}), 400
+                    return create_error_response(f"Validation error: '{field}' must be either 0, 1 or 2.")
             elif field in ["type", "section_id", "sort_order"]:
                 if not validate_int(request_data[field], 0):
-                    return jsonify({"msg": f"Field '{field}' must be a non-negative integer."}), 400
+                    return create_error_response(f"Validation error: '{field}' must be an integer greater than or equal to 0.")
             else:
                 # Convert remaining fields to string if not None
                 if request_data[field] is not None:
@@ -832,7 +857,7 @@ def link_text_to_publication(project, publication_id):
                 result = connection.execute(stmt).first()
 
                 if result is None:
-                    return jsonify({"msg": "Publication not found. Either project name or publication_id is invalid."}), 404
+                    return create_error_response("Validation error: could not find publication, either 'project' or 'publication_id' is invalid.")
 
                 # Since publications can have only one comment linked to them,
                 # we need to check if the publication already has a comment.
@@ -840,7 +865,7 @@ def link_text_to_publication(project, publication_id):
                     text_type == "comment"
                     and result["publication_comment_id"] is not None
                 ):
-                    return jsonify({"msg": "Comment already linked to publication. Publications can have only one comment."}), 400
+                    return create_error_response("Failed to add comment to publication: a comment is already linked to the publication.")
 
                 table = get_table(f"publication_{text_type}")
                 ins_stmt = (
@@ -848,15 +873,11 @@ def link_text_to_publication(project, publication_id):
                     .values(**values)
                     .returning(*table.c)  # Return the inserted row
                 )
-                result = connection.execute(ins_stmt)
-                inserted_row = result.fetchone()  # Fetch the inserted row
+                inserted_row = connection.execute(ins_stmt).first()
 
                 if inserted_row is None:
                     # No row was returned; handle accordingly
-                    return jsonify({
-                        "msg": "Insertion failed: no row returned.",
-                        "reason": "The insert statement did not return any data."
-                    }), 500
+                    return create_error_response("Insertion failed: no row returned.", 500)
 
                 if text_type == "comment":
                     # Update the publication with the comment id
@@ -870,13 +891,12 @@ def link_text_to_publication(project, publication_id):
                 # Convert the inserted row to a dict for JSON serialization
                 inserted_row_dict = inserted_row._asdict()
 
-                return jsonify({
-                    "msg": f"Publication {text_type} with ID {inserted_row['id']} created successfully.",
-                    "row": inserted_row_dict
-                }), 201
+                return create_success_response(
+                    message=f"Publication {text_type} created and linked to publication.",
+                    data=inserted_row_dict,
+                    status_code=201
+                )
 
     except Exception as e:
-        return jsonify({
-            "msg": f"Failed to create new publication {text_type}.",
-            "reason": str(e)
-        }), 500
+        logger.exception(f"Exception creating new publication {text_type}: {str(e)}")
+        return create_error_response(f"Unexpected error: failed to create new publication {text_type}.", 500)
