@@ -439,7 +439,7 @@ def edit_publication_collection(project, collection_id):
             values[field] = request_data[field]
 
     if not values:
-        return create_error_response(f"Validation error: no valid fields provided to update.")
+        return create_error_response("Validation error: no valid fields provided to update.")
 
     # Add date_modified
     values["date_modified"] = datetime.now()
@@ -749,7 +749,7 @@ def edit_publication(project, publication_id):
                 values[field] = request_data[field]
 
     if not values:
-        return create_error_response(f"Validation error: no valid fields provided to update.")
+        return create_error_response("Validation error: no valid fields provided to update.")
 
     # Add date_modified
     values["date_modified"] = datetime.now()
@@ -906,7 +906,7 @@ def edit_comment(project, publication_id):
             values[field] = request_data[field]
 
     if not values:
-        return create_error_response(f"Validation error: no valid fields provided to update.")
+        return create_error_response("Validation error: no valid fields provided to update.")
 
     # Add date_modified
     values["date_modified"] = datetime.now()
@@ -1094,7 +1094,7 @@ def edit_manuscript(project, manuscript_id):
                 values[field] = request_data[field]
 
     if not values:
-        return create_error_response(f"Validation error: no valid fields provided to update.")
+        return create_error_response("Validation error: no valid fields provided to update.")
 
     # Add date_modified
     values["date_modified"] = datetime.now()
@@ -1283,7 +1283,7 @@ def edit_version(project, version_id):
                 values[field] = request_data[field]
 
     if not values:
-        return create_error_response(f"Validation error: no valid fields provided to update.")
+        return create_error_response("Validation error: no valid fields provided to update.")
 
     # Add date_modified
     values["date_modified"] = datetime.now()

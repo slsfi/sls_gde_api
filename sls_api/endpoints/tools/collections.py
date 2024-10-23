@@ -295,7 +295,7 @@ def edit_facsimile_collection(project, collection_id):
                 values[field] = request_data[field]
 
     if not values:
-        return create_error_response(f"Validation error: no valid fields provided to update.")
+        return create_error_response("Validation error: no valid fields provided to update.")
 
     # Add date_modified
     values["date_modified"] = datetime.now()
@@ -639,7 +639,7 @@ def link_facsimile_collection_to_publication(project, collection_id):
             values[field] = request_data[field]
 
     if not values:
-        return create_error_response(f"Validation error: no valid fields provided to update.")
+        return create_error_response("Validation error: no valid fields provided to update.")
 
     # Set default values for "page_nr", "section_id", "priority", "type"
     for field in ["page_nr", "section_id", "priority", "type"]:
@@ -806,7 +806,7 @@ def edit_facsimile(project):
             values[field] = request_data[field]
 
     if not values:
-        return create_error_response(f"Validation error: no valid fields provided to update.")
+        return create_error_response("Validation error: no valid fields provided to update.")
 
     # Add date_modified
     values["date_modified"] = datetime.now()

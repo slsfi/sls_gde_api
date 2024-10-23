@@ -621,7 +621,7 @@ def edit_subject(project, subject_id):
                 values[field] = request_data[field]
 
     if not values:
-        return create_error_response(f"Validation error: no valid fields provided to update.")
+        return create_error_response("Validation error: no valid fields provided to update.")
 
     # Add date_modified
     values["date_modified"] = datetime.now()
@@ -885,7 +885,7 @@ def edit_translation(project, translation_id):
                 values[field] = request_data[field]
 
     if not values:
-        return create_error_response(f"Validation error: no valid fields provided to update.")
+        return create_error_response("Validation error: no valid fields provided to update.")
 
     translation_text_id = request_data.get("translation_text_id")
     if translation_text_id is None:
