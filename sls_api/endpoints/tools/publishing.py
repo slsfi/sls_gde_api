@@ -250,6 +250,7 @@ def edit_project(project_id):
     POST Data Parameters in JSON Format (at least one required):
 
     - deleted (int): Soft delete flag. Must be an integer with value 0 or 1.
+      Setting `deleted` value to 1 will force `published` value to 0.
     - published (int): The publication status of the project.
       Must be an integer with value 0, 1 or 2.
 
@@ -345,6 +346,9 @@ def edit_project(project_id):
 
     if values:
         values["date_modified"] = datetime.now()
+        # If "deleted" set to 1, force "published" to 0
+        if values.get("deleted"):
+            values["published"] = 0
 
     try:
         with db_engine.connect() as connection:
@@ -391,6 +395,7 @@ def edit_publication_collection(project, collection_id):
     - published (int): The publication status. Must be an integer with
       value 0, 1 or 2.
     - deleted (int): Soft delete flag. Must be an integer with value 0 or 1.
+      Setting `deleted` value to 1 will force `published` value to 0.
 
     Returns:
 
@@ -498,6 +503,9 @@ def edit_publication_collection(project, collection_id):
 
     # Add date_modified
     values["date_modified"] = datetime.now()
+    # If "deleted" set to 1, force "published" to 0
+    if values.get("deleted"):
+        values["published"] = 0
 
     try:
         with db_engine.connect() as connection:
@@ -688,6 +696,7 @@ def edit_publication(project, publication_id):
       publication (ISO 639-1).
     - genre (str): The genre of the publication.
     - deleted (int): Soft delete flag. Must be an integer with value 0 or 1.
+      Setting `deleted` value to 1 will force `published` value to 0.
 
     Additionally, all POST data parameter values can be set to null,
     except 'deleted'.
@@ -817,6 +826,9 @@ def edit_publication(project, publication_id):
 
     # Add date_modified
     values["date_modified"] = datetime.now()
+    # If "deleted" set to 1, force "published" to 0
+    if values.get("deleted"):
+        values["published"] = 0
 
     try:
         with db_engine.connect() as connection:
@@ -874,8 +886,9 @@ def edit_comment(project, publication_id):
     POST Data Parameters in JSON Format (at least one required):
 
     - deleted (int): Soft delete flag. Must be an integer with value 0 or 1.
+      Setting `deleted` value to 1 will force `published` value to 0.
     - published (int): The publication status of the comment. Must be an
-      integer with value 0, 1, or 2.
+      integer with value 0, 1 or 2.
     - original_filename (str): Path to the comment’s XML-file in the
       project GitHub repository.
 
@@ -983,6 +996,9 @@ def edit_comment(project, publication_id):
 
     # Add date_modified
     values["date_modified"] = datetime.now()
+    # If "deleted" set to 1, force "published" to 0
+    if values.get("deleted"):
+        values["published"] = 0
 
     try:
         with db_engine.connect() as connection:
@@ -1044,6 +1060,7 @@ def edit_manuscript(project, manuscript_id):
     - publication_id (int): The ID of the publication linked to the
       manuscript. Must be a positive integer or null.
     - deleted (int): Soft delete flag. Must be an integer with value 0 or 1.
+      Setting `deleted` value to 1 will force `published` value to 0.
     - published (int): The publication status of the manuscript.
       Must be an integer with value 0, 1 or 2.
     - original_filename (str): Path to the manuscript’s XML file
@@ -1182,6 +1199,9 @@ def edit_manuscript(project, manuscript_id):
 
     # Add date_modified
     values["date_modified"] = datetime.now()
+    # If "deleted" set to 1, force "published" to 0
+    if values.get("deleted"):
+        values["published"] = 0
 
     try:
         with db_engine.connect() as connection:
@@ -1244,6 +1264,7 @@ def edit_version(project, version_id):
     - publication_id (int): The ID of the publication linked to the version.
       Must be a positive integer or null.
     - deleted (int): Soft delete flag. Must be an integer with value 0 or 1.
+      Setting `deleted` value to 1 will force `published` value to 0.
     - published (int): The publication status of the version. Must be an
       integer with value 0, 1 or 2.
     - original_filename (str): Path to the version’s XML file in the
@@ -1381,6 +1402,9 @@ def edit_version(project, version_id):
 
     # Add date_modified
     values["date_modified"] = datetime.now()
+    # If "deleted" set to 1, force "published" to 0
+    if values.get("deleted"):
+        values["published"] = 0
 
     try:
         with db_engine.connect() as connection:

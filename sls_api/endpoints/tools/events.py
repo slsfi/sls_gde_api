@@ -921,11 +921,11 @@ def edit_translation(project, translation_id):
 
     - translation_text_id (int, recommended): ID of the translation text
       object in the `translation_text` table.
-    - table_name (str): name of the table being translated.
-    - field_name (str): name of the field being translated.
-    - text (str) the translation text.
-    - language (str): language code of the translation (ISO 639-1).
-    - deleted (int): flag to mark as deleted (0 for no and 1 for yes).
+    - table_name (str): Name of the table being translated.
+    - field_name (str): Name of the field being translated.
+    - text (str): The translation text.
+    - language (str): Language code of the translation (ISO 639-1).
+    - deleted (int): Soft delete flag. Must be an integer with value 0 or 1.
 
     If translation_text_id is omitted, an attempt to find the translation
     object which is to be updated is made based on translation_id,
