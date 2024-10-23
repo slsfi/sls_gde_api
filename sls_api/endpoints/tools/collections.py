@@ -49,12 +49,12 @@ def create_facsimile_collection(project):
         {
             "success": bool,
             "message": str,
-            "data": dict or None
+            "data": object or null
         }
 
     - `success`: A boolean indicating whether the operation was successful.
     - `message`: A string containing a descriptive message about the result.
-    - `data`: On success, a dictionary containing the inserted facsimile
+    - `data`: On success, an object containing the inserted facsimile
        collection data; `null` on error.
 
     Example Request:
@@ -215,12 +215,12 @@ def edit_facsimile_collection(project, collection_id):
         {
             "success": bool,
             "message": str,
-            "data": dict or None
+            "data": object or null
         }
 
     - `success`: A boolean indicating whether the operation was successful.
     - `message`: A string containing a descriptive message about the result.
-    - `data`: On success, a dictionary containing the updated facsimile
+    - `data`: On success, an object containing the updated facsimile
        collection data; `null` on error.
 
     Example Request:
@@ -377,13 +377,13 @@ def list_facsimile_collections(project, order_by="id", direction="desc"):
         {
             "success": bool,
             "message": str,
-            "data": dict or None
+            "data": array of objects or null
         }
 
     - `success`: A boolean indicating whether the operation was successful.
     - `message`: A string containing a descriptive message about the result.
-    - `data`: On success, a list of facsimile collection objects;
-       `null` on error.
+    - `data`: On success, an array of facsimile collection objects; `null`
+       on error.
 
     Example Request:
 
@@ -590,13 +590,13 @@ def link_facsimile_collection_to_publication(project, collection_id):
         {
             "success": bool,
             "message": str,
-            "data": dict or None
+            "data": object or null
         }
 
     - `success`: A boolean indicating whether the operation was successful.
     - `message`: A string containing a descriptive message about the result.
-    - `data`: On success, a dictionary containing the inserted facsimile
-       data; `null` on error.
+    - `data`: On success, an object containing the inserted facsimile data;
+      `null` on error.
 
     Example Request:
 
@@ -774,12 +774,12 @@ def edit_facsimile(project):
         {
             "success": bool,
             "message": str,
-            "data": dict or None
+            "data": object or null
         }
 
     - `success`: A boolean indicating whether the operation was successful.
     - `message`: A string containing a descriptive message about the result.
-    - `data`: On success, a dictionary containing the updated facsimile data;
+    - `data`: On success, an object containing the updated facsimile data;
       `null` on error.
 
     Example Request:
@@ -947,12 +947,12 @@ def list_facsimile_collection_links(project, collection_id, order_by="id", direc
         {
             "success": bool,
             "message": str,
-            "data": dict or None
+            "data": array of objects or null
         }
 
     - `success`: A boolean indicating whether the operation was successful.
     - `message`: A string containing a descriptive message about the result.
-    - `data`: On success, a list of facsimile objects; `null` on error.
+    - `data`: On success, an array of facsimile objects; `null` on error.
 
     Example Request:
 
@@ -1075,12 +1075,12 @@ def list_publication_collections(project):
         {
             "success": bool,
             "message": str,
-            "data": dict or None
+            "data": array of objects or null
         }
 
     - `success`: A boolean indicating whether the operation was successful.
     - `message`: A string containing a descriptive message about the result.
-    - `data`: On success, a list of publication collection objects; `null`
+    - `data`: On success, an array of publication collection objects; `null`
       on error.
 
     Example Request:
@@ -1209,12 +1209,12 @@ def new_publication_collection(project):
         {
             "success": bool,
             "message": str,
-            "data": dict or None
+            "data": object or null
         }
 
     - `success`: A boolean indicating whether the operation was successful.
     - `message`: A string containing a descriptive message about the result.
-    - `data`: On success, a dictionary containing the inserted publication
+    - `data`: On success, an object containing the inserted publication
       collection data; `null` on error.
 
     Example Request:
@@ -1356,12 +1356,12 @@ def list_publications(project, collection_id, order_by="id"):
         {
             "success": bool,
             "message": str,
-            "data": dict or None
+            "data": array of objects or null
         }
 
     - `success`: A boolean indicating whether the operation was successful.
     - `message`: A string containing a descriptive message about the result.
-    - `data`: On success, a list of publication objects; `null` on error.
+    - `data`: On success, an array of publication objects; `null` on error.
 
     Example Request:
 
@@ -1497,12 +1497,12 @@ def new_publication(project, collection_id):
         {
             "success": bool,
             "message": str,
-            "data": dict or None
+            "data": object or null
         }
 
     - `success`: A boolean indicating whether the operation was successful.
     - `message`: A string containing a descriptive message about the result.
-    - `data`: On success, a dictionary containing the inserted publication
+    - `data`: On success, an object containing the inserted publication
       data; `null` on error.
 
     Example Request:

@@ -27,12 +27,12 @@ def list_user_projects():
         {
             "success": bool,
             "message": str,
-            "data": dict or None
+            "data": array of objects or null
         }
 
     - `success`: A boolean indicating whether the operation was successful.
     - `message`: A string containing a descriptive message about the result.
-    - `data`: On success, a list of project objects; `null` on error.
+    - `data`: On success, an array of project objects; `null` on error.
 
     Example Success Response (HTTP 200):
 
@@ -126,13 +126,13 @@ def add_new_project():
         {
             "success": bool,
             "message": str,
-            "data": dict or None
+            "data": object or null
         }
 
     - `success`: A boolean indicating whether the operation was successful.
     - `message`: A string containing a descriptive message about the result.
-    - `data`: On success, a dictionary containing the inserted project
-      data; `null` on error.
+    - `data`: On success, an object containing the inserted project data;
+      `null` on error.
 
     Example Request:
 
@@ -262,13 +262,13 @@ def edit_project(project_id):
         {
             "success": bool,
             "message": str,
-            "data": dict or None
+            "data": object or null
         }
 
     - `success`: A boolean indicating whether the operation was successful.
     - `message`: A string containing a descriptive message about the result.
-    - `data`: On success, a dictionary containing the updated project
-      data; `null` on error.
+    - `data`: On success, an object containing the updated project data;
+      `null` on error.
 
     Example Request:
 
@@ -405,12 +405,12 @@ def edit_publication_collection(project, collection_id):
         {
             "success": bool,
             "message": str,
-            "data": dict or None
+            "data": object or null
         }
 
     - `success`: A boolean indicating whether the operation was successful.
     - `message`: A string containing a descriptive message about the result.
-    - `data`: On success, a dictionary containing the updated publication
+    - `data`: On success, an object containing the updated publication
       collection data; `null` on error.
 
     Example Request:
@@ -709,12 +709,12 @@ def edit_publication(project, publication_id):
         {
             "success": bool,
             "message": str,
-            "data": dict or None
+            "data": object or null
         }
 
     - `success`: A boolean indicating whether the operation was successful.
     - `message`: A string containing a descriptive message about the result.
-    - `data`: On success, a dictionary containing the updated publication
+    - `data`: On success, an object containing the updated publication
       data; `null` on error.
 
     Example Request:
@@ -900,13 +900,13 @@ def edit_comment(project, publication_id):
         {
             "success": bool,
             "message": str,
-            "data": dict or None
+            "data":  object or null
         }
 
     - `success`: A boolean indicating whether the operation was successful.
     - `message`: A string containing a descriptive message about the result.
-    - `data`: On success, a dictionary containing the updated comment
-      data; `null` on error.
+    - `data`: On success, an object containing the updated comment data;
+      `null` on error.
 
     Example Request:
 
@@ -1081,12 +1081,12 @@ def edit_manuscript(project, manuscript_id):
         {
             "success": bool,
             "message": str,
-            "data": dict or None
+            "data": object or null
         }
 
     - `success`: A boolean indicating whether the operation was successful.
     - `message`: A string containing a descriptive message about the result.
-    - `data`: On success, a dictionary containing the updated manuscript
+    - `data`: On success, an object containing the updated manuscript
       data; `null` on error.
 
     Example Request:
@@ -1285,12 +1285,12 @@ def edit_version(project, version_id):
         {
             "success": bool,
             "message": str,
-            "data": dict or None
+            "data": object or null
         }
 
     - `success`: A boolean indicating whether the operation was successful.
     - `message`: A string containing a descriptive message about the result.
-    - `data`: On success, a dictionary containing the updated publication
+    - `data`: On success, an object containing the updated publication
       version data; `null` on error.
 
     Example Request:

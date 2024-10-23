@@ -192,12 +192,12 @@ def list_project_subjects(project, order_by="last_name", direction="asc"):
         {
             "success": bool,
             "message": str,
-            "data": dict or None
+            "data": array of objects or null
         }
 
     - `success`: A boolean indicating whether the operation was successful.
     - `message`: A string containing a descriptive message about the result.
-    - `data`: On success, a list of subject objects; `null` on error.
+    - `data`: On success, an array of subject objects; `null` on error.
 
     Example Request:
 
@@ -347,12 +347,12 @@ def add_new_subject(project):
         {
             "success": bool,
             "message": str,
-            "data": dict or None
+            "data": object or null
         }
 
     - `success`: A boolean indicating whether the operation was successful.
     - `message`: A string containing a descriptive message about the result.
-    - `data`: On success, a dictionary containing the inserted subject
+    - `data`: On success, an object containing the inserted subject
       data; `null` on error.
 
     Example Request:
@@ -539,13 +539,13 @@ def edit_subject(project, subject_id):
         {
             "success": bool,
             "message": str,
-            "data": dict or None
+            "data": object or null
         }
 
     - `success`: A boolean indicating whether the operation was successful.
     - `message`: A string containing a descriptive message about the result.
-    - `data`: On success, a dictionary containing the updated subject
-      data; `null` on error.
+    - `data`: On success, an object containing the updated subject data;
+      `null` on error.
 
     Example Request:
 
@@ -705,8 +705,8 @@ def add_new_translation(project):
 
     URL Path Parameters:
 
-    - project (str, required): The name of the project the translation belongs to
-      (must be a valid project name).
+    - project (str, required): The name of the project the translation
+      belongs to (must be a valid project name).
 
     POST Data Parameters in JSON Format:
 
@@ -734,13 +734,13 @@ def add_new_translation(project):
         {
             "success": bool,
             "message": str,
-            "data": dict or None
+            "data": object or null
         }
 
     - `success`: A boolean indicating whether the operation was successful.
     - `message`: A string containing a descriptive message about the result.
-    - `data`: On success, a dictionary containing the inserted translation
-      text object; `null` on error.
+    - `data`: On success, an object containing the inserted translation
+      text data; `null` on error.
 
     Example Request:
 
@@ -944,13 +944,13 @@ def edit_translation(project, translation_id):
         {
             "success": bool,
             "message": str,
-            "data": dict or None
+            "data": object or null
         }
 
     - `success`: A boolean indicating whether the operation was successful.
     - `message`: A string containing a descriptive message about the result.
-    - `data`: On success, a dictionary containing the updated translation
-      text object; `null` on error.
+    - `data`: On success, an object containing the updated translation
+      text data; `null` on error.
 
     Example Request:
 
@@ -1140,12 +1140,12 @@ def list_translations(project, translation_id):
         {
             "success": bool,
             "message": str,
-            "data": dict or None
+            "data": array of objects or null
         }
 
     - `success`: A boolean indicating whether the operation was successful.
     - `message`: A string containing a descriptive message about the result.
-    - `data`: On success, a list of translation text objects; `null` on
+    - `data`: On success, an array of translation text objects; `null` on
       error.
 
     Example Request:

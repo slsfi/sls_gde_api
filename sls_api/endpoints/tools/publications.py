@@ -37,12 +37,12 @@ def get_publications(project, order_by="id", direction="asc"):
         {
             "success": bool,
             "message": str,
-            "data": dict or None
+            "data": array of objects or null
         }
 
     - `success`: A boolean indicating whether the operation was successful.
     - `message`: A string containing a descriptive message about the result.
-    - `data`: On success, a list of publication objects; `null` on error.
+    - `data`: On success, an array of publication objects; `null` on error.
 
     Example Request:
 
@@ -160,12 +160,12 @@ def get_publication(project, publication_id):
         {
             "success": bool,
             "message": str,
-            "data": dict or None
+            "data": object or null
         }
 
     - `success`: A boolean indicating whether the operation was successful.
     - `message`: A string containing a descriptive message about the result.
-    - `data`: On success, a dictionary containing the publication data; `null`
+    - `data`: On success, an object containing the publication data; `null`
       on error.
 
     Example Request:
@@ -273,12 +273,12 @@ def get_publication_versions(project, publication_id):
         {
             "success": bool,
             "message": str,
-            "data": dict or None
+            "data": array of objects or null
         }
 
     - `success`: A boolean indicating whether the operation was successful.
     - `message`: A string containing a descriptive message about the result.
-    - `data`: On success, a list of publication version objects; `null` on
+    - `data`: On success, an array of publication version objects; `null` on
       error.
 
     Example Request:
@@ -383,12 +383,12 @@ def get_publication_manuscripts(project, publication_id):
         {
             "success": bool,
             "message": str,
-            "data": dict or None
+            "data": array of objects or null
         }
 
     - `success`: A boolean indicating whether the operation was successful.
     - `message`: A string containing a descriptive message about the result.
-    - `data`: On success, a list of publication manuscript objects; `null`
+    - `data`: On success, an array of publication manuscript objects; `null`
       on error.
 
     Example Request:
@@ -493,12 +493,12 @@ def get_publication_tags(project, publication_id):
         {
             "success": bool,
             "message": str,
-            "data": dict or None
+            "data": array of objects or null
         }
 
     - `success`: A boolean indicating whether the operation was successful.
     - `message`: A string containing a descriptive message about the result.
-    - `data`: On success, a list of tag objects; `null` on error.
+    - `data`: On success, an array of tag objects; `null` on error.
 
     Example Request:
 
@@ -600,12 +600,12 @@ def get_publication_facsimiles(project, publication_id):
         {
             "success": bool,
             "message": str,
-            "data": dict or None
+            "data": array of objects or null
         }
 
     - `success`: A boolean indicating whether the operation was successful.
     - `message`: A string containing a descriptive message about the result.
-    - `data`: On success, a list of facsimile objects; `null` on error.
+    - `data`: On success, an array of facsimile objects; `null` on error.
 
     Example Request:
 
@@ -719,12 +719,13 @@ def get_publication_comments(project, publication_id):
         {
             "success": bool,
             "message": str,
-            "data": dict or None
+            "data": array of objects or null
         }
 
     - `success`: A boolean indicating whether the operation was successful.
     - `message`: A string containing a descriptive message about the result.
-    - `data`: On success, a list of publication comment objects; `null` on error.
+    - `data`: On success, an array of publication comment objects; `null`
+      on error.
 
     Example Request:
 
@@ -862,12 +863,12 @@ def link_text_to_publication(project, publication_id):
         {
             "success": bool,
             "message": str,
-            "data": dict or None
+            "data": object or null
         }
 
     - `success`: A boolean indicating whether the operation was successful.
     - `message`: A string containing a descriptive message about the result.
-    - `data`: On success, a dictionary containing the inserted data; `null`
+    - `data`: On success, an object containing the inserted data; `null`
       on error.
 
     Example Request:
