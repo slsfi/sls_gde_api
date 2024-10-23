@@ -208,7 +208,7 @@ def list_project_subjects(project, order_by="last_name", direction="asc"):
 
         {
             "success": true,
-            "message": "Retrieved # records.",
+            "message": "Retrieved # person records.",
             "data": [
                 {
                     "id": 1,
@@ -299,7 +299,7 @@ def list_project_subjects(project, order_by="last_name", direction="asc"):
             rows = connection.execute(stmt).fetchall()
 
             return create_success_response(
-                message=f"Retrieved {len(rows)} records.",
+                message=f"Retrieved {len(rows)} person records.",
                 data=[row._asdict() for row in rows]
             )
 
@@ -1160,7 +1160,7 @@ def list_translations(project, translation_id):
 
         {
             "success": true,
-            "message": "Retrieved # records.",
+            "message": "Retrieved # translation texts.",
             "data": [
                 {
                     "translation_text_id": 123,
@@ -1254,7 +1254,7 @@ def list_translations(project, translation_id):
                 rows = connection.execute(statement).fetchall()
 
                 return create_success_response(
-                    message=f"Retrieved {len(rows)} records.",
+                    message=f"Retrieved {len(rows)} translation texts.",
                     data=[row._asdict() for row in rows]
                 )
 

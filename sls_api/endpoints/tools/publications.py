@@ -53,7 +53,7 @@ def get_publications(project, order_by="id", direction="asc"):
 
         {
             "success": true,
-            "message": "Retrieved # records.",
+            "message": "Retrieved # publications.",
             "data": [
                 {
                     "id": 1,
@@ -131,7 +131,7 @@ def get_publications(project, order_by="id", direction="asc"):
             rows = connection.execute(stmt).fetchall()
 
             return create_success_response(
-                message=f"Retrieved {len(rows)} records.",
+                message=f"Retrieved {len(rows)} publications.",
                 data=[row._asdict() for row in rows]
             )
 
@@ -176,7 +176,7 @@ def get_publication(project, publication_id):
 
         {
             "success": true,
-            "message": "Retrieved 1 record.",
+            "message": "Retrieved 1 publication.",
             "data": {
                 "id": 123,
                 "publication_collection_id": 456,
@@ -242,7 +242,7 @@ def get_publication(project, publication_id):
                 return create_error_response("Validation error: could not find publication, either 'project' or 'publication_id' is invalid.")
 
             return create_success_response(
-                message="Retrieved 1 record.",
+                message="Retrieved 1 publication.",
                 data=result._asdict()
             )
 
@@ -289,7 +289,7 @@ def get_publication_versions(project, publication_id):
 
         {
             "success": true,
-            "message": "Retrieved # records.",
+            "message": "Retrieved # publication versions.",
             "data": [
                 {
                     "id": 1,
@@ -352,7 +352,7 @@ def get_publication_versions(project, publication_id):
             rows = connection.execute(stmt).fetchall()
 
             return create_success_response(
-                message=f"Retrieved {len(rows)} records.",
+                message=f"Retrieved {len(rows)} publication versions.",
                 data=[row._asdict() for row in rows]
             )
 
@@ -399,7 +399,7 @@ def get_publication_manuscripts(project, publication_id):
 
         {
             "success": true,
-            "message": "Retrieved # records.",
+            "message": "Retrieved # publication manuscripts.",
             "data": [
                 {
                     "id": 1,
@@ -463,7 +463,7 @@ def get_publication_manuscripts(project, publication_id):
             rows = connection.execute(stmt).fetchall()
 
             return create_success_response(
-                message=f"Retrieved {len(rows)} records.",
+                message=f"Retrieved {len(rows)} publication manuscripts.",
                 data=[row._asdict() for row in rows]
             )
 
@@ -508,7 +508,7 @@ def get_publication_tags(project, publication_id):
 
         {
             "success": true,
-            "message": "Retrieved # records.",
+            "message": "Retrieved # publication tags.",
             "data": [
                 {
                     "id": 1,
@@ -569,7 +569,7 @@ def get_publication_tags(project, publication_id):
             ).fetchall()
 
             return create_success_response(
-                message=f"Retrieved {len(rows)} records.",
+                message=f"Retrieved {len(rows)} publication tags.",
                 data=[row._asdict() for row in rows]
             )
 
@@ -615,7 +615,7 @@ def get_publication_facsimiles(project, publication_id):
 
         {
             "success": true,
-            "message": "Retrieved # records.",
+            "message": "Retrieved # publication facsimiles.",
             "data": [
                 {
                     "id": 123,
@@ -687,7 +687,7 @@ def get_publication_facsimiles(project, publication_id):
             rows = connection.execute(stmt).fetchall()
 
             return create_success_response(
-                message=f"Retrieved {len(rows)} records.",
+                message=f"Retrieved {len(rows)} publication facsimiles.",
                 data=[row._asdict() for row in rows]
             )
 
@@ -734,7 +734,7 @@ def get_publication_comments(project, publication_id):
 
         {
             "success": true,
-            "message": "Retrieved # records.",
+            "message": "Retrieved # publication comments.",
             "data": [
                 {
                     "id": 2582,
@@ -798,7 +798,7 @@ def get_publication_comments(project, publication_id):
             rows = connection.execute(stmt).fetchall()
 
             return create_success_response(
-                message=f"Retrieved {len(rows)} records.",
+                message=f"Retrieved {len(rows)} publication comments.",
                 data=[row._asdict() for row in rows]
             )
 

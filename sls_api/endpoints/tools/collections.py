@@ -161,8 +161,7 @@ def create_facsimile_collection(project):
                     .values(**values)
                     .returning(*facs_coll_table.c)  # Return the inserted row
                 )
-                result = connection.execute(stmt)
-                inserted_row = result.fetchone()  # Fetch the inserted row
+                inserted_row = connection.execute(stmt).first()
 
                 if inserted_row is None:
                     return create_error_response("Insertion failed: no row returned.", 500)
@@ -394,7 +393,7 @@ def list_facsimile_collections(project, order_by="id", direction="desc"):
 
         {
             "success": true,
-            "message": "Retrieved # records.",
+            "message": "Retrieved # facsimile collections.",
             "data": [
                 {
                     "id": 123,
@@ -547,7 +546,7 @@ def list_facsimile_collections(project, order_by="id", direction="desc"):
 
             rows = connection.execute(stmt).fetchall()
             return create_success_response(
-                message=f"Retrieved {len(rows)} records.",
+                message=f"Retrieved {len(rows)} facsimile collections.",
                 data=[row._asdict() for row in rows]
             )
 
@@ -963,7 +962,7 @@ def list_facsimile_collection_links(project, collection_id, order_by="id", direc
 
         {
             "success": true,
-            "message": "Retrieved # records.",
+            "message": "Retrieved # publication facsimiles.",
             "data": [
                 {
                     "id": 456,
@@ -1048,7 +1047,7 @@ def list_facsimile_collection_links(project, collection_id, order_by="id", direc
             rows = connection.execute(stmt).fetchall()
 
             return create_success_response(
-                message=f"Retrieved {len(rows)} records.",
+                message=f"Retrieved {len(rows)} publication facsimiles.",
                 data=[row._asdict() for row in rows]
             )
 
@@ -1092,7 +1091,7 @@ def list_publication_collections(project):
 
         {
             "success": true,
-            "message": "Retrieved # records.",
+            "message": "Retrieved # publication collections.",
             "data": [
                 {
                     "id": 1,
@@ -1176,7 +1175,7 @@ def list_publication_collections(project):
             ).fetchall()
 
             return create_success_response(
-                message=f"Retrieved {len(rows)} records.",
+                message=f"Retrieved {len(rows)} publication collections.",
                 data=[row._asdict() for row in rows]
             )
 
@@ -1373,7 +1372,7 @@ def list_publications(project, collection_id, order_by="id"):
 
         {
             "success": true,
-            "message": "Retrieved # records.",
+            "message": "Retrieved # publications.",
             "data": [
                 {
                     "id": 1,
@@ -1453,7 +1452,7 @@ def list_publications(project, collection_id, order_by="id"):
                 rows = connection.execute(select_pub_stmt).fetchall()
 
                 return create_success_response(
-                    message=f"Retrieved {len(rows)} records.",
+                    message=f"Retrieved {len(rows)} publications.",
                     data=[row._asdict() for row in rows]
                 )
 
