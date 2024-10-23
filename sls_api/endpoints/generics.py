@@ -486,26 +486,26 @@ def get_translation_text_id(translation_id, table_name, field_name, language):
     connection = db_engine.connect()
     if translation_id is not None:
         stmt = """
-            SELECT id 
-            FROM translation_text 
-            WHERE 
+            SELECT id
+            FROM translation_text
+            WHERE
                 (
-                    translation_id = :t_id 
+                    translation_id = :t_id
                     AND (
-                        language IS NULL 
+                        language IS NULL
                         OR language = 'not set'
                     )
-                    AND table_name = :table_name 
-                    AND field_name = :field_name 
+                    AND table_name = :table_name
+                    AND field_name = :field_name
                     AND deleted = 0
-                ) 
-                OR 
+                )
+                OR
                 (
-                    translation_id = :t_id 
-                    AND language = :language 
-                    AND table_name = :table_name 
-                    AND field_name = :field_name 
-                    AND language != 'not set' 
+                    translation_id = :t_id
+                    AND language = :language
+                    AND table_name = :table_name
+                    AND field_name = :field_name
+                    AND language != 'not set'
                     AND deleted = 0
                 )
             LIMIT 1
