@@ -43,7 +43,19 @@ def create_facsimile_collection(project):
 
     Returns:
 
-        JSON: A success message with the inserted row or an error message.
+    - A tuple containing a Flask Response object with JSON data and an
+      HTTP status code. The JSON response has the following structure:
+
+        {
+            "success": bool,
+            "message": str,
+            "data": dict or None
+        }
+
+    - `success`: A boolean indicating whether the operation was successful.
+    - `message`: A string containing a descriptive message about the result.
+    - `data`: On success, a dictionary containing the inserted facsimile
+       collection data; `null` on error.
 
     Example Request:
 
@@ -55,11 +67,12 @@ def create_facsimile_collection(project):
             "number_of_pages": 100
         }
 
-    Example Response (Success):
+    Example Success Response (HTTP 201):
 
         {
-            "msg": "Facsimile collection with ID 123 created successfully.",
-            "row": {
+            "success": true,
+            "message": "Facsimile collection created.",
+            "data": {
                 "id": 123,
                 "date_created": "2023-05-12T12:34:56",
                 "date_modified": "2023-06-01T08:22:11",
@@ -74,10 +87,12 @@ def create_facsimile_collection(project):
             }
         }
 
-    Example Response (Error):
+    Example Error Response (HTTP 400):
 
         {
-            "msg": "Field 'title' must be provided and cannot be empty."
+            "success": false,
+            "message": "Validation error: 'title' required.",
+            "data": null
         }
 
     Status Codes:
@@ -199,7 +214,19 @@ def edit_facsimile_collection(project, collection_id):
 
     Returns:
 
-        JSON: A success message with the updated row or an error message.
+    - A tuple containing a Flask Response object with JSON data and an
+      HTTP status code. The JSON response has the following structure:
+
+        {
+            "success": bool,
+            "message": str,
+            "data": dict or None
+        }
+
+    - `success`: A boolean indicating whether the operation was successful.
+    - `message`: A string containing a descriptive message about the result.
+    - `data`: On success, a dictionary containing the updated facsimile
+       collection data; `null` on error.
 
     Example Request:
 
@@ -211,11 +238,12 @@ def edit_facsimile_collection(project, collection_id):
             "number_of_pages": 150
         }
 
-    Example Response (Success):
+    Example Success Response (HTTP 200):
 
         {
-            "msg": "Updated facsimile collection with ID 123 successfully.",
-            "row": {
+            "success": true,
+            "message": "Facsimile collection updated.",
+            "data": {
                 "id": 123,
                 "date_created": "2023-05-12T12:34:56",
                 "date_modified": "2023-06-01T08:22:11",
@@ -230,10 +258,12 @@ def edit_facsimile_collection(project, collection_id):
             }
         }
 
-    Example Response (Error):
+    Example Error Response (HTTP 400):
 
         {
-            "msg": "Invalid collection_id, must be a positive integer."
+            "success": false,
+            "message": "Validation error: 'collection_id' must be a positive integer.",
+            "data": null
         }
 
     Status Codes:
@@ -349,36 +379,53 @@ def list_facsimile_collections(project, order_by="id", direction="desc"):
 
     Returns:
 
-        JSON: A list with facsimile collection objects, an empty list
-        or an error message.
+    - A tuple containing a Flask Response object with JSON data and an
+      HTTP status code. The JSON response has the following structure:
+
+        {
+            "success": bool,
+            "message": str,
+            "data": dict or None
+        }
+
+    - `success`: A boolean indicating whether the operation was successful.
+    - `message`: A string containing a descriptive message about the result.
+    - `data`: On success, a list of facsimile collection objects;
+       `null` on error.
 
     Example Request:
 
         GET /projectname/facsimile_collection/list/
 
-    Example Response (Success):
-
-        [
-            {
-                "id": 123,
-                "date_created": "2023-05-12T12:34:56",
-                "date_modified": "2023-06-01T08:22:11",
-                "deleted": 0,
-                "title": "Facsimile Collection",
-                "number_of_pages": 150,
-                "start_page_number": 0,
-                "description": "Description of the collection.",
-                "folder_path": null,
-                "page_comment": null,
-                "external_url": null
-            },
-            ...
-        ]
-
-    Example Response (Error):
+    Example Success Response (HTTP 200):
 
         {
-            "msg": "Invalid project name."
+            "success": true,
+            "message": "Retrieved # records.",
+            "data": [
+                {
+                    "id": 123,
+                    "date_created": "2023-05-12T12:34:56",
+                    "date_modified": "2023-06-01T08:22:11",
+                    "deleted": 0,
+                    "title": "Facsimile Collection",
+                    "number_of_pages": 150,
+                    "start_page_number": 0,
+                    "description": "Description of the collection.",
+                    "folder_path": null,
+                    "page_comment": null,
+                    "external_url": null
+                },
+                ...
+            ]
+        }
+
+    Example Error Response (HTTP 400):
+
+        {
+            "success": false,
+            "message": "Validation error: 'project' does not exist.",
+            "data": null
         }
 
     Status Codes:
@@ -545,7 +592,19 @@ def link_facsimile_collection_to_publication(project, collection_id):
 
     Returns:
 
-        JSON: A success message with the inserted row or an error message.
+    - A tuple containing a Flask Response object with JSON data and an
+      HTTP status code. The JSON response has the following structure:
+
+        {
+            "success": bool,
+            "message": str,
+            "data": dict or None
+        }
+
+    - `success`: A boolean indicating whether the operation was successful.
+    - `message`: A string containing a descriptive message about the result.
+    - `data`: On success, a dictionary containing the inserted facsimile
+       data; `null` on error.
 
     Example Request:
 
@@ -557,11 +616,12 @@ def link_facsimile_collection_to_publication(project, collection_id):
             "priority": 1
         }
 
-    Example Response (Success):
+    Example Success Response (HTTP 201):
 
         {
-            "msg": "Publication facsimile with ID 789 created successfully.",
-            "row": {
+            "success": true,
+            "message": "Facsimile created.",
+            "data": {
                 "id": 789,
                 "publication_facsimile_collection_id": 123,
                 "publication_id": 456,
@@ -577,18 +637,19 @@ def link_facsimile_collection_to_publication(project, collection_id):
             }
         }
 
-    Example Response (Error):
+    Example Error Response (HTTP 400):
 
         {
-            "msg": "Publication not found. Either project name or publication_id is invalid."
+            "success": false,
+            "message": "Validation error: 'publication_id' required.",
+            "data": null
         }
 
     Status Codes:
 
-    - 201 - Created: The facsimile was linked successfully.
-    - 400 - Bad Request: Invalid project name, collection ID, publication ID, or no data
-            provided.
-    - 404 - Not Found: The publication was not found for the given project or ID.
+    - 201 - Created: The facsimile was created successfully.
+    - 400 - Bad Request: Invalid project name, collection ID, publication ID,
+            or no data provided.
     - 500 - Internal Server Error: Database query or execution failed.
     """
     # Verify that project name is valid and get project_id
@@ -719,7 +780,19 @@ def edit_facsimile(project):
 
     Returns:
 
-        JSON: A success message with the updated row or an error message.
+    - A tuple containing a Flask Response object with JSON data and an
+      HTTP status code. The JSON response has the following structure:
+
+        {
+            "success": bool,
+            "message": str,
+            "data": dict or None
+        }
+
+    - `success`: A boolean indicating whether the operation was successful.
+    - `message`: A string containing a descriptive message about the result.
+    - `data`: On success, a dictionary containing the updated facsimile data;
+      `null` on error.
 
     Example Request:
 
@@ -731,11 +804,12 @@ def edit_facsimile(project):
             "priority": 2
         }
 
-    Example Response (Success):
+    Example Success Response (HTTP 200):
 
         {
-            "msg": "Publication facsimile with ID 789 updated successfully.",
-            "row": {
+            "success": true,
+            "message": "Facsimile updated.",
+            "data": {
                 "id": 789,
                 "publication_facsimile_collection_id": 123,
                 "publication_id": 456,
@@ -751,17 +825,19 @@ def edit_facsimile(project):
             }
         }
 
-    Example Response (Error):
+    Example Error Response (HTTP 400):
 
         {
-            "msg": "Invalid 'id' field, must be a positive integer."
+            "success": false,
+            "message": "Validation error: 'id' must be a positive integer.",
+            "data": null
         }
 
     Status Codes:
 
     - 200 - OK: The facsimile was updated successfully.
-    - 400 - Bad Request: Invalid project name, facsimile ID, or no valid data provided.
-    - 404 - Not Found: The facsimile was not found for the given project or ID.
+    - 400 - Bad Request: Invalid project name, facsimile ID, or no valid
+            data provided.
     - 500 - Internal Server Error: Database query or execution failed.
     """
     # Verify that project name is valid and get project_id
@@ -881,31 +957,54 @@ def list_facsimile_collection_links(project, collection_id, order_by="id", direc
 
     Returns:
 
-        JSON: A list of facsimile objects with details or an error message.
+    - A tuple containing a Flask Response object with JSON data and an
+      HTTP status code. The JSON response has the following structure:
+
+        {
+            "success": bool,
+            "message": str,
+            "data": dict or None
+        }
+
+    - `success`: A boolean indicating whether the operation was successful.
+    - `message`: A string containing a descriptive message about the result.
+    - `data`: On success, a list of facsimile objects; `null` on error.
 
     Example Request:
 
         GET /projectname/facsimile_collection/123/list_links/
 
-    Example Response (Success):
-
-        [
-            {
-                "id": 456,
-                "publication_id": 789,
-                "publication_name": "Publication Title",
-                "page_number": 12,
-                "date_created": "2023-07-01T14:22:33",
-                "deleted": 0
-            },
-            ...
-        ]
-
-    Example Response (Error):
+    Example Success Response (HTTP 200):
 
         {
-            "msg": "Invalid collection_id, must be a positive integer."
+            "success": true,
+            "message": "Retrieved # records.",
+            "data": [
+                {
+                    "id": 456,
+                    "publication_facsimile_collection_id": 123,
+                    "publication_id": 789,
+                    "publication_manuscript_id": null,
+                    "publication_version_id": null,
+                    "date_created": "2023-05-12T12:34:56",
+                    "date_modified": "2023-06-01T08:22:11",
+                    "deleted": 0,
+                    "page_nr": 12,
+                    "section_id": 1,
+                    "priority": 1,
+                    "type": 0,
+                    "publication_name": "Publication Title"
+                },
+                ...
+            ]
         }
+
+    Example Error Response (HTTP 400):
+
+        {
+            "success": false,
+            "message": "Validation error: 'collection_id' must be a positive integer.",
+            "data": null
 
     Status Codes:
 
@@ -986,42 +1085,58 @@ def list_publication_collections(project):
 
     Returns:
 
-        JSON: A list of all publication collection objects associated
-        with the given project, an empty list if there are none,
-        or an error message.
+    - A tuple containing a Flask Response object with JSON data and an
+      HTTP status code. The JSON response has the following structure:
+
+        {
+            "success": bool,
+            "message": str,
+            "data": dict or None
+        }
+
+    - `success`: A boolean indicating whether the operation was successful.
+    - `message`: A string containing a descriptive message about the result.
+    - `data`: On success, a list of publication collection objects; `null`
+      on error.
 
     Example Request:
 
-        GET /<project>/publication_collection/list/
+        GET /projectname/publication_collection/list/
 
-    Example Response (Success):
-
-        [
-            {
-                "id": 1,
-                "name": "Collection Title",
-                "published": 1,
-                "date_created": "2023-05-12T12:34:56",
-                "date_modified": "2023-06-01T08:22:11",
-                "date_published_externally": null,
-                "deleted": 0,
-                "legacy_id": null,
-                "project_id": 101,
-                "publication_collection_title_id": 55,
-                "publication_collection_introduction_id": 75,
-                "name_translation_id": null,
-                "collection_title_filename": "title_file.xml",
-                "collection_intro_filename": "intro_file.xml",
-                "collection_title_published": 1,
-                "collection_intro_published": 1
-            },
-            ...
-        ]
-
-    Example Response (Error):
+    Example Success Response (HTTP 200):
 
         {
-            "msg": "No such project exists."
+            "success": true,
+            "message": "Retrieved # records.",
+            "data": [
+                {
+                    "id": 1,
+                    "name": "Collection Title",
+                    "published": 1,
+                    "date_created": "2023-05-12T12:34:56",
+                    "date_modified": "2023-06-01T08:22:11",
+                    "date_published_externally": null,
+                    "deleted": 0,
+                    "legacy_id": null,
+                    "project_id": 101,
+                    "publication_collection_title_id": 55,
+                    "publication_collection_introduction_id": 75,
+                    "name_translation_id": null,
+                    "collection_title_filename": "title_file.xml",
+                    "collection_intro_filename": "intro_file.xml",
+                    "collection_title_published": 1,
+                    "collection_intro_published": 1
+                },
+                ...
+            ]
+        }
+
+    Example Error Response (HTTP 400):
+
+        {
+            "success": false,
+            "message": "Validation error: 'project' does not exist.",
+            "data": null
         }
 
     Status Codes:
@@ -1104,8 +1219,19 @@ def new_publication_collection(project):
 
     Returns:
 
-        JSON: A success message and the inserted publication collection
-        row, or an error message.
+    - A tuple containing a Flask Response object with JSON data and an
+      HTTP status code. The JSON response has the following structure:
+
+        {
+            "success": bool,
+            "message": str,
+            "data": dict or None
+        }
+
+    - `success`: A boolean indicating whether the operation was successful.
+    - `message`: A string containing a descriptive message about the result.
+    - `data`: On success, a dictionary containing the inserted publication
+      collection data; `null` on error.
 
     Example Request:
 
@@ -1116,22 +1242,33 @@ def new_publication_collection(project):
             "published": 1
         }
 
-    Example Response (Success):
+    Example Success Response (HTTP 201):
 
         {
-            "msg": "Publication collection created successfully.",
-            "row": {
-                "id": 789,
-                "name": "My New Collection",
+            "success": true,
+            "message": "Publication collection created.",
+            "data": {
+                "id": 1,
+                "publication_collection_introduction_id": null,
+                "publication_collection_title_id": null,
+                "project_id": 101,
+                "date_created": "2023-05-12T12:34:56",
+                "date_modified": null,
+                "date_published_externally": null,
+                "deleted": 0,
                 "published": 1,
-                ...
+                "name": "My New Collection",
+                "legacy_id": null,
+                "name_translation_id": null
             }
         }
 
-    Example Response (Error):
+    Example Error Response (HTTP 400):
 
         {
-            "msg": "Field 'published' must be an integer with value 0, 1 or 2."
+            "success": false,
+            "message": "Validation error: 'name' required.",
+            "data": null
         }
 
     Status Codes:
@@ -1233,43 +1370,59 @@ def list_publications(project, collection_id, order_by="id"):
 
     Returns:
 
-        JSON: A list of publication objects in the specified collection, an
-        empty list if there are no publications, or an error message.
+    - A tuple containing a Flask Response object with JSON data and an
+      HTTP status code. The JSON response has the following structure:
+
+        {
+            "success": bool,
+            "message": str,
+            "data": dict or None
+        }
+
+    - `success`: A boolean indicating whether the operation was successful.
+    - `message`: A string containing a descriptive message about the result.
+    - `data`: On success, a list of publication objects; `null` on error.
 
     Example Request:
 
         GET /projectname/publication_collection/123/publications/
         GET /projectname/publication_collection/123/publications/name/
 
-    Example Response (Success):
-
-        [
-            {
-                "id": 1,
-                "publication_collection_id": 123,
-                "publication_comment_id": 5487,
-                "date_created": "2023-05-12T12:34:56",
-                "date_modified": "2023-06-01T08:22:11",
-                "date_published_externally": null,
-                "deleted": 0,
-                "published": 1,
-                "legacy_id": null,
-                "published_by": null,
-                "original_filename": "/path/to/file.xml",
-                "name": "Publication Title",
-                "genre": "non-fiction",
-                "publication_group_id": null,
-                "original_publication_date": "1854",
-                "zts_id": null,
-                "language": "en"
-            },
-            ...
-        ]
-
-    Example Response (Error):
+    Example Success Response (HTTP 200):
 
         {
-            "msg": "Invalid collection_id, does not exist."
+            "success": true,
+            "message": "Retrieved # records.",
+            "data": [
+                {
+                    "id": 1,
+                    "publication_collection_id": 123,
+                    "publication_comment_id": 5487,
+                    "date_created": "2023-05-12T12:34:56",
+                    "date_modified": "2023-06-01T08:22:11",
+                    "date_published_externally": null,
+                    "deleted": 0,
+                    "published": 1,
+                    "legacy_id": null,
+                    "published_by": null,
+                    "original_filename": "/path/to/file.xml",
+                    "name": "Publication Title",
+                    "genre": "non-fiction",
+                    "publication_group_id": null,
+                    "original_publication_date": "1854",
+                    "zts_id": null,
+                    "language": "en"
+                },
+                ...
+            ]
+        }
+
+    Example Error Response (HTTP 400):
+
+        {
+            "success": false,
+            "message": "Validation error: 'collection_id' must be a positive integer.",
+            "data": null
         }
 
     Status Codes:
@@ -1358,7 +1511,19 @@ def new_publication(project, collection_id):
 
     Returns:
 
-        JSON: A success message with the inserted row or an error message.
+    - A tuple containing a Flask Response object with JSON data and an
+      HTTP status code. The JSON response has the following structure:
+
+        {
+            "success": bool,
+            "message": str,
+            "data": dict or None
+        }
+
+    - `success`: A boolean indicating whether the operation was successful.
+    - `message`: A string containing a descriptive message about the result.
+    - `data`: On success, a dictionary containing the inserted publication
+      data; `null` on error.
 
     Example Request:
 
@@ -1366,25 +1531,43 @@ def new_publication(project, collection_id):
         Body:
         {
             "name": "New Publication",
-            "published": 1
+            "original_filename": "/path/to/file.xml",
+            "original_publication_date": "1854",
+            "language": "en"
         }
 
-    Example Response (Success):
+    Example Success Response (HTTP 201):
 
         {
-            "msg": "Publication created successfully.",
-            "row": {
-                "id": 789,
-                "name": "New Publication",
+            "success": true,
+            "message": "Publication created.",
+            "data":  {
+                "id": 1,
+                "publication_collection_id": 123,
+                "publication_comment_id": null,
+                "date_created": "2023-05-12T12:34:56",
+                "date_modified": null,
+                "date_published_externally": null,
+                "deleted": 0,
                 "published": 1,
-                ...
+                "legacy_id": null,
+                "published_by": null,
+                "original_filename": "/path/to/file.xml",
+                "name": "New Publication",
+                "genre": null,
+                "publication_group_id": null,
+                "original_publication_date": "1854",
+                "zts_id": null,
+                "language": "en"
             }
         }
 
-    Example Response (Error):
+    Example Error Response (HTTP 400):
 
         {
-            "msg": "Field 'published' must be an integer with value 0, 1 or 2."
+            "success": false,
+            "message": "Validation error: 'collection_id' must be a positive integer.",
+            "data": null
         }
 
     Status Codes:

@@ -21,28 +21,51 @@ def list_user_projects():
 
     Returns:
 
-        JSON: A list of project objects the user has access to
-        or an error message.
+    - A tuple containing a Flask Response object with JSON data and an
+      HTTP status code. The JSON response has the following structure:
 
-    Example Response (Success):
+        {
+            "success": bool,
+            "message": str,
+            "data": dict or None
+        }
 
-        [
-            {
-                "id": 1,
-                "date_created": "2023-05-12T12:34:56",
-                "date_modified": "2023-06-01T08:22:11",
-                "deleted": 0,
-                "published": 1,
-                "name": "project_name"
-            },
-            ...
-        ]
+    - `success`: A boolean indicating whether the operation was successful.
+    - `message`: A string containing a descriptive message about the result.
+    - `data`: On success, a list of project objects; `null` on error.
+
+    Example Success Response (HTTP 200):
+
+        {
+            "success": true,
+            "message": "Retrieved # records.",
+            "data": [
+                {
+                    "id": 1,
+                    "date_created": "2023-05-12T12:34:56",
+                    "date_modified": "2023-06-01T08:22:11",
+                    "deleted": 0,
+                    "published": 1,
+                    "name": "project_name"
+                },
+                ...
+            ]
+        }
+
+    Example Error Response (HTTP 404):
+
+        {
+            "success": false,
+            "message": "Permissions error: user lacks access to any project.",
+            "data": null
+        }
 
     Status Codes:
 
     - 200 - OK: The request was successful, and the projects are returned.
     - 403 - Forbidden: The user doesn't have project permissions.
-    - 404 - Not Found: The user doesn't have access to any (non-deleted) project.
+    - 404 - Not Found: The user doesn't have access to any (non-deleted)
+            project.
     - 500 - Internal Server Error: Database query or execution failed.
     """
     # Get identity of current JWT user along with projects the user
@@ -97,7 +120,19 @@ def add_new_project():
 
     Returns:
 
-        JSON: A success message with the inserted row, or an error message.
+    - A tuple containing a Flask Response object with JSON data and an
+      HTTP status code. The JSON response has the following structure:
+
+        {
+            "success": bool,
+            "message": str,
+            "data": dict or None
+        }
+
+    - `success`: A boolean indicating whether the operation was successful.
+    - `message`: A string containing a descriptive message about the result.
+    - `data`: On success, a dictionary containing the inserted project
+      data; `null` on error.
 
     Example Request:
 
@@ -107,11 +142,12 @@ def add_new_project():
             "name": "My New Project"
         }
 
-    Example Response (Success):
+    Example Success Response (HTTP 201):
 
         {
-            "msg": "Created new project.",
-            "row": {
+            "success": true,
+            "message": "Project created.",
+            "data": {
                 "id": 123,
                 "date_created": "2023-07-12T09:23:45",
                 "date_modified": null,
@@ -121,10 +157,12 @@ def add_new_project():
             }
         }
 
-    Example Response (Error):
+    Example Error Response (HTTP 400):
 
         {
-            "msg": "No data provided."
+            "success": false,
+            "message": "Validation error: 'name' required.",
+            "data": null
         }
 
     Status Codes:
@@ -221,43 +259,55 @@ def edit_project(project_id):
 
     Returns:
 
-        JSON: A message indicating the result of the operation and the
-        updated project row, or an error message.
+    - A tuple containing a Flask Response object with JSON data and an
+      HTTP status code. The JSON response has the following structure:
+
+        {
+            "success": bool,
+            "message": str,
+            "data": dict or None
+        }
+
+    - `success`: A boolean indicating whether the operation was successful.
+    - `message`: A string containing a descriptive message about the result.
+    - `data`: On success, a dictionary containing the updated project
+      data; `null` on error.
 
     Example Request:
 
         POST /projects/123/edit/
         Body:
         {
-            "deleted": 0,
-            "published": 1
+            "published": 2
         }
 
-    Example Response (Success):
+    Example Success Response (HTTP 200):
 
         {
-            "msg": "Updated project with ID 123 successfully.",
-            "row": {
+            "success": true,
+            "message": "Project updated.",
+            "data": {
                 "id": 123,
                 "date_created": "2023-01-01T10:00:00",
                 "date_modified": "2023-10-17T12:34:56",
                 "deleted": 0,
-                "published": 1,
+                "published": 2,
                 "name": "projectname"
             }
         }
 
-    Example Response (Error):
+    Example Error Response (HTTP 400):
 
         {
-            "msg": "Invalid project_id, must be a positive integer."
+            "success": false,
+            "message": "Validation error: 'project_id' must be a positive integer.",
+            "data": null
         }
 
     Status Codes:
 
-    - 200: The project was successfully updated.
+    - 200 - OK: The project was successfully updated.
     - 400 - Bad Request: Invalid `project_id`, field values or no data provided.
-    - 404 - Not Found: No project exists with the specified `project_id`.
     - 500 - Internal Server Error: Database query or execution failed.
     """
     # Convert project_id to integer and verify
@@ -351,8 +401,19 @@ def edit_publication_collection(project, collection_id):
 
     Returns:
 
-        JSON: A success message with the updated publication collection row,
-        or an error message.
+    - A tuple containing a Flask Response object with JSON data and an
+      HTTP status code. The JSON response has the following structure:
+
+        {
+            "success": bool,
+            "message": str,
+            "data": dict or None
+        }
+
+    - `success`: A boolean indicating whether the operation was successful.
+    - `message`: A string containing a descriptive message about the result.
+    - `data`: On success, a dictionary containing the updated publication
+      collection data; `null` on error.
 
     Example Request:
 
@@ -360,14 +421,15 @@ def edit_publication_collection(project, collection_id):
         Body:
         {
             "name": "Updated Collection Name",
-            "published": 1
+            "published": 2
         }
 
-    Example Response (Success):
+    Example Success Response (HTTP 200):
 
         {
-            "msg": "Publication collection with id 456 updated successfully.",
-            "row": {
+            "success": true,
+            "message": "Publication collection updated.",
+            "data": {
                 "id": 456,
                 "publication_collection_introduction_id": null,
                 "publication_collection_title_id": null,
@@ -376,17 +438,19 @@ def edit_publication_collection(project, collection_id):
                 "date_modified": "2023-08-14T14:29:02",
                 "date_published_externally": null,
                 "deleted": 0,
-                "published": 1,
+                "published": 2,
                 "name": "Updated Collection Name",
                 "legacy_id": null,
                 "name_translation_id": 4297
             }
         }
 
-    Example Response (Error):
+    Example Error Response (HTTP 400):
 
         {
-            "msg": "Field 'published' must be an integer with value 0, 1 or 2."
+            "success": false,
+            "message": "Validation error: 'published' must be either 0, 1 or 2.",
+            "data": null
         }
 
     Status Codes:
@@ -394,8 +458,6 @@ def edit_publication_collection(project, collection_id):
     - 200 - OK: The publication collection was updated successfully.
     - 400 - Bad Request: Invalid collection_id, invalid field values,
             or no valid fields provided for the update.
-    - 404 - Not Found: No publication collection with the given collection_id
-            exists or no changes were made.
     - 500 - Internal Server Error: Database query or execution failed.
     """
     # Verify that project is valid
@@ -638,12 +700,24 @@ def edit_publication(project, publication_id):
     - genre (str): The genre of the publication.
     - deleted (int): Soft delete flag. Must be an integer with value 0 or 1.
 
-    Additionally, all POST data parameter values can be set to null, except 'deleted'.
+    Additionally, all POST data parameter values can be set to null,
+    except 'deleted'.
 
     Returns:
 
-        JSON: A success message and the updated row if the publication was
-        updated, or an error message.
+    - A tuple containing a Flask Response object with JSON data and an
+      HTTP status code. The JSON response has the following structure:
+
+        {
+            "success": bool,
+            "message": str,
+            "data": dict or None
+        }
+
+    - `success`: A boolean indicating whether the operation was successful.
+    - `message`: A string containing a descriptive message about the result.
+    - `data`: On success, a dictionary containing the updated publication
+      data; `null` on error.
 
     Example Request:
 
@@ -655,11 +729,12 @@ def edit_publication(project, publication_id):
             "language": "en"
         }
 
-    Example Response (Success):
+    Example Success Response (HTTP 200):
 
         {
-            "msg": "Publication with id 123 updated successfully.",
-            "row": {
+            "success": true,
+            "message": "Publication updated.",
+            "data": {
                 "id": 123,
                 "publication_collection_id": 585,
                 "publication_comment_id": 5487,
@@ -680,10 +755,12 @@ def edit_publication(project, publication_id):
             }
         }
 
-    Example Response (Error):
+    Example Error Response (HTTP 400):
 
         {
-            "msg": "Field 'published' must be an integer with value 0, 1 or 2."
+            "success": false,
+            "message": "Validation error: 'published' must be either 0, 1 or 2.",
+            "data": null
         }
 
     Status Codes:
@@ -691,8 +768,6 @@ def edit_publication(project, publication_id):
     - 200 - OK: The publication was updated successfully.
     - 400 - Bad Request: Invalid publication_id, invalid field values,
             or no valid fields provided for the update.
-    - 404 - Not Found: No publication with the given publication_id exists
-            or no changes were made.
     - 500 - Internal Server Error: Database query or execution failed.
     """
     # Verify that project name is valid and get project_id
@@ -802,7 +877,8 @@ def edit_publication(project, publication_id):
 @project_permission_required
 def edit_comment(project, publication_id):
     """
-    Edit a comment of the specified publication in the given project by updating its fields.
+    Edit a comment of the specified publication in the given project by
+    updating its fields.
 
     URL Path Parameters:
 
@@ -820,8 +896,19 @@ def edit_comment(project, publication_id):
 
     Returns:
 
-        JSON: A success message and the updated comment data if the
-        comment was updated, or an error message.
+    - A tuple containing a Flask Response object with JSON data and an
+      HTTP status code. The JSON response has the following structure:
+
+        {
+            "success": bool,
+            "message": str,
+            "data": dict or None
+        }
+
+    - `success`: A boolean indicating whether the operation was successful.
+    - `message`: A string containing a descriptive message about the result.
+    - `data`: On success, a dictionary containing the updated comment
+      data; `null` on error.
 
     Example Request:
 
@@ -833,11 +920,12 @@ def edit_comment(project, publication_id):
             "original_filename": "path/to/updated_comment_file.xml"
         }
 
-    Example Response (Success):
+    Example Success Response (HTTP 200):
 
         {
-            "msg": "Updated comment of publication with ID 123 successfully.",
-            "row": {
+            "success": true,
+            "message": "Publication comment updated.",
+            "data": {
                 "id": 456,
                 "date_created": "2023-07-12T09:23:45",
                 "date_modified": "2023-08-14T14:29:02",
@@ -850,10 +938,12 @@ def edit_comment(project, publication_id):
             }
         }
 
-    Example Response (Error):
+    Example Error Response (HTTP 400):
 
         {
-            "msg": "Field 'published' must be an integer with value 0, 1 or 2."
+            "success": false,
+            "message": "Validation error: 'project' does not exist.",
+            "data": null
         }
 
     Status Codes:
@@ -861,8 +951,6 @@ def edit_comment(project, publication_id):
     - 200 - OK: The comment was updated successfully.
     - 400 - Bad Request: Invalid publication_id, invalid field values,
             no data provided, or no valid fields provided to update.
-    - 404 - Not Found: Publication not found in project, or comment
-            linked to publication not found.
     - 500 - Internal Server Error: Database query or execution failed.
     """
     # Verify that project name is valid and get project_id
@@ -988,8 +1076,19 @@ def edit_manuscript(project, manuscript_id):
 
     Returns:
 
-        JSON: A success message and the updated manuscript row if the
-        manuscript was updated, or an error message.
+    - A tuple containing a Flask Response object with JSON data and an
+      HTTP status code. The JSON response has the following structure:
+
+        {
+            "success": bool,
+            "message": str,
+            "data": dict or None
+        }
+
+    - `success`: A boolean indicating whether the operation was successful.
+    - `message`: A string containing a descriptive message about the result.
+    - `data`: On success, a dictionary containing the updated manuscript
+      data; `null` on error.
 
     Example Request:
 
@@ -1002,11 +1101,12 @@ def edit_manuscript(project, manuscript_id):
             "name": "Updated Manuscript Title"
         }
 
-    Example Response (Success):
+    Example Success Response (HTTP 200):
 
         {
-            "msg": "Updated manuscript with ID 123 successfully.",
-            "row": {
+            "success": true,
+            "message": "Publication manuscript updated.",
+            "data": {
                 "id": 123,
                 "publication_id": 456,
                 "date_created": "2024-08-02T05:13:49",
@@ -1025,10 +1125,12 @@ def edit_manuscript(project, manuscript_id):
             }
         }
 
-    Example Response (Error):
+    Example Error Response (HTTP 400):
 
         {
-            "msg": "Field 'published' must be an integer with value 0, 1 or 2."
+            "success": false,
+            "message": "Validation error: 'manuscript_id' must be a positive integer.",
+            "data": null
         }
 
     Status Codes:
@@ -1178,8 +1280,19 @@ def edit_version(project, version_id):
 
     Returns:
 
-        JSON: A success message and the updated publication version row
-        if the version was updated, or an error message.
+    - A tuple containing a Flask Response object with JSON data and an
+      HTTP status code. The JSON response has the following structure:
+
+        {
+            "success": bool,
+            "message": str,
+            "data": dict or None
+        }
+
+    - `success`: A boolean indicating whether the operation was successful.
+    - `message`: A string containing a descriptive message about the result.
+    - `data`: On success, a dictionary containing the updated publication
+      version data; `null` on error.
 
     Example Request:
 
@@ -1192,11 +1305,12 @@ def edit_version(project, version_id):
             "name": "Updated Version Title"
         }
 
-    Example Response (Success):
+    Example Success Response (HTTP 200):
 
         {
-            "msg": "Updated version with ID 123 successfully.",
-            "row": {
+            "success": true,
+            "message": "Publication version updated.",
+            "data": {
                 "id": 123,
                 "publication_id": 456,
                 "date_created": "2024-08-02T05:13:49",
@@ -1214,10 +1328,12 @@ def edit_version(project, version_id):
             }
         }
 
-    Example Response (Error):
+    Example Error Response (HTTP 400):
 
         {
-            "msg": "Field 'published' must be an integer with value 0, 1 or 2."
+            "success": false,
+            "message": "Validation error: 'project' does not exist.",
+            "data": null
         }
 
     Status Codes:

@@ -171,8 +171,8 @@ def edit_location(project, location_id):
 @project_permission_required
 def list_project_subjects(project, order_by="last_name", direction="asc"):
     """
-    List all (non-deleted) subjects for a specified project, with optional sorting
-    by subject table columns.
+    List all (non-deleted) subjects (persons) for a specified project,
+    with optional sorting by subject table columns.
 
     URL Path Parameters:
 
@@ -186,52 +186,69 @@ def list_project_subjects(project, order_by="last_name", direction="asc"):
 
     Returns:
 
-        JSON: A list of subject objects within the specified project,
-        an empty list if there are no subjects, or an error message.
+    - A tuple containing a Flask Response object with JSON data and an
+      HTTP status code. The JSON response has the following structure:
+
+        {
+            "success": bool,
+            "message": str,
+            "data": dict or None
+        }
+
+    - `success`: A boolean indicating whether the operation was successful.
+    - `message`: A string containing a descriptive message about the result.
+    - `data`: On success, a list of subject objects; `null` on error.
 
     Example Request:
 
         GET /projectname/subjects/list/
         GET /projectname/subjects/list/last_name/asc/
 
-    Example Response (Success):
-
-        [
-            {
-                "id": 1,
-                "date_created": "2023-05-12T12:34:56",
-                "date_modified": "2023-06-01T08:22:11",
-                "deleted": 0,
-                "type": "Historical person",
-                "first_name": "John",
-                "last_name": "Doe",
-                "place_of_birth": "Fantasytown",
-                "occupation": "Doctor",
-                "preposition": "von",
-                "full_name": "John von Doe",
-                "description": "a brief description about the person.",
-                "legacy_id": "pe1",
-                "date_born": "1870",
-                "date_deceased": "1915",
-                "project_id": 123,
-                "source": "Encyclopaedia Britannica",
-                "alias": "JD",
-                "previous_last_name": "Crow",
-                "translation_id": 4287
-            },
-            ...
-        ]
-
-    Example Response (Error):
+    Example Success Response (HTTP 200):
 
         {
-            "msg": "Invalid project name."
+            "success": true,
+            "message": "Retrieved # records.",
+            "data": [
+                {
+                    "id": 1,
+                    "date_created": "2023-05-12T12:34:56",
+                    "date_modified": "2023-06-01T08:22:11",
+                    "deleted": 0,
+                    "type": "Historical person",
+                    "first_name": "John",
+                    "last_name": "Doe",
+                    "place_of_birth": "Fantasytown",
+                    "occupation": "Doctor",
+                    "preposition": "von",
+                    "full_name": "John von Doe",
+                    "description": "a brief description about the person.",
+                    "legacy_id": "pe1",
+                    "date_born": "1870",
+                    "date_deceased": "1915",
+                    "project_id": 123,
+                    "source": "Encyclopaedia Britannica",
+                    "alias": "JD",
+                    "previous_last_name": "Crow",
+                    "translation_id": 4287
+                },
+                ...
+            ]
+        }
+
+    Example Error Response (HTTP 400):
+
+        {
+            "success": false,
+            "message": "Validation error: 'project' does not exist.",
+            "data": null
         }
 
     Status Codes:
 
     - 200 - OK: The request was successful, and the subjects are returned.
-    - 400 - Bad Request: The project name, order_by field, or sort direction is invalid.
+    - 400 - Bad Request: The project name, order_by field, or sort direction
+            is invalid.
     - 500 - Internal Server Error: Database query or execution failed.
     """
     # Verify that project name is valid and get project_id
@@ -309,23 +326,34 @@ def add_new_subject(project):
     - last_name (str): The last name of the person.
     - place_of_birth (str): The place where the person was born.
     - occupation (str): The person's occupation.
-    - preposition (str): Prepositional or nobiliary particle used in the surname of
-      the person.
+    - preposition (str): Prepositional or nobiliary particle used in the
+      surname of the person.
     - full_name (str): The full name of the person.
     - description (str): A brief description of the person.
     - legacy_id (str): An identifier from a legacy system.
-    - date_born (str, optional): The birth date or year of the person (max length
-      30 characters), in YYYY-MM-DD or YYYY format.
-    - date_deceased (str, optional): The date of death of the person (max length
-      30 characters), in YYYY-MM-DD or YYYY format.
+    - date_born (str, optional): The birth date or year of the person
+      (max length 30 characters), in YYYY-MM-DD or YYYY format.
+    - date_deceased (str, optional): The date of death of the person
+      (max length 30 characters), in YYYY-MM-DD or YYYY format.
     - source (str): The source of the information.
     - alias (str, optional): An alias for the person.
     - previous_last_name (str, optional): The person's previous last name.
 
     Returns:
 
-        JSON: A message indicating the success of the operation, along with the
-        created subject object, or an error message if the operation fails.
+    - A tuple containing a Flask Response object with JSON data and an
+      HTTP status code. The JSON response has the following structure:
+
+        {
+            "success": bool,
+            "message": str,
+            "data": dict or None
+        }
+
+    - `success`: A boolean indicating whether the operation was successful.
+    - `message`: A string containing a descriptive message about the result.
+    - `data`: On success, a dictionary containing the inserted subject
+      data; `null` on error.
 
     Example Request:
 
@@ -347,11 +375,12 @@ def add_new_subject(project):
             "previous_last_name": "Smith"
         }
 
-    Example Response (Success):
+    Example Success Response (HTTP 201):
 
         {
-            "msg": "Subject with ID 123 created successfully.",
-            "row": {
+            "success": true,
+            "message": "Person record created.",
+            "data": {
                 "id": 123,
                 "date_created": "2023-05-12T12:34:56",
                 "date_modified": "2023-06-01T08:22:11",
@@ -375,10 +404,12 @@ def add_new_subject(project):
             }
         }
 
-    Example Response (Error):
+    Example Error Response (HTTP 400):
 
         {
-            "msg": "Invalid project name."
+            "success": false,
+            "message": "Validation error: 'date_born' must be 30 or less characters in length.",
+            "data": null
         }
 
     Status Codes:
@@ -484,29 +515,41 @@ def edit_subject(project, subject_id):
 
     POST Data Parameters in JSON Format (at least one required):
 
-    - deleted (int): Indicates if the subject is deleted (0 for no, 1 for yes).
+    - deleted (int): Indicates if the subject is deleted (0 for no,
+      1 for yes).
     - type (str): The type of person.
     - first_name (str): The first name of the person.
     - last_name (str): The last name of the person.
     - place_of_birth (str): The place where the person was born.
     - occupation (str): The person's occupation.
-    - preposition (str): Prepositional or nobiliary particle used in the surname
-      of the person.
+    - preposition (str): Prepositional or nobiliary particle used in the
+      surname of the person.
     - full_name (str): The full name of the person.
     - description (str): A brief description of the person.
     - legacy_id (str): An identifier from a legacy system.
-    - date_born (str, optional): The birth date or year of the person (max length
-      30 characters), in YYYY-MM-DD or YYYY format.
-    - date_deceased (str, optional): The date of death of the person (max length
-      30 characters), in YYYY-MM-DD or YYYY format.
+    - date_born (str, optional): The birth date or year of the person
+      (max length 30 characters), in YYYY-MM-DD or YYYY format.
+    - date_deceased (str, optional): The date of death of the person
+      (max length 30 characters), in YYYY-MM-DD or YYYY format.
     - source (str): The source of the information.
     - alias (str, optional): An alias for the person.
     - previous_last_name (str, optional): The person's previous last name.
 
     Returns:
 
-        JSON: A message indicating the success of the operation, along with the updated
-        subject object, or an error message if the operation fails.
+    - A tuple containing a Flask Response object with JSON data and an
+      HTTP status code. The JSON response has the following structure:
+
+        {
+            "success": bool,
+            "message": str,
+            "data": dict or None
+        }
+
+    - `success`: A boolean indicating whether the operation was successful.
+    - `message`: A string containing a descriptive message about the result.
+    - `data`: On success, a dictionary containing the updated subject
+      data; `null` on error.
 
     Example Request:
 
@@ -529,11 +572,12 @@ def edit_subject(project, subject_id):
             "deleted": 0
         }
 
-    Example Response (Success):
+    Example Success Response (HTTP 200):
 
         {
-            "msg": "Updated subject with ID 123 successfully.",
-            "row": {
+            "success": true,
+            "message": "Person record updated.",
+            "data": {
                 "id": 123,
                 "date_created": "2023-05-12T12:34:56",
                 "date_modified": "2024-01-01T09:00:00",
@@ -557,10 +601,12 @@ def edit_subject(project, subject_id):
             }
         }
 
-    Example Response (Error):
+    Example Error Response (HTTP 400):
 
         {
-            "msg": "Invalid project name."
+            "success": false,
+            "message": "Validation error: 'subject_id' must be a positive integer.",
+            "data": null
         }
 
     Status Codes:
@@ -671,22 +717,80 @@ def add_new_translation(project):
 
     POST Data Parameters in JSON Format:
 
-    - table_name (str, required): name of the table containing the record to be
-      translated.
-    - field_name (str, required): name of the field to be translated (if applicable).
+    - table_name (str, required): name of the table containing the record
+      to be translated.
+    - field_name (str, required): name of the field to be translated (if
+      applicable).
     - text (str, required): the translated text.
-    - language (str, required): the language code for the translation (ISO 639-1).
-    - translation_id (int): the ID of an existing translation record in the
-      `translation` table. Required if you intend to add a translation in a new
-      language to an entry that already has one or more translations.
+    - language (str, required): the language code for the translation
+      (ISO 639-1).
+    - translation_id (int): the ID of an existing translation record in
+      the `translation` table. Required if you intend to add a translation
+      in a new language to an entry that already has one or more
+      translations.
     - parent_id (int): the ID of the record in the `table_name` table.
-    - parent_translation_field (str): the name of the field holding the translation_id
-      (defaults to 'translation_id').
+    - parent_translation_field (str): the name of the field holding the
+      translation_id (defaults to 'translation_id').
     - neutral_text (str): the base text before translation.
+
+    Returns:
+
+    - A tuple containing a Flask Response object with JSON data and an
+      HTTP status code. The JSON response has the following structure:
+
+        {
+            "success": bool,
+            "message": str,
+            "data": dict or None
+        }
+
+    - `success`: A boolean indicating whether the operation was successful.
+    - `message`: A string containing a descriptive message about the result.
+    - `data`: On success, a dictionary containing the inserted translation
+      text object; `null` on error.
+
+    Example Request:
+
+        POST /projectname/translation/new/
+        Body:
+        {
+            "table_name": "subject",
+            "field_name": "description",
+            "text": "a description of the person",
+            "language": "en",
+            "parent_id": 958,
+            "neutral_text": "en beskrivning av personen"
+        }
+
+    Example Success Response (HTTP 201):
+
+        {
+            "success": true,
+            "message": "Translation created.",
+            "data": {
+                "id": 123,
+                "translation_id": 7387,
+                "language": "en",
+                "text": "a description of the person",
+                "field_name": "description",
+                "table_name": "subject",
+                "date_created": "2023-05-12T12:34:56",
+                "date_modified": null,
+                "deleted": 0
+            }
+        }
+
+    Example Error Response (HTTP 400):
+
+        {
+            "success": false,
+            "message": "Validation error: 'text' and 'language' required.",
+            "data": null
+        }
 
     Return Codes:
 
-    - 201 - OK: Created new translation.
+    - 201 - Created: Successfully created new translation.
     - 400 - Bad Request: Invalid input.
     - 500 - Internal Server Error: Database query or execution failed.
     """
@@ -817,29 +921,85 @@ def edit_translation(project, translation_id):
     URL Path Parameters:
 
     - project (str, required): The name of the project.
-    - translation_id (int, required): The unique identifier of the translation to be
-      updated.
+    - translation_id (int, required): The unique identifier of the
+      translation object to be updated.
 
     POST Data Parameters in JSON Format (at least one required):
 
-    - translation_text_id (int): ID of the translation object in the
-      `translation_text` table.
+    - translation_text_id (int, recommended): ID of the translation text
+      object in the `translation_text` table.
     - table_name (str): name of the table being translated.
     - field_name (str): name of the field being translated.
     - text (str) the translation text.
     - language (str): language code of the translation (ISO 639-1).
     - deleted (int): flag to mark as deleted (0 for no and 1 for yes).
 
-    If translation_text_id is omitted, an attempt to find the translation object
-    which is to be updated is made based on translation_id, table_name, field_name
-    and language. If that fails, a new tranlation object will be created.
+    If translation_text_id is omitted, an attempt to find the translation
+    object which is to be updated is made based on translation_id,
+    table_name, field_name and language. If that fails, a new translation
+    object will be created.
+
+    In practice, it's always recommended to provide translation_text_id in
+    requests to this endpoint. To create a new translation, the
+    add_new_translation() endpoint should be used.
+
+    Returns:
+
+    - A tuple containing a Flask Response object with JSON data and an
+      HTTP status code. The JSON response has the following structure:
+
+        {
+            "success": bool,
+            "message": str,
+            "data": dict or None
+        }
+
+    - `success`: A boolean indicating whether the operation was successful.
+    - `message`: A string containing a descriptive message about the result.
+    - `data`: On success, a dictionary containing the updated translation
+      text object; `null` on error.
+
+    Example Request:
+
+        POST /projectname/translations/123/edit/
+        Body:
+        {
+            "translation_text_id": 456,
+            "text": "an edited translated text"
+        }
+
+    Example Success Response (HTTP 200):
+
+        {
+            "success": true,
+            "message": "Translation text updated.",
+            "data": {
+                "id": 456,
+                "translation_id": 123,
+                "language": "en",
+                "text": "an edited translated text",
+                "field_name": "description",
+                "table_name": "subject",
+                "date_created": "2023-05-12T12:34:56",
+                "date_modified": "2023-10-22T14:17:02",
+                "deleted": 0
+            }
+        }
+
+    Example Error Response (HTTP 400):
+
+        {
+            "success": false,
+            "message": "Validation error: 'translation_text_id' must be a positive integer.",
+            "data": null
+        }
 
     Response Codes:
 
-    - 201: New translation created.
-    - 200: Existing translation updated.
-    - 400: Invalid input.
-    - 500: Server error.
+    - 201 - Created: Successfully created new translation text.
+    - 200 - OK: Existing translation text updated.
+    - 400 - Bad Request: Invalid input.
+    - 500 - Internal Server Error: Database query or execution failed.
     """
     # Verify that project name is valid and get project_id
     project_id = get_project_id_from_name(project)
@@ -889,12 +1049,13 @@ def edit_translation(project, translation_id):
 
     translation_text_id = request_data.get("translation_text_id")
     if translation_text_id is None:
-        # Attempt to get the id of the record in translation_text based on translation id,
-        # table name, field name and language in the data
+        # Attempt to get the id of the record in translation_text based on
+        # translation id, table name, field name and language in the data
         translation_text_id = get_translation_text_id(translation_id,
                                                       values.get("table_name"),
                                                       values.get("field_name"),
                                                       values.get("language"))
+
     try:
         with db_engine.connect() as connection:
             with connection.begin():
@@ -986,36 +1147,57 @@ def list_translations(project, translation_id):
 
     Returns:
 
-        JSON: A list of translation records or an error message.
+    - A tuple containing a Flask Response object with JSON data and an
+      HTTP status code. The JSON response has the following structure:
+
+        {
+            "success": bool,
+            "message": str,
+            "data": dict or None
+        }
+
+    - `success`: A boolean indicating whether the operation was successful.
+    - `message`: A string containing a descriptive message about the result.
+    - `data`: On success, a list of translation text objects; `null` on
+      error.
 
     Example Request:
 
         POST /projectname/translations/1/list/
         Body:
         {
-            "table_name": "subject",
-            "field_name": "description",
-            "language": "en",
-            "translation_text_id": 123
+            "language": "en"
         }
 
-    Example Response:
+    Example Success Response (HTTP 200):
 
-        [
-            {
-                "translation_text_id": 123,
-                "translation_id": 1,
-                "language": "en",
-                "text": "Some description in English",
-                "field_name": "description",
-                "table_name": "subject"
-            },
-            ...
-        ]
+        {
+            "success": true,
+            "message": "Retrieved # records.",
+            "data": [
+                {
+                    "translation_text_id": 123,
+                    "translation_id": 1,
+                    "language": "en",
+                    "text": "Some description in English",
+                    "field_name": "description",
+                    "table_name": "subject"
+                },
+                ...
+            ]
+        }
+
+    Example Error Response (HTTP 400):
+
+        {
+            "success": false,
+            "message": "Validation error: 'translation_id' must be a positive integer.",
+            "data": null
+        }
 
     Status Codes:
 
-    - 200 - OK: Returns the list of translations.
+    - 200 - OK: Successfully retrieved the list of translation texts.
     - 400 - Bad Request: Invalid or missing translation_id.
     - 500 - Internal Server Error: Database query or execution failed.
     """

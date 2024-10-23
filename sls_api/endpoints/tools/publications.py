@@ -31,43 +31,59 @@ def get_publications(project, order_by="id", direction="asc"):
 
     Returns:
 
-        JSON: A list of publication objects within the specified project,
-        an empty list if there are no publications, or an error message.
+    - A tuple containing a Flask Response object with JSON data and an
+      HTTP status code. The JSON response has the following structure:
+
+        {
+            "success": bool,
+            "message": str,
+            "data": dict or None
+        }
+
+    - `success`: A boolean indicating whether the operation was successful.
+    - `message`: A string containing a descriptive message about the result.
+    - `data`: On success, a list of publication objects; `null` on error.
 
     Example Request:
 
         GET /projectname/publications/
         GET /projectname/publications/date_modified/desc/
 
-    Example Response (Success):
-
-        [
-            {
-                "id": 1,
-                "publication_collection_id": 123,
-                "publication_comment_id": 5487,
-                "date_created": "2023-05-12T12:34:56",
-                "date_modified": "2023-06-01T08:22:11",
-                "date_published_externally": null,
-                "deleted": 0,
-                "published": 1,
-                "legacy_id": null,
-                "published_by": null,
-                "original_filename": "/path/to/file.xml",
-                "name": "Publication Title",
-                "genre": "non-fiction",
-                "publication_group_id": null,
-                "original_publication_date": "1854",
-                "zts_id": null,
-                "language": "en"
-            },
-            ...
-        ]
-
-    Example Response (Error):
+    Example Success Response (HTTP 200):
 
         {
-            "msg": "Invalid project name."
+            "success": true,
+            "message": "Retrieved # records.",
+            "data": [
+                {
+                    "id": 1,
+                    "publication_collection_id": 123,
+                    "publication_comment_id": 5487,
+                    "date_created": "2023-05-12T12:34:56",
+                    "date_modified": "2023-06-01T08:22:11",
+                    "date_published_externally": null,
+                    "deleted": 0,
+                    "published": 1,
+                    "legacy_id": null,
+                    "published_by": null,
+                    "original_filename": "/path/to/file.xml",
+                    "name": "Publication Title",
+                    "genre": "non-fiction",
+                    "publication_group_id": null,
+                    "original_publication_date": "1854",
+                    "zts_id": null,
+                    "language": "en"
+                },
+                ...
+            ]
+        }
+
+    Example Error Response (HTTP 400):
+
+        {
+            "success": false,
+            "message": "Validation error: 'project' does not exist.",
+            "data": null
         }
 
     Status Codes:
@@ -138,48 +154,62 @@ def get_publication(project, publication_id):
 
     Returns:
 
-        JSON: A publication object within the specified project, or an error
-        message if the publication is not found.
+    - A tuple containing a Flask Response object with JSON data and an
+      HTTP status code. The JSON response has the following structure:
+
+        {
+            "success": bool,
+            "message": str,
+            "data": dict or None
+        }
+
+    - `success`: A boolean indicating whether the operation was successful.
+    - `message`: A string containing a descriptive message about the result.
+    - `data`: On success, a dictionary containing the publication data; `null`
+      on error.
 
     Example Request:
 
         GET /projectname/publication/123/
 
-    Example Response (Success):
+    Example Success Response (HTTP 200):
 
         {
-            "id": 123,
-            "publication_collection_id": 456,
-            "publication_comment_id": 789,
-            "date_created": "2023-05-12T12:34:56",
-            "date_modified": "2023-06-01T08:22:11",
-            "date_published_externally": null,
-            "deleted": 0,
-            "published": 1,
-            "legacy_id": null,
-            "published_by": null,
-            "original_filename": "/path/to/file.xml",
-            "name": "Publication Title",
-            "genre": "fiction",
-            "publication_group_id": null,
-            "original_publication_date": "1854",
-            "zts_id": null,
-            "language": "en"
+            "success": true,
+            "message": "Retrieved 1 record.",
+            "data": {
+                "id": 123,
+                "publication_collection_id": 456,
+                "publication_comment_id": 789,
+                "date_created": "2023-05-12T12:34:56",
+                "date_modified": "2023-06-01T08:22:11",
+                "date_published_externally": null,
+                "deleted": 0,
+                "published": 1,
+                "legacy_id": null,
+                "published_by": null,
+                "original_filename": "/path/to/file.xml",
+                "name": "Publication Title",
+                "genre": "fiction",
+                "publication_group_id": null,
+                "original_publication_date": "1854",
+                "zts_id": null,
+                "language": "en"
+            }
         }
 
-    Example Response (Error):
+    Example Error Response (HTTP 400):
 
         {
-            "msg": "Publication not found. Either project name or
-                    publication_id is invalid."
+            "success": false,
+            "message": "Validation error: 'project' does not exist.",
+            "data": null
         }
 
     Status Codes:
 
     - 200 - OK: The request was successful, and the publication is returned.
     - 400 - Bad Request: The project name or publication_id is invalid.
-    - 404 - Not Found: The publication was not found within the specified
-            project.
     - 500 - Internal Server Error: Database query or execution failed.
     """
     # Verify that project name is valid and get project_id
@@ -237,39 +267,56 @@ def get_publication_versions(project, publication_id):
 
     Returns:
 
-        JSON: A list of publication version objects for the specified
-        publication, or an error message.
+    - A tuple containing a Flask Response object with JSON data and an
+      HTTP status code. The JSON response has the following structure:
+
+        {
+            "success": bool,
+            "message": str,
+            "data": dict or None
+        }
+
+    - `success`: A boolean indicating whether the operation was successful.
+    - `message`: A string containing a descriptive message about the result.
+    - `data`: On success, a list of publication version objects; `null` on
+      error.
 
     Example Request:
 
         GET /projectname/publication/456/versions/
 
-    Example Response (Success):
-
-        [
-            {
-                "id": 1,
-                "publication_id": 456,
-                "date_created": "2023-07-12T09:23:45",
-                "date_modified": "2023-07-13T10:00:00",
-                "date_published_externally": null,
-                "deleted": 0,
-                "published": 1,
-                "legacy_id": null,
-                "published_by": null,
-                "original_filename": "path/to/file.xml",
-                "name": "Publication Title version 2",
-                "type": 1,
-                "section_id": 5,
-                "sort_order": 1
-            },
-            ...
-        ]
-
-    Example Response (Error):
+    Example Success Response (HTTP 200):
 
         {
-            "msg": "Invalid publication_id, must be a positive integer."
+            "success": true,
+            "message": "Retrieved # records.",
+            "data": [
+                {
+                    "id": 1,
+                    "publication_id": 456,
+                    "date_created": "2023-07-12T09:23:45",
+                    "date_modified": "2023-07-13T10:00:00",
+                    "date_published_externally": null,
+                    "deleted": 0,
+                    "published": 1,
+                    "legacy_id": null,
+                    "published_by": null,
+                    "original_filename": "path/to/file.xml",
+                    "name": "Publication Title version 2",
+                    "type": 1,
+                    "section_id": 5,
+                    "sort_order": 1
+                },
+                ...
+            ]
+        }
+
+    Example Error Response (HTTP 400):
+
+        {
+            "success": false,
+            "message": "Validation error: 'project' does not exist.",
+            "data": null
         }
 
     Status Codes:
@@ -330,40 +377,57 @@ def get_publication_manuscripts(project, publication_id):
 
     Returns:
 
-        JSON: A list of manuscript objects for the specified publication,
-        or an error message.
+    - A tuple containing a Flask Response object with JSON data and an
+      HTTP status code. The JSON response has the following structure:
+
+        {
+            "success": bool,
+            "message": str,
+            "data": dict or None
+        }
+
+    - `success`: A boolean indicating whether the operation was successful.
+    - `message`: A string containing a descriptive message about the result.
+    - `data`: On success, a list of publication manuscript objects; `null`
+      on error.
 
     Example Request:
 
         GET /projectname/publication/456/manuscripts/
 
-    Example Response (Success):
-
-        [
-            {
-                "id": 1,
-                "publication_id": 456,
-                "date_created": "2023-07-12T09:23:45",
-                "date_modified": "2023-07-13T10:00:00",
-                "date_published_externally": null,
-                "deleted": 0,
-                "published": 1,
-                "legacy_id": null,
-                "published_by": null,
-                "original_filename": "path/to/file.xml",
-                "name": "Publication Title manuscript 1",
-                "type": 1,
-                "section_id": 5,
-                "sort_order": 1,
-                "language": "en"
-            },
-            ...
-        ]
-
-    Example Response (Error):
+    Example Success Response (HTTP 200):
 
         {
-            "msg": "Invalid publication_id, must be a positive integer."
+            "success": true,
+            "message": "Retrieved # records.",
+            "data": [
+                {
+                    "id": 1,
+                    "publication_id": 456,
+                    "date_created": "2023-07-12T09:23:45",
+                    "date_modified": "2023-07-13T10:00:00",
+                    "date_published_externally": null,
+                    "deleted": 0,
+                    "published": 1,
+                    "legacy_id": null,
+                    "published_by": null,
+                    "original_filename": "path/to/file.xml",
+                    "name": "Publication Title manuscript 1",
+                    "type": 1,
+                    "section_id": 5,
+                    "sort_order": 1,
+                    "language": "en"
+                },
+                ...
+            ]
+        }
+
+    Example Error Response (HTTP 400):
+
+        {
+            "success": false,
+            "message": "Validation error: 'project' does not exist.",
+            "data": null
         }
 
     Status Codes:
@@ -423,12 +487,44 @@ def get_publication_tags(project, publication_id):
 
     Returns:
 
-        JSON: A list of tag objects for the specified publication, or an
-        error message.
+    - A tuple containing a Flask Response object with JSON data and an
+      HTTP status code. The JSON response has the following structure:
+
+        {
+            "success": bool,
+            "message": str,
+            "data": dict or None
+        }
+
+    - `success`: A boolean indicating whether the operation was successful.
+    - `message`: A string containing a descriptive message about the result.
+    - `data`: On success, a list of tag objects; `null` on error.
 
     Example Request:
 
         GET /projectname/publication/456/tags/
+
+    Example Success Response (HTTP 200):
+
+        {
+            "success": true,
+            "message": "Retrieved # records.",
+            "data": [
+                {
+                    "id": 1,
+                    ...
+                },
+                ...
+            ]
+        }
+
+    Example Error Response (HTTP 400):
+
+        {
+            "success": false,
+            "message": "Validation error: 'project' does not exist.",
+            "data": null
+        }
 
     Status Codes:
 
@@ -498,12 +594,57 @@ def get_publication_facsimiles(project, publication_id):
 
     Returns:
 
-        JSON: A list of fascimile objects for the specified publication,
-        or an error message.
+    - A tuple containing a Flask Response object with JSON data and an
+      HTTP status code. The JSON response has the following structure:
+
+        {
+            "success": bool,
+            "message": str,
+            "data": dict or None
+        }
+
+    - `success`: A boolean indicating whether the operation was successful.
+    - `message`: A string containing a descriptive message about the result.
+    - `data`: On success, a list of facsimile objects; `null` on error.
 
     Example Request:
 
         GET /projectname/publication/456/fascimiles/
+
+    Example Success Response (HTTP 200):
+
+        {
+            "success": true,
+            "message": "Retrieved # records.",
+            "data": [
+                {
+                    "id": 123,
+                    "publication_facsimile_collection_id": 5830,
+                    "publication_id": 456,
+                    "publication_manuscript_id": null,
+                    "publication_version_id": null,
+                    "date_created": "2023-05-12T12:34:56",
+                    "date_modified": "2023-06-01T08:22:11",
+                    "deleted": 0,
+                    "page_nr": 4,
+                    "section_id": 1,
+                    "priority": 1,
+                    "type": 0,
+                    "title": "Facsimile Collection Title",
+                    "description": "Some details about the collection.",
+                    "external_url": null
+                },
+                ...
+            ]
+        }
+
+    Example Error Response (HTTP 400):
+
+        {
+            "success": false,
+            "message": "Validation error: 'project' does not exist.",
+            "data": null
+        }
 
     Status Codes:
 
@@ -560,7 +701,8 @@ def get_publication_facsimiles(project, publication_id):
 def get_publication_comments(project, publication_id):
     """
     List all (non-deleted) comments of the specified publication
-    in a given project.
+    in a given project. Since only one comment is allowed per publication,
+    the list will have only one item (or none).
 
     URL Path Parameters:
 
@@ -571,36 +713,50 @@ def get_publication_comments(project, publication_id):
 
     Returns:
 
-        JSON: A list of publication comment objects for the specified
-        publication, or an error message. Currently, publications can have
-        only one comment, so the list will have either only one item or no
-        items.
+    - A tuple containing a Flask Response object with JSON data and an
+      HTTP status code. The JSON response has the following structure:
+
+        {
+            "success": bool,
+            "message": str,
+            "data": dict or None
+        }
+
+    - `success`: A boolean indicating whether the operation was successful.
+    - `message`: A string containing a descriptive message about the result.
+    - `data`: On success, a list of publication comment objects; `null` on error.
 
     Example Request:
 
         GET /projectname/publication/456/comments/
 
-    Example Response (Success):
-
-        [
-            {
-                "id": 2582,
-                "publication_id": 456,
-                "date_created": "2023-07-12T09:23:45",
-                "date_modified": "2023-07-13T10:00:00",
-                "date_published_externally": null,
-                "deleted": 0,
-                "published": 1,
-                "legacy_id": null,
-                "published_by": null,
-                "original_filename": "path/to/comment_file.xml"
-            }
-        ]
-
-    Example Response (Error):
+    Example Success Response (HTTP 200):
 
         {
-            "msg": "Invalid publication_id, must be a positive integer."
+            "success": true,
+            "message": "Retrieved # records.",
+            "data": [
+                {
+                    "id": 2582,
+                    "publication_id": 456,
+                    "date_created": "2023-07-12T09:23:45",
+                    "date_modified": "2023-07-13T10:00:00",
+                    "date_published_externally": null,
+                    "deleted": 0,
+                    "published": 1,
+                    "legacy_id": null,
+                    "published_by": null,
+                    "original_filename": "path/to/comment_file.xml"
+                }
+            ]
+        }
+
+    Example Error Response (HTTP 400):
+
+        {
+            "success": false,
+            "message": "Validation error: 'project' does not exist.",
+            "data": null
         }
 
     Status Codes:
@@ -679,7 +835,7 @@ def link_text_to_publication(project, publication_id):
 
     - name (str, optional): The name or title of the text.
     - type (int, optional): A non-negative integer representing the type of
-      the file. Defaults to 1 for "version" (1=base text, 2=other variant).
+      the text. Defaults to 1 for "version" (1=base text, 2=other variant).
     - section_id (int, optional): A non-negative integer representing the
       section ID.
     - sort_order (int, optional): A non-negative integer indicating the
@@ -690,7 +846,7 @@ def link_text_to_publication(project, publication_id):
     - language (str, optional): The language code (ISO 639-1) of the main
       language in the manuscript text.
 
-    For all file types:
+    For all text types:
 
     - published (int, optional): The publication status. Must be an integer
       with value 0, 1 or 2. Defaults to 1.
@@ -700,11 +856,23 @@ def link_text_to_publication(project, publication_id):
 
     Returns:
 
-        JSON: A success message with the inserted row data or an error message.
+    - A tuple containing a Flask Response object with JSON data and an
+      HTTP status code. The JSON response has the following structure:
+
+        {
+            "success": bool,
+            "message": str,
+            "data": dict or None
+        }
+
+    - `success`: A boolean indicating whether the operation was successful.
+    - `message`: A string containing a descriptive message about the result.
+    - `data`: On success, a dictionary containing the inserted data; `null`
+      on error.
 
     Example Request:
 
-        POST /projectname/publication/456/link_file/
+        POST /projectname/publication/456/link_text/
         Body:
         {
             "text_type": "manuscript",
@@ -714,11 +882,12 @@ def link_text_to_publication(project, publication_id):
             "published": 1
         }
 
-    Example Response (Success):
+    Example Success Response (HTTP 201):
 
         {
-            "msg": "Publication manuscript with ID 123 created successfully.",
-            "row": {
+            "success": true,
+            "message": "Publication manuscript created and linked to publication.",
+            "data":  {
                 "id": 284,
                 "publication_id": 456,
                 "date_created": "2023-07-12T09:23:45",
@@ -737,10 +906,12 @@ def link_text_to_publication(project, publication_id):
             }
         }
 
-    Example Response (Error):
+    Example Error Response (HTTP 400):
 
         {
-            "msg": "POST data is invalid: required fields are missing or empty, or 'text_type' has an invalid value."
+            "success": false,
+            "message": "Validation error: 'original_filename' and 'text_type' required. Valid values for 'text_type' are 'comment', 'manuscript' or 'version'.",
+            "data": null
         }
 
     Status Codes:
@@ -748,8 +919,6 @@ def link_text_to_publication(project, publication_id):
     - 201 - Created: The publication text type was created successfully.
     - 400 - Bad Request: Invalid project name, publication ID, field values,
             or no data provided.
-    - 404 - Not Found: Publication not found or does not belong to the
-            specified project.
     - 500 - Internal Server Error: Database query or execution failed.
     """
     # Verify that project name is valid and get project_id
