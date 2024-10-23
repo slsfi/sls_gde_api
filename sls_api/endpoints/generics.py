@@ -434,7 +434,7 @@ def create_translation(neutral, connection=None):
     """
     Inserts a new translation record with the provided neutral text and
     returns the generated ID.
-    
+
     If a connection is provided, it uses the existing connection. If no
     connection is provided, a new connection is created for the operation,
     and it will be closed automatically once the insertion is completed.
@@ -485,11 +485,31 @@ def create_translation_text(translation_id, table_name):
 def get_translation_text_id(translation_id, table_name, field_name, language):
     connection = db_engine.connect()
     if translation_id is not None:
-        stmt = """ SELECT id FROM translation_text WHERE
-                            (translation_id = :t_id AND (language is NULL OR language = 'not set') AND table_name = :table_name AND field_name = :field_name AND deleted = 0)
-                            OR (translation_id = :t_id AND language = :language AND table_name = :table_name AND field_name = :field_name AND language != 'not set' AND deleted = 0)
-                    LIMIT 1
-                """
+        stmt = """
+            SELECT id 
+            FROM translation_text 
+            WHERE 
+                (
+                    translation_id = :t_id 
+                    AND (
+                        language IS NULL 
+                        OR language = 'not set'
+                    )
+                    AND table_name = :table_name 
+                    AND field_name = :field_name 
+                    AND deleted = 0
+                ) 
+                OR 
+                (
+                    translation_id = :t_id 
+                    AND language = :language 
+                    AND table_name = :table_name 
+                    AND field_name = :field_name 
+                    AND language != 'not set' 
+                    AND deleted = 0
+                )
+            LIMIT 1
+        """
         statement = text(stmt).bindparams(t_id=translation_id, table_name=table_name, field_name=field_name, language=language)
         result = connection.execute(statement)
         row = result.fetchone()
