@@ -224,15 +224,11 @@ def add_new_project():
                 inserted_row = connection.execute(insert_stmt).first()
 
                 if inserted_row is None:
-                    # No row was returned; handle accordingly
                     return create_error_response("Insertion failed: no row returned.", 500)
-
-                # Convert the inserted row to a dict for JSON serialization
-                inserted_row_dict = inserted_row._asdict()
 
                 return create_success_response(
                     message="Project created.",
-                    data=inserted_row_dict,
+                    data=inserted_row._asdict(),
                     status_code=201
                 )
 
@@ -366,12 +362,9 @@ def edit_project(project_id):
                     # No row was returned; project_id invalid
                     return create_error_response("Update failed: no project with the provided 'project_id' found.")
 
-                # Convert the inserted row to a dict for JSON serialization
-                updated_row_dict = updated_row._asdict()
-
                 return create_success_response(
                     message="Project updated.",
-                    data=updated_row_dict
+                    data=updated_row._asdict()
                 )
 
     except Exception as e:
@@ -520,15 +513,11 @@ def edit_publication_collection(project, collection_id):
                 updated_row = connection.execute(upd_stmt).first()
 
                 if updated_row is None:
-                    # No row was returned; handle accordingly
                     return create_error_response("Update failed: no publication collection with the provided 'collection_id' and 'project' found.")
-
-                # Convert the inserted row to a dict for JSON serialization
-                updated_row_dict = updated_row._asdict()
 
                 return create_success_response(
                     message="Publication collection updated.",
-                    data=updated_row_dict
+                    data=updated_row._asdict()
                 )
 
     except Exception as e:
@@ -857,15 +846,11 @@ def edit_publication(project, publication_id):
                 updated_row = connection.execute(upd_stmt).first()
 
                 if updated_row is None:
-                    # No row was returned; handle accordingly
                     return create_error_response("Update failed: no publication with the provided 'publication_id' found.")
-
-                # Convert the inserted row to a dict for JSON serialization
-                updated_row_dict = updated_row._asdict()
 
                 return create_success_response(
                     message="Publication updated.",
-                    data=updated_row_dict
+                    data=updated_row._asdict()
                 )
 
     except Exception as e:
@@ -1032,12 +1017,9 @@ def edit_comment(project, publication_id):
                 if updated_row is None:
                     return create_error_response("Update failed: no comment linked to the publication with the provided 'publication_id' found.")
 
-                # Convert the inserted row to a dict for JSON serialization
-                updated_row_dict = updated_row._asdict()
-
                 return create_success_response(
                     message="Publication comment updated.",
-                    data=updated_row_dict
+                    data=updated_row._asdict()
                 )
 
     except Exception as e:
@@ -1233,15 +1215,11 @@ def edit_manuscript(project, manuscript_id):
                 updated_row = connection.execute(upd_stmt).first()
 
                 if updated_row is None:
-                    # No row was returned; handle accordingly
                     return create_error_response("Update failed: no publication manuscript with the provided 'manuscript_id' found.")
-
-                # Convert the inserted row to a dict for JSON serialization
-                updated_row_dict = updated_row._asdict()
 
                 return create_success_response(
                     message="Publication manuscript updated.",
-                    data=updated_row_dict
+                    data=updated_row._asdict()
                 )
 
     except Exception as e:
@@ -1436,15 +1414,11 @@ def edit_version(project, version_id):
                 updated_row = connection.execute(upd_stmt).first()
 
                 if updated_row is None:
-                    # No row was returned; handle accordingly
                     return create_error_response("Update failed: no publication version with the provided 'version_id' found.")
-
-                # Convert the inserted row to a dict for JSON serialization
-                updated_row_dict = updated_row._asdict()
 
                 return create_success_response(
                     message="Publication version updated.",
-                    data=updated_row_dict
+                    data=updated_row._asdict()
                 )
 
     except Exception as e:

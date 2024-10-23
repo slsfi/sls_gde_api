@@ -482,15 +482,11 @@ def add_new_subject(project):
                 inserted_row = connection.execute(stmt).first()
 
                 if inserted_row is None:
-                    # No row was returned; handle accordingly
                     return create_error_response("Insertion failed: no row returned.", 500)
-
-                # Convert the inserted_row to a dictionary for JSON serialization
-                inserted_row_dict = inserted_row._asdict()
 
                 return create_success_response(
                     message="Person record created.",
-                    data=inserted_row_dict,
+                    data=inserted_row._asdict(),
                     status_code=201
                 )
 
@@ -689,12 +685,9 @@ def edit_subject(project, subject_id):
                     # No row was returned: invalid subject_id or project name
                     return create_error_response("Update failed: no person record with the provided 'subject_id' found in project.")
 
-                # Convert the inserted row to a dict for JSON serialization
-                updated_row_dict = updated_row._asdict()
-
                 return create_success_response(
                     message="Person record updated.",
-                    data=updated_row_dict
+                    data=updated_row._asdict()
                 )
 
     except Exception as e:
@@ -901,12 +894,9 @@ def add_new_translation(project):
                 if inserted_row is None:
                     return create_error_response("Insertion failed: no row returned.", 500)
 
-                # Convert the inserted_row to a dictionary for JSON serialization
-                inserted_row_dict = inserted_row._asdict()
-
                 return create_success_response(
                     message="Translation created.",
-                    data=inserted_row_dict,
+                    data=inserted_row._asdict(),
                     status_code=201
                 )
 
@@ -1079,12 +1069,9 @@ def edit_translation(project, translation_id):
                         if inserted_row is None:
                             return create_error_response("Insertion failed: no row returned.", 500)
 
-                        # Convert the inserted_row to a dictionary for JSON serialization
-                        inserted_row_dict = inserted_row._asdict()
-
                         return create_success_response(
                             message="Translation text created.",
-                            data=inserted_row_dict,
+                            data=inserted_row._asdict(),
                             status_code=201
                         )
 
@@ -1114,12 +1101,9 @@ def edit_translation(project, translation_id):
                     if updated_row is None:
                         return create_error_response("Update failed: no translation text with the provided 'translation_text_id' found.")
 
-                    # Convert the inserted row to a dict for JSON serialization
-                    updated_row_dict = updated_row._asdict()
-
                     return create_success_response(
                         message="Translation text updated.",
-                        data=updated_row_dict
+                        data=updated_row._asdict()
                     )
 
     except Exception as e:

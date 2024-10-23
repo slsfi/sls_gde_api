@@ -1045,7 +1045,6 @@ def link_text_to_publication(project, publication_id):
                 inserted_row = connection.execute(ins_stmt).first()
 
                 if inserted_row is None:
-                    # No row was returned; handle accordingly
                     return create_error_response("Insertion failed: no row returned.", 500)
 
                 if text_type == "comment":
@@ -1057,12 +1056,9 @@ def link_text_to_publication(project, publication_id):
                     )
                     connection.execute(upd_stmt)
 
-                # Convert the inserted row to a dict for JSON serialization
-                inserted_row_dict = inserted_row._asdict()
-
                 return create_success_response(
                     message=f"Publication {text_type} created and linked to publication.",
-                    data=inserted_row_dict,
+                    data=inserted_row._asdict(),
                     status_code=201
                 )
 

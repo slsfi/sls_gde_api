@@ -165,15 +165,11 @@ def create_facsimile_collection(project):
                 inserted_row = result.fetchone()  # Fetch the inserted row
 
                 if inserted_row is None:
-                    # No row was returned; handle accordingly
                     return create_error_response("Insertion failed: no row returned.", 500)
-
-                # Convert the inserted_row to a dictionary for JSON serialization
-                inserted_row_dict = inserted_row._asdict()
 
                 return create_success_response(
                     message="Facsimile collection created.",
-                    data=inserted_row_dict,
+                    data=inserted_row._asdict(),
                     status_code=201
                 )
 
@@ -346,12 +342,9 @@ def edit_facsimile_collection(project, collection_id):
                     # No row was returned: invalid facsimile collection_id
                     return create_error_response("Update failed: no facsimile collection with the provided 'collection_id' found.")
 
-                # Convert the inserted row to a dict for JSON serialization
-                updated_row_dict = updated_row._asdict()
-
                 return create_success_response(
                     message="Facsimile collection updated.",
-                    data=updated_row_dict
+                    data=updated_row._asdict()
                 )
 
     except Exception as e:
@@ -737,15 +730,11 @@ def link_facsimile_collection_to_publication(project, collection_id):
                 inserted_row = connection.execute(ins_stmt).first()  # Fetch the inserted row
 
                 if inserted_row is None:
-                    # No row was returned; handle accordingly
                     return create_error_response("Insertion failed: no row returned.", 500)
-
-                # Convert the inserted row to a dict for JSON serialization
-                inserted_row_dict = inserted_row._asdict()
 
                 return create_success_response(
                     message="Facsimile created.",
-                    data=inserted_row_dict,
+                    data=inserted_row._asdict(),
                     status_code=201
                 )
 
@@ -918,15 +907,11 @@ def edit_facsimile(project):
                 updated_row = connection.execute(upd_stmt).first()
 
                 if updated_row is None:
-                    # No row was returned; handle accordingly
                     return create_error_response("Update failed: no facsimile with the provided 'id' found.")
-
-                # Convert the inserted row to a dict for JSON serialization
-                updated_row_dict = updated_row._asdict()
 
                 return create_success_response(
                     message="Publication facsimile updated.",
-                    data=updated_row_dict
+                    data=updated_row._asdict()
                 )
 
     except Exception as e:
@@ -1333,15 +1318,11 @@ def new_publication_collection(project):
                 inserted_row = connection.execute(statement).first()
 
                 if inserted_row is None:
-                    # No row was returned; handle accordingly
                     return create_error_response("Insertion failed: no row returned.", 500)
-
-                # Convert the inserted_row to a dictionary for JSON serialization
-                inserted_row_dict = inserted_row._asdict()
 
                 return create_success_response(
                     message="Publication collection created.",
-                    data=inserted_row_dict,
+                    data=inserted_row._asdict(),
                     status_code=201
                 )
 
@@ -1676,15 +1657,11 @@ def new_publication(project, collection_id):
                 inserted_row = connection.execute(insert_stmt).first()
 
                 if inserted_row is None:
-                    # No row was returned; handle accordingly
                     return create_error_response("Insertion failed: no row returned.", 500)
-
-                # Convert the inserted_row to a dictionary for JSON serialization
-                inserted_row_dict = inserted_row._asdict()
 
                 return create_success_response(
                     message="Publication created.",
-                    data=inserted_row_dict,
+                    data=inserted_row._asdict(),
                     status_code=201
                 )
 
