@@ -564,7 +564,6 @@ def edit_publication_collection(project, collection_id):
                         if casc_upd_result is None:
                             raise CascadeUpdateError(f"failed to update 'deleted' or 'published' field for {text_type} linked to the collection.")
 
-
                     # Get all non-deleted publications in the collection
                     publication_table = get_table("publication")
                     pub_stmt = (
