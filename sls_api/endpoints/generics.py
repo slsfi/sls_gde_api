@@ -443,7 +443,8 @@ def update_publication_related_table(
 
     This function updates records in one of the publication-related
     tables ('publication', 'publication_comment', 'publication_manuscript',
-    or 'publication_version') based on the specified `text_type`. It
+    'publication_version', 'publication_collection_introduction', or
+    'publication_collection_title') based on the specified `text_type`. It
     dynamically constructs the update statement depending on the table and
     the ID column relevant to that table.
 
@@ -451,9 +452,11 @@ def update_publication_related_table(
         connection (Connection): An active database connection through
             SQLAlchemy.
         text_type (str): The type of text to update. Must be one of
-            'publication', 'comment', 'manuscript', or 'version'.
+            'publication', 'comment', 'manuscript', 'version',
+            'collection_introduction', or 'collection_title'.
         id (int): The ID of the row to update. Refers to either the
-            `id` column (for 'publication' and 'comment') or the
+            `id` column (for 'publication', 'comment',
+            'collection_introduction' and 'collection_title') or the
             `publication_id` column (for 'manuscript' and 'version').
         values (Dict[str, Any]): A dictionary of column names and their
             new values to update.
@@ -470,16 +473,21 @@ def update_publication_related_table(
         are logged. The function returns None if an exception occurs.
     """
     try:
-        if text_type not in ["publication", "comment", "manuscript", "version"]:
+        if text_type not in ["publication",
+                             "comment",
+                             "manuscript",
+                             "version",
+                             "collection_introduction",
+                             "collection_title"]:
             return None
 
         target_table = (get_table(f"publication_{text_type}")
                         if text_type != "publication"
                         else get_table("publication"))
 
-        id_column = (target_table.c.id
-                     if text_type in ["publication", "comment"]
-                     else target_table.c.publication_id)
+        id_column = (target_table.c.publication_id
+                     if text_type in ["manuscript", "version"]
+                     else target_table.c.id)
 
         return_data = (target_table.c
                        if return_all_columns
@@ -491,13 +499,11 @@ def update_publication_related_table(
             .values(**values)
             .returning(*return_data)
         )
-
         updated_rows = connection.execute(stmt).fetchall()
+
         return [row._asdict() for row in updated_rows]
 
     except Exception:
-        field = "id" if text_type in ["publication", "comment"] else "publication_id"
-        logger.exception(f"Error updating {text_type} with {field} {id}")
         return None
 
 

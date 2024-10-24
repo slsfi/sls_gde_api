@@ -397,6 +397,18 @@ def edit_publication_collection(project, collection_id):
       value 0, 1 or 2.
     - deleted (int): Soft delete flag. Must be an integer with value 0 or 1.
       Setting `deleted` value to 1 will force `published` value to 0.
+    - cascade_deleted (bool): If `true`, all publications in the
+      collection including comments, manuscripts and versions linked to
+      the publications will be marked with the same 'deleted' value as
+      this publication collection. Also titles and introductions linked
+      to the collection will be affected. If the value of 'deleted' is 1,
+      the 'published' value will be set to 0 also for these. Defaults
+      to `false`.
+    - cascade_published (bool): If `true`, all publications in the
+      collection including comments, manuscripts and versions linked to
+      the publications will be marked with the same 'published' value as
+      this publication collection. Also titles and introductions linked
+      to the collection will be affected. Defaults to `false`.
 
     Returns:
 
@@ -524,10 +536,73 @@ def edit_publication_collection(project, collection_id):
                 if updated_row is None:
                     return create_error_response("Update failed: no publication collection with the provided 'collection_id' and 'project' found.")
 
+                updated_row_dict = updated_row._asdict()
+
+                # Check if the "deleted" or "published" status should be cascaded
+                # to publications and their comments, manuscripts and versions
+                if (
+                    ("deleted" in values and request_data.get("cascade_deleted"))
+                    or ("published" in values and request_data.get("cascade_published"))
+                ):
+                    casc_values = {"date_modified": values["date_modified"]}
+                    for field in ["published", "deleted"]:
+                        if field in values and request_data.get(f"cascade_{field}"):
+                            casc_values[field] = values[field]
+
+                    # Force 'published' value to 0 if 'deleted' set to 1
+                    casc_values = handle_deleted_flag(casc_values)
+
+                    # Update collection introduction and title
+                    for text_type in ["collection_introduction", "collection_title"]:
+                        upd_id = updated_row_dict.get(f"publication_{text_type}_id")
+                        if upd_id is None:
+                            continue
+
+                        casc_upd_result = update_publication_related_table(
+                            connection, text_type, upd_id, casc_values
+                        )
+                        if casc_upd_result is None:
+                            raise CascadeUpdateError(f"failed to update 'deleted' or 'published' field for {text_type} linked to the collection.")
+
+
+                    # Get all non-deleted publications in the collection
+                    publication_table = get_table("publication")
+                    pub_stmt = (
+                        select(
+                            publication_table.c.id,
+                            publication_table.c.publication_comment_id
+                        )
+                        .where(publication_table.c.deleted < 1)
+                        .where(publication_table.c.publication_collection_id == collection_id)
+                    )
+                    pub_rows = connection.execute(pub_stmt).fetchall()
+
+                    # Update each publication
+                    for pub_data in pub_rows:
+                        # Update the "deleted" and/or "published" value of
+                        # the publication and any comment, manuscript and
+                        # version linked to the publication.
+                        for text_type in ["publication", "comment", "manuscript", "version"]:
+                            upd_id = (pub_data.publication_comment_id
+                                      if text_type == "comment"
+                                      else pub_data.id)
+                            if upd_id is None:
+                                continue
+
+                            casc_upd_result = update_publication_related_table(
+                                connection, text_type, upd_id, casc_values
+                            )
+                            if casc_upd_result is None:
+                                raise CascadeUpdateError(f"failed to update 'deleted' or 'published' field for {text_type} linked to publication in the collection.")
+
                 return create_success_response(
                     message="Publication collection updated.",
-                    data=updated_row._asdict()
+                    data=updated_row_dict
                 )
+
+    except CascadeUpdateError as ce:
+        logger.exception(f"Error updating publication collection: {ce.message}")
+        return create_error_response(f"Unexpected error: {ce.message}", 500)
 
     except Exception as e:
         logger.exception(f"Exception updating publication collection: {str(e)}")
@@ -886,16 +961,16 @@ def edit_publication(project, publication_id):
                     # comment, manuscript and version linked to the
                     # publication.
                     for text_type in ["comment", "manuscript", "version"]:
-                        upd_id = (updated_row.get("publication_comment_id")
+                        upd_id = (updated_row.publication_comment_id
                                   if text_type == "comment"
                                   else publication_id)
                         if upd_id is None:
                             continue
 
-                        prop_upd_result = update_publication_related_table(
+                        casc_upd_result = update_publication_related_table(
                             connection, text_type, upd_id, casc_values
                         )
-                        if prop_upd_result is None:
+                        if casc_upd_result is None:
                             raise CascadeUpdateError(f"failed to update 'deleted' or 'published' field for {text_type} linked to the publication.")
 
                 return create_success_response(
