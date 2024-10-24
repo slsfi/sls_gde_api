@@ -7,6 +7,7 @@ from datetime import datetime
 from sls_api.endpoints.generics import db_engine, get_project_id_from_name, get_table, int_or_none, \
     project_permission_required, validate_project_name, validate_int, create_error_response, \
     create_success_response, update_publication_related_table, handle_deleted_flag
+from sls_api.exceptions import CascadeUpdateError
 
 
 publishing_tools = Blueprint("publishing_tools", __name__)
@@ -867,21 +868,19 @@ def edit_publication(project, publication_id):
                 if updated_row is None:
                     return create_error_response("Update failed: no publication with the provided 'publication_id' found.")
 
-                response_message = "Publication updated."
-
                 # Check if the "deleted" or "published" status should be cascaded
                 # to comments, manuscripts and versions linked to the publication
                 if (
                     ("deleted" in values and request_data.get("cascade_deleted"))
                     or ("published" in values and request_data.get("cascade_published"))
                 ):
-                    prop_values = {"date_modified": values["date_modified"]}
+                    casc_values = {"date_modified": values["date_modified"]}
                     for field in ["published", "deleted"]:
                         if field in values and request_data.get(f"cascade_{field}"):
-                            prop_values[field] = values[field]
+                            casc_values[field] = values[field]
 
                     # Force 'published' value to 0 if 'deleted' set to 1
-                    prop_values = handle_deleted_flag(prop_values)
+                    casc_values = handle_deleted_flag(casc_values)
 
                     # Update the "deleted" and/or "published" value of any
                     # comment, manuscript and version linked to the
@@ -894,15 +893,19 @@ def edit_publication(project, publication_id):
                             continue
 
                         prop_upd_result = update_publication_related_table(
-                            connection, text_type, upd_id, prop_values
+                            connection, text_type, upd_id, casc_values
                         )
                         if prop_upd_result is None:
-                            response_message += f" Failed to update 'deleted' or 'published' field for {text_type} linked to the publication."
+                            raise CascadeUpdateError(f"failed to update 'deleted' or 'published' field for {text_type} linked to the publication.")
 
                 return create_success_response(
-                    message=response_message,
+                    message="Publication updated.",
                     data=updated_row._asdict()
                 )
+
+    except CascadeUpdateError as ce:
+        logger.exception(f"Error updating publication: {ce.message}")
+        return create_error_response(f"Unexpected error: {ce.message}", 500)
 
     except Exception as e:
         logger.exception(f"Exception updating publication: {str(e)}")
