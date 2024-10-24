@@ -11,10 +11,10 @@ from lxml import etree
 import os
 import re
 from ruamel.yaml import YAML
-from sqlalchemy import create_engine, MetaData, Table
+from sqlalchemy import create_engine, Connection, MetaData, Table
 from sqlalchemy.sql import select, text
 import time
-from typing import Any, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 from werkzeug.security import safe_join
 
 ALLOWED_EXTENSIONS_FOR_FACSIMILE_UPLOAD = ["tif", "tiff", "png", "jpg", "jpeg"]
@@ -430,6 +430,77 @@ def get_content(project, folder, xml_filename, xsl_filename, parameters):
     return content
 
 
+def update_publication_related_table(
+        connection: Connection,
+        text_type: str,
+        id: int,
+        values: Dict[str, Any],
+        return_all_columns: bool = False
+) -> Optional[List[Dict[str, Any]]]:
+    """
+    Helper function to update rows in the appropriate publication-related
+    table based on the provided text type.
+
+    This function updates records in one of the publication-related
+    tables ('publication', 'publication_comment', 'publication_manuscript',
+    or 'publication_version') based on the specified `text_type`. It
+    dynamically constructs the update statement depending on the table and
+    the ID column relevant to that table.
+
+    Args:
+        connection (Connection): An active database connection through
+            SQLAlchemy.
+        text_type (str): The type of text to update. Must be one of
+            'publication', 'comment', 'manuscript', or 'version'.
+        id (int): The ID of the row to update. Refers to either the
+            `id` column (for 'publication' and 'comment') or the
+            `publication_id` column (for 'manuscript' and 'version').
+        values (Dict[str, Any]): A dictionary of column names and their
+            new values to update.
+        return_all_columns (bool): When set to `True`, the function
+            returns all columns of updated rows, otherwise just the `id`
+            column of updated rows. Defaults to `False`.
+
+    Returns:
+        A list of dictionaries with the updated rows. Returns None if no
+        update is performed or an error occurs.
+
+    Logs:
+        Exception: Any exceptions encountered during the update operation
+        are logged. The function returns None if an exception occurs.
+    """
+    try:
+        if text_type not in ["publication", "comment", "manuscript", "version"]:
+            return None
+
+        target_table = (get_table(f"publication_{text_type}")
+                        if text_type != "publication"
+                        else get_table("publication"))
+
+        id_column = (target_table.c.id
+                     if text_type in ["publication", "comment"]
+                     else target_table.c.publication_id)
+
+        return_data = (target_table.c
+                       if return_all_columns
+                       else (target_table.c.id,))
+
+        stmt = (
+            target_table.update()
+            .where(id_column == id)
+            .values(**values)
+            .returning(*return_data)
+        )
+
+        updated_rows = connection.execute(stmt).fetchall()
+        return [row._asdict() for row in updated_rows]
+
+    except Exception:
+        field = "id" if text_type in ["publication", "comment"] else "publication_id"
+        logger.exception(f"Error updating {text_type} with {field} {id}")
+        return None
+
+
 def create_translation(neutral, connection=None):
     """
     Inserts a new translation record with the provided neutral text and
@@ -689,3 +760,23 @@ def create_error_response(
         "message": message,
         "data": None
     }), status_code
+
+
+def handle_deleted_flag(values: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Adjusts the 'published' flag in the provided values dictionary if the
+    'deleted' flag is set to a truthy value (like 1). This ensures that
+    if a record is marked as deleted, it cannot remain published.
+
+    Args:
+        values (Dict[str, Any]): A dictionary containing the fields to
+            update for a record. If the dictionary contains a 'deleted'
+            key with a truthy value, the value of the 'published' key
+            will be set to 0.
+
+    Returns:
+        The updated dictionary.
+    """
+    if values.get("deleted"):
+        values["published"] = 0
+    return values

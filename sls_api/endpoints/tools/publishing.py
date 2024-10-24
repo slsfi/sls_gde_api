@@ -6,7 +6,7 @@ from datetime import datetime
 
 from sls_api.endpoints.generics import db_engine, get_project_id_from_name, get_table, int_or_none, \
     project_permission_required, validate_project_name, validate_int, create_error_response, \
-    create_success_response
+    create_success_response, update_publication_related_table, handle_deleted_flag
 
 
 publishing_tools = Blueprint("publishing_tools", __name__)
@@ -697,6 +697,14 @@ def edit_publication(project, publication_id):
     - genre (str): The genre of the publication.
     - deleted (int): Soft delete flag. Must be an integer with value 0 or 1.
       Setting `deleted` value to 1 will force `published` value to 0.
+    - cascade_deleted (bool): If `true`, all comments, manuscripts and
+      versions linked to the publication will be marked with the same
+      'deleted' value as the publication. If the value of 'deleted' is 1,
+      the 'published' value will be set to 0 also for these. Defaults
+      to `false`.
+    - cascade_published (bool): If `true`, all comments, manuscripts and
+      versions linked to the publication will be marked with the same
+      'published' value as the publication. Defaults to `false`.
 
     Additionally, all POST data parameter values can be set to null,
     except 'deleted'.
@@ -827,8 +835,7 @@ def edit_publication(project, publication_id):
     # Add date_modified
     values["date_modified"] = datetime.now()
     # If "deleted" set to 1, force "published" to 0
-    if values.get("deleted"):
-        values["published"] = 0
+    values = handle_deleted_flag(values)
 
     try:
         with db_engine.connect() as connection:
@@ -860,8 +867,40 @@ def edit_publication(project, publication_id):
                 if updated_row is None:
                     return create_error_response("Update failed: no publication with the provided 'publication_id' found.")
 
+                response_message = "Publication updated."
+
+                # Check if the "deleted" or "published" status should be cascaded
+                # to comments, manuscripts and versions linked to the publication
+                if (
+                    ("deleted" in values and request_data.get("cascade_deleted"))
+                    or ("published" in values and request_data.get("cascade_published"))
+                ):
+                    prop_values = {"date_modified": values["date_modified"]}
+                    for field in ["published", "deleted"]:
+                        if field in values and request_data.get(f"cascade_{field}"):
+                            prop_values[field] = values[field]
+
+                    # Force 'published' value to 0 if 'deleted' set to 1
+                    prop_values = handle_deleted_flag(prop_values)
+
+                    # Update the "deleted" and/or "published" value of any
+                    # comment, manuscript and version linked to the
+                    # publication.
+                    for text_type in ["comment", "manuscript", "version"]:
+                        upd_id = (updated_row.get("publication_comment_id")
+                                  if text_type == "comment"
+                                  else publication_id)
+                        if upd_id is None:
+                            continue
+
+                        prop_upd_result = update_publication_related_table(
+                            connection, text_type, upd_id, prop_values
+                        )
+                        if prop_upd_result is None:
+                            response_message += f" Failed to update 'deleted' or 'published' field for {text_type} linked to the publication."
+
                 return create_success_response(
-                    message="Publication updated.",
+                    message=response_message,
                     data=updated_row._asdict()
                 )
 
