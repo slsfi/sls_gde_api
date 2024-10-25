@@ -11,6 +11,7 @@ from lxml import etree
 import os
 import re
 from ruamel.yaml import YAML
+from sls_api.models import User
 from sqlalchemy import create_engine, Connection, MetaData, Table
 from sqlalchemy.sql import select, text
 import time
@@ -113,13 +114,30 @@ def project_permission_required(fn):
                 return jsonify({"msg": "No project identified."}), 500
 
             # check for permission
-            if "projects" not in identity or ["projects"] is None or not identity["projects"]:
+            if "projects" not in identity or not identity["projects"]:
+                # according to JWT, no access to any projects
                 return jsonify({"msg": "No access to this project."}), 403
-            elif project in identity["projects"]:
+            elif check_for_project_permission_in_database(identity['sub'], project):
+                # only run function if database says user *actually* has permissions
                 return fn(*args, **kwargs)
             else:
                 return jsonify({"msg": "No access to this project."}), 403
     return decorated_function
+
+
+def check_for_project_permission_in_database(user_email, project_name) -> bool:
+    """
+    Helper method to check in database for project permission.
+    Returns true if user has permission for the project in question, otherwise false.
+    """
+    # make sure user actually has edit rights
+    user = User.find_by_email(user_email)
+    if user:
+        return user.can_edit_project(project_name)
+    else:
+        # user not found in database
+        logger.warning(f"Ostensibly logged in user {user_email} was not found in the database.")
+        return False
 
 
 def get_project_id_from_name(project):
