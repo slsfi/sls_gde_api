@@ -435,7 +435,8 @@ def update_publication_related_table(
         text_type: str,
         id: int,
         values: Dict[str, Any],
-        return_all_columns: bool = False
+        return_all_columns: bool = False,
+        exclude_deleted: bool = True
 ) -> Optional[List[Dict[str, Any]]]:
     """
     Helper function to update rows in the appropriate publication-related
@@ -463,6 +464,9 @@ def update_publication_related_table(
         return_all_columns (bool): When set to `True`, the function
             returns all columns of updated rows, otherwise just the `id`
             column of updated rows. Defaults to `False`.
+        exclude_deleted (bool): When set to `True`, the function updates
+            only records that are non-deleted, otherwise no filtering
+            is done base on deleted status. Defaults to `True`.
 
     Returns:
         A list of dictionaries with the updated rows. Returns None if no
@@ -493,12 +497,11 @@ def update_publication_related_table(
                        if return_all_columns
                        else (target_table.c.id,))
 
-        stmt = (
-            target_table.update()
-            .where(id_column == id)
-            .values(**values)
-            .returning(*return_data)
-        )
+        stmt = target_table.update().where(id_column == id)
+        if exclude_deleted:
+            stmt = stmt.where(target_table.c.deleted < 1)
+        stmt = stmt.values(**values).returning(*return_data)
+
         updated_rows = connection.execute(stmt).fetchall()
 
         return [row._asdict() for row in updated_rows]
