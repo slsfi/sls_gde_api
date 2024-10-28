@@ -1135,7 +1135,10 @@ def edit_comment(project, publication_id):
                 if result is None:
                     return create_error_response("Validation error: could not find publication, either 'project' or 'publication_id' is invalid.")
 
-                com_id = result["publication_comment_id"]
+                com_id = getattr(result, "publication_comment_id", None)
+
+                if com_id is None:
+                    return create_error_response("Update failed: ID of comment linked to the publication is NULL.", 500)
 
                 # Execute the update statement
                 upd_stmt = (

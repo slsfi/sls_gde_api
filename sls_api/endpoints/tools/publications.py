@@ -1033,7 +1033,7 @@ def link_text_to_publication(project, publication_id):
                 # we need to check if the publication already has a comment.
                 if (
                     text_type == "comment"
-                    and result["publication_comment_id"] is not None
+                    and getattr(result, "publication_comment_id", None) is not None
                 ):
                     return create_error_response("Failed to add comment to publication: a comment is already linked to the publication.")
 
@@ -1048,12 +1048,15 @@ def link_text_to_publication(project, publication_id):
                 if inserted_row is None:
                     return create_error_response("Insertion failed: no row returned.", 500)
 
-                if text_type == "comment":
+                if (
+                    text_type == "comment"
+                    and getattr(inserted_row, "id", None) is not None
+                ):
                     # Update the publication with the comment id
                     upd_stmt = (
                         publication_table.update()
                         .where(publication_table.c.id == publication_id)
-                        .values(publication_comment_id=inserted_row["id"])
+                        .values(publication_comment_id=inserted_row.id)
                     )
                     connection.execute(upd_stmt)
 
