@@ -1078,9 +1078,9 @@ def link_text_to_publication(project, publication_id):
 @project_permission_required
 def get_or_verify_facsimile_file(project, collection_id, file_nr, zoom_level, verify_exists=None):
     """
-    Retrieve a facsimile file or verify the existence of one or more
-    facsimile files for a specific facsimile collection in the given
-    project.
+    Retrieve a facsimile file or verify the existence of a single
+    facsimile file or all files in a specific facsimile collection in the
+    given project.
 
     URL Path Parameters:
 
@@ -1104,8 +1104,8 @@ def get_or_verify_facsimile_file(project, collection_id, file_nr, zoom_level, ve
       containing a Flask Response object and an HTTP status code.
       Otherwise, it returns the image file's binary data.
 
-    The JSON Response (when `verify_exists` is present) has the following
-    structure:
+    The JSON Response (when `verify_exists` is present or `file_nr` is
+    'all') has the following structure:
 
         {
             "success": bool,
@@ -1153,7 +1153,7 @@ def get_or_verify_facsimile_file(project, collection_id, file_nr, zoom_level, ve
 
     Status Codes:
 
-    - 200 - OK: The request was successful. For verification, the file
+    - 200 - OK: The request was successful. For verification, the file(s)
                 exists; for retrieval, the image binary data is returned.
     - 400 - Bad Request: One or more URL path parameters are invalid.
     - 403 - Forbidden: Permission denied to access facsimile file.

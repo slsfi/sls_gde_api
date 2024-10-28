@@ -769,7 +769,7 @@ def create_success_response(
 def create_error_response(
     message: str,
     status_code: int = 400,
-    data: Optional[Any] = None,
+    data: Optional[Any] = None
 ) -> Tuple[Response, int]:
     """
     Create a standardized JSON error response.
