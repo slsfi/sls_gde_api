@@ -1,11 +1,13 @@
 import logging
-from flask import Blueprint, request
+import os
+from flask import Blueprint, request, Response
 from flask_jwt_extended import jwt_required
 from sqlalchemy import asc, desc, select, text
+from werkzeug.security import safe_join
 
 from sls_api.endpoints.generics import db_engine, get_project_id_from_name, \
     get_table, int_or_none, validate_int, project_permission_required, \
-    create_error_response, create_success_response
+    create_error_response, create_success_response, get_project_config
 
 
 publication_tools = Blueprint("publication_tools", __name__)
@@ -1069,3 +1071,134 @@ def link_text_to_publication(project, publication_id):
     except Exception as e:
         logger.exception(f"Exception creating new publication {text_type}: {str(e)}")
         return create_error_response(f"Unexpected error: failed to create new publication {text_type}.", 500)
+
+
+@publication_tools.route("/<project>/get_or_verify_facsimile_file/<collection_id>/<file_nr>/<zoom_level>")
+@publication_tools.route("/<project>/get_or_verify_facsimile_file/<collection_id>/<file_nr>/<zoom_level>/<verify_exists>")
+@project_permission_required
+def get_or_verify_facsimile_file(project, collection_id, file_nr, zoom_level, verify_exists=None):
+    """
+    Retrieve or verify the existence of a facsimile file for a specific
+    facsimile collection in the given project.
+
+    URL Path Parameters:
+
+    - project (str, required): The name of the project containing the
+      facsimile collection.
+    - collection_id (int, required): The ID of the facsimile collection.
+      Must be a positive integer.
+    - file_nr (int, required): The number of the facsimile file to
+      retrieve. Must be a positive integer.
+    - zoom_level (int, required): The zoom level of the facsimile file.
+      Must be an integer with value 1, 2, 3 or 4.
+    - verify_exists (bool, optional): If present, verifies the existence
+      of the file instead of retrieving it.
+
+    Returns:
+
+    - If `verify_exists` is provided, a tuple containing a Flask Response
+      object and an HTTP status code. Otherwise, it returns the image
+      file's binary data.
+
+    The JSON Response (when `verify_exists` is present) has the following
+    structure:
+
+        {
+            "success": bool,
+            "message": str,
+            "data": null
+        }
+
+    - `success`: A boolean indicating whether the file exists.
+    - `message`: A string containing a descriptive message about the result.
+    - `data`: Always `null`.
+
+    Example Request:
+
+        GET /projectname/get_or_verify_facsimile_file/1234/5/2
+        GET /projectname/get_or_verify_facsimile_file/1234/5/2/verify_exists
+
+    Example Success Response for File Verification (HTTP 200):
+
+        {
+            "success": true,
+            "message": "Facsimile file exists.",
+            "data": null
+        }
+
+    Example Error Response (HTTP 404 for verification or retrieval):
+
+        {
+            "success": false,
+            "message": "Facsimile file not found.",
+            "data": null
+        }
+
+    Status Codes:
+
+    - 200 - OK: The request was successful. For verification, the file
+                exists; for retrieval, the image binary data is returned.
+    - 400 - Bad Request: One or more URL path parameters are invalid.
+    - 404 - Not Found: The specified facsimile file does not exist.
+    - 500 - Internal Server Error: Database query, configuration error,
+            or file access failed.
+    """
+    # Validate URL path parameters
+    project_id = get_project_id_from_name(project)
+    if not project_id:
+        return create_error_response("Validation error: 'project' does not exist.")
+
+    collection_id = int_or_none(collection_id)
+    if not collection_id or collection_id < 1:
+        return create_error_response("Validation error: 'collection_id' must be a positive integer.")
+
+    file_nr = int_or_none(file_nr)
+    if not file_nr or file_nr < 1:
+        return create_error_response("Validation error: 'file_nr' must be a positive integer.")
+
+    zoom_level = int_or_none(zoom_level)
+    if not validate_int(zoom_level, 1, 4):
+        return create_error_response("Validation error: 'zoom_level' must be an integer with value 1, 2, 3 or 4.")
+
+    # Verify facsimile collection exists in database
+    try:
+        with db_engine.connect() as connection:
+            facs_coll_table = get_table("publication_facsimile_collection")
+            stmt = (
+                select(facs_coll_table)
+                .where(facs_coll_table.c.id == collection_id)
+            )
+            result = connection.execute(stmt).first()
+    except Exception:
+        logger.exception(f"Database error retrieving facsimile collection with ID {collection_id}.")
+        return create_error_response("Unexpected error: failed to get facsimile collection from database.", 500)
+
+    if result is None:
+        return create_error_response("Validation error: could not find facsimile collection with given ID.")
+
+    # Set the folder path based on the database or configuration
+    folder_path = getattr(result, "folder_path", None)
+    if folder_path:
+        base_path = folder_path
+    else:
+        config = get_project_config(project)
+        if config is None:
+            return create_error_response("Error: project config does not exist on server.", 500)
+        base_path = safe_join(config["file_root"], "facsimiles")
+
+    file_path = safe_join(base_path, collection_id, zoom_level, f"{file_nr}.jpg")
+
+    # Check if the file exists or retrieve its contents based on `verify_exists`
+    if verify_exists is not None:
+        if os.path.isfile(file_path):
+            return create_success_response("Facsimile file exists.")
+        else:
+            return create_error_response("Facsimile file not found.", 404)
+    else:
+        try:
+            with open(file_path, "rb") as img_file:
+                content = img_file.read()
+            return Response(content, status=200, content_type="image/jpeg")
+        except Exception:
+            logger.exception(f"Error reading facsimile at {file_path}.")
+            return create_error_response("Facsimile file not found.", 404)
