@@ -90,6 +90,7 @@ def list_user_projects():
                 select(project_table)
                 .where(project_table.c.deleted < 1)
                 .where(project_table.c.name.in_(user_projects))
+                .order_by(project_table.c.name)
             )
             rows = connection.execute(stmt).fetchall()
 
