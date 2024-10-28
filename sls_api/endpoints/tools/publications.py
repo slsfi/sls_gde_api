@@ -1078,8 +1078,9 @@ def link_text_to_publication(project, publication_id):
 @project_permission_required
 def get_or_verify_facsimile_file(project, collection_id, file_nr, zoom_level, verify_exists=None):
     """
-    Retrieve or verify the existence of a facsimile file for a specific
-    facsimile collection in the given project.
+    Retrieve a facsimile file or verify the existence of one or more
+    facsimile files for a specific facsimile collection in the given
+    project.
 
     URL Path Parameters:
 
@@ -1087,18 +1088,21 @@ def get_or_verify_facsimile_file(project, collection_id, file_nr, zoom_level, ve
       facsimile collection.
     - collection_id (int, required): The ID of the facsimile collection.
       Must be a positive integer.
-    - file_nr (int, required): The number of the facsimile file to
-      retrieve. Must be a positive integer.
+    - file_nr (int or str, required): The number of the facsimile file to
+      retrieve. Must be a positive integer to retrieve or verify a single
+      file, or the fixed string 'all' to verify all image files in the
+      facsimile collection.
     - zoom_level (int, required): The zoom level of the facsimile file.
       Must be an integer with value 1, 2, 3 or 4.
     - verify_exists (bool, optional): If present, verifies the existence
-      of the file instead of retrieving it.
+      of the file (or files) instead of retrieving it. If `file_nr` equals
+      'all', 'verify_exists' is treated as `True`.
 
     Returns:
 
-    - If `verify_exists` is provided, a tuple containing a Flask Response
-      object and an HTTP status code. Otherwise, it returns the image
-      file's binary data.
+    - If `verify_exists` is provided or `file_nr` is 'all', a tuple
+      containing a Flask Response object and an HTTP status code.
+      Otherwise, it returns the image file's binary data.
 
     The JSON Response (when `verify_exists` is present) has the following
     structure:
@@ -1106,17 +1110,18 @@ def get_or_verify_facsimile_file(project, collection_id, file_nr, zoom_level, ve
         {
             "success": bool,
             "message": str,
-            "data": null
+            "data": null or object
         }
 
     - `success`: A boolean indicating whether the file exists.
     - `message`: A string containing a descriptive message about the result.
-    - `data`: Always `null`.
+    - `data`: `null` or an object with a list of missing file numbers.
 
     Example Request:
 
         GET /projectname/get_or_verify_facsimile_file/1234/5/2
         GET /projectname/get_or_verify_facsimile_file/1234/5/2/verify_exists
+        GET /projectname/get_or_verify_facsimile_file/1234/all/2
 
     Example Success Response for File Verification (HTTP 200):
 
@@ -1126,7 +1131,8 @@ def get_or_verify_facsimile_file(project, collection_id, file_nr, zoom_level, ve
             "data": null
         }
 
-    Example Error Response (HTTP 404 for verification or retrieval):
+    Example Error Response (HTTP 404 for verification or retrieval of
+    single file):
 
         {
             "success": false,
@@ -1134,14 +1140,25 @@ def get_or_verify_facsimile_file(project, collection_id, file_nr, zoom_level, ve
             "data": null
         }
 
+    Example Error Response (HTTP 404 for verification of all files
+    in a collection):
+
+        {
+            "success": false,
+            "message": "5 facsimile files not found.",
+            "data": {
+                "missing_file_numbers": [4, 11, 12, 27, 61]
+            }
+        }
+
     Status Codes:
 
     - 200 - OK: The request was successful. For verification, the file
                 exists; for retrieval, the image binary data is returned.
     - 400 - Bad Request: One or more URL path parameters are invalid.
+    - 403 - Forbidden: Permission denied to access facsimile file.
     - 404 - Not Found: The specified facsimile file does not exist.
-    - 500 - Internal Server Error: Database query, configuration error,
-            or file access failed.
+    - 500 - Internal Server Error: Database query or file reading failed.
     """
     # Validate URL path parameters
     project_id = get_project_id_from_name(project)
@@ -1152,9 +1169,10 @@ def get_or_verify_facsimile_file(project, collection_id, file_nr, zoom_level, ve
     if not collection_id or collection_id < 1:
         return create_error_response("Validation error: 'collection_id' must be a positive integer.")
 
-    file_nr = int_or_none(file_nr)
-    if not file_nr or file_nr < 1:
-        return create_error_response("Validation error: 'file_nr' must be a positive integer.")
+    if file_nr != "all":
+        file_nr = int_or_none(file_nr)
+        if not file_nr or file_nr < 1:
+            return create_error_response("Validation error: 'file_nr' must be a positive integer or 'all'.")
 
     zoom_level = int_or_none(zoom_level)
     if not validate_int(zoom_level, 1, 4):
@@ -1186,19 +1204,55 @@ def get_or_verify_facsimile_file(project, collection_id, file_nr, zoom_level, ve
             return create_error_response("Error: project config does not exist on server.", 500)
         base_path = safe_join(config["file_root"], "facsimiles")
 
-    file_path = safe_join(base_path, collection_id, zoom_level, f"{file_nr}.jpg")
-
-    # Check if the file exists or retrieve its contents based on `verify_exists`
-    if verify_exists is not None:
-        if os.path.isfile(file_path):
-            return create_success_response("Facsimile file exists.")
-        else:
-            return create_error_response("Facsimile file not found.", 404)
+    # Create list of file paths where each item is a tuple with the file
+    # number as the first part and the path as the second part.
+    file_paths = []
+    if file_nr == "all":
+        for i in range(1, result.number_of_pages + 1):
+            file_paths.append(
+                (i, safe_join(base_path, str(collection_id), str(zoom_level), f"{str(i)}.jpg"))
+            )
     else:
+        file_paths.append(
+            (file_nr, safe_join(base_path, str(collection_id), str(zoom_level), f"{file_nr}.jpg"))
+        )
+
+    # Check if the file(s) exist(s) or retrieve image file
+    if verify_exists is not None or file_nr == "all":
+        # Check if one or more files exist
+        missing_file_numbers = []
+        for file_number, path in file_paths:
+            if not os.path.isfile(path):
+                missing_file_numbers.append(file_number)
+
+        if len(file_paths) > 1:
+            if len(missing_file_numbers) > 0:
+                return create_error_response(
+                    f"{len(missing_file_numbers)} facsimile files not found.",
+                    404,
+                    {"missing_file_numbers": missing_file_numbers}
+                )
+            else:
+                return create_success_response("Facsimile files exist.")
+        else:
+            if len(missing_file_numbers) > 0:
+                return create_error_response("Facsimile file not found.", 404)
+            else:
+                return create_success_response("Facsimile file exists.")
+    else:
+        # Retrieve single image file
         try:
-            with open(file_path, "rb") as img_file:
+            # Access the path part of the first tuple in the list
+            _, path = file_paths[0]
+            with open(path, "rb") as img_file:
                 content = img_file.read()
             return Response(content, status=200, content_type="image/jpeg")
-        except Exception:
-            logger.exception(f"Error reading facsimile at {file_path}.")
+        except FileNotFoundError:
+            logger.exception(f"Error reading facsimile: file not found at {path}.")
             return create_error_response("Facsimile file not found.", 404)
+        except PermissionError:
+            logger.exception(f"Permission denied when accessing facsimile file at {path}.")
+            return create_error_response("Error: permission denied to access facsimile file.", 403)
+        except OSError:
+            logger.exception(f"I/O error accessing facsimile file at {path}.")
+            return create_error_response("Error accessing facsimile file.", 500)
