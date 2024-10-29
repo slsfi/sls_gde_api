@@ -1073,8 +1073,8 @@ def link_text_to_publication(project, publication_id):
         return create_error_response(f"Unexpected error: failed to create new publication {text_type}.", 500)
 
 
-@publication_tools.route("/<project>/get_or_verify_facsimile_file/<collection_id>/<file_nr>/<zoom_level>")
-@publication_tools.route("/<project>/get_or_verify_facsimile_file/<collection_id>/<file_nr>/<zoom_level>/<verify_exists>")
+@publication_tools.route("/<project>/get-or-verify-facsimile-file/<collection_id>/<file_nr>/<zoom_level>")
+@publication_tools.route("/<project>/get-or-verify-facsimile-file/<collection_id>/<file_nr>/<zoom_level>/<verify_exists>")
 @project_permission_required
 def get_or_verify_facsimile_file(project, collection_id, file_nr, zoom_level, verify_exists=None):
     """
