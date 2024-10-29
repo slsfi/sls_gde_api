@@ -98,8 +98,8 @@ def list_user_projects():
                 data=[row._asdict() for row in rows]
             )
 
-    except Exception as e:
-        logger.exception(f"Exception retrieving user projects: {str(e)}")
+    except Exception:
+        logger.exception("Exception retrieving user projects.")
         return create_error_response("Unexpected error: failed to retrieve user projects.", 500)
 
 
@@ -233,8 +233,8 @@ def add_new_project():
                     status_code=201
                 )
 
-    except Exception as e:
-        logger.exception(f"Exception creating new project: {str(e)}")
+    except Exception:
+        logger.exception("Exception creating new project.")
         return create_error_response("Unexpected error: failed to create new project.", 500)
 
 
@@ -372,8 +372,8 @@ def edit_project(project_id):
                     data=updated_row._asdict()
                 )
 
-    except Exception as e:
-        logger.exception(f"Exception updating project: {str(e)}")
+    except Exception:
+        logger.exception("Exception updating project.")
         return create_error_response("Unexpected error: failed to update project.", 500)
 
 
@@ -600,11 +600,11 @@ def edit_publication_collection(project, collection_id):
                 )
 
     except CascadeUpdateError as ce:
-        logger.exception(f"Error updating publication collection: {ce.message}")
+        logger.error(f"Error updating publication collection: {ce.message}")
         return create_error_response(f"Unexpected error: {ce.message}", 500)
 
-    except Exception as e:
-        logger.exception(f"Exception updating publication collection: {str(e)}")
+    except Exception:
+        logger.exception("Exception updating publication collection.")
         return create_error_response("Unexpected error: failed to update publication collection.", 500)
 
 
@@ -978,11 +978,11 @@ def edit_publication(project, publication_id):
                 )
 
     except CascadeUpdateError as ce:
-        logger.exception(f"Error updating publication: {ce.message}")
+        logger.error(f"Error updating publication: {ce.message}")
         return create_error_response(f"Unexpected error: {ce.message}", 500)
 
-    except Exception as e:
-        logger.exception(f"Exception updating publication: {str(e)}")
+    except Exception:
+        logger.exception("Exception updating publication.")
         return create_error_response("Unexpected error: failed to update publication.", 500)
 
 
@@ -1157,8 +1157,8 @@ def edit_comment(project, publication_id):
                     data=updated_row._asdict()
                 )
 
-    except Exception as e:
-        logger.exception(f"Exception updating publication comment: {str(e)}")
+    except Exception:
+        logger.exception("Exception updating publication comment.")
         return create_error_response("Unexpected error: failed to update publication comment.", 500)
 
 
@@ -1361,8 +1361,8 @@ def edit_manuscript(project, manuscript_id):
                     data=updated_row._asdict()
                 )
 
-    except Exception as e:
-        logger.exception(f"Exception updating publication manuscript: {str(e)}")
+    except Exception:
+        logger.exception("Exception updating publication manuscript.")
         return create_error_response("Unexpected error: failed to update publication manuscript.", 500)
 
 
@@ -1564,8 +1564,8 @@ def edit_version(project, version_id):
                     data=updated_row._asdict()
                 )
 
-    except Exception as e:
-        logger.exception(f"Exception updating publication version: {str(e)}")
+    except Exception:
+        logger.exception("Exception updating publication version.")
         return create_error_response("Unexpected error: failed to update publication version.", 500)
 
 

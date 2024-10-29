@@ -172,8 +172,8 @@ def create_facsimile_collection(project):
                     status_code=201
                 )
 
-    except Exception as e:
-        logger.exception(f"Exception creating new facsimile collection: {str(e)}")
+    except Exception:
+        logger.exception("Exception creating new facsimile collection.")
         return create_error_response("Unexpected error: failed to create new facsimile collection.", 500)
 
 
@@ -346,8 +346,8 @@ def edit_facsimile_collection(project, collection_id):
                     data=updated_row._asdict()
                 )
 
-    except Exception as e:
-        logger.exception(f"Exception updating facsimile collection: {str(e)}")
+    except Exception:
+        logger.exception("Exception updating facsimile collection.")
         return create_error_response("Unexpected error: failed to update facsimile collection.", 500)
 
 
@@ -550,8 +550,8 @@ def list_facsimile_collections(project, order_by="id", direction="desc"):
                 data=[row._asdict() for row in rows]
             )
 
-    except Exception as e:
-        logger.exception(f"Exception retrieving facsimile collections: {str(e)}")
+    except Exception:
+        logger.exception("Exception retrieving facsimile collections.")
         return create_error_response("Unexpected error: failed to retrieve facsimile collections.", 500)
 
 
@@ -737,8 +737,8 @@ def link_facsimile_collection_to_publication(project, collection_id):
                     status_code=201
                 )
 
-    except Exception as e:
-        logger.exception(f"Exception creating new publication facsimile: {str(e)}")
+    except Exception:
+        logger.exception("Exception creating new publication facsimile.")
         return create_error_response("Unexpected error: failed to create new publication facsimile.", 500)
 
 
@@ -913,8 +913,8 @@ def edit_facsimile(project):
                     data=updated_row._asdict()
                 )
 
-    except Exception as e:
-        logger.exception(f"Exception updating publication facsimile: {str(e)}")
+    except Exception:
+        logger.exception("Exception updating publication facsimile.")
         return create_error_response("Unexpected error: failed to update publication facsimile.", 500)
 
 
@@ -1051,8 +1051,8 @@ def list_facsimile_collection_links(project, collection_id, order_by="id", direc
                 data=[row._asdict() for row in rows]
             )
 
-    except Exception as e:
-        logger.exception(f"Exception retrieving publication facsimiles: {str(e)}")
+    except Exception:
+        logger.exception("Exception retrieving publication facsimiles.")
         return create_error_response("Unexpected error: failed to retrieve publication facsimiles.", 500)
 
 
@@ -1179,8 +1179,8 @@ def list_publication_collections(project):
                 data=[row._asdict() for row in rows]
             )
 
-    except Exception as e:
-        logger.exception(f"Exception retrieving publication collections: {str(e)}")
+    except Exception:
+        logger.exception("Exception retrieving publication collections.")
         return create_error_response("Unexpected error: failed to retrieve publication collections.", 500)
 
 
@@ -1325,8 +1325,8 @@ def new_publication_collection(project):
                     status_code=201
                 )
 
-    except Exception as e:
-        logger.exception(f"Exception creating new publication collection: {str(e)}")
+    except Exception:
+        logger.exception("Exception creating new publication collection.")
         return create_error_response("Unexpected error: failed to create new publication collection.", 500)
 
 
@@ -1456,8 +1456,8 @@ def list_publications(project, collection_id, order_by="id"):
                     data=[row._asdict() for row in rows]
                 )
 
-    except Exception as e:
-        logger.exception(f"Exception retrieving publications: {str(e)}")
+    except Exception:
+        logger.exception("Exception retrieving publications.")
         return create_error_response("Unexpected error: failed to retrieve publications.", 500)
 
 
@@ -1664,6 +1664,6 @@ def new_publication(project, collection_id):
                     status_code=201
                 )
 
-    except Exception as e:
-        logger.exception(f"Exception creating new publication: {str(e)}")
+    except Exception:
+        logger.exception("Exception creating new publication.")
         return create_error_response("Unexpected error: failed to create new publication.", 500)
