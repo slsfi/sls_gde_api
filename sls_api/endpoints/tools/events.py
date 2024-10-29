@@ -303,8 +303,8 @@ def list_project_subjects(project, order_by="last_name", direction="asc"):
                 data=[row._asdict() for row in rows]
             )
 
-    except Exception as e:
-        logger.exception(f"Exception retrieving project subjects: {str(e)}")
+    except Exception:
+        logger.exception("Exception retrieving project subjects.")
         return create_error_response("Unexpected error: failed to retrieve person records in project.", 500)
 
 
@@ -490,8 +490,8 @@ def add_new_subject(project):
                     status_code=201
                 )
 
-    except Exception as e:
-        logger.exception(f"Exception creating new subject: {str(e)}")
+    except Exception:
+        logger.exception("Exception creating new subject.")
         return create_error_response("Unexpected error: failed to create new person record.", 500)
 
 
@@ -690,8 +690,8 @@ def edit_subject(project, subject_id):
                     data=updated_row._asdict()
                 )
 
-    except Exception as e:
-        logger.exception(f"Exception updating subject: {str(e)}")
+    except Exception:
+        logger.exception("Exception updating subject.")
         return create_error_response("Unexpected error: failed to update person record.", 500)
 
 
@@ -900,8 +900,8 @@ def add_new_translation(project):
                     status_code=201
                 )
 
-    except Exception as e:
-        logger.exception(f"Exception creating new translation: {str(e)}")
+    except Exception:
+        logger.exception("Exception creating new translation.")
         return create_error_response("Unexpected error: failed to create new translation.", 500)
 
 
@@ -1075,8 +1075,8 @@ def edit_translation(project, translation_id):
                             status_code=201
                         )
 
-                    except Exception as e:
-                        logger.exception(f"Exception creating new translation text: {str(e)}")
+                    except Exception:
+                        logger.exception("Exception creating new translation text.")
                         return create_error_response("Unexpected error: failed to create new translation text.", 500)
 
                 else:
@@ -1106,8 +1106,8 @@ def edit_translation(project, translation_id):
                         data=updated_row._asdict()
                     )
 
-    except Exception as e:
-        logger.exception(f"Exception updating translation text: {str(e)}")
+    except Exception:
+        logger.exception("Exception updating translation text.")
         return create_error_response("Unexpected error: failed to update translation text.", 500)
 
 
@@ -1258,8 +1258,8 @@ def list_translations(project, translation_id):
                     data=[row._asdict() for row in rows]
                 )
 
-    except Exception as e:
-        logger.exception(f"Exception retrieving translations: {str(e)}")
+    except Exception:
+        logger.exception("Exception retrieving translations.")
         return create_error_response("Unexpected error: failed to retrieve translations.", 500)
 
 

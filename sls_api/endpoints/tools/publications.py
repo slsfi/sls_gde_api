@@ -135,8 +135,8 @@ def get_publications(project, order_by="id", direction="asc"):
                 data=[row._asdict() for row in rows]
             )
 
-    except Exception as e:
-        logger.exception(f"Exception retrieving publications: {str(e)}")
+    except Exception:
+        logger.exception("Exception retrieving publications.")
         return create_error_response("Unexpected error: failed to retrieve publications.", 500)
 
 
@@ -246,8 +246,8 @@ def get_publication(project, publication_id):
                 data=result._asdict()
             )
 
-    except Exception as e:
-        logger.exception(f"Exception retrieving publication: {str(e)}")
+    except Exception:
+        logger.exception("Exception retrieving publication.")
         return create_error_response("Unexpected error: failed to retrieve publication.", 500)
 
 
@@ -356,8 +356,8 @@ def get_publication_versions(project, publication_id):
                 data=[row._asdict() for row in rows]
             )
 
-    except Exception as e:
-        logger.exception(f"Exception retrieving publication versions: {str(e)}")
+    except Exception:
+        logger.exception("Exception retrieving publication versions.")
         return create_error_response("Unexpected error: failed to retrieve publication versions.", 500)
 
 
@@ -467,8 +467,8 @@ def get_publication_manuscripts(project, publication_id):
                 data=[row._asdict() for row in rows]
             )
 
-    except Exception as e:
-        logger.exception(f"Exception retrieving publication manuscripts: {str(e)}")
+    except Exception:
+        logger.exception("Exception retrieving publication manuscripts.")
         return create_error_response("Unexpected error: failed to retrieve publication manuscripts.", 500)
 
 
@@ -573,8 +573,8 @@ def get_publication_tags(project, publication_id):
                 data=[row._asdict() for row in rows]
             )
 
-    except Exception as e:
-        logger.exception(f"Exception retrieving publication tags: {str(e)}")
+    except Exception:
+        logger.exception("Exception retrieving publication tags.")
         return create_error_response("Unexpected error: failed to retrieve publication tags.", 500)
 
 
@@ -691,8 +691,8 @@ def get_publication_facsimiles(project, publication_id):
                 data=[row._asdict() for row in rows]
             )
 
-    except Exception as e:
-        logger.exception(f"Exception retrieving publication facsimiles: {str(e)}")
+    except Exception:
+        logger.exception("Exception retrieving publication facsimiles.")
         return create_error_response("Unexpected error: failed to retrieve publication facsimiles.", 500)
 
 
@@ -803,8 +803,8 @@ def get_publication_comments(project, publication_id):
                 data=[row._asdict() for row in rows]
             )
 
-    except Exception as e:
-        logger.exception(f"Exception retrieving publication comments: {str(e)}")
+    except Exception:
+        logger.exception("Exception retrieving publication comments.")
         return create_error_response("Unexpected error: failed to retrieve publication comments.", 500)
 
 
@@ -1066,6 +1066,6 @@ def link_text_to_publication(project, publication_id):
                     status_code=201
                 )
 
-    except Exception as e:
-        logger.exception(f"Exception creating new publication {text_type}: {str(e)}")
+    except Exception:
+        logger.exception(f"Exception creating new publication {text_type}.")
         return create_error_response(f"Unexpected error: failed to create new publication {text_type}.", 500)
