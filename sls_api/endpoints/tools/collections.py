@@ -1197,7 +1197,7 @@ def list_publication_collections(project, order_by="id", direction="asc"):
             )
 
     except Exception:
-        logger.exception(f"Exception retrieving publication collections.")
+        logger.exception("Exception retrieving publication collections.")
         return create_error_response("Unexpected error: failed to retrieve publication collections.", 500)
 
 
