@@ -1,6 +1,6 @@
 import logging
 from flask import Blueprint, request
-from sqlalchemy import select, text, and_, or_, not_, asc, desc
+from sqlalchemy import select, and_, or_, not_, asc, desc
 from datetime import datetime
 
 from sls_api.endpoints.generics import db_engine, get_project_id_from_name, get_table, \
@@ -1057,15 +1057,21 @@ def list_facsimile_collection_links(project, collection_id, order_by="id", direc
 
 
 @collection_tools.route("/<project>/publication_collection/list/")
+@collection_tools.route("/<project>/publication_collection/list/<order_by>/<direction>/")
 @project_permission_required
-def list_publication_collections(project):
+def list_publication_collections(project, order_by="id", direction="asc"):
     """
-    List all (non-deleted) publication collections for a given project.
+    List all (non-deleted) publication collections for a given project,
+    with optional sorting by publication collection table columns.
 
     URL Path Parameter:
 
     - project (str, required): The name of the project to retrieve
       publication collections for.
+    - order_by (str, optional): The column by which to order the publication
+      collections. For example "id", "name", "date_modified". Defaults to "id".
+    - direction (str, optional): The sort direction, valid values are `asc`
+      (ascending, default) and `desc` (descending).
 
     Returns:
 
@@ -1086,6 +1092,7 @@ def list_publication_collections(project):
     Example Request:
 
         GET /projectname/publication_collection/list/
+        GET /projectname/publication_collection/list/name/asc/
 
     Example Success Response (HTTP 200):
 
@@ -1130,57 +1137,67 @@ def list_publication_collections(project):
     - 400 - Bad Request: The project does not exist.
     - 500 - Internal Server Error: Database query or execution failed.
     """
+    # Verify that project name is valid and get project_id
     project_id = get_project_id_from_name(project)
     if not project_id:
         return create_error_response("Validation error: 'project' does not exist.")
 
-    statement = """
-        SELECT
-            pc.id,
-            pc.name,
-            pc.published,
-            pc.date_created,
-            pc.date_modified,
-            pc.date_published_externally,
-            pc.deleted,
-            pc.legacy_id,
-            pc.project_id,
-            pc.publication_collection_title_id,
-            pc.publication_collection_introduction_id,
-            pc.name_translation_id,
-            pct.original_filename AS collection_title_filename,
-            pci.original_filename AS collection_intro_filename,
-            pct.published AS collection_title_published,
-            pci.published AS collection_intro_published
-        FROM
-            publication_collection pc
-        LEFT JOIN
-            publication_collection_title pct
-            ON pct.id = pc.publication_collection_title_id
-        LEFT JOIN
-            publication_collection_introduction pci
-            ON pci.id = pc.publication_collection_introduction_id
-        WHERE
-            pc.project_id = :project_id
-            AND pc.deleted < 1
-        ORDER BY
-            pc.id
-    """
-
     try:
+        # Get table metadata
+        collection_table = get_table("publication_collection")
+        title_table = get_table("publication_collection_title")
+        introduction_table = get_table("publication_collection_introduction")
+
+        # Verify order_by and direction
+        if order_by not in collection_table.c:
+            return create_error_response("Validation error: 'order_by' must be a valid column in the publication_collection table.")
+
+        if direction not in ["asc", "desc"]:
+            return create_error_response("Validation error: 'direction' must be either 'asc' or 'desc'.")
+
+        # Select all columns from the collection table and the
+        # `original_filename` and `published` columns from the
+        # collection title and introduction tables.
+        stmt = select(
+            *collection_table.c,
+            title_table.c.original_filename.label("collection_title_filename"),
+            introduction_table.c.original_filename.label("collection_intro_filename"),
+            title_table.c.published.label("collection_title_published"),
+            introduction_table.c.published.label("collection_intro_published")
+        ).select_from(
+            collection_table.outerjoin(
+                title_table,
+                collection_table.c.publication_collection_title_id == title_table.c.id
+            ).outerjoin(
+                introduction_table,
+                collection_table.c.publication_collection_introduction_id == introduction_table.c.id
+            )
+        ).where(
+            and_(
+                collection_table.c.project_id == project_id,
+                collection_table.c.deleted < 1
+            )
+        )
+
+        if direction == "asc":
+            stmt = stmt.order_by(
+                asc(collection_table.c[order_by])
+            )
+        else:
+            stmt = stmt.order_by(
+                desc(collection_table.c[order_by])
+            )
+
         with db_engine.connect() as connection:
-            rows = connection.execute(
-                text(statement),
-                {"project_id": project_id}
-            ).fetchall()
+            rows = connection.execute(stmt).fetchall()
 
             return create_success_response(
                 message=f"Retrieved {len(rows)} publication collections.",
                 data=[row._asdict() for row in rows]
             )
 
-    except Exception as e:
-        logger.exception(f"Exception retrieving publication collections: {str(e)}")
+    except Exception:
+        logger.exception(f"Exception retrieving publication collections.")
         return create_error_response("Unexpected error: failed to retrieve publication collections.", 500)
 
 
