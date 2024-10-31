@@ -22,7 +22,7 @@ setup(
         'ruamel.yaml==0.18.6',
         'requests==2.32.2',
         'sqlalchemy==2.0.30',
-        'werkzeug==3.0.3',
+        'werkzeug==3.0.6',
         'uwsgi==2.0.25.1'
     ]
 )
