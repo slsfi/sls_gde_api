@@ -6,9 +6,12 @@ import json
 import logging
 import os
 import subprocess
+import xml.etree.ElementTree as ET
 from werkzeug.security import safe_join
 
-from sls_api.endpoints.generics import get_project_config, project_permission_required
+from sls_api.endpoints.generics import get_project_config, \
+    project_permission_required, create_error_response, \
+    create_success_response
 
 
 file_tools = Blueprint("file_tools", __name__)
@@ -441,6 +444,88 @@ def get_file_tree(project, file_path=None):
         }), 500
     tree = path_list_to_tree(file_listing)
     return jsonify(tree)
+
+
+@file_tools.route("/<project>/get_metadata_from_xml/by_path/<path:file_path>")
+@project_permission_required
+def get_metadata_from_xml_file(project, file_path: str):
+    # Check that the file in file_path has a .xml extension
+    if not file_path.endswith(".xml"):
+        return create_error_response("Error: the file path must point to a file with a .xml extension.", 400)
+
+    # Validate project config
+    config = get_project_config(project)
+    if config is None:
+        return create_error_response("Error: project config does not exist on server.", 500)
+    
+    config_ok = check_project_config(project)
+    if not config_ok[0]:
+        return create_error_response(f"Error: {config_ok[1]}", 500)
+    
+    if not is_a_test(project):
+        # Sync the desired file from remote repository to local API repository
+        update_repo = update_files_in_git_repo(project, file_path)
+        if not update_repo[0]:
+            logger.error(f"Git update failed to execute properly: {update_repo[1]}")
+            return create_error_response("Error: git update failed to execute properly.", 500)
+    
+    full_path = safe_join(config["file_root"], file_path)
+
+    if not os.path.isfile(full_path):
+        return create_error_response("Error: the requested file was not found in the git repository.", 404)
+
+    max_file_size = 10 * 1024 * 1024  # 10 MB
+    if os.path.getsize(full_path) > max_file_size:
+        return create_error_response("Error: File size exceeds the maximum allowed limit.", 413)
+
+    try:
+        # Parse the XML file and extract relevant metadata from it
+        with open(full_path, "r", encoding="utf-8-sig") as xml_file:
+            tree = ET.parse(xml_file)
+        root = tree.getroot()
+
+        # Determine namespace
+        ns = {"tei": "http://www.tei-c.org/ns/1.0"} if "http://www.tei-c.org/ns/1.0" in root.tag else {}
+
+        # Helper function to get full text including subelements
+        def get_full_text(element):
+            return "".join(element.itertext()) if element is not None else None
+
+        # Extract the full text of <title> inside <titleStmt>
+        title_element = root.find("./tei:teiHeader/tei:fileDesc/tei:titleStmt/tei:title", namespaces=ns)
+        title = get_full_text(title_element)
+
+        # Extract the @when attribute value in <origDate> within <sourceDesc>
+        orig_date_element = root.find("./tei:teiHeader/tei:fileDesc/tei:sourceDesc//tei:origDate", namespaces=ns)
+        orig_date = orig_date_element.get("when") if orig_date_element is not None else None
+        if not orig_date:
+            # Search for a <date> with @when in <bibl> within <sourceDesc>
+            date_element = root.find("./tei:teiHeader/tei:fileDesc/tei:sourceDesc/tei:bibl//tei:date", namespaces=ns)
+            orig_date = date_element.get("when") if date_element is not None else None
+
+        # Extract the @xml:lang attribute in <text>
+        text_element = root.find("./tei:text", namespaces=ns)
+        language = text_element.get("{http://www.w3.org/XML/1998/namespace}lang") if text_element is not None else None
+
+        metadata = {
+            "name": title,
+            "original_publication_date": orig_date,
+            "language": language
+        }
+        return create_success_response("Metadata retrieved from XML file.", data=metadata)
+
+    except FileNotFoundError:
+        logger.exception("File not found error when trying to open XML file for metadata extraction.")
+        return create_error_response("Error: permission denied when trying to read the XML file.", 404)
+    except ET.ParseError:
+        logger.exception("Parse error when trying to extract metadata from XML file.")
+        return create_error_response("Error: The XML file is not well-formed or could not be parsed.", 500)
+    except PermissionError:
+        logger.exception("Permission denied error when trying to extract metadata from XML file.")
+        return create_error_response("Error: permission denied when trying to read the XML file.", 403)
+    except Exception:
+        logger.exception("Exception extracting metadata from XML file.")
+        return create_error_response("Unexpected error: unable to extract metadata from XML file.", 500)
 
 
 def path_list_to_tree(path_list):
