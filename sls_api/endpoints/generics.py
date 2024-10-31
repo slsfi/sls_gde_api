@@ -768,7 +768,8 @@ def create_success_response(
 
 def create_error_response(
     message: str,
-    status_code: int = 400
+    status_code: int = 400,
+    data: Optional[Any] = None
 ) -> Tuple[Response, int]:
     """
     Create a standardized JSON error response.
@@ -777,6 +778,7 @@ def create_error_response(
 
         message (str): A message describing the error.
         status_code (int, optional): The HTTP status code for the response. Defaults to 400.
+        data (Any, optional): The data to include in the response. Defaults to None.
 
     Returns:
 
@@ -785,7 +787,7 @@ def create_error_response(
     return jsonify({
         "success": False,
         "message": message,
-        "data": None
+        "data": data
     }), status_code
 
 

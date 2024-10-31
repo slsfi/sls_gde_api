@@ -1,11 +1,13 @@
 import logging
-from flask import Blueprint, request
+import os
+from flask import Blueprint, request, Response
 from flask_jwt_extended import jwt_required
 from sqlalchemy import asc, desc, select, text
+from werkzeug.security import safe_join
 
 from sls_api.endpoints.generics import db_engine, get_project_id_from_name, \
     get_table, int_or_none, validate_int, project_permission_required, \
-    create_error_response, create_success_response
+    create_error_response, create_success_response, get_project_config
 
 
 publication_tools = Blueprint("publication_tools", __name__)
@@ -1069,3 +1071,293 @@ def link_text_to_publication(project, publication_id):
     except Exception:
         logger.exception(f"Exception creating new publication {text_type}.")
         return create_error_response(f"Unexpected error: failed to create new publication {text_type}.", 500)
+
+
+@publication_tools.route("/<project>/verify-facsimile-file/<collection_id>/<file_nr>/<zoom_level>")
+@project_permission_required
+def verify_facsimile_file_exists(project, collection_id, file_nr, zoom_level):
+    """
+    Verify the existence of a single facsimile file or all files in a
+    specific facsimile collection in the given project.
+
+    URL Path Parameters:
+
+    - project (str, required): The name of the project containing the
+      facsimile collection.
+    - collection_id (int, required): The ID of the facsimile collection.
+      Must be a positive integer.
+    - file_nr (int or str, required): The number of the facsimile file to
+      verify. Must be either a positive integer to verify a single
+      file, or the fixed string 'all' to verify all image files in the
+      facsimile collection.
+    - zoom_level (int, required): The zoom level of the facsimile file(s).
+      Must be an integer with value 1, 2, 3 or 4.
+
+    Returns:
+
+    - A tuple containing a Flask Response object with JSON data and an
+      HTTP status code. The JSON Response has the following structure:
+
+        {
+            "success": bool,
+            "message": str,
+            "data": null or object
+        }
+
+    - `success`: A boolean indicating whether the file exists.
+    - `message`: A string containing a descriptive message about the result.
+    - `data`: `null` or an object with an array of missing file numbers.
+
+    Example Request:
+
+        GET /projectname/verify-facsimile-file/1234/5/2
+        GET /projectname/verify-facsimile-file/1234/all/2
+
+    Example Success Response For Single File (HTTP 200):
+
+        {
+            "success": true,
+            "message": "Facsimile file exists.",
+            "data": null
+        }
+
+    Example Error Response For Single File (HTTP 404):
+
+        {
+            "success": false,
+            "message": "Facsimile file not found.",
+            "data": null
+        }
+
+    Example Error Response For All Files (HTTP 404):
+
+        {
+            "success": false,
+            "message": "5 facsimile files not found.",
+            "data": {
+                "missing_file_numbers": [4, 11, 12, 27, 61]
+            }
+        }
+
+    Status Codes:
+
+    - 200 - OK: The request was successful; the file(s) exist(s).
+    - 400 - Bad Request: One or more URL path parameters are invalid.
+    - 403 - Forbidden: Permission denied to access facsimile file.
+    - 404 - Not Found: The specified facsimile file does not exist.
+    - 500 - Internal Server Error: Database query or file reading failed.
+    """
+    # Validate URL path parameters
+    project_id = get_project_id_from_name(project)
+    if not project_id:
+        return create_error_response("Validation error: 'project' does not exist.")
+
+    collection_id = int_or_none(collection_id)
+    if not collection_id or collection_id < 1:
+        return create_error_response("Validation error: 'collection_id' must be a positive integer.")
+
+    if file_nr != "all":
+        file_nr = int_or_none(file_nr)
+        if not validate_int(file_nr, 1):
+            return create_error_response("Validation error: 'file_nr' must be a positive integer or 'all'.")
+
+    zoom_level = int_or_none(zoom_level)
+    if not validate_int(zoom_level, 1, 4):
+        return create_error_response("Validation error: 'zoom_level' must be an integer with value 1, 2, 3 or 4.")
+
+    # Verify facsimile collection exists in database
+    try:
+        with db_engine.connect() as connection:
+            facs_coll_table = get_table("publication_facsimile_collection")
+            stmt = (
+                select(facs_coll_table)
+                .where(facs_coll_table.c.id == collection_id)
+            )
+            result = connection.execute(stmt).first()
+    except Exception:
+        logger.exception(f"Database error retrieving facsimile collection with ID {collection_id}.")
+        return create_error_response("Unexpected error: failed to get facsimile collection from database.", 500)
+
+    if result is None:
+        return create_error_response("Validation error: could not find facsimile collection with given ID.")
+
+    # Set the folder path based on the database or configuration
+    folder_path = getattr(result, "folder_path", None)
+    if folder_path:
+        base_path = safe_join(folder_path)
+    else:
+        config = get_project_config(project)
+        if config is None:
+            return create_error_response("Error: project config does not exist on server.", 500)
+        base_path = safe_join(config["file_root"], "facsimiles")
+
+    # Create list of file paths where each item is a tuple with the file
+    # number as the first part and the path as the second part.
+    file_paths = []
+
+    if file_nr == "all":
+        image_count = int_or_none(result.number_of_pages)
+        if not validate_int(image_count, 1):
+            return create_error_response("Error: 'number_of_pages' for the facsimile collection in the database is NULL or a non-positive integer.")
+
+        for i in range(1, image_count + 1):
+            file_paths.append(
+                (i, safe_join(base_path, str(collection_id), str(zoom_level), f"{str(i)}.jpg"))
+            )
+    else:
+        file_paths.append(
+            (file_nr, safe_join(base_path, str(collection_id), str(zoom_level), f"{file_nr}.jpg"))
+        )
+
+    # Check if one or more files exist
+    missing_file_numbers = []
+    for file_number, path in file_paths:
+        try:
+            if not os.path.isfile(path):
+                missing_file_numbers.append(file_number)
+        except Exception:
+            logger.exception(f"Error checking file existence at {path}.")
+            return create_error_response("Error accessing facsimile files.", 500)
+
+    if len(file_paths) > 1:
+        if len(missing_file_numbers) > 0:
+            return create_error_response(
+                f"{len(missing_file_numbers)} facsimile files not found.",
+                404,
+                {"missing_file_numbers": missing_file_numbers}
+            )
+        else:
+            return create_success_response("All facsimile files exist.")
+    else:
+        if len(missing_file_numbers) > 0:
+            return create_error_response("Facsimile file not found.", 404)
+        else:
+            return create_success_response("Facsimile file exists.")
+
+
+@publication_tools.route("/<project>/get-single-facsimile-file/<collection_id>/<file_nr>/<zoom_level>")
+@project_permission_required
+def get_single_facsimile_file(project, collection_id, file_nr, zoom_level):
+    """
+    Retrieve a single facsimile file in a specific facsimile collection
+    in the given project. Unlike the public `get_facsimile_file` endpoint
+    in `facsimiles.py`, this endpoint does not require the facsimile
+    collection to be linked to a publication. Also, the file number of the
+    image to retrieve is not adjusted with the `start_page_number` value
+    of the collection in the database.
+
+    URL Path Parameters:
+
+    - project (str, required): The name of the project containing the
+      facsimile collection.
+    - collection_id (int, required): The ID of the facsimile collection.
+      Must be a positive integer.
+    - file_nr (int, required): The number of the facsimile file to
+      retrieve. Must be a positive integer.
+    - zoom_level (int, required): The zoom level of the facsimile file.
+      Must be an integer with value 1, 2, 3 or 4.
+
+    Returns:
+
+    - On success, the image file's binary data, otherwise a tuple
+      containing a Flask Response object with JSON data and an
+      HTTP status code. On failure, the JSON Response has the following
+      structure:
+
+        {
+            "success": bool,
+            "message": str,
+            "data": null
+        }
+
+    - `success`: `false`.
+    - `message`: A string containing a descriptive message about the result.
+    - `data`: `null`.
+
+    Example Request:
+
+        GET /projectname/get-single-facsimile-file/1234/5/2
+
+    Example Success Response (HTTP 200):
+
+        Binary content of the image file with 'Content-Type: image/jpeg'.
+
+    Example Error Response (HTTP 404):
+
+        {
+            "success": false,
+            "message": "Facsimile file not found.",
+            "data": null
+        }
+
+    Status Codes:
+
+    - 200 - OK: The request was successful; the image binary data is
+                returned.
+    - 400 - Bad Request: One or more URL path parameters are invalid.
+    - 403 - Forbidden: Permission denied to access facsimile file.
+    - 404 - Not Found: The specified facsimile file does not exist.
+    - 500 - Internal Server Error: Database query or file reading failed.
+    """
+    # Validate URL path parameters
+    project_id = get_project_id_from_name(project)
+    if not project_id:
+        return create_error_response("Validation error: 'project' does not exist.")
+
+    collection_id = int_or_none(collection_id)
+    if not collection_id or collection_id < 1:
+        return create_error_response("Validation error: 'collection_id' must be a positive integer.")
+
+    file_nr = int_or_none(file_nr)
+    if not validate_int(file_nr, 1):
+        return create_error_response("Validation error: 'file_nr' must be a positive integer.")
+
+    zoom_level = int_or_none(zoom_level)
+    if not validate_int(zoom_level, 1, 4):
+        return create_error_response("Validation error: 'zoom_level' must be an integer with value 1, 2, 3 or 4.")
+
+    # Verify facsimile collection exists in database
+    try:
+        with db_engine.connect() as connection:
+            facs_coll_table = get_table("publication_facsimile_collection")
+            stmt = (
+                select(facs_coll_table)
+                .where(facs_coll_table.c.id == collection_id)
+            )
+            result = connection.execute(stmt).first()
+    except Exception:
+        logger.exception(f"Database error retrieving facsimile collection with ID {collection_id}.")
+        return create_error_response("Unexpected error: failed to get facsimile collection from database.", 500)
+
+    if result is None:
+        return create_error_response("Validation error: could not find facsimile collection with given ID.")
+
+    # Set the file path based on the database or configuration
+    folder_path = getattr(result, "folder_path", None)
+    if folder_path:
+        base_path = folder_path
+    else:
+        config = get_project_config(project)
+        if config is None:
+            return create_error_response("Error: project config does not exist on server.", 500)
+        base_path = safe_join(config["file_root"], "facsimiles")
+
+    file_path = safe_join(base_path,
+                          str(collection_id),
+                          str(zoom_level),
+                          f"{file_nr}.jpg")
+
+    # Retrieve image file
+    try:
+        with open(file_path, "rb") as img_file:
+            content = img_file.read()
+        return Response(content, status=200, content_type="image/jpeg")
+    except FileNotFoundError:
+        logger.exception(f"Error reading facsimile: file not found at {file_path}.")
+        return create_error_response("Facsimile file not found.", 404)
+    except PermissionError:
+        logger.exception(f"Permission denied when accessing facsimile file at {file_path}.")
+        return create_error_response("Error: permission denied to access facsimile file.", 403)
+    except OSError:
+        logger.exception(f"I/O error accessing facsimile file at {file_path}.")
+        return create_error_response("Error accessing facsimile file.", 500)
