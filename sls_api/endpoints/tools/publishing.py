@@ -90,6 +90,7 @@ def list_user_projects():
                 select(project_table)
                 .where(project_table.c.deleted < 1)
                 .where(project_table.c.name.in_(user_projects))
+                .order_by(project_table.c.name)
             )
             rows = connection.execute(stmt).fetchall()
 
@@ -189,7 +190,7 @@ def add_new_project():
     name = str(name)
     is_valid_name, name_error_msg = validate_project_name(name)
     if not is_valid_name:
-        return create_error_response(f"Validation error: {name_error_msg}.")
+        return create_error_response(f"Validation error: {name_error_msg}")
 
     values["name"] = name
 
