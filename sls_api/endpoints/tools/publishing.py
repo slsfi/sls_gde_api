@@ -190,7 +190,7 @@ def add_new_project():
     name = str(name)
     is_valid_name, name_error_msg = validate_project_name(name)
     if not is_valid_name:
-        return create_error_response(f"Validation error: {name_error_msg}.")
+        return create_error_response(f"Validation error: {name_error_msg}")
 
     values["name"] = name
 
