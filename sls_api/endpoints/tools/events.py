@@ -1084,7 +1084,7 @@ def edit_translation(project, translation_id):
 
                     # Validate translation_text_id
                     translation_text_id = int_or_none(translation_text_id)
-                    if translation_text_id is None or validate_int(translation_text_id, 1):
+                    if translation_text_id is None or not validate_int(translation_text_id, 1):
                         return create_error_response("Validation error: 'translation_text_id' must be a positive integer.")
 
                     # Add date_modified
