@@ -448,7 +448,7 @@ def get_file_tree(project, file_path=None):
 
 @file_tools.route("/<project>/get_metadata_from_xml/by_path/<path:file_path>")
 @project_permission_required
-def get_metadata_from_xml_file(project, file_path: str):
+def get_metadata_from_xml_file(project: str, file_path: str):
     # Check that the file in file_path has a .xml extension
     if not file_path.endswith(".xml"):
         return create_error_response("Error: the file path must point to a file with a .xml extension.", 400)
@@ -462,28 +462,32 @@ def get_metadata_from_xml_file(project, file_path: str):
     if not config_ok[0]:
         return create_error_response(f"Error: {config_ok[1]}", 500)
 
-    # git update commented out for now, not sure it's a good idea
-    """
-    if not is_a_test(project):
-        # Sync the desired file from remote repository to local API repository
-        update_repo = update_files_in_git_repo(project, file_path)
-        if not update_repo[0]:
-            logger.error(f"Git update failed to execute properly: {update_repo[1]}")
-            return create_error_response("Error: git update failed to execute properly.", 500)
-    """
-
+    # Safely join the base directory and file path
     full_path = safe_join(config["file_root"], file_path)
+    if full_path is None:
+        return create_error_response("Error: invalid file path.", 400)
 
+    # Resolve the real, absolute paths
+    base_dir = os.path.realpath(config["file_root"])
+    full_path = os.path.realpath(full_path)
+
+    # Verify that full_path is within base_dir, i.e. file_root specified
+    # in config
+    if os.path.commonpath([base_dir, full_path]) != base_dir:
+        return create_error_response("Error: invalid file path.", 400)
+
+    # Check if the file exists
     try:
         if not os.path.isfile(full_path):
             return create_error_response("Error: the requested file was not found in the git repository.", 404)
     except Exception:
         logger.exception(f"Error accessing file at {full_path}")
-        return create_error_response(f"Error accessing file at {full_path}", 500)
+        return create_error_response(f"Error accessing file at {file_path}", 500)
 
-    max_file_size = 10 * 1024 * 1024  # 10 MB
+    # Check file size so we don't parse overly large XML files
+    max_file_size = 5 * 1024 * 1024  # 5 MB
     if os.path.getsize(full_path) > max_file_size:
-        return create_error_response("Error: file size exceeds the maximum allowed limit (10 MB).", 413)
+        return create_error_response("Error: file size exceeds the maximum allowed limit (5 MB).", 413)
 
     try:
         # Parse the XML file and extract relevant metadata from it
@@ -531,7 +535,7 @@ def get_metadata_from_xml_file(project, file_path: str):
 
     except FileNotFoundError:
         logger.exception("File not found error when trying to open XML file for metadata extraction.")
-        return create_error_response("Error: permission denied when trying to read the XML file.", 404)
+        return create_error_response("Error: file not found.", 404)
     except ET.ParseError:
         logger.exception("Parse error when trying to extract metadata from XML file.")
         return create_error_response("Error: The XML file is not well-formed or could not be parsed.", 500)
