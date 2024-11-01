@@ -1,5 +1,6 @@
 import calendar
 from collections import OrderedDict
+from datetime import datetime
 from flask import jsonify, Response
 from flask_jwt_extended import get_jwt_identity, verify_jwt_in_request
 from functools import wraps
@@ -807,3 +808,73 @@ def handle_deleted_flag(values: Dict[str, Any]) -> Dict[str, Any]:
     if values.get("deleted"):
         values["published"] = 0
     return values
+
+
+def is_valid_year_yearmonth_or_date(date_string: str) -> bool:
+    """
+    Validates if a given string conforms to either 'YYYY', 'YYYY-MM' or
+    'YYYY-MM-DD' date formats and checks if it represents a logically
+    valid year, year-month or date.
+
+    Parameters:
+
+        date_string (str): The input string to be checked.
+
+    Returns:
+
+        bool: True if the string is a valid 'YYYY', 'YYYY-MM' or
+        'YYYY-MM-DD' format and represents a logically correct year,
+        year-month or date; False otherwise.
+
+    Examples:
+
+        >>> is_valid_year_yearmonth_or_date("2023")
+        True
+        >>> is_valid_year_yearmonth_or_date("2023-10")
+        True
+        >>> is_valid_year_yearmonth_or_date("2023-10-31")
+        True
+        >>> is_valid_year_yearmonth_or_date("2023-02-29")
+        False  # 2023 is not a leap year
+        >>> is_valid_year_yearmonth_or_date("2023-13-31")
+        False  # Invalid month
+        >>> is_valid_year_yearmonth_or_date("23-10-31")
+        False  # Invalid format
+    """
+    # Check for YYYY format
+    if len(date_string) == 4 and date_string.isdigit():
+        try:
+            datetime.strptime(date_string, "%Y")
+            return True
+        except ValueError:
+            return False
+
+    # Check for YYYY-MM format
+    elif (
+        len(date_string) == 7
+        and date_string[:4].isdigit()
+        and date_string[5:7].isdigit()
+        and date_string[4] == '-'
+    ):
+        try:
+            datetime.strptime(date_string, "%Y-%m")
+            return True
+        except ValueError:
+            return False
+
+    # Check for YYYY-MM-DD format
+    elif (
+        len(date_string) == 10
+        and date_string[:4].isdigit()
+        and date_string[5:7].isdigit()
+        and date_string[8:10].isdigit()
+        and date_string[4] == '-'
+        and date_string[7] == '-'
+    ):
+        try:
+            datetime.strptime(date_string, "%Y-%m-%d")
+            return True
+        except ValueError:
+            return False
+
+    return False
