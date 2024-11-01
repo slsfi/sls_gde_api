@@ -11,7 +11,7 @@ from werkzeug.security import safe_join
 
 from sls_api.endpoints.generics import get_project_config, \
     project_permission_required, create_error_response, \
-    create_success_response
+    create_success_response, is_valid_year_yearmonth_or_date
 
 
 file_tools = Blueprint("file_tools", __name__)
@@ -457,26 +457,33 @@ def get_metadata_from_xml_file(project, file_path: str):
     config = get_project_config(project)
     if config is None:
         return create_error_response("Error: project config does not exist on server.", 500)
-    
+
     config_ok = check_project_config(project)
     if not config_ok[0]:
         return create_error_response(f"Error: {config_ok[1]}", 500)
-    
+
+    # git update commented out for now, not sure it's a good idea
+    """
     if not is_a_test(project):
         # Sync the desired file from remote repository to local API repository
         update_repo = update_files_in_git_repo(project, file_path)
         if not update_repo[0]:
             logger.error(f"Git update failed to execute properly: {update_repo[1]}")
             return create_error_response("Error: git update failed to execute properly.", 500)
-    
+    """
+
     full_path = safe_join(config["file_root"], file_path)
 
-    if not os.path.isfile(full_path):
-        return create_error_response("Error: the requested file was not found in the git repository.", 404)
+    try:
+        if not os.path.isfile(full_path):
+            return create_error_response("Error: the requested file was not found in the git repository.", 404)
+    except Exception:
+        logger.exception(f"Error accessing file at {full_path}")
+        return create_error_response(f"Error accessing file at {full_path}", 500)
 
     max_file_size = 10 * 1024 * 1024  # 10 MB
     if os.path.getsize(full_path) > max_file_size:
-        return create_error_response("Error: File size exceeds the maximum allowed limit.", 413)
+        return create_error_response("Error: file size exceeds the maximum allowed limit (10 MB).", 413)
 
     try:
         # Parse the XML file and extract relevant metadata from it
@@ -485,7 +492,7 @@ def get_metadata_from_xml_file(project, file_path: str):
         root = tree.getroot()
 
         # Determine namespace
-        ns = {"tei": "http://www.tei-c.org/ns/1.0"} if "http://www.tei-c.org/ns/1.0" in root.tag else {}
+        ns = {'tei': 'http://www.tei-c.org/ns/1.0'}
 
         # Helper function to get full text including subelements
         def get_full_text(element):
@@ -502,6 +509,14 @@ def get_metadata_from_xml_file(project, file_path: str):
             # Search for a <date> with @when in <bibl> within <sourceDesc>
             date_element = root.find("./tei:teiHeader/tei:fileDesc/tei:sourceDesc/tei:bibl//tei:date", namespaces=ns)
             orig_date = date_element.get("when") if date_element is not None else None
+
+            # Validate orig_date, must conform to YYYY, YYYY-MM or
+            # YYYY-MM-DD date formats
+            if (
+                orig_date is not None and
+                not is_valid_year_yearmonth_or_date(str(orig_date))
+            ):
+                orig_date = None
 
         # Extract the @xml:lang attribute in <text>
         text_element = root.find("./tei:text", namespaces=ns)
