@@ -12,7 +12,7 @@ setup(
         'flask==3.0.3',
         'flask-jwt-extended==4.6.0',
         'flask-sqlalchemy==3.1.1',
-        'flask-cors==4.0.1',
+        'flask-cors==5.0.0',
         'lxml==5.2.2',
         'mysqlclient==2.2.4',
         'passlib==1.7.4',
@@ -22,7 +22,7 @@ setup(
         'ruamel.yaml==0.18.6',
         'requests==2.32.2',
         'sqlalchemy==2.0.30',
-        'werkzeug==3.0.3',
+        'werkzeug==3.0.6',
         'uwsgi==2.0.25.1'
     ]
 )
