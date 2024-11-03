@@ -456,7 +456,7 @@ def get_metadata_from_xml_file(project: str, file_path: str):
     This endpoint parses a TEI (Text Encoding Initiative) XML file
     specified by `file_path` within the given `project` and extracts
     publication metadata, including the title, original publication date
-    (date of origin), and language.
+    (date of origin), language, and genre.
 
     URL Path Parameters:
 
@@ -493,7 +493,8 @@ def get_metadata_from_xml_file(project: str, file_path: str):
             "data": {
                 "name": "Publication Title",
                 "original_publication_date": "1854-07-20",
-                "language": "en"
+                "language": "en",
+                "genre": "prose"
             }
         }
 
@@ -580,6 +581,7 @@ def extract_publication_metadata_from_tei_xml(file_path: str) -> Tuple[Optional[
             - "original_publication_date" (str or None): The date of
               origin in "YYYY", "YYYY-MM", or "YYYY-MM-DD" format.
             - "language" (str or None): The language code.
+            - "genre" (str or None): The genre of the text.
             Returns `None` if an error occurred.
         - error_message (str or None): An error message if an error
           occurred; otherwise `None`.
@@ -632,7 +634,8 @@ def extract_publication_metadata_from_tei_xml(file_path: str) -> Tuple[Optional[
         metadata = {
             "name": title,
             "original_publication_date": orig_date,
-            "language": language
+            "language": language,
+            "genre": None  # Currently, genre is not extractable from the XML files
         }
         return metadata, None, 200
 
