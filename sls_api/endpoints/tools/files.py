@@ -127,30 +127,78 @@ def update_config(project):
 @project_permission_required
 def pull_changes_from_git_remote(project):
     """
-    Sync API's local repo with the git remote, ensuring that all files are updated to their latest versions
+    Sync the local git repository of a given project with its remote origin.
+
+    URL Path Parameters:
+
+    - project (str, required): The name of the project for which the git
+      repository sync is being performed.
+
+    Returns:
+
+    - A tuple containing a Flask Response object with JSON data and an
+      HTTP status code. The JSON response has the following structure:
+
+        {
+            "success": bool,
+            "message": str,
+            "data": object or null
+        }
+
+    - `success`: A boolean indicating whether the operation was successful.
+    - `message`: A string containing a descriptive message about the result.
+    - `data`: On success, an object containing a list of changed files;
+      `null` on error.
+
+    Example Request:
+
+        POST /projectname/sync_files/
+
+    Example Success Response (HTTP 200):
+
+        {
+            "success": true,
+            "message": "Git repository successfully synced.",
+            "data": {
+                "changed_files": [
+                    "file1.txt",
+                    "dir1/file2.txt"
+                ]
+            }
+        }
+
+    Example Error Response (HTTP 500):
+
+        {
+            "success": false,
+            "message": "Error: update of git repository failed.",
+            "data": null
+        }
+
+    Status Codes:
+
+    - 200 - OK: The request was successful, and the git repository was
+            synced.
+    - 500 - Internal Server Error: The project configuration is invalid,
+            or an unexpected error occurred during the sync operation.
     """
     # verify git config
-    config_okay = check_project_config(project)
-    if not config_okay[0]:
-        return jsonify({
-            "msg": "Error in git configuration, check configuration file.",
-            "reason": config_okay[1]
-        }), 500
+    config_ok = check_project_config(project)
+    if not config_ok[0]:
+        return create_error_response(f"Error: {config_ok[1]}", 500)
 
     sync_repo = update_files_in_git_repo(project)
 
     # TODO merge conflict handling, if necessary. wait and see how things pan out - may not be an issue.
 
     if sync_repo[0]:
-        return jsonify({
-            "msg": "Git repository successfully synced for project {}".format(project),
-            "changed_files": sync_repo[1]
-        })
+        return create_success_response(
+            message=f"Git repository for project '{project}' successfully synced.",
+            data={"changed_files": sync_repo[1]}
+        )
     else:
-        return jsonify({
-            "msg": "Git update failed to execute properly.",
-            "reason": sync_repo[1]
-        }), 500
+        logger.error(f"Git update failed: {sync_repo[1]}")
+        return create_error_response("Error: update of git repository failed.", 500)
 
 
 def is_a_test(project):
