@@ -12,7 +12,8 @@ from werkzeug.security import safe_join
 
 from sls_api.endpoints.generics import get_project_config, \
     project_permission_required, create_error_response, \
-    create_success_response, is_valid_year_yearmonth_or_date
+    create_success_response, is_valid_year, is_valid_date, \
+    is_valid_year_month
 
 
 file_tools = Blueprint("file_tools", __name__)
@@ -620,8 +621,12 @@ def extract_publication_metadata_from_tei_xml(file_path: str) -> Tuple[Optional[
             # Validate orig_date, must conform to YYYY, YYYY-MM
             # or YYYY-MM-DD date formats
             if (
-                orig_date is not None and
-                not is_valid_year_yearmonth_or_date(str(orig_date))
+                orig_date is not None
+                and not (
+                    is_valid_year(str(orig_date))
+                    or is_valid_year_month(str(orig_date))
+                    or is_valid_date(str(orig_date))
+                )
             ):
                 orig_date = None
 

@@ -812,11 +812,36 @@ def handle_deleted_flag(values: Dict[str, Any]) -> Dict[str, Any]:
     return values
 
 
-def is_valid_year_yearmonth_or_date(date_string: str) -> bool:
+def is_valid_year(year_string: str) -> bool:
     """
-    Validates if a given string conforms to either 'YYYY', 'YYYY-MM' or
-    'YYYY-MM-DD' date formats and checks if it represents a logically
-    valid year, year-month or date.
+    Checks if a string can be parsed as a four-digit year between 1 and 9999.
+    
+    The function validates that the input string consists of only digits and
+    represents a year between 1 and 9999. It handles both zero-padded and
+    non-zero-padded formats for years less than 1000 (e.g., "0456" and "456"
+    are both valid).
+
+    Args:
+
+        year_string (str): The input string representing a year.
+
+    Returns:
+
+        bool: True if the string represents a valid year between 1 and 9999,
+        False otherwise.
+    """
+    if not year_string.isdigit():
+        return False
+    
+    # Check if the integer value is between 1 and 9999
+    year = int(year_string)
+    return 1 <= year <= 9999
+
+
+def is_valid_date(date_string: str) -> bool:
+    """
+    Validates if a given string conforms to the 'YYYY-MM-DD' date format
+    and checks if it represents a logically date.
 
     Parameters:
 
@@ -824,58 +849,55 @@ def is_valid_year_yearmonth_or_date(date_string: str) -> bool:
 
     Returns:
 
-        bool: True if the string is a valid 'YYYY', 'YYYY-MM' or
-        'YYYY-MM-DD' format and represents a logically correct year,
-        year-month or date; False otherwise.
+        bool: True if the string is a valid 'YYYY-MM-DD' date format and
+        represents a logically correct date; False otherwise.
 
     Examples:
 
-        >>> is_valid_year_yearmonth_or_date("2023")
+        >>> is_valid_date("2023-10-31")
         True
-        >>> is_valid_year_yearmonth_or_date("2023-10")
-        True
-        >>> is_valid_year_yearmonth_or_date("2023-10-31")
-        True
-        >>> is_valid_year_yearmonth_or_date("2023-02-29")
+        >>> is_valid_date("2023-02-29")
         False  # 2023 is not a leap year
-        >>> is_valid_year_yearmonth_or_date("2023-13-31")
+        >>> is_valid_date("2023-13-31")
         False  # Invalid month
-        >>> is_valid_year_yearmonth_or_date("23-10-31")
+        >>> is_valid_date("23-10-31")
         False  # Invalid format
     """
-    # Check for YYYY format
-    if len(date_string) == 4 and date_string.isdigit():
-        try:
-            datetime.strptime(date_string, "%Y")
-            return True
-        except ValueError:
-            return False
+    try:
+        datetime.strptime(date_string, "%Y-%m-%d")
+        return True
+    except ValueError:
+        return False
 
-    # Check for YYYY-MM format
-    elif (
-        len(date_string) == 7
-        and date_string[:4].isdigit()
-        and date_string[5:7].isdigit()
-        and date_string[4] == '-'
-    ):
-        try:
-            datetime.strptime(date_string, "%Y-%m")
-            return True
-        except ValueError:
-            return False
 
-    # Check for YYYY-MM-DD format
-    elif (
-        len(date_string) == 10
-        and date_string[:4].isdigit()
-        and date_string[5:7].isdigit()
-        and date_string[8:10].isdigit()
-        and date_string[4] == '-'
-        and date_string[7] == '-'
-    ):
+def is_valid_year_month(date_string: str) -> bool:
+    """
+    Validates if a given string conforms to the 'YYYY-MM' date format.
+    If the YYYY part is a year before 1000, it must be zero-padded.
+
+    Depends on the `is_valid_year()` helper function.
+
+    Parameters:
+
+        date_string (str): The input string to be checked.
+
+    Returns:
+
+        bool: True if the string is a valid 'YYYY-MM' format; False
+        otherwise.
+
+    Examples:
+
+        >>> is_valid_year_month("2023-10")
+        True
+        >>> is_valid_year_month("2023-13")
+        False  # Invalid month
+    """
+    parts = date_string.split("-")
+    if len(parts) == 2 and len(parts[0]) == 4 and is_valid_year(parts[0]):
         try:
-            datetime.strptime(date_string, "%Y-%m-%d")
-            return True
+            month = int(parts[1])
+            return 1 <= month <= 12
         except ValueError:
             return False
 
