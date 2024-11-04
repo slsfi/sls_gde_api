@@ -815,7 +815,7 @@ def handle_deleted_flag(values: Dict[str, Any]) -> Dict[str, Any]:
 def is_valid_year(year_string: str) -> bool:
     """
     Checks if a string can be parsed as a four-digit year between 1 and 9999.
-    
+
     The function validates that the input string consists of only digits and
     represents a year between 1 and 9999. It handles both zero-padded and
     non-zero-padded formats for years less than 1000 (e.g., "0456" and "456"
