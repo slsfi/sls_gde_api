@@ -8,7 +8,8 @@ import os
 import subprocess
 from werkzeug.security import safe_join
 
-from sls_api.endpoints.generics import get_project_config, project_permission_required
+from sls_api.endpoints.generics import get_project_config, project_permission_required, \
+    create_error_response, create_success_response, get_project_id_from_name
 
 
 file_tools = Blueprint("file_tools", __name__)
@@ -420,27 +421,121 @@ def get_file(project, file_path):
 @project_permission_required
 def get_file_tree(project, file_path=None):
     """
-    Get a file listing from the git remote
+    Retrieve a file tree from the local git repository of a given project.
+
+    URL Path Parameters:
+
+    - project (str, required): The name of the project for which the file
+      tree is being requested.
+    - file_path (str, optional): The path to a specific directory or file
+      within the project's git repository. If omitted, the root file tree
+      of the project's git repository will be retrieved.
+
+    Returns:
+
+    - A tuple containing a Flask Response object with JSON data and an
+      HTTP status code. The JSON response has the following structure:
+
+        {
+            "success": bool,
+            "message": str,
+            "data": object or null
+        }
+
+    - `success`: A boolean indicating whether the operation was successful.
+    - `message`: A string containing a descriptive message about the result.
+    - `data`: On success, an object representing the file tree structure;
+      `null` on error.
+
+    Example Request:
+
+        GET /projectname/get_tree/
+        GET /projectname/get_tree/path/to/directory/
+
+    Example Success Response (HTTP 200):
+
+        {
+            "success": true,
+            "message": "File tree retrieved successfully.",
+            "data": {
+                "\"documents": {
+                    "Manuskript": {
+                        "Lasning_for_barn_manuskript": {
+                        "Lasning_for_barn_1": {
+                            "Den_tappade_kangan": {
+                                "Madamen och tiggarflickan ms NB 244_106_0201 Lfb Den tappade k\\303\\244ngan.xml\"": null
+                            }
+                        },
+                    ...
+            }
+        }
+
+    Example Error Response (HTTP 400):
+
+        {
+            "success": false,
+            "message": "Error: invalid file path.",
+            "data": null
+        }
+
+    Status Codes:
+
+    - 200 - OK: The request was successful, and the file tree is returned.
+    - 400 - Bad Request: The file path is invalid or outside the allowed
+            directory.
+    - 500 - Internal Server Error: The project configuration is invalid,
+            or an unexpected error occurred while retrieving the file
+            tree.
     """
+    # Validate project config
     config = get_project_config(project)
     if config is None:
-        return jsonify({"msg": "No such project."}), 400
-    # Fetch changes (to update index) but don't merge, and then run ls-files to get file listing.
+        return create_error_response("Error: project config does not exist on server.", 500)
+
+    config_ok = check_project_config(project)
+    if not config_ok[0]:
+        return create_error_response(f"Error: {config_ok[1]}", 500)
+
     try:
-        if not is_a_test(project):
-            run_git_command(project, ["fetch"])
+        # List files from the local repository
         if file_path is None:
             output = run_git_command(project, ["ls-files"])
         else:
+            # Validate file_path
+            # Safely join the base directory and file path
+            full_path = safe_join(config["file_root"], file_path)
+            if full_path is None:
+                return create_error_response("Error: invalid file path.", 400)
+
+            # Resolve the real, absolute paths
+            base_dir = os.path.realpath(config["file_root"])
+            full_path = os.path.realpath(full_path)
+
+            # Verify that full_path is within base_dir, i.e. file_root specified
+            # in config
+            if os.path.commonpath([base_dir, full_path]) != base_dir:
+                return create_error_response("Error: invalid file path.", 400)
+
             output = run_git_command(project, ["ls-files", file_path])
-        file_listing = [s.strip().decode('utf-8', 'ignore') for s in output.splitlines()]
+
+        # Decode and process the output
+        file_listing = [s.strip().decode("utf-8", "ignore") for s in output.splitlines()]
+        tree = path_list_to_tree(file_listing)
+
     except subprocess.CalledProcessError as e:
-        return jsonify({
-            "msg": "Git file listing failed.",
-            "reason": str(e.output)
-        }), 500
-    tree = path_list_to_tree(file_listing)
-    return jsonify(tree)
+        # Handle git command errors
+        logger.error(f"Git file listing failed: {e.output.decode('utf-8', 'ignore')}")
+        return create_error_response("Error: git file listing failed.", 500)
+    except Exception:
+        # Handle any other unexpected errors
+        logger.exception("Unexpected error retrieving file tree.")
+        return create_error_response("Unexpected error: could not get file tree.", 500)
+
+    # Return the file tree in a standardized success response
+    return create_success_response(
+        message="File tree retrieved successfully.",
+        data=tree
+    )
 
 
 def path_list_to_tree(path_list):
