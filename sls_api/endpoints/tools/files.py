@@ -9,7 +9,7 @@ import subprocess
 from werkzeug.security import safe_join
 
 from sls_api.endpoints.generics import get_project_config, project_permission_required, \
-    create_error_response, create_success_response, get_project_id_from_name
+    create_error_response, create_success_response
 
 
 file_tools = Blueprint("file_tools", __name__)
