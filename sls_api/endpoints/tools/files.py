@@ -138,10 +138,10 @@ def get_git_repo_details(project):
 
     - `project` (str, required): The name of the project for which
       Git repository details are being retrieved.
-    
+
     Returns:
 
-    - A tuple containing a Flask Response object with JSON data and an 
+    - A tuple containing a Flask Response object with JSON data and an
       HTTP status code. The JSON response has the following structure:
 
         {
