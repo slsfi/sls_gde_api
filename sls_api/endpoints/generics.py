@@ -832,7 +832,7 @@ def is_valid_year(year_string: str) -> bool:
     """
     if not year_string.isdigit():
         return False
-    
+
     # Check if the integer value is between 1 and 9999
     year = int(year_string)
     return 1 <= year <= 9999
