@@ -875,8 +875,6 @@ def is_valid_year_month(date_string: str) -> bool:
     Validates if a given string conforms to the 'YYYY-MM' date format.
     If the YYYY part is a year before 1000, it must be zero-padded.
 
-    Depends on the `is_valid_year()` helper function.
-
     Parameters:
 
         date_string (str): The input string to be checked.
@@ -893,12 +891,8 @@ def is_valid_year_month(date_string: str) -> bool:
         >>> is_valid_year_month("2023-13")
         False  # Invalid month
     """
-    parts = date_string.split("-")
-    if len(parts) == 2 and len(parts[0]) == 4 and is_valid_year(parts[0]):
-        try:
-            month = int(parts[1])
-            return 1 <= month <= 12
-        except ValueError:
-            return False
-
-    return False
+    try:
+        datetime.strptime(date_string, "%Y-%m")
+        return True
+    except ValueError:
+        return False
