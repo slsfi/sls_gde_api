@@ -123,7 +123,7 @@ def update_config(project):
         return jsonify({"msg": "received"})
 
 
-@file_tools.route("/<project>/git-repo-details/get")
+@file_tools.route("/<project>/git-repo-details")
 @project_permission_required
 def get_git_repo_details(project):
     """
