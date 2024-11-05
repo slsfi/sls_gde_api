@@ -530,14 +530,8 @@ def get_metadata_from_xml_file(project: str, file_path: str):
     if full_path is None:
         return create_error_response("Error: invalid file path.", 400)
 
-    # Resolve the real, absolute paths
-    base_dir = os.path.realpath(config["file_root"])
+    # Resolve the real, absolute path
     full_path = os.path.realpath(full_path)
-
-    # Verify that full_path is within base_dir, i.e. file_root specified
-    # in config
-    if os.path.commonpath([base_dir, full_path]) != base_dir:
-        return create_error_response("Error: invalid file path.", 400)
 
     # Check if the file exists
     try:
