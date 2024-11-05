@@ -1,5 +1,6 @@
 import calendar
 from collections import OrderedDict
+from datetime import datetime
 from flask import jsonify, Response
 from flask_jwt_extended import get_jwt_identity, verify_jwt_in_request
 from functools import wraps
@@ -809,3 +810,118 @@ def handle_deleted_flag(values: Dict[str, Any]) -> Dict[str, Any]:
     if values.get("deleted"):
         values["published"] = 0
     return values
+
+
+def is_valid_year(year_string: str) -> bool:
+    """
+    Checks if a string can be parsed as a four-digit year between 1 and 9999.
+
+    The function validates that the input string consists of only digits and
+    represents a year between 1 and 9999. It handles both zero-padded and
+    non-zero-padded formats for years less than 1000 (e.g., "0456" and "456"
+    are both valid).
+
+    Args:
+
+        year_string (str): The input string representing a year.
+
+    Returns:
+
+        bool: True if the string represents a valid year between 1 and 9999,
+        False otherwise.
+    """
+    if not year_string.isdigit():
+        return False
+
+    # Check if the integer value is between 1 and 9999
+    year = int(year_string)
+    return 1 <= year <= 9999
+
+
+def is_valid_date(date_string: str) -> bool:
+    """
+    Validates if a given string conforms to the 'YYYY-MM-DD' date format
+    and checks if it represents a sensible date.
+
+    Parameters:
+
+        date_string (str): The input string to be checked.
+
+    Returns:
+
+        bool: True if the string is a valid 'YYYY-MM-DD' date format and
+        represents a logically correct date; False otherwise.
+
+    Examples:
+
+        >>> is_valid_date("2023-10-31")
+        True
+        >>> is_valid_date("2023-02-29")
+        False  # 2023 is not a leap year
+        >>> is_valid_date("2023-13-31")
+        False  # Invalid month
+        >>> is_valid_date("23-10-31")
+        False  # Invalid format
+    """
+    try:
+        datetime.strptime(date_string, "%Y-%m-%d")
+        return True
+    except ValueError:
+        return False
+
+
+def is_valid_year_month(date_string: str) -> bool:
+    """
+    Validates if a given string conforms to the 'YYYY-MM' date format.
+    If the YYYY part is a year before 1000, it must be zero-padded.
+
+    Parameters:
+
+        date_string (str): The input string to be checked.
+
+    Returns:
+
+        bool: True if the string is a valid 'YYYY-MM' format; False
+        otherwise.
+
+    Examples:
+
+        >>> is_valid_year_month("2023-10")
+        True
+        >>> is_valid_year_month("2023-13")
+        False  # Invalid month
+    """
+    try:
+        datetime.strptime(date_string, "%Y-%m")
+        return True
+    except ValueError:
+        return False
+
+
+def is_any_valid_date_format(date_string: str) -> bool:
+    """
+    Validates if a given string conforms to any of the following date
+    formats:
+
+    - 'YYYY': four-digit year between 1 and 9999, also valid for
+      non-zero-padded years before 1000.
+    - 'YYYY-MM'
+    - 'YYYY-MM-DD'
+
+    Parameters:
+
+        date_string (str): The input string to be checked.
+
+    Returns:
+
+        bool: True if the string is in any of the valid date formats;
+        False otherwise.
+    """
+    if (
+        is_valid_year(date_string)
+        or is_valid_date(date_string)
+        or is_valid_year_month(date_string)
+    ):
+        return True
+
+    return False
