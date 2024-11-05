@@ -123,6 +123,87 @@ def update_config(project):
         return jsonify({"msg": "received"})
 
 
+@file_tools.route("/<project>/git-repo-details")
+@project_permission_required
+def get_git_repo_details(project):
+    """
+    Retrieve details of a project's git repository.
+
+    This endpoint fetches and returns details of a git repository
+    associated with a given `project`, including the repository name
+    and current branch. The details are extracted from the project's
+    configuration on the server.
+
+    URL Path Parameters:
+
+    - `project` (str, required): The name of the project for which
+      Git repository details are being retrieved.
+
+    Returns:
+
+    - A tuple containing a Flask Response object with JSON data and an
+      HTTP status code. The JSON response has the following structure:
+
+        {
+            "success": bool,
+            "message": str,
+            "data": object or null
+        }
+
+      - `success`: A boolean indicating whether the operation was successful.
+      - `message`: A string containing a descriptive message about the result.
+      - `data`: On success, an object containing the Git repository details;
+        `null` on error.
+
+    Example Request:
+
+        GET /my_project/git-repo-details/get
+
+    Example Success Response (HTTP 200):
+
+        {
+            "success": true,
+            "message": "Project git repository details successfully retrieved.",
+            "data": {
+                "name": "my_repo",
+                "branch": "main"
+            }
+        }
+
+    Example Error Response (HTTP 500):
+
+        {
+            "success": false,
+            "message": "Error: project config not found on the server.",
+            "data": null
+        }
+
+    Status Codes:
+
+    - 200 - OK: The request was successful, and the repository details are
+            returned.
+    - 404 - Not Found: The project configuration does not exist.
+    - 500 - Internal Server Error: An unexpected error occurred on the
+            server.
+    """
+    # Validate project config
+    config = get_project_config(project)
+    if config is None:
+        return create_error_response("Error: project config not found on the server.", 404)
+
+    config_ok = check_project_config(project)
+    if not config_ok[0]:
+        return create_error_response(f"Error: {config_ok[1]}", 404)
+
+    # Get the repo name from the repo URL
+    repo_name = str(config["git_repository"]).split('/')[-1].replace(".git", "")
+
+    return create_success_response(
+        message="Project git repository details successfully retrieved.",
+        data={"name": repo_name, "branch": config["git_branch"]}
+    )
+
+
 @file_tools.route("/<project>/sync_files/", methods=["POST"])
 @project_permission_required
 def pull_changes_from_git_remote(project):
