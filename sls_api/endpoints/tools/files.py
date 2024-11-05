@@ -546,7 +546,12 @@ def get_metadata_from_xml_file(project: str, file_path: str):
         return create_error_response("Error: the file path must point to a file with a .xml extension.", 400)
 
     # Check file size so we don't parse overly large XML files
-    max_file_size = 5 * 1024 * 1024  # 5 MB
+    # Use default value if max size not specified in config
+    if "xml_max_file_size" in config:
+        max_file_size = config["xml_max_file_size"] * 1024 * 1024
+    else:
+        max_file_size = 5 * 1024 * 1024  # 5 MB
+
     if os.path.getsize(full_path) > max_file_size:
         return create_error_response("Error: file size exceeds the maximum allowed limit (5 MB).", 400)
 

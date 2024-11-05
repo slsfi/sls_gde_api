@@ -31,6 +31,9 @@ parland:
     # Currently only used to set response headers on downloadable PDFs and
     # EPUBs in the `get_pdf_file` endpoint in `endpoints/media.py`.
     allowed_cors_origins: ["https://parland.sls.fi"]
+    # Max size in MB of XML files to be parsed. Currently only used in the
+    # `get_metadata_from_xml_file` endpoint in `endpoints/tools/files.py`.
+    xml_max_file_size: 5
 
 topelius:
     # First, settings about how the publication tools should communicate towards git
@@ -53,6 +56,9 @@ topelius:
     # Currently only used to set response headers on downloadable PDFs and
     # EPUBs in the `get_pdf_file` endpoint in `endpoints/media.py`.
     allowed_cors_origins: ["https://topelius.sls.fi"]
+    # Max size in MB of XML files to be parsed. Currently only used in the
+    # `get_metadata_from_xml_file` endpoint in `endpoints/tools/files.py`.
+    xml_max_file_size: 5
 
 # XML-to-HTML is somewhat computationally expensive, so HTML reading texts are cached for up to this amount of time
 cache_lifetime_seconds: 7200  # 2 hours
