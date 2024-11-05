@@ -841,7 +841,7 @@ def is_valid_year(year_string: str) -> bool:
 def is_valid_date(date_string: str) -> bool:
     """
     Validates if a given string conforms to the 'YYYY-MM-DD' date format
-    and checks if it represents a logically date.
+    and checks if it represents a sensible date.
 
     Parameters:
 
