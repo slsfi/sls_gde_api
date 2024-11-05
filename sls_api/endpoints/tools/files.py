@@ -764,7 +764,7 @@ def get_metadata_from_xml_file(project: str, file_path: str):
         return create_error_response(f"Error accessing file at {file_path}", 500)
 
     # Check that the file has a .xml extension
-    if os.path.splitext(full_path) != ".xml":
+    if os.path.splitext(full_path)[1] != ".xml":
         return create_error_response("Error: the file path must point to a file with a .xml extension.", 400)
 
     # Check file size so we don't parse overly large XML files
