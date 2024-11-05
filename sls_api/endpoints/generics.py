@@ -896,3 +896,32 @@ def is_valid_year_month(date_string: str) -> bool:
         return True
     except ValueError:
         return False
+
+
+def is_any_valid_date_format(date_string: str) -> bool:
+    """
+    Validates if a given string conforms to any of the following date
+    formats:
+
+    - 'YYYY': four-digit year between 1 and 9999, also valid for
+      non-zero-padded years before 1000.
+    - 'YYYY-MM'
+    - 'YYYY-MM-DD'
+
+    Parameters:
+
+        date_string (str): The input string to be checked.
+
+    Returns:
+
+        bool: True if the string is in any of the valid date formats;
+        False otherwise.
+    """
+    if (
+        is_valid_year(date_string)
+        or is_valid_date(date_string)
+        or is_valid_year_month(date_string)
+    ):
+        return True
+
+    return False
