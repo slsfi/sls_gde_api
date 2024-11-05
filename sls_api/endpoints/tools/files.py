@@ -126,34 +126,163 @@ def update_config(project):
         return jsonify({"msg": "received"})
 
 
+@file_tools.route("/<project>/git-repo-details")
+@project_permission_required
+def get_git_repo_details(project):
+    """
+    Retrieve details of a project's git repository.
+
+    This endpoint fetches and returns details of a git repository
+    associated with a given `project`, including the repository name
+    and current branch. The details are extracted from the project's
+    configuration on the server.
+
+    URL Path Parameters:
+
+    - `project` (str, required): The name of the project for which
+      Git repository details are being retrieved.
+
+    Returns:
+
+    - A tuple containing a Flask Response object with JSON data and an
+      HTTP status code. The JSON response has the following structure:
+
+        {
+            "success": bool,
+            "message": str,
+            "data": object or null
+        }
+
+      - `success`: A boolean indicating whether the operation was successful.
+      - `message`: A string containing a descriptive message about the result.
+      - `data`: On success, an object containing the Git repository details;
+        `null` on error.
+
+    Example Request:
+
+        GET /my_project/git-repo-details/get
+
+    Example Success Response (HTTP 200):
+
+        {
+            "success": true,
+            "message": "Project git repository details successfully retrieved.",
+            "data": {
+                "name": "my_repo",
+                "branch": "main"
+            }
+        }
+
+    Example Error Response (HTTP 500):
+
+        {
+            "success": false,
+            "message": "Error: project config not found on the server.",
+            "data": null
+        }
+
+    Status Codes:
+
+    - 200 - OK: The request was successful, and the repository details are
+            returned.
+    - 404 - Not Found: The project configuration does not exist.
+    - 500 - Internal Server Error: An unexpected error occurred on the
+            server.
+    """
+    # Validate project config
+    config = get_project_config(project)
+    if config is None:
+        return create_error_response("Error: project config not found on the server.", 404)
+
+    config_ok = check_project_config(project)
+    if not config_ok[0]:
+        return create_error_response(f"Error: {config_ok[1]}", 404)
+
+    # Get the repo name from the repo URL
+    repo_name = str(config["git_repository"]).split('/')[-1].replace(".git", "")
+
+    return create_success_response(
+        message="Project git repository details successfully retrieved.",
+        data={"name": repo_name, "branch": config["git_branch"]}
+    )
+
+
 @file_tools.route("/<project>/sync_files/", methods=["POST"])
 @project_permission_required
 def pull_changes_from_git_remote(project):
     """
-    Sync API's local repo with the git remote, ensuring that all files are updated to their latest versions
+    Sync the local git repository of a given project with its remote origin.
+
+    URL Path Parameters:
+
+    - project (str, required): The name of the project for which the git
+      repository sync is being performed.
+
+    Returns:
+
+    - A tuple containing a Flask Response object with JSON data and an
+      HTTP status code. The JSON response has the following structure:
+
+        {
+            "success": bool,
+            "message": str,
+            "data": object or null
+        }
+
+    - `success`: A boolean indicating whether the operation was successful.
+    - `message`: A string containing a descriptive message about the result.
+    - `data`: On success, an object containing a list of changed files;
+      `null` on error.
+
+    Example Request:
+
+        POST /projectname/sync_files/
+
+    Example Success Response (HTTP 200):
+
+        {
+            "success": true,
+            "message": "Git repository successfully synced.",
+            "data": {
+                "changed_files": [
+                    "file1.txt",
+                    "dir1/file2.txt"
+                ]
+            }
+        }
+
+    Example Error Response (HTTP 500):
+
+        {
+            "success": false,
+            "message": "Error: update of git repository failed.",
+            "data": null
+        }
+
+    Status Codes:
+
+    - 200 - OK: The request was successful, and the git repository was
+            synced.
+    - 500 - Internal Server Error: The project configuration is invalid,
+            or an unexpected error occurred during the sync operation.
     """
     # verify git config
-    config_okay = check_project_config(project)
-    if not config_okay[0]:
-        return jsonify({
-            "msg": "Error in git configuration, check configuration file.",
-            "reason": config_okay[1]
-        }), 500
+    config_ok = check_project_config(project)
+    if not config_ok[0]:
+        return create_error_response(f"Error: {config_ok[1]}", 500)
 
     sync_repo = update_files_in_git_repo(project)
 
     # TODO merge conflict handling, if necessary. wait and see how things pan out - may not be an issue.
 
     if sync_repo[0]:
-        return jsonify({
-            "msg": "Git repository successfully synced for project {}".format(project),
-            "changed_files": sync_repo[1]
-        })
+        return create_success_response(
+            message=f"Git repository for project '{project}' successfully synced.",
+            data={"changed_files": sync_repo[1]}
+        )
     else:
-        return jsonify({
-            "msg": "Git update failed to execute properly.",
-            "reason": sync_repo[1]
-        }), 500
+        logger.error(f"Git update failed: {sync_repo[1]}")
+        return create_error_response("Error: update of git repository failed.", 500)
 
 
 def is_a_test(project):
@@ -424,27 +553,121 @@ def get_file(project, file_path):
 @project_permission_required
 def get_file_tree(project, file_path=None):
     """
-    Get a file listing from the git remote
+    Retrieve a file tree from the local git repository of a given project.
+
+    URL Path Parameters:
+
+    - project (str, required): The name of the project for which the file
+      tree is being requested.
+    - file_path (str, optional): The path to a specific directory or file
+      within the project's git repository. If omitted, the root file tree
+      of the project's git repository will be retrieved.
+
+    Returns:
+
+    - A tuple containing a Flask Response object with JSON data and an
+      HTTP status code. The JSON response has the following structure:
+
+        {
+            "success": bool,
+            "message": str,
+            "data": object or null
+        }
+
+    - `success`: A boolean indicating whether the operation was successful.
+    - `message`: A string containing a descriptive message about the result.
+    - `data`: On success, an object representing the file tree structure;
+      `null` on error.
+
+    Example Request:
+
+        GET /projectname/get_tree/
+        GET /projectname/get_tree/path/to/directory/
+
+    Example Success Response (HTTP 200):
+
+        {
+            "success": true,
+            "message": "File tree retrieved successfully.",
+            "data": {
+                "\"documents": {
+                    "Manuskript": {
+                        "Lasning_for_barn_manuskript": {
+                        "Lasning_for_barn_1": {
+                            "Den_tappade_kangan": {
+                                "Madamen och tiggarflickan ms NB 244_106_0201 Lfb Den tappade k\\303\\244ngan.xml\"": null
+                            }
+                        },
+                    ...
+            }
+        }
+
+    Example Error Response (HTTP 400):
+
+        {
+            "success": false,
+            "message": "Error: invalid file path.",
+            "data": null
+        }
+
+    Status Codes:
+
+    - 200 - OK: The request was successful, and the file tree is returned.
+    - 400 - Bad Request: The file path is invalid or outside the allowed
+            directory.
+    - 500 - Internal Server Error: The project configuration is invalid,
+            or an unexpected error occurred while retrieving the file
+            tree.
     """
+    # Validate project config
     config = get_project_config(project)
     if config is None:
-        return jsonify({"msg": "No such project."}), 400
-    # Fetch changes (to update index) but don't merge, and then run ls-files to get file listing.
+        return create_error_response("Error: project config does not exist on server.", 500)
+
+    config_ok = check_project_config(project)
+    if not config_ok[0]:
+        return create_error_response(f"Error: {config_ok[1]}", 500)
+
     try:
-        if not is_a_test(project):
-            run_git_command(project, ["fetch"])
+        # List files from the local repository
         if file_path is None:
             output = run_git_command(project, ["ls-files"])
         else:
+            # Validate file_path
+            # Safely join the base directory and file path
+            full_path = safe_join(config["file_root"], file_path)
+            if full_path is None:
+                return create_error_response("Error: invalid file path.", 400)
+
+            # Resolve the real, absolute paths
+            base_dir = os.path.realpath(config["file_root"])
+            full_path = os.path.realpath(full_path)
+
+            # Verify that full_path is within base_dir, i.e. file_root specified
+            # in config
+            if os.path.commonpath([base_dir, full_path]) != base_dir:
+                return create_error_response("Error: invalid file path.", 400)
+
             output = run_git_command(project, ["ls-files", file_path])
-        file_listing = [s.strip().decode('utf-8', 'ignore') for s in output.splitlines()]
+
+        # Decode and process the output
+        file_listing = [s.strip().decode("utf-8", "ignore") for s in output.splitlines()]
+        tree = path_list_to_tree(file_listing)
+
     except subprocess.CalledProcessError as e:
-        return jsonify({
-            "msg": "Git file listing failed.",
-            "reason": str(e.output)
-        }), 500
-    tree = path_list_to_tree(file_listing)
-    return jsonify(tree)
+        # Handle git command errors
+        logger.error(f"Git file listing failed: {e.output.decode('utf-8', 'ignore')}")
+        return create_error_response("Error: git file listing failed.", 500)
+    except Exception:
+        # Handle any other unexpected errors
+        logger.exception("Unexpected error retrieving file tree.")
+        return create_error_response("Unexpected error: could not get file tree.", 500)
+
+    # Return the file tree in a standardized success response
+    return create_success_response(
+        message="File tree retrieved successfully.",
+        data=tree
+    )
 
 
 @file_tools.route("/<project>/get_metadata_from_xml/by_path/<path:file_path>")
