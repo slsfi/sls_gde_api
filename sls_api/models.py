@@ -66,15 +66,6 @@ class User(db.Model):
             return self.projects.split(",")
         return None
 
-    def get_token_identity(self):
-        """
-        Generate the JWT identity for the User
-        """
-        return {
-            "sub": self.email,
-            "projects": self.get_projects()
-        }
-
     def check_password(self, password):
         """
         Verifies that 'password' matches against the stored password hash for the user

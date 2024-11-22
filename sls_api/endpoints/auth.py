@@ -29,12 +29,12 @@ def register_user():
 
     try:
         new_user = User.create_new_user(email, password)
-        identity = new_user.get_token_identity()
+        projects = [] # a new user does not have access to any projects, set claim to empty string
         return jsonify(
             {
                 "msg": "User {!r} was created. Contact support to be given editing rights for GDE projects.".format(data["email"]),
-                "access_token": create_access_token(identity=identity),
-                "refresh_token": create_refresh_token(identity=identity)
+                "access_token": create_access_token(identity=new_user.email, additional_claims={"projects": projects}),
+                "refresh_token": create_refresh_token(identity=new_user.email, additional_claims={"projects": projects})
             }
         ), 201
     except Exception:
@@ -57,13 +57,13 @@ def login_user():
     if not success:
         return jsonify({"msg": "Incorrect email or password."}), 400
 
-    identity = current_user.get_token_identity()
+    projects = current_user.get_projects() # get current projects for user to add as additional claims
 
     return jsonify(
         {
             "msg": "Logged in as {!r}".format(data["email"]),
-            "access_token": create_access_token(identity=identity),
-            "refresh_token": create_refresh_token(identity=identity),
+            "access_token": create_access_token(identity=current_user.email, additional_claims={"projects": projects}),
+            "refresh_token": create_refresh_token(identity=current_user.email, additional_claims={"projects": projects}),
             "user_projects": current_user.get_projects()
         }
     ), 200
