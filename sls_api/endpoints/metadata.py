@@ -199,7 +199,7 @@ def handle_toc(project, collection_id, language=None):
             else:
                 authorized = False
                 # in debug mode, test user has access to every project
-                if int(os.environ.get("FLASK_DEBUG", 0)) == 1 and identity["sub"] == "test@test.com":
+                if int(os.environ.get("FLASK_DEBUG", 0)) == 1 and identity == "test@test.com":
                     authorized = True
                 elif claims["projects"] is not None and project in claims["projects"]:
                     authorized = True

@@ -75,7 +75,7 @@ def refresh_token():
     identity = get_jwt_identity()
     return jsonify(
         {
-            "msg": "Logged in as {!r}".format(identity["sub"]),
+            "msg": "Logged in as {!r}".format(identity),
             "access_token": create_access_token(identity=identity)
         }
     ), 200

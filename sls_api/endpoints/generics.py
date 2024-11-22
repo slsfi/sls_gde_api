@@ -105,7 +105,7 @@ def project_permission_required(fn):
         identity = get_jwt_identity()
         # get JWT claims to check for claimed project access
         claims = get_jwt()
-        if int(os.environ.get("FLASK_DEBUG", 0)) == 1 and identity["sub"] == "test@test.com":
+        if int(os.environ.get("FLASK_DEBUG", 0)) == 1 and identity == "test@test.com":
             # If in FLASK_DEBUG mode, test@test.com user has access to all projects
             return fn(*args, **kwargs)
         else:
@@ -121,7 +121,7 @@ def project_permission_required(fn):
             if "projects" not in claims or not claims["projects"]:
                 # according to JWT, no access to any projects
                 return jsonify({"msg": "No access to this project."}), 403
-            elif check_for_project_permission_in_database(identity['sub'], project):
+            elif check_for_project_permission_in_database(identity, project):
                 # only run function if database says user *actually* has permissions
                 return fn(*args, **kwargs)
             else:
