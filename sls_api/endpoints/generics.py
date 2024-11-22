@@ -2,7 +2,7 @@ import calendar
 from collections import OrderedDict
 from datetime import datetime
 from flask import jsonify, Response
-from flask_jwt_extended import get_jwt_identity, verify_jwt_in_request
+from flask_jwt_extended import get_jwt, get_jwt_identity, verify_jwt_in_request
 from functools import wraps
 import glob
 import hashlib
@@ -101,7 +101,10 @@ def project_permission_required(fn):
     @wraps(fn)
     def decorated_function(*args, **kwargs):
         verify_jwt_in_request()
+        # get JWT identity
         identity = get_jwt_identity()
+        # get JWT claims to check for claimed project access
+        claims = get_jwt()
         if int(os.environ.get("FLASK_DEBUG", 0)) == 1 and identity["sub"] == "test@test.com":
             # If in FLASK_DEBUG mode, test@test.com user has access to all projects
             return fn(*args, **kwargs)
@@ -115,7 +118,7 @@ def project_permission_required(fn):
                 return jsonify({"msg": "No project identified."}), 500
 
             # check for permission
-            if "projects" not in identity or not identity["projects"]:
+            if "projects" not in claims or not claims["projects"]:
                 # according to JWT, no access to any projects
                 return jsonify({"msg": "No access to this project."}), 403
             elif check_for_project_permission_in_database(identity['sub'], project):

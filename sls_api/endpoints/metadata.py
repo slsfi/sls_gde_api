@@ -1,6 +1,6 @@
 from flask import abort, Blueprint, request, Response
 from flask.json import jsonify
-from flask_jwt_extended import get_jwt_identity, jwt_required
+from flask_jwt_extended import get_jwt, get_jwt_identity, jwt_required
 import glob
 import io
 import json
@@ -193,6 +193,7 @@ def handle_toc(project, collection_id, language=None):
         elif request.method == "PUT":
             # uploading a new table of contents requires authorization and project permission
             identity = get_jwt_identity()
+            claims = get_jwt()
             if not identity:
                 return jsonify({"msg": "Missing Authorization Header"}), 403
             else:
@@ -200,7 +201,7 @@ def handle_toc(project, collection_id, language=None):
                 # in debug mode, test user has access to every project
                 if int(os.environ.get("FLASK_DEBUG", 0)) == 1 and identity["sub"] == "test@test.com":
                     authorized = True
-                elif identity["projects"] is not None and project in identity["projects"]:
+                elif claims["projects"] is not None and project in claims["projects"]:
                     authorized = True
 
                 if not authorized:

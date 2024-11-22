@@ -1,6 +1,6 @@
 import logging
 from flask import Blueprint, jsonify, request
-from flask_jwt_extended import get_jwt_identity, jwt_required
+from flask_jwt_extended import get_jwt, jwt_required
 from sqlalchemy import select
 from datetime import datetime
 
@@ -69,17 +69,17 @@ def list_user_projects():
             project.
     - 500 - Internal Server Error: Database query or execution failed.
     """
-    # Get identity of current JWT user along with projects the user
+    # Get claims of current JWT user along with projects the user
     # has permissions to.
-    identity = get_jwt_identity()
+    claims = get_jwt()
 
-    if "projects" not in identity:
+    if "projects" not in claims:
         return create_error_response("Permissions error: user lacks project permissions.", 403)
 
-    if not identity["projects"]:
+    if not claims["projects"]:
         return create_error_response("Permissions error: user lacks access to any project.", 404)
 
-    user_projects = [str(project) for project in identity["projects"]]
+    user_projects = [str(project) for project in claims["projects"]]
     project_table = get_table("project")
 
     try:
