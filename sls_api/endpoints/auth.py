@@ -73,10 +73,13 @@ def login_user():
 @jwt_required(refresh=True)
 def refresh_token():
     identity = get_jwt_identity()
+    user = User.find_by_email(identity)
+    projects = user.get_projects()
     return jsonify(
         {
             "msg": "Logged in as {!r}".format(identity),
-            "access_token": create_access_token(identity=identity)
+            "access_token": create_access_token(identity=identity, additional_claims={"projects": projects}),
+            "user_projects": projects
         }
     ), 200
 
