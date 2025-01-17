@@ -308,7 +308,7 @@ def generate_modern_est_and_com_files(publication_info: Optional[Dict[str, Any]]
 
         notes_xml_str = "\n".join(note_fragments)
 
-    try: 
+    try:
         com_document = SaxonXMLDocument(saxon_proc, xml_filepath=com_source_file_path)
         if est_metadata:
             com_metadata = est_metadata
@@ -554,7 +554,8 @@ def check_publication_mtimes_and_publish_files(project: str, publication_ids: Un
                         else:
                             md5sums.append("SKIP")
                         if modern_text_encoding:
-                            generate_modern_est_and_com_files(row, project,
+                            generate_modern_est_and_com_files(row,
+                                                              project,
                                                               est_source_file_path,
                                                               com_source_file_path,
                                                               est_target_file_path,
@@ -563,8 +564,12 @@ def check_publication_mtimes_and_publish_files(project: str, publication_ids: Un
                                                               xslt_est_exec,
                                                               xslt_com_exec)
                         else:
-                            generate_est_and_com_files(row, project, est_source_file_path, com_source_file_path,
-                                                   est_target_file_path, com_target_file_path)
+                            generate_est_and_com_files(row,
+                                                       project,
+                                                       est_source_file_path,
+                                                       com_source_file_path,
+                                                       est_target_file_path,
+                                                       com_target_file_path)
                     except Exception:
                         logger.exception("Failed to generate est/com files for publication {}!".format(publication_id))
                         continue
