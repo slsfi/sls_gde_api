@@ -21,6 +21,7 @@ setup(
         'raven[flask]==6.10.0',
         'ruamel.yaml==0.18.6',
         'requests==2.32.3',
+        'saxonche==12.5.0',
         'sqlalchemy==2.0.36',
         'werkzeug==3.1.3',
         'uwsgi==2.0.28'
