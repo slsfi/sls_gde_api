@@ -42,11 +42,10 @@ class SaxonXMLDocument:
         mappings. Defaults to TEI and XML namespaces.
     """
 
-
     def __init__(
-            self, 
-            saxon_proc: PySaxonProcessor, 
-            xml_filepath: str = "", 
+            self,
+            saxon_proc: PySaxonProcessor,
+            xml_filepath: str = "",
             config: Optional[Dict[str, Any]] = None
     ):
         """
@@ -91,7 +90,6 @@ class SaxonXMLDocument:
             except Exception as e:
                 raise ValueError(f"Failed to load XML file '{xml_filepath}': {e}")
 
-
     def load_xml_file(self, filepath: str) -> bool:
         """
         Loads an XML document from a file.
@@ -115,7 +113,6 @@ class SaxonXMLDocument:
             raise FileNotFoundError(f"The file '{filepath}' was not found.")
         except (EnvironmentError, PySaxonApiError) as e:
             raise ValueError(f"Error reading or parsing the file '{filepath}': {e}")
-
 
     def generate_web_xml_file(
             self,
@@ -145,7 +142,6 @@ class SaxonXMLDocument:
         self.xml_doc_str = xslt_exec.transform_to_string(xdm_node=self.xml_doc_tree)
         self._save_to_file(output_filepath=output_filepath)
 
-
     def _save_to_file(self, output_filepath: str):
         """
         Saves the XML document to the specified output file.
@@ -158,7 +154,6 @@ class SaxonXMLDocument:
             xml_str = self._remove_blank_lines(self.xml_doc_str)
             xml_str = self._format_xml_with_line_endings(xml_str)
             file.write(xml_str)
-
 
     def get_all_comment_ids(self) -> List[int]:
         """
@@ -187,7 +182,6 @@ class SaxonXMLDocument:
                 raise ValueError(f"Invalid ID: '{comment_id}' is not convertible to an integer.")
 
         return ids
-    
 
     def get_all_comment_positions(self, comment_ids: List[int]) -> Dict[str, Any]:
         xml_doc = self._parse_from_string(self.xml_doc_str)
@@ -223,7 +217,6 @@ class SaxonXMLDocument:
 
         return comment_positions
 
-
     def _parse_from_string(self, xml_str: str) -> PyXdmNode:
         """
         Parses the XML document provided as a string.
@@ -235,7 +228,6 @@ class SaxonXMLDocument:
         - The XDM node representation of the XML document (PyXdmNode).
         """
         return self.saxon_proc.parse_xml(xml_text=xml_str, encoding="utf-8")
-
 
     def _evaluate_xpath(self, xpath_str: str, node: Optional[PyXdmNode] = None) -> PyXdmValue:
         """
@@ -258,7 +250,6 @@ class SaxonXMLDocument:
 
         return xp_proc.evaluate(xpath_str, encoding="utf-8")
 
-
     def _remove_blank_lines(self, input_string: str) -> str:
         """
         Removes blank lines (lines with only whitespace or no content) from
@@ -271,7 +262,6 @@ class SaxonXMLDocument:
         - A string with blank lines removed.
         """
         return "".join(line for line in input_string.splitlines(keepends=True) if line.strip())
-
 
     def _format_xml_with_line_endings(self, xml_string: str) -> str:
         """
@@ -292,7 +282,6 @@ class SaxonXMLDocument:
 
         return formatted_xml
 
-
     def _set_xslt_params_from_dict(
             self,
             xslt_exec: PyXsltExecutable,
@@ -311,13 +300,12 @@ class SaxonXMLDocument:
         for param_name, param_value in parameters.items():
             xslt_exec.set_parameter(name=param_name, value=self._convert_primitive_type_to_xdm(param_value))
 
-
     def _convert_primitive_type_to_xdm(self, value: any) -> PyXdmValue:
         """
         Converts a primitive Python value to an XDM-compatible value.
 
         Parameters:
-        - value (any): A primitive Python value (int, str, bool, float) to be 
+        - value (any): A primitive Python value (int, str, bool, float) to be
             converted to an XDM value for use with the Saxon processor.
 
         Returns:
