@@ -317,7 +317,7 @@ def generate_modern_est_and_com_files(publication_info: Optional[Dict[str, Any]]
         else:
             com_metadata = {}
         com_metadata["textType"] = "com"
-        com_metadata["notesXML"] = notes_xml_str
+        com_metadata["notes"] = notes_xml_str
 
         com_document.generate_web_xml_file(xslt_exec=xslt_com_exec,
                                            output_filepath=com_target_file_path,

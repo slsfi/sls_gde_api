@@ -133,7 +133,7 @@ class SaxonXMLDocument:
         # Initialize parameters as an empty dictionary if None is passed
         parameters = parameters or {}
 
-        # Clear any parameters previously set on the XSLT processor
+        # Clear any parameters previously set on the XSLT executable
         xslt_exec.clear_parameters()
 
         if parameters:
@@ -314,10 +314,10 @@ class SaxonXMLDocument:
 
         Behavior:
         - Converts Python types to their XDM equivalents:
-                - `int` -> XDM Integer
-                - `str` -> XDM String (UTF-8 encoded by default)
-                - `bool` -> XDM Boolean
-                - `float` -> XDM Float
+            - `int` -> XDM Integer
+            - `str` -> XDM String (UTF-8 encoded by default)
+            - `bool` -> XDM Boolean
+            - `float` -> XDM Float
         - For unsupported types, returns an empty XDM sequence.
         """
         if isinstance(value, int):
