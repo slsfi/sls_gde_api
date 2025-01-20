@@ -121,14 +121,14 @@ class SaxonXMLDocument:
             parameters: Optional[Dict] = None
     ):
         """
-        Generates a transformed XML file using an XSLT processor.
+        Generates a transformed XML file using an XSLT executable.
 
         Parameters:
         - xslt_exec (PyXsltExecutable): The XSLT execution object.
         - output_filepath (str): The file path where the transformed XML will
             be saved.
         - parameters (dict, optional): A dictionary with parameters for the XSLT
-            processor. Defaults to None.
+            executable. Defaults to None.
         """
         # Initialize parameters as an empty dictionary if None is passed
         parameters = parameters or {}
@@ -174,6 +174,9 @@ class SaxonXMLDocument:
         result = self._evaluate_xpath('//tei:anchor[starts-with(@xml:id,"start")]/@xml:id')
 
         ids = []
+        if not result:
+            return ids
+
         for i in range(result.size):
             comment_id = result[i].get_string_value(encoding="utf-8")
             try:
@@ -192,22 +195,22 @@ class SaxonXMLDocument:
             for prefix in id_prefixes:
                 position = "none"
                 xml_id = prefix + str(comment_id)
-                xp_result = self._evaluate_xpath('tei:anchor[@xml:id = "' + xml_id + '"]/ancestor::*[self::tei:p or self::tei:lg or self::tei:l][@n][1]/@n', xml_doc)
+                xp_result = self._evaluate_xpath('//tei:anchor[@xml:id = "' + xml_id + '"]/ancestor::*[self::tei:p or self::tei:lg or self::tei:l][@n][1]/@n', xml_doc)
 
-                if xp_result.size > 0:
+                if xp_result and xp_result.size > 0:
                     position = xp_result[0].get_string_value(encoding="utf-8")
                 else:
                     # The comment anchor is in an unnumbered ancestor, check if in a
                     # <head>, <note> or <date> element
-                    xp_result = self._evaluate_xpath('tei:anchor[@xml:id = "' + xml_id + '"]/ancestor::*[self::tei:head or self::tei:note or self::tei:date][1]/name()', xml_doc)
+                    xp_result = self._evaluate_xpath('//tei:anchor[@xml:id = "' + xml_id + '"]/ancestor::*[self::tei:head or self::tei:note or self::tei:date][1]/name()', xml_doc)
 
-                    if xp_result.size > 0:
+                    if xp_result and xp_result.size > 0:
                         position = xp_result[0].get_string_value(encoding="utf-8")
 
                         if position == "head":
-                            xp_result = self._evaluate_xpath('tei:anchor[@xml:id = "' + xml_id + '"]/ancestor::*[self::tei:text or self::tei:div][@type][1]/@type', xml_doc)
+                            xp_result = self._evaluate_xpath('//tei:anchor[@xml:id = "' + xml_id + '"]/ancestor::*[self::tei:text or self::tei:div][@type][1]/@type', xml_doc)
 
-                            if xp_result.size > 0:
+                            if xp_result and xp_result.size > 0:
                                 head_type = xp_result[0].get_string_value(encoding="utf-8")
 
                                 if head_type == "poem":
