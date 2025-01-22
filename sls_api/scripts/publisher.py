@@ -183,7 +183,7 @@ def construct_notes_xml(comments: List[Dict[str, Any]], comment_positions: Dict[
     """
     Given a list of dictionaries with comment notes data and a dictionary
     with note IDs (keys) and note positions (values), constructs an XML
-    fragment of the notes and returns it in stringified form. 
+    fragment of the notes and returns it in stringified form.
     """
     notes = []
     for comment in comments:
