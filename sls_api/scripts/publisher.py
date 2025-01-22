@@ -9,7 +9,7 @@ from saxonche import PySaxonProcessor, PyXslt30Processor, PyXsltExecutable
 from sqlalchemy import create_engine
 from sqlalchemy.sql import text
 from subprocess import CalledProcessError
-from typing import Any, Dict, Optional, Union
+from typing import Any, Dict, List, Optional, Union
 
 from sls_api.endpoints.generics import calculate_checksum, config, db_engine, get_project_id_from_name
 from sls_api.endpoints.tools.files import run_git_command, update_files_in_git_repo
@@ -142,10 +142,11 @@ def get_letter_location(letter_id, type):
     return data
 
 
-def validate_comment_html_fragment(html_str) -> str:
+def clean_comment_html_fragment(html_str: str) -> str:
     """
-    Parses the provided HTML fragment (str) using BeautifulSoup and
-    ElementTree from lxml to ensure the result is well-formed.
+    Parses the provided HTML fragment (str) using 1) BeautifulSoup and
+    2) ElementTree from lxml to ensure the result is well-formed XML.
+    Returns the valid XML in stringified form.
     """
     result = "<noteText></noteText>"
     html_str = html_str.strip()
@@ -161,16 +162,45 @@ def validate_comment_html_fragment(html_str) -> str:
 
 
 def construct_note_position(comment_positions: Dict[str, Any], comment_id: str) -> str | None:
+    """
+    Given a dictionary of comment note IDs (keys) and note positions (values),
+    and a specific note ID, returns a string representing the position of the
+    lemma of the note, or None if the note ID is not found in the dictionary.
+    """
     start_pos = comment_positions.get('start' + comment_id)
     end_pos = comment_positions.get('end' + comment_id)
 
     if start_pos is None or end_pos is None:
         return None
 
-    if start_pos == end_pos or (start_pos != "none" and end_pos == "none") or start_pos == "none":
+    if start_pos == end_pos or (start_pos != "null" and end_pos == "null") or start_pos == "null":
         return str(start_pos)
     else:
         return str(start_pos) + "–" + str(end_pos)
+
+
+def construct_notes_xml(comments: List[Dict[str, Any]], comment_positions: Dict[str, Any]) -> str:
+    """
+    Given a list of dictionaries with comment notes data and a dictionary
+    with note IDs (keys) and note positions (values), constructs an XML
+    fragment of the notes and returns it in stringified form. 
+    """
+    notes = []
+    for comment in comments:
+        note_position = construct_note_position(comment_positions, str(comment["id"]))
+        if note_position is None:
+            continue
+        # Parse and clean the comment HTML to ensure it's well-formed
+        note_text = clean_comment_html_fragment(comment["description"])
+
+        # Form the note XML
+        note = '<note id="' + str(comment["id"]) + '">'
+        note += '<notePosition>' + note_position + '</notePosition>'
+        note += '<noteLemma>' + str(comment["shortenedSelection"]).replace('[...]', '<lemmaBreak>[...]</lemmaBreak>') + '</noteLemma>'
+        note += note_text + '</note>'
+        notes.append(note)
+
+    return "\n".join(notes)
 
 
 def generate_est_and_com_files(publication_info, project, est_master_file_path, com_master_file_path, est_target_path, com_target_path, com_xsl_path=None):
@@ -243,85 +273,70 @@ def generate_modern_est_and_com_files(publication_info: Optional[Dict[str, Any]]
                                       xslt_com_exec: PyXsltExecutable):
     try:
         est_document = SaxonXMLDocument(saxon_proc, xml_filepath=est_source_file_path)
-        est_metadata = None
+        est_params = {}
         if publication_info is not None:
-            est_metadata = {
+            est_params = {
                 "collectionId": publication_info["c_id"],
                 "publicationId": publication_info["p_id"],
                 "title": publication_info["name"],
-                "textType": "est",
                 "sourceFile": publication_info["original_filename"],
+                "publishedStatus": publication_info["published"],
                 "dateOrigin": publication_info["original_publication_date"],
                 "genre": publication_info["genre"],
                 "language": publication_info["language"]
             }
+        est_params["textType"] = "est"
 
         est_document.generate_web_xml_file(xslt_exec=xslt_est_exec,
                                            output_filepath=est_target_file_path,
-                                           parameters=est_metadata)
+                                           parameters=est_params)
     except Exception as ex:
         logger.exception("Failed to handle est master file: {}".format(est_source_file_path))
         raise ex
 
     if not publication_info["publication_comment_id"]:
-        # No publication_comment linked to publication, skip processing of comments
+        # No publication_comment linked to publication, skip
+        # generation of comments web XML
         logger.info("Skipping generation of comment file, no comment linked to publication.")
         return
 
     try:
         # Get all comment IDs from the reading text file
-        comment_ids = est_document.get_all_comment_ids()
+        comment_note_ids = est_document.get_all_comment_ids()
         # Use these IDs to get all comments from the notes database
         # comments is a list of dictionaries with the keys "id",
         # "shortenedSelection" and "description"
-        comments = get_comments_from_database(project, comment_ids)
+        comment_notes = get_comments_from_database(project, comment_note_ids)
         # Get positions of comment start and end tags from reading text file
-        comment_positions = est_document.get_all_comment_positions(comment_ids)
+        comment_positions = est_document.get_all_comment_positions(comment_note_ids)
     except Exception as ex:
-        comments = []
+        comment_notes = []
         logger.exception("Failed to get comments from database.")
         raise ex
 
     notes_xml_str = ""
 
-    if comments:
+    if comment_notes:
+        notes_xml_str = construct_notes_xml(comment_notes, comment_positions)
         # If com_source_file_path doesn't exist, use
         # COMMENTS_TEMPLATE_PATH_IN_FILE_ROOT
         if not os.path.exists(com_source_file_path):
             com_source_file_path = os.path.join(config[project]["file_root"], COMMENTS_TEMPLATE_PATH_IN_FILE_ROOT)
 
-        note_fragments = []
-
-        for comment in comments:
-            note_position = construct_note_position(comment_positions, str(comment["id"]))
-            if note_position is None:
-                continue
-            # Parse and validate the HTML comment to ensure it's well-formed
-            note_text = validate_comment_html_fragment(comment["description"])
-
-            # Form the note XML
-            note_str = '<note id="' + str(comment["id"]) + '">'
-            note_str += '<notePosition>' + note_position + '</notePosition>'
-            note_str += '<noteLemma>' + str(comment["shortenedSelection"]).replace('[...]', '<lemmaBreak>[...]</lemmaBreak>') + '</noteLemma>'
-            note_str += note_text + '</note>'
-            note_fragments.append(note_str)
-
-        notes_xml_str = "\n".join(note_fragments)
-
     try:
         com_document = SaxonXMLDocument(saxon_proc, xml_filepath=com_source_file_path)
-        if est_metadata:
-            com_metadata = est_metadata
-            com_metadata["commentId"] = publication_info["publication_comment_id"]
-            com_metadata["sourceFile"] = publication_info["com_original_filename"] or None
+        if est_params:
+            com_params = est_params
+            com_params["commentId"] = publication_info["publication_comment_id"]
+            com_params["sourceFile"] = publication_info["com_original_filename"] or None
         else:
-            com_metadata = {}
-        com_metadata["textType"] = "com"
-        com_metadata["notes"] = notes_xml_str
+            com_params = {}
+        com_params["textType"] = "com"
+        com_params["notes"] = notes_xml_str
 
         com_document.generate_web_xml_file(xslt_exec=xslt_com_exec,
                                            output_filepath=com_target_file_path,
-                                           parameters=com_metadata)
+                                           parameters=com_params)
     except Exception as ex:
         logger.exception("Failed to handle com master file: {}".format(com_source_file_path))
         raise ex
@@ -386,6 +401,7 @@ def check_publication_mtimes_and_publish_files(project: str, publication_ids: Un
                                 p.publication_collection_id as c_id, \
                                 pcol.id as c_id, \
                                 p.original_filename as original_filename, \
+                                p.published as published, \
                                 p.original_publication_date as original_publication_date, \
                                 p.genre as genre, \
                                 p.language as language, \
@@ -403,6 +419,7 @@ def check_publication_mtimes_and_publish_files(project: str, publication_ids: Un
                                     p.publication_collection_id as c_id, \
                                     pcol.id as c_id, \
                                     tr.text as original_filename, \
+                                    p.published as published, \
                                     p.original_publication_date as original_publication_date, \
                                     p.genre as genre, \
                                     p.publication_group_id as publication_group_id, \
@@ -419,6 +436,7 @@ def check_publication_mtimes_and_publish_files(project: str, publication_ids: Un
                             p.id as p_id, \
                             p.publication_collection_id as c_id, \
                             pc.original_filename as original_filename, \
+                            pc.published as published, \
                             p.original_publication_date as original_publication_date, \
                             p.genre as genre, \
                             p.publication_group_id as publication_group_id, \
@@ -436,6 +454,7 @@ def check_publication_mtimes_and_publish_files(project: str, publication_ids: Un
                                 p.publication_collection_id as c_id, \
                                 pcol.id as c_id, \
                                 pm.original_filename as original_filename, \
+                                pm.published as published, \
                                 p.original_publication_date as original_publication_date, \
                                 p.genre as genre, \
                                 p.publication_group_id as publication_group_id, \
@@ -520,8 +539,8 @@ def check_publication_mtimes_and_publish_files(project: str, publication_ids: Un
                     logger.info("Comment file not set for publication {}, using template instead.".format(publication_id))
                     comment_file = COMMENTS_TEMPLATE_PATH_IN_FILE_ROOT
 
-                # Add the comment filename to the row dict so it can be passed
-                # to called functions
+                # Add the comment filename and published status to the row
+                # dict so it can be passed to called functions
                 row["com_original_filename"] = comment_file
 
                 com_source_file_path = os.path.join(file_root, comment_file)

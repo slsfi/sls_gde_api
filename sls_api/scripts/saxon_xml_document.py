@@ -142,18 +142,22 @@ class SaxonXMLDocument:
         self.xml_doc_str = xslt_exec.transform_to_string(xdm_node=self.xml_doc_tree)
         self._save_to_file(output_filepath=output_filepath)
 
-    def _save_to_file(self, output_filepath: str):
+    def add_namespace(self, ns_prefix: str, ns_uri: str):
         """
-        Saves the XML document to the specified output file.
+        Adds the provided namespace to the class config and namespace
+        properties.
 
         Parameters:
-        - output_filepath (str): The file path where the XML document will be
-            saved.
+        - ns_prefix (str): The prefix of the namespace.
+        - ns_uri (str): The URI of the namespace.
         """
-        with open(output_filepath, "w", encoding="utf-8") as file:
-            xml_str = self._remove_blank_lines(self.xml_doc_str)
-            xml_str = self._format_xml_with_line_endings(xml_str)
-            file.write(xml_str)
+        self.config["namespaces"].append(
+            {
+                "prefix": ns_prefix,
+                "uri": ns_uri
+            }
+        )
+        self.namespaces = self.config["namespaces"]
 
     def get_all_comment_ids(self) -> List[int]:
         """
@@ -193,7 +197,7 @@ class SaxonXMLDocument:
 
         for comment_id in comment_ids:
             for prefix in id_prefixes:
-                position = "none"
+                position = "null"
                 xml_id = prefix + str(comment_id)
                 xp_result = self._evaluate_xpath('//tei:anchor[@xml:id = "' + xml_id + '"]/ancestor::*[self::tei:p or self::tei:lg or self::tei:l][@n][1]/@n', xml_doc)
 
@@ -219,6 +223,19 @@ class SaxonXMLDocument:
                 comment_positions[xml_id] = position
 
         return comment_positions
+
+    def _save_to_file(self, output_filepath: str):
+        """
+        Saves the XML document to the specified output file.
+
+        Parameters:
+        - output_filepath (str): The file path where the XML document will be
+            saved.
+        """
+        with open(output_filepath, "w", encoding="utf-8") as file:
+            xml_str = self._remove_blank_lines(self.xml_doc_str)
+            xml_str = self._format_xml_with_line_endings(xml_str)
+            file.write(xml_str)
 
     def _parse_from_string(self, xml_str: str) -> PyXdmNode:
         """
