@@ -16,30 +16,30 @@ class SaxonXMLDocument:
     - xml_doc_tree (PyXdmNode): Parsed XML tree representation.
     - xml_doc_str (str): String representation of the loaded XML document.
     - saxon_proc (PySaxonProcessor): An instance of PySaxonProcessor for
-        SaxonC operations.
+      SaxonC operations.
     - config (dict): Configuration dictionary containing namespace mappings.
     - namespaces (list): List of namespaces to declare for XPath evaluation.
 
     Methods:
     - load_xml_file(filepath): Loads an XML document from a file and parses it.
     - generate_web_xml_file(xslt_exec, output_filepath): Generates a
-        transformed XML file using XSLT.
+      transformed XML file using XSLT.
     - get_all_comment_ids(): Extracts all comment IDs matching a specific
-        XPath query.
+      XPath query.
     - _parse_from_string(xml_str): Parses an XML document from a string.
     - _evaluate_xpath(xpath_str): Evaluates an XPath expression using the
-        configured namespaces.
+      configured namespaces.
     - _save_to_file(output_filepath): Saves the current XML document to a file.
     - _move_end_anchors(xml_str): Adjusts the position of end anchors in the
-        XML.
+      XML.
 
     Parameters (during initialization):
     - saxon_proc (PySaxonProcessor): Instance of PySaxonProcessor for handling
-        XML parsing and XPath evaluation.
+      XML parsing and XPath evaluation.
     - xml_filepath (optional, str): Path to an XML file to load upon
-        initialization.
+      initialization.
     - config (optional, dict): Configuration dictionary containing namespace
-        mappings. Defaults to TEI and XML namespaces.
+      mappings. Defaults to TEI and XML namespaces.
     """
 
     def __init__(
@@ -53,12 +53,12 @@ class SaxonXMLDocument:
 
         Parameters:
         - saxon_proc (PySaxonProcessor): An instance of PySaxonProcessor for
-            handling XML parsing and XPath evaluation.
+          handling XML parsing and XPath evaluation.
         - xml_filepath (str, optional): The file path of an XML document to
-            load upon initialization. If provided, the XML document will be
-            immediately loaded.
+          load upon initialization. If provided, the XML document will be
+          immediately loaded.
         - config (dict, optional): A configuration dictionary containing
-            namespace mappings. Defaults to:
+          namespace mappings. Defaults to:
             {
                 "namespaces": [
                     {"prefix": "xml", "uri": "http://www.w3.org/XML/1998/namespace"},
@@ -126,9 +126,9 @@ class SaxonXMLDocument:
         Parameters:
         - xslt_exec (PyXsltExecutable): The XSLT execution object.
         - output_filepath (str): The file path where the transformed XML will
-            be saved.
+          be saved.
         - parameters (dict, optional): A dictionary with parameters for the XSLT
-            executable. Defaults to None.
+          executable. Defaults to None.
         """
         # Initialize parameters as an empty dictionary if None is passed
         parameters = parameters or {}
@@ -173,7 +173,7 @@ class SaxonXMLDocument:
 
         Raises:
         - ValueError: If any extracted ID (after removing the "start" prefix) is
-            not a valid integer.
+          not a valid integer.
         """
         result = self._evaluate_xpath('//tei:anchor[starts-with(@xml:id,"start")]/@xml:id')
 
@@ -230,7 +230,7 @@ class SaxonXMLDocument:
 
         Parameters:
         - output_filepath (str): The file path where the XML document will be
-            saved.
+          saved.
         """
         with open(output_filepath, "w", encoding="utf-8") as file:
             xml_str = self._remove_blank_lines(self.xml_doc_str)
@@ -312,10 +312,10 @@ class SaxonXMLDocument:
 
         Parameters:
         - xslt_exec (PyXsltExecutable): The XSLT execution object where the parameters
-            will be set.
+          will be set.
         - parameters (dict): A dictionary containing parameter names and their
-            corresponding values. The values will be converted to the appropriate XDM
-            type before being set on the XSLT processor.
+          corresponding values. The values will be converted to the appropriate XDM
+          type before being set on the XSLT processor.
         """
         for param_name, param_value in parameters.items():
             xslt_exec.set_parameter(name=param_name, value=self._convert_primitive_type_to_xdm(param_value))
@@ -326,11 +326,11 @@ class SaxonXMLDocument:
 
         Parameters:
         - value (any): A primitive Python value (int, str, bool, float) to be
-            converted to an XDM value for use with the Saxon processor.
+          converted to an XDM value for use with the Saxon processor.
 
         Returns:
         - PyXdmValue: The XDM representation of the input value. If the input value
-            does not match a recognized type, an empty XDM sequence is returned.
+          does not match a recognized type, an empty XDM sequence is returned.
 
         Behavior:
         - Converts Python types to their XDM equivalents:
