@@ -787,8 +787,8 @@ def get_metadata_from_xml_file(project: str, file_path: str):
 
 def extract_publication_metadata_from_tei_xml(file_path: str) -> Tuple[Optional[Dict[str, Any]], Optional[str], Optional[int]]:
     """
-    Extracts publication metadata (document title, date of origin and main
-    language) from a TEI XML file located at the given file path.
+    Extracts publication metadata (document title, date of origin, main
+    language and genre) from a TEI XML file located at the given file path.
 
     Args:
 
@@ -834,18 +834,25 @@ def extract_publication_metadata_from_tei_xml(file_path: str) -> Tuple[Optional[
         # Extract the @when attribute value in <origDate> within <sourceDesc>
         orig_date_element = root.find("./tei:teiHeader/tei:fileDesc/tei:sourceDesc//tei:origDate", namespaces=ns)
         orig_date = orig_date_element.get("when") if orig_date_element is not None else None
+
+        # Fallbacks in case <origDate> not found in <sourceDesc>:
         if not orig_date:
             # Search for a <date> with @when in <bibl> within <sourceDesc>
             date_element = root.find("./tei:teiHeader/tei:fileDesc/tei:sourceDesc/tei:bibl//tei:date", namespaces=ns)
             orig_date = date_element.get("when") if date_element is not None else None
 
-            # Validate orig_date, must conform to YYYY, YYYY-MM
-            # or YYYY-MM-DD date formats
-            if (
-                orig_date is not None
-                and not is_any_valid_date_format(str(orig_date))
-            ):
-                orig_date = None
+            if not orig_date:
+                # Search for a <date> with @when in <correspDesc> within <profileDesc>
+                date_element = root.find("./tei:teiHeader/tei:profileDesc/tei:correspDesc/tei:correspAction[@type='sent']/tei:date", namespaces=ns)
+                orig_date = date_element.get("when") if date_element is not None else None
+
+        # Validate orig_date, must conform to YYYY, YYYY-MM or YYYY-MM-DD
+        # date formats if not None. Set to None if invalid format.
+        if (
+            orig_date is not None
+            and not is_any_valid_date_format(str(orig_date))
+        ):
+            orig_date = None
 
         # Extract the @xml:lang attribute in <text>
         text_element = root.find("./tei:text", namespaces=ns)
@@ -853,11 +860,15 @@ def extract_publication_metadata_from_tei_xml(file_path: str) -> Tuple[Optional[
                     if text_element is not None
                     else None)
 
+        # Extract genre from <textClass>
+        genre_element = root.find("./tei:teiHeader/tei:profileDesc/tei:textClass/tei:keywords/tei:term[@type='genre']", namespaces=ns)
+        genre = genre_element.text if genre_element is not None else None
+
         metadata = {
             "name": title,
             "original_publication_date": orig_date,
             "language": language,
-            "genre": None  # Currently, genre is not extractable from the XML files
+            "genre": genre
         }
         return metadata, None, 200
 
