@@ -7,8 +7,6 @@
 __pycache__
 .DS_Store
 .vs
-build
-venv
 configs/digital_editions.yml
 sls_api/scripts/xslt/*
 sls_api/scripts/get-pip.py
