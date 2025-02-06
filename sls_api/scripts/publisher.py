@@ -503,12 +503,12 @@ def check_publication_mtimes_and_publish_files(project: str, publication_ids: Un
                 xslt_execs: Dict[str, Optional[PyXsltExecutable]] = {}
 
                 for type_key, xsl_path in [
-                    ("est", EST_XSL_PATH_IN_FILE_ROOT), 
+                    ("est", EST_XSL_PATH_IN_FILE_ROOT),
                     ("com", COM_XSL_PATH_IN_FILE_ROOT),
                     ("ms", MS_XSL_PATH_IN_FILE_ROOT)
                 ]:
                     xsl_full_path = os.path.join(config[project]["file_root"], xsl_path)
-                    
+
                     if os.path.exists(xsl_full_path):
                         xslt_execs[type_key] = xslt_proc.compile_stylesheet(stylesheet_file=xsl_full_path, encoding="utf-8")
                     else:
@@ -579,6 +579,7 @@ def check_publication_mtimes_and_publish_files(project: str, publication_ids: Un
                             md5sums.append(calculate_checksum(com_target_file_path))
                         else:
                             md5sums.append("SKIP")
+
                         if modern_text_encoding:
                             generate_modern_est_and_com_files(row,
                                                               project,
