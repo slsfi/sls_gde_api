@@ -845,8 +845,6 @@ def check_publication_mtimes_and_publish_files(project: str, publication_ids: Un
                 target_filename = "{}_{}_ms_{}.xml".format(collection_id,
                                                            publication_id,
                                                            manuscript_id)
-                if row["original_filename"] is None:
-                    continue
 
                 source_filename = row["original_filename"]
                 if not source_filename:
