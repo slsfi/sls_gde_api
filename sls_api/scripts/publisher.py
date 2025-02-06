@@ -24,8 +24,10 @@ valid_projects = [project for project in config if isinstance(config[project], d
 
 comment_db_engines = {project: create_engine(config[project]["comments_database"], pool_pre_ping=True) for project in valid_projects}
 
-EST_XSL_PATH_IN_FILE_ROOT = "xslt/publish-est.xsl"
-COMMENTS_XSL_PATH_IN_FILE_ROOT = "xslt/comment_html_to_tei.xsl"
+EST_XSL_PATH_IN_FILE_ROOT = "xslt/publisher/est.xsl"
+COM_XSL_PATH_IN_FILE_ROOT = "xslt/publisher/com.xsl"
+MS_XSL_PATH_IN_FILE_ROOT = "xslt/publisher/ms.xsl"
+LEGACY_COMMENTS_XSL_PATH_IN_FILE_ROOT = "xslt/comment_html_to_tei.xsl"
 COMMENTS_TEMPLATE_PATH_IN_FILE_ROOT = "templates/comment.xml"
 
 
@@ -246,7 +248,7 @@ def generate_est_and_com_files(publication_info, project, est_master_file_path, 
         # if com_xsl_path is invalid or not given, try using COMMENTS_XSL_PATH_IN_FILE_ROOT
         if com_xsl_path is None or not os.path.exists(com_xsl_path):
             com_xsl_path = os.path.join(
-                config[project]["file_root"], COMMENTS_XSL_PATH_IN_FILE_ROOT)
+                config[project]["file_root"], LEGACY_COMMENTS_XSL_PATH_IN_FILE_ROOT)
 
         # process comments and save
         com_document.ProcessCommments(comments, est_document, com_xsl_path)
@@ -269,8 +271,7 @@ def generate_modern_est_and_com_files(publication_info: Optional[Dict[str, Any]]
                                       est_target_file_path: str,
                                       com_target_file_path: str,
                                       saxon_proc: PySaxonProcessor,
-                                      xslt_est_exec: PyXsltExecutable,
-                                      xslt_com_exec: PyXsltExecutable):
+                                      xslt_execs: Dict[str, Optional[PyXsltExecutable]]):
     try:
         est_document = SaxonXMLDocument(saxon_proc, xml_filepath=est_source_file_path)
         est_params = {}
@@ -287,7 +288,7 @@ def generate_modern_est_and_com_files(publication_info: Optional[Dict[str, Any]]
             }
         est_params["textType"] = "est"
 
-        est_document.generate_web_xml_file(xslt_exec=xslt_est_exec,
+        est_document.generate_web_xml_file(xslt_exec=xslt_execs["est"],
                                            output_filepath=est_target_file_path,
                                            parameters=est_params)
     except Exception as ex:
@@ -334,7 +335,7 @@ def generate_modern_est_and_com_files(publication_info: Optional[Dict[str, Any]]
         com_params["textType"] = "com"
         com_params["notes"] = notes_xml_str
 
-        com_document.generate_web_xml_file(xslt_exec=xslt_com_exec,
+        com_document.generate_web_xml_file(xslt_exec=xslt_execs["com"],
                                            output_filepath=com_target_file_path,
                                            parameters=com_params)
     except Exception as ex:
@@ -499,14 +500,20 @@ def check_publication_mtimes_and_publish_files(project: str, publication_ids: Un
                 saxon_proc: PySaxonProcessor = PySaxonProcessor(license=False)
                 xslt_proc: PyXslt30Processor = saxon_proc.new_xslt30_processor()
 
-                xslt_est_exec: Optional[PyXsltExecutable] = None
-                xslt_com_exec: Optional[PyXsltExecutable] = None
+                xslt_execs: Dict[str, Optional[PyXsltExecutable]] = {}
 
-                est_xsl_path = os.path.join(config[project]["file_root"], EST_XSL_PATH_IN_FILE_ROOT)
-                if os.path.exists(est_xsl_path):
-                    xslt_est_exec = xslt_proc.compile_stylesheet(stylesheet_file=est_xsl_path, encoding="utf-8")
-                else:
-                    logger.error(f"Unable to publish est web files, {EST_XSL_PATH_IN_FILE_ROOT} does not exist.")
+                for type_key, xsl_path in [
+                    ("est", EST_XSL_PATH_IN_FILE_ROOT), 
+                    ("com", COM_XSL_PATH_IN_FILE_ROOT),
+                    ("ms", MS_XSL_PATH_IN_FILE_ROOT)
+                ]:
+                    xsl_full_path = os.path.join(config[project]["file_root"], xsl_path)
+                    
+                    if os.path.exists(xsl_full_path):
+                        xslt_execs[type_key] = xslt_proc.compile_stylesheet(stylesheet_file=xsl_full_path, encoding="utf-8")
+                    else:
+                        xslt_execs[type_key] = None
+                        logger.warning(f"Unable to publish {type_key} web files, {xsl_path} does not exist.")
 
             # Keep a list of changed files for later git commit
             changes = set()
@@ -580,8 +587,7 @@ def check_publication_mtimes_and_publish_files(project: str, publication_ids: Un
                                                               est_target_file_path,
                                                               com_target_file_path,
                                                               saxon_proc,
-                                                              xslt_est_exec,
-                                                              xslt_com_exec)
+                                                              xslt_execs)
                         else:
                             generate_est_and_com_files(row,
                                                        project,
