@@ -628,8 +628,23 @@ def check_publication_mtimes_and_publish_files(project: str, publication_ids: Un
                                 md5sums.append(calculate_checksum(com_target_file_path))
                             else:
                                 md5sums.append("SKIP")
-                            generate_est_and_com_files(row, project, est_source_file_path, com_source_file_path,
-                                                       est_target_file_path, com_target_file_path)
+
+                            if modern_text_encoding:
+                                generate_modern_est_and_com_files(row,
+                                                                  project,
+                                                                  est_source_file_path,
+                                                                  com_source_file_path,
+                                                                  est_target_file_path,
+                                                                  com_target_file_path,
+                                                                  saxon_proc,
+                                                                  xslt_execs)
+                            else:
+                                generate_est_and_com_files(row,
+                                                           project,
+                                                           est_source_file_path,
+                                                           com_source_file_path,
+                                                           est_target_file_path,
+                                                           com_target_file_path)
                         except Exception:
                             logger.exception("Failed to generate est/com files for publication {}!".format(publication_id))
                             continue
@@ -657,8 +672,23 @@ def check_publication_mtimes_and_publish_files(project: str, publication_ids: Un
                                     md5sums.append(calculate_checksum(com_target_file_path))
                                 else:
                                     md5sums.append("SKIP")
-                                generate_est_and_com_files(row, project, est_source_file_path, com_source_file_path,
-                                                           est_target_file_path, com_target_file_path)
+
+                                if modern_text_encoding:
+                                    generate_modern_est_and_com_files(row,
+                                                                      project,
+                                                                      est_source_file_path,
+                                                                      com_source_file_path,
+                                                                      est_target_file_path,
+                                                                      com_target_file_path,
+                                                                      saxon_proc,
+                                                                      xslt_execs)
+                                else:
+                                    generate_est_and_com_files(row,
+                                                               project,
+                                                               est_source_file_path,
+                                                               com_source_file_path,
+                                                               est_target_file_path,
+                                                               com_target_file_path)
                             except Exception:
                                 logger.exception("Failed to generate est/com files for publication {}!".format(publication_id))
                                 continue
