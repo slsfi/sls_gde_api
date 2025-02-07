@@ -158,8 +158,9 @@ def clean_comment_html_fragment(html_str: str) -> str:
             soup.contents[0].unwrap()
             dom = ET.parse(StringIO('<noteText>' + str(soup) + '</noteText>'))
             result = ET.tostring(dom, encoding="unicode")
-        except Exception as e:
-            print(e)
+        except Exception:
+            logger.exception("Failed to parse comment HTML fragment.")
+            raise
     return result
 
 
@@ -193,7 +194,10 @@ def construct_notes_xml(comments: List[Dict[str, Any]], comment_positions: Dict[
         if note_position is None:
             continue
         # Parse and clean the comment HTML to ensure it's well-formed
-        note_text = clean_comment_html_fragment(comment["description"])
+        try:
+            note_text = clean_comment_html_fragment(comment["description"])
+        except Exception:
+            raise
 
         # Form the note XML
         note = '<note id="' + str(comment["id"]) + '">'
@@ -275,28 +279,34 @@ def generate_modern_est_and_com_files(publication_info: Optional[Dict[str, Any]]
     """
     Generates published est and com files using XSLT processing.
     """
-    try:
-        est_document = SaxonXMLDocument(saxon_proc, xml_filepath=est_source_file_path)
-        est_params = {}
-        if publication_info is not None:
-            est_params = {
-                "collectionId": publication_info["c_id"],
-                "publicationId": publication_info["p_id"],
-                "title": publication_info["name"],
-                "sourceFile": publication_info["original_filename"],
-                "publishedStatus": publication_info["published"],
-                "dateOrigin": publication_info["original_publication_date"],
-                "genre": publication_info["genre"],
-                "language": publication_info["language"]
-            }
-        est_params["textType"] = "est"
+    if xslt_execs["est"] is None:
+        logger.warning(f"XSLT executable for 'est' is missing. '{EST_XSL_PATH_IN_FILE_ROOT}' is invalid or does not exist in project root.")
+        # Don't raise an exception here in case the XSLT for est is
+        # intentionally missing, for example if the project doesn't
+        # have est files. This still allows com files to be processed.
+    else:
+        try:
+            est_document = SaxonXMLDocument(saxon_proc, xml_filepath=est_source_file_path)
+            est_params = {}
+            if publication_info is not None:
+                est_params = {
+                    "collectionId": publication_info["c_id"],
+                    "publicationId": publication_info["p_id"],
+                    "title": publication_info["name"],
+                    "sourceFile": publication_info["original_filename"],
+                    "publishedStatus": publication_info["published"],
+                    "dateOrigin": publication_info["original_publication_date"],
+                    "genre": publication_info["genre"],
+                    "language": publication_info["language"]
+                }
+            est_params["textType"] = "est"
 
-        est_document.generate_web_xml_file(xslt_exec=xslt_execs["est"],
-                                           output_filepath=est_target_file_path,
-                                           parameters=est_params)
-    except Exception as ex:
-        logger.exception("Failed to handle est master file: {}".format(est_source_file_path))
-        raise ex
+            est_document.generate_web_xml_file(xslt_exec=xslt_execs["est"],
+                                            output_filepath=est_target_file_path,
+                                            parameters=est_params)
+        except Exception:
+            logger.exception(f"Failed to handle est master file: {est_source_file_path}")
+            raise
 
     if not publication_info["publication_comment_id"]:
         # No publication_comment linked to publication, skip
@@ -304,28 +314,33 @@ def generate_modern_est_and_com_files(publication_info: Optional[Dict[str, Any]]
         logger.info("Skipping generation of comment file, no comment linked to publication.")
         return
 
-    try:
-        # Get all comment IDs from the reading text file
-        comment_note_ids = est_document.get_all_comment_ids()
-        # Use these IDs to get all comments from the notes database
-        # comments is a list of dictionaries with the keys "id",
-        # "shortenedSelection" and "description"
-        comment_notes = get_comments_from_database(project, comment_note_ids)
-        # Get positions of comment start and end tags from reading text file
-        comment_positions = est_document.get_all_comment_positions(comment_note_ids)
-    except Exception as ex:
-        comment_notes = []
-        logger.exception("Failed to get comments from database.")
-        raise ex
+    if xslt_execs["com"] is None:
+        logger.warning(f"XSLT executable for 'com' is missing. '{COM_XSL_PATH_IN_FILE_ROOT}' is invalid or does not exist in project root. Comment file not generated.")
+        # Don't raise an exception here so the est file can still be committed.
+        return
 
     notes_xml_str = ""
 
-    if comment_notes:
-        notes_xml_str = construct_notes_xml(comment_notes, comment_positions)
-        # If com_source_file_path doesn't exist, use
-        # COMMENTS_TEMPLATE_PATH_IN_FILE_ROOT
-        if not os.path.exists(com_source_file_path):
-            com_source_file_path = os.path.join(config[project]["file_root"], COMMENTS_TEMPLATE_PATH_IN_FILE_ROOT)
+    if xslt_execs["est"] is not None:
+        try:
+            # Get all comment IDs from the reading text file
+            comment_note_ids = est_document.get_all_comment_ids()
+            # Use these IDs to get all comments from the notes database
+            # comments is a list of dictionaries with the keys "id",
+            # "shortenedSelection" and "description"
+            comment_notes = get_comments_from_database(project, comment_note_ids)
+            # Get positions of comment start and end tags from reading text file
+            comment_positions = est_document.get_all_comment_positions(comment_note_ids)
+            # Stringify the notes data
+            notes_xml_str = construct_notes_xml(comment_notes, comment_positions)
+        except Exception:
+            logger.exception("Failed to get/process comment notes from database.")
+
+    # If com_source_file_path doesn't exist, use
+    # COMMENTS_TEMPLATE_PATH_IN_FILE_ROOT
+    if not os.path.exists(com_source_file_path):
+        com_source_file_path = os.path.join(config[project]["file_root"],
+                                            COMMENTS_TEMPLATE_PATH_IN_FILE_ROOT)
 
     try:
         com_document = SaxonXMLDocument(saxon_proc, xml_filepath=com_source_file_path)
@@ -341,9 +356,9 @@ def generate_modern_est_and_com_files(publication_info: Optional[Dict[str, Any]]
         com_document.generate_web_xml_file(xslt_exec=xslt_execs["com"],
                                            output_filepath=com_target_file_path,
                                            parameters=com_params)
-    except Exception as ex:
-        logger.exception("Failed to handle com master file: {}".format(com_source_file_path))
-        raise ex
+    except Exception:
+        logger.exception(f"Failed to handle com master file: {com_source_file_path}")
+        raise
 
 
 def process_var_documents_and_generate_files(main_var_doc, main_var_path, var_docs, var_paths, publication_info):
@@ -389,6 +404,10 @@ def generate_modern_ms_file(publication_info: Optional[Dict[str, Any]],
     Generates a published ms file using XSLT processing.
     """
     try:
+        if xslt_execs["ms"] is None:
+            logger.error(f"XSLT executable for 'ms' is missing. '{MS_XSL_PATH_IN_FILE_ROOT}' is invalid or does not exist in project root.")
+            raise ValueError("XSLT executable for 'ms' is missing.")
+
         ms_document = SaxonXMLDocument(saxon_proc, xml_filepath=source_file_path)
         ms_params = {}
         if publication_info is not None:
@@ -408,9 +427,9 @@ def generate_modern_ms_file(publication_info: Optional[Dict[str, Any]],
         ms_document.generate_web_xml_file(xslt_exec=xslt_execs["ms"],
                                           output_filepath=target_file_path,
                                           parameters=ms_params)
-    except Exception as ex:
-        logger.exception("Failed to handle manuscript file: {}".format(source_file_path))
-        raise ex
+    except Exception:
+        logger.exception(f"Failed to handle manuscript file: {source_file_path}")
+        raise
 
 
 def check_publication_mtimes_and_publish_files(project: str, publication_ids: Union[tuple, None], git_author: str, no_git=False, force_publish=False, is_multilingual=False, modern_text_encoding=False):
@@ -546,10 +565,13 @@ def check_publication_mtimes_and_publish_files(project: str, publication_ids: Un
                     xsl_full_path = os.path.join(config[project]["file_root"], xsl_path)
 
                     if os.path.exists(xsl_full_path):
-                        xslt_execs[type_key] = xslt_proc.compile_stylesheet(stylesheet_file=xsl_full_path, encoding="utf-8")
+                        try:
+                            xslt_execs[type_key] = xslt_proc.compile_stylesheet(stylesheet_file=xsl_full_path, encoding="utf-8")
+                        except Exception as ex:
+                            logger.warning(f"Failed to compile XSLT executable for '{type_key}' files. Make sure '{xsl_path}' exists and is valid in project root. Exception: {ex}")
+                            xslt_execs[type_key] = None
                     else:
                         xslt_execs[type_key] = None
-                        logger.warning(f"Unable to publish {type_key} web files, {xsl_path} does not exist.")
 
             # Keep a list of changed files for later git commit
             changes = set()
