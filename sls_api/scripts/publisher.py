@@ -359,12 +359,12 @@ def process_var_documents_and_generate_files(main_var_doc, main_var_path, var_do
         var_doc.Save(var_path)
 
 
-def generate_ms_file(master_file_path, target_file_path, publication_info, modern_text_encoding=False):
+def generate_ms_file(master_file_path, target_file_path, publication_info):
     """
     Given a project name, and valid master and target file paths for a publication manuscript, regenerates target file based on source file
     """
     try:
-        ms_document = CTeiDocument(modernTextEncoding=modern_text_encoding)
+        ms_document = CTeiDocument()
         ms_document.Load(master_file_path)
         ms_document.PostProcessOtherText()
     except Exception as ex:
@@ -373,8 +373,38 @@ def generate_ms_file(master_file_path, target_file_path, publication_info, moder
 
     if publication_info is not None:
         ms_document.SetMetadata(publication_info['original_publication_date'], publication_info['p_id'], publication_info['name'],
-                                publication_info['genre'], 'com', publication_info['c_id'], publication_info['publication_group_id'])
+                                publication_info['genre'], 'ms', publication_info['c_id'], publication_info['publication_group_id'])
     ms_document.Save(target_file_path)
+
+
+def generate_modern_ms_file(publication_info: Optional[Dict[str, Any]],
+                            source_file_path: str,
+                            target_file_path: str,
+                            saxon_proc: PySaxonProcessor,
+                            xslt_execs: Dict[str, Optional[PyXsltExecutable]]):
+    try:
+        ms_document = SaxonXMLDocument(saxon_proc, xml_filepath=source_file_path)
+        ms_params = {}
+        if publication_info is not None:
+            ms_params = {
+                "collectionId": publication_info["c_id"],
+                "publicationId": publication_info["p_id"],
+                "manuscriptId": publication_info["m_id"],
+                "title": publication_info["m_name"],
+                "sourceFile": publication_info["original_filename"],
+                "publishedStatus": publication_info["published"],
+                "dateOrigin": publication_info["original_publication_date"],
+                "genre": publication_info["genre"],
+                "language": publication_info["language"]
+            }
+        ms_params["textType"] = "ms"
+
+        ms_document.generate_web_xml_file(xslt_exec=xslt_execs["ms"],
+                                          output_filepath=target_file_path,
+                                          parameters=ms_params)
+    except Exception as ex:
+        logger.exception("Failed to handle manuscript file: {}".format(source_file_path))
+        raise ex
 
 
 def check_publication_mtimes_and_publish_files(project: str, publication_ids: Union[tuple, None], git_author: str, no_git=False, force_publish=False, is_multilingual=False, modern_text_encoding=False):
@@ -872,7 +902,17 @@ def check_publication_mtimes_and_publish_files(project: str, publication_ids: Un
                             md5sum = calculate_checksum(target_file_path)
                         else:
                             md5sum = "SKIP"
-                        generate_ms_file(source_file_path, target_file_path, row)
+
+                        if modern_text_encoding:
+                            generate_modern_ms_file(row,
+                                                    source_file_path,
+                                                    target_file_path,
+                                                    saxon_proc,
+                                                    xslt_execs)
+                        else:
+                            generate_ms_file(source_file_path,
+                                             target_file_path,
+                                             row)
                     except Exception:
                         continue
                     else:
@@ -895,7 +935,17 @@ def check_publication_mtimes_and_publish_files(project: str, publication_ids: Un
                                 md5sum = calculate_checksum(target_file_path)
                             else:
                                 md5sum = "SKIP"
-                            generate_ms_file(source_file_path, target_file_path, row)
+
+                            if modern_text_encoding:
+                                generate_modern_ms_file(row,
+                                                        source_file_path,
+                                                        target_file_path,
+                                                        saxon_proc,
+                                                        xslt_execs)
+                            else:
+                                generate_ms_file(source_file_path,
+                                                 target_file_path,
+                                                 row)
                         except Exception:
                             continue
                         else:
@@ -914,7 +964,17 @@ def check_publication_mtimes_and_publish_files(project: str, publication_ids: Un
                                     md5sum = calculate_checksum(target_file_path)
                                 else:
                                     md5sum = "SKIP"
-                                generate_ms_file(source_file_path, target_file_path, row)
+
+                                if modern_text_encoding:
+                                    generate_modern_ms_file(row,
+                                                            source_file_path,
+                                                            target_file_path,
+                                                            saxon_proc,
+                                                            xslt_execs)
+                                else:
+                                    generate_ms_file(source_file_path,
+                                                     target_file_path,
+                                                     row)
                             except Exception:
                                 continue
                             else:
