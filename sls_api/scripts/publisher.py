@@ -24,9 +24,9 @@ valid_projects = [project for project in config if isinstance(config[project], d
 
 comment_db_engines = {project: create_engine(config[project]["comments_database"], pool_pre_ping=True) for project in valid_projects}
 
-EST_XSL_PATH_IN_FILE_ROOT = "xslt/publisher/est.xsl"
-COM_XSL_PATH_IN_FILE_ROOT = "xslt/publisher/com.xsl"
-MS_XSL_PATH_IN_FILE_ROOT = "xslt/publisher/ms.xsl"
+EST_XSL_PATH_IN_FILE_ROOT = "xslt/publisher/publish_est.xsl"
+COM_XSL_PATH_IN_FILE_ROOT = "xslt/publisher/publish_com.xsl"
+MS_XSL_PATH_IN_FILE_ROOT = "xslt/publisher/publish_ms.xsl"
 LEGACY_COMMENTS_XSL_PATH_IN_FILE_ROOT = "xslt/comment_html_to_tei.xsl"
 COMMENTS_TEMPLATE_PATH_IN_FILE_ROOT = "templates/comment.xml"
 
@@ -272,6 +272,9 @@ def generate_modern_est_and_com_files(publication_info: Optional[Dict[str, Any]]
                                       com_target_file_path: str,
                                       saxon_proc: PySaxonProcessor,
                                       xslt_execs: Dict[str, Optional[PyXsltExecutable]]):
+    """
+    Generates published est and com files using XSLT processing.
+    """
     try:
         est_document = SaxonXMLDocument(saxon_proc, xml_filepath=est_source_file_path)
         est_params = {}
@@ -382,6 +385,9 @@ def generate_modern_ms_file(publication_info: Optional[Dict[str, Any]],
                             target_file_path: str,
                             saxon_proc: PySaxonProcessor,
                             xslt_execs: Dict[str, Optional[PyXsltExecutable]]):
+    """
+    Generates a published ms file using XSLT processing.
+    """
     try:
         ms_document = SaxonXMLDocument(saxon_proc, xml_filepath=source_file_path)
         ms_params = {}
