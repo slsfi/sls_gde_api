@@ -640,13 +640,13 @@ def check_publication_mtimes_and_publish_files(project: str, publication_ids: Un
 
                         if use_xslt_processing:
                             generate_est_and_com_files_with_xslt(row,
-                                                              project,
-                                                              est_source_file_path,
-                                                              com_source_file_path,
-                                                              est_target_file_path,
-                                                              com_target_file_path,
-                                                              saxon_proc,
-                                                              xslt_execs)
+                                                                 project,
+                                                                 est_source_file_path,
+                                                                 com_source_file_path,
+                                                                 est_target_file_path,
+                                                                 com_target_file_path,
+                                                                 saxon_proc,
+                                                                 xslt_execs)
                         else:
                             generate_est_and_com_files(row,
                                                        project,
@@ -689,13 +689,13 @@ def check_publication_mtimes_and_publish_files(project: str, publication_ids: Un
 
                             if use_xslt_processing:
                                 generate_est_and_com_files_with_xslt(row,
-                                                                  project,
-                                                                  est_source_file_path,
-                                                                  com_source_file_path,
-                                                                  est_target_file_path,
-                                                                  com_target_file_path,
-                                                                  saxon_proc,
-                                                                  xslt_execs)
+                                                                     project,
+                                                                     est_source_file_path,
+                                                                     com_source_file_path,
+                                                                     est_target_file_path,
+                                                                     com_target_file_path,
+                                                                     saxon_proc,
+                                                                     xslt_execs)
                             else:
                                 generate_est_and_com_files(row,
                                                            project,
@@ -733,13 +733,13 @@ def check_publication_mtimes_and_publish_files(project: str, publication_ids: Un
 
                                 if use_xslt_processing:
                                     generate_est_and_com_files_with_xslt(row,
-                                                                      project,
-                                                                      est_source_file_path,
-                                                                      com_source_file_path,
-                                                                      est_target_file_path,
-                                                                      com_target_file_path,
-                                                                      saxon_proc,
-                                                                      xslt_execs)
+                                                                         project,
+                                                                         est_source_file_path,
+                                                                         com_source_file_path,
+                                                                         est_target_file_path,
+                                                                         com_target_file_path,
+                                                                         saxon_proc,
+                                                                         xslt_execs)
                                 else:
                                     generate_est_and_com_files(row,
                                                                project,
@@ -933,10 +933,10 @@ def check_publication_mtimes_and_publish_files(project: str, publication_ids: Un
 
                         if use_xslt_processing:
                             generate_ms_file_with_xslt(row,
-                                                    source_file_path,
-                                                    target_file_path,
-                                                    saxon_proc,
-                                                    xslt_execs)
+                                                       source_file_path,
+                                                       target_file_path,
+                                                       saxon_proc,
+                                                       xslt_execs)
                         else:
                             generate_ms_file(source_file_path,
                                              target_file_path,
@@ -966,10 +966,10 @@ def check_publication_mtimes_and_publish_files(project: str, publication_ids: Un
 
                             if use_xslt_processing:
                                 generate_ms_file_with_xslt(row,
-                                                        source_file_path,
-                                                        target_file_path,
-                                                        saxon_proc,
-                                                        xslt_execs)
+                                                           source_file_path,
+                                                           target_file_path,
+                                                           saxon_proc,
+                                                           xslt_execs)
                             else:
                                 generate_ms_file(source_file_path,
                                                  target_file_path,
@@ -995,10 +995,10 @@ def check_publication_mtimes_and_publish_files(project: str, publication_ids: Un
 
                                 if use_xslt_processing:
                                     generate_ms_file_with_xslt(row,
-                                                            source_file_path,
-                                                            target_file_path,
-                                                            saxon_proc,
-                                                            xslt_execs)
+                                                               source_file_path,
+                                                               target_file_path,
+                                                               saxon_proc,
+                                                               xslt_execs)
                                 else:
                                     generate_ms_file(source_file_path,
                                                      target_file_path,
@@ -1060,7 +1060,8 @@ if __name__ == "__main__":
         else:
             if args.project in valid_projects:
                 check_publication_mtimes_and_publish_files(args.project, ids, git_author=args.git_author,
-                                                           no_git=args.no_git, force_publish=args.all_ids, is_multilingual=args.is_multilingual,
+                                                           no_git=args.no_git, force_publish=args.all_ids,
+                                                           is_multilingual=args.is_multilingual,
                                                            use_xslt_processing=args.use_xslt_processing)
             else:
                 logger.error(f"{args.project} is not in the API configuration or lacks 'comments_database' setting, aborting...")
