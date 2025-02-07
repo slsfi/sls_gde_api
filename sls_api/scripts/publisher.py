@@ -268,14 +268,14 @@ def generate_est_and_com_files(publication_info, project, est_master_file_path, 
         raise ex
 
 
-def generate_modern_est_and_com_files(publication_info: Optional[Dict[str, Any]],
-                                      project: str,
-                                      est_source_file_path: str,
-                                      com_source_file_path: str,
-                                      est_target_file_path: str,
-                                      com_target_file_path: str,
-                                      saxon_proc: PySaxonProcessor,
-                                      xslt_execs: Dict[str, Optional[PyXsltExecutable]]):
+def generate_est_and_com_files_with_xslt(publication_info: Optional[Dict[str, Any]],
+                                         project: str,
+                                         est_source_file_path: str,
+                                         com_source_file_path: str,
+                                         est_target_file_path: str,
+                                         com_target_file_path: str,
+                                         saxon_proc: PySaxonProcessor,
+                                         xslt_execs: Dict[str, Optional[PyXsltExecutable]]):
     """
     Generates published est and com files using XSLT processing.
     """
@@ -302,8 +302,8 @@ def generate_modern_est_and_com_files(publication_info: Optional[Dict[str, Any]]
             est_params["textType"] = "est"
 
             est_document.generate_web_xml_file(xslt_exec=xslt_execs["est"],
-                                            output_filepath=est_target_file_path,
-                                            parameters=est_params)
+                                               output_filepath=est_target_file_path,
+                                               parameters=est_params)
         except Exception:
             logger.exception(f"Failed to handle est master file: {est_source_file_path}")
             raise
@@ -395,11 +395,11 @@ def generate_ms_file(master_file_path, target_file_path, publication_info):
     ms_document.Save(target_file_path)
 
 
-def generate_modern_ms_file(publication_info: Optional[Dict[str, Any]],
-                            source_file_path: str,
-                            target_file_path: str,
-                            saxon_proc: PySaxonProcessor,
-                            xslt_execs: Dict[str, Optional[PyXsltExecutable]]):
+def generate_ms_file_with_xslt(publication_info: Optional[Dict[str, Any]],
+                               source_file_path: str,
+                               target_file_path: str,
+                               saxon_proc: PySaxonProcessor,
+                               xslt_execs: Dict[str, Optional[PyXsltExecutable]]):
     """
     Generates a published ms file using XSLT processing.
     """
@@ -432,7 +432,7 @@ def generate_modern_ms_file(publication_info: Optional[Dict[str, Any]],
         raise
 
 
-def check_publication_mtimes_and_publish_files(project: str, publication_ids: Union[tuple, None], git_author: str, no_git=False, force_publish=False, is_multilingual=False, modern_text_encoding=False):
+def check_publication_mtimes_and_publish_files(project: str, publication_ids: Union[tuple, None], git_author: str, no_git=False, force_publish=False, is_multilingual=False, use_xslt_processing=False):
     update_success, result_str = update_files_in_git_repo(project)
     if not update_success:
         logger.error("Git update failed! Reason: {}".format(result_str))
@@ -549,7 +549,7 @@ def check_publication_mtimes_and_publish_files(project: str, publication_ids: Un
             # close DB connection for now, it won't be needed for a while
             connection.close()
 
-            if modern_text_encoding:
+            if use_xslt_processing:
                 # Compile Saxon XSLT stylesheets so they can be reused for
                 # each publication
                 saxon_proc: PySaxonProcessor = PySaxonProcessor(license=False)
@@ -638,8 +638,8 @@ def check_publication_mtimes_and_publish_files(project: str, publication_ids: Un
                         else:
                             md5sums.append("SKIP")
 
-                        if modern_text_encoding:
-                            generate_modern_est_and_com_files(row,
+                        if use_xslt_processing:
+                            generate_est_and_com_files_with_xslt(row,
                                                               project,
                                                               est_source_file_path,
                                                               com_source_file_path,
@@ -687,8 +687,8 @@ def check_publication_mtimes_and_publish_files(project: str, publication_ids: Un
                             else:
                                 md5sums.append("SKIP")
 
-                            if modern_text_encoding:
-                                generate_modern_est_and_com_files(row,
+                            if use_xslt_processing:
+                                generate_est_and_com_files_with_xslt(row,
                                                                   project,
                                                                   est_source_file_path,
                                                                   com_source_file_path,
@@ -731,8 +731,8 @@ def check_publication_mtimes_and_publish_files(project: str, publication_ids: Un
                                 else:
                                     md5sums.append("SKIP")
 
-                                if modern_text_encoding:
-                                    generate_modern_est_and_com_files(row,
+                                if use_xslt_processing:
+                                    generate_est_and_com_files_with_xslt(row,
                                                                       project,
                                                                       est_source_file_path,
                                                                       com_source_file_path,
@@ -931,8 +931,8 @@ def check_publication_mtimes_and_publish_files(project: str, publication_ids: Un
                         else:
                             md5sum = "SKIP"
 
-                        if modern_text_encoding:
-                            generate_modern_ms_file(row,
+                        if use_xslt_processing:
+                            generate_ms_file_with_xslt(row,
                                                     source_file_path,
                                                     target_file_path,
                                                     saxon_proc,
@@ -964,8 +964,8 @@ def check_publication_mtimes_and_publish_files(project: str, publication_ids: Un
                             else:
                                 md5sum = "SKIP"
 
-                            if modern_text_encoding:
-                                generate_modern_ms_file(row,
+                            if use_xslt_processing:
+                                generate_ms_file_with_xslt(row,
                                                         source_file_path,
                                                         target_file_path,
                                                         saxon_proc,
@@ -993,8 +993,8 @@ def check_publication_mtimes_and_publish_files(project: str, publication_ids: Un
                                 else:
                                     md5sum = "SKIP"
 
-                                if modern_text_encoding:
-                                    generate_modern_ms_file(row,
+                                if use_xslt_processing:
+                                    generate_ms_file_with_xslt(row,
                                                             source_file_path,
                                                             target_file_path,
                                                             saxon_proc,
@@ -1037,7 +1037,7 @@ if __name__ == "__main__":
     parser.add_argument("--git_author", type=str, help="Author used for git commits (Default 'Publisher <is@sls.fi>')", default="Publisher <is@sls.fi>")
     parser.add_argument("--no_git", action="store_true", help="Don't run git commands as part of publishing.")
     parser.add_argument("--is_multilingual", action="store_true", help="The publication is multilingual and original_filename is found in translation_text")
-    parser.add_argument("--modern_text_encoding", action="store_true", help="The publication is encoded according to the modern SLS text encoding guidelines and is processed differently from legacy encoded publications.")
+    parser.add_argument("--use_xslt_processing", action="store_true", help="XML files related to the publication are processed using XSLT.")
 
     args = parser.parse_args()
 
@@ -1056,12 +1056,12 @@ if __name__ == "__main__":
             for p in valid_projects:
                 check_publication_mtimes_and_publish_files(p, ids, git_author=args.git_author,
                                                            no_git=args.no_git, force_publish=args.all_ids,
-                                                           modern_text_encoding=args.modern_text_encoding)
+                                                           use_xslt_processing=args.use_xslt_processing)
         else:
             if args.project in valid_projects:
                 check_publication_mtimes_and_publish_files(args.project, ids, git_author=args.git_author,
                                                            no_git=args.no_git, force_publish=args.all_ids, is_multilingual=args.is_multilingual,
-                                                           modern_text_encoding=args.modern_text_encoding)
+                                                           use_xslt_processing=args.use_xslt_processing)
             else:
                 logger.error(f"{args.project} is not in the API configuration or lacks 'comments_database' setting, aborting...")
                 sys.exit(1)
