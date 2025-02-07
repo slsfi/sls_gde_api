@@ -22,8 +22,8 @@ class SaxonXMLDocument:
 
     Methods:
     - load_xml_file(filepath): Loads an XML document from a file and parses it.
-    - generate_web_xml_file(xslt_exec, output_filepath): Generates a
-      transformed XML file using XSLT.
+    - transform_and_save(xslt_exec, output_filepath): Generates a
+      transformed document using XSLT.
     - get_all_comment_ids(): Extracts all comment IDs matching a specific
       XPath query.
     - _parse_from_string(xml_str): Parses an XML document from a string.
@@ -114,18 +114,19 @@ class SaxonXMLDocument:
         except (EnvironmentError, PySaxonApiError) as e:
             raise ValueError(f"Error reading or parsing the file '{filepath}': {e}")
 
-    def generate_web_xml_file(
+    def transform_and_save(
             self,
             xslt_exec: PyXsltExecutable,
             output_filepath: str,
             parameters: Optional[Dict] = None
     ):
         """
-        Generates a transformed XML file using an XSLT executable.
+        Transforms the XML document using an XSLT executable and saves the result
+        to the output filepath.
 
         Parameters:
         - xslt_exec (PyXsltExecutable): The XSLT execution object.
-        - output_filepath (str): The file path where the transformed XML will
+        - output_filepath (str): The file path where the transformed document will
           be saved.
         - parameters (dict, optional): A dictionary with parameters for the XSLT
           executable. Defaults to None.

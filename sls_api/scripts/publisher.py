@@ -301,9 +301,9 @@ def generate_est_and_com_files_with_xslt(publication_info: Optional[Dict[str, An
                 }
             est_params["textType"] = "est"
 
-            est_document.generate_web_xml_file(xslt_exec=xslt_execs["est"],
-                                               output_filepath=est_target_file_path,
-                                               parameters=est_params)
+            est_document.transform_and_save(xslt_exec=xslt_execs["est"],
+                                            output_filepath=est_target_file_path,
+                                            parameters=est_params)
         except Exception:
             logger.exception(f"Failed to handle est master file: {est_source_file_path}")
             raise
@@ -353,9 +353,9 @@ def generate_est_and_com_files_with_xslt(publication_info: Optional[Dict[str, An
         com_params["textType"] = "com"
         com_params["notes"] = notes_xml_str
 
-        com_document.generate_web_xml_file(xslt_exec=xslt_execs["com"],
-                                           output_filepath=com_target_file_path,
-                                           parameters=com_params)
+        com_document.transform_and_save(xslt_exec=xslt_execs["com"],
+                                        output_filepath=com_target_file_path,
+                                        parameters=com_params)
     except Exception:
         logger.exception(f"Failed to handle com master file: {com_source_file_path}")
         raise
@@ -424,9 +424,9 @@ def generate_ms_file_with_xslt(publication_info: Optional[Dict[str, Any]],
             }
         ms_params["textType"] = "ms"
 
-        ms_document.generate_web_xml_file(xslt_exec=xslt_execs["ms"],
-                                          output_filepath=target_file_path,
-                                          parameters=ms_params)
+        ms_document.transform_and_save(xslt_exec=xslt_execs["ms"],
+                                       output_filepath=target_file_path,
+                                       parameters=ms_params)
     except Exception:
         logger.exception(f"Failed to handle manuscript file: {source_file_path}")
         raise
