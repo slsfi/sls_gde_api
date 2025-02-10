@@ -17,28 +17,36 @@ class SaxonXMLDocument:
     - xml_doc_str (str): String representation of the loaded XML document.
     - saxon_proc (PySaxonProcessor): An instance of PySaxonProcessor for
       SaxonC operations.
-    - config (dict): Configuration dictionary containing namespace mappings.
     - namespaces (list): List of namespaces to declare for XPath evaluation.
 
     Methods:
     - load_xml_file(filepath): Loads an XML document from a file and parses it.
-    - transform_and_save(xslt_exec, output_filepath): Generates a
+    - transform_and_save(xslt_exec, output_filepath, parameters): Generates a
       transformed document using XSLT.
-    - get_all_comment_ids(): Extracts all comment IDs matching a specific
-      XPath query.
+    - add_namespace(ns_prefix, ns_uri): Adds a namespace to the `namespaces`
+      attribute of the class instance.
+    - get_all_comment_ids(): Extracts all comment note IDs in the document.
+    - get_all_comment_positions(comment_ids): Extracts the positions of all
+      comment notes in the document.
+    - _save_to_file(output_filepath): Saves the XML document to a file.
     - _parse_from_string(xml_str): Parses an XML document from a string.
     - _evaluate_xpath(xpath_str): Evaluates an XPath expression using the
       configured namespaces.
-    - _save_to_file(output_filepath): Saves the current XML document to a file.
-    - _move_end_anchors(xml_str): Adjusts the position of end anchors in the
-      XML.
+    - _remove_blank_lines(input_string): Removes blank lines from the given
+      string.
+    - _format_xml_with_line_endings(xml_string): Formats an XML string to add
+      line endings after the XML declaration and processing instructions.
+    - _set_xslt_parameters_from_dict(xslt_exec, parameters): Sets parameters
+      for an XSLT processor from a dictionary.
+    - _convert_primitive_type_to_xdm(value): Converts a primitive Python value
+      to an XDM-compatible value.
 
     Parameters (during initialization):
     - saxon_proc (PySaxonProcessor): Instance of PySaxonProcessor for handling
       XML parsing and XPath evaluation.
-    - xml_filepath (optional, str): Path to an XML file to load upon
+    - xml_filepath (str, optional): Path to an XML file to load upon
       initialization.
-    - config (optional, dict): Configuration dictionary containing namespace
+    - namespaces (list, optional): A list of dictionaries containing namespace
       mappings. Defaults to TEI and XML namespaces.
     """
 
@@ -46,7 +54,7 @@ class SaxonXMLDocument:
             self,
             saxon_proc: PySaxonProcessor,
             xml_filepath: str = "",
-            config: Optional[Dict[str, Any]] = None
+            namespaces: Optional[List[Dict[str, str]]] = None
     ):
         """
         Initializes a SaxonXMLDocument instance.
@@ -57,30 +65,24 @@ class SaxonXMLDocument:
         - xml_filepath (str, optional): The file path of an XML document to
           load upon initialization. If provided, the XML document will be
           immediately loaded.
-        - config (dict, optional): A configuration dictionary containing
+        - namespaces (list, optional): A list of dictionaries containing
           namespace mappings. Defaults to:
-            {
-                "namespaces": [
-                    {"prefix": "xml", "uri": "http://www.w3.org/XML/1998/namespace"},
-                    {"prefix": "tei", "uri": "http://www.tei-c.org/ns/1.0"}
-                ]
-            }
+            [
+                {"prefix": "xml", "uri": "http://www.w3.org/XML/1998/namespace"},
+                {"prefix": "tei", "uri": "http://www.tei-c.org/ns/1.0"}
+            ]
 
         Raises:
         - FileNotFoundError: If the specified XML file is not found.
         - ValueError: If the file cannot be loaded due to invalid content.
         """
-        self.xml_doc_tree: PyXdmNode = None
+        self.xml_doc_tree: Optional[PyXdmNode] = None
         self.xml_doc_str: str = ""
         self.saxon_proc: PySaxonProcessor = saxon_proc
-
-        self.config = config or {
-            "namespaces": [
-                {"prefix": "xml", "uri": "http://www.w3.org/XML/1998/namespace"},
-                {"prefix": "tei", "uri": "http://www.tei-c.org/ns/1.0"}
-            ]
-        }
-        self.namespaces = self.config["namespaces"]
+        self.namespaces: List[Dict[str, str]] = namespaces or [
+            {"prefix": "xml", "uri": "http://www.w3.org/XML/1998/namespace"},
+            {"prefix": "tei", "uri": "http://www.tei-c.org/ns/1.0"}
+        ]
 
         if xml_filepath:
             try:
@@ -92,13 +94,10 @@ class SaxonXMLDocument:
 
     def load_xml_file(self, filepath: str) -> bool:
         """
-        Loads an XML document from a file.
+        Loads an XML document from a file and parses it.
 
         Parameters:
         - filepath (str): The file path of the XML document to load.
-
-        Returns:
-        - bool: True if the file is loaded successfully.
 
         Raises:
         - FileNotFoundError: If the file does not exist.
@@ -108,7 +107,6 @@ class SaxonXMLDocument:
             with io.open(filepath, mode="r", encoding="utf-8-sig") as xml_file:
                 self.xml_doc_str = xml_file.read()
                 self.xml_doc_tree = self._parse_from_string(xml_str=self.xml_doc_str)
-                return True
         except FileNotFoundError:
             raise FileNotFoundError(f"The file '{filepath}' was not found.")
         except (EnvironmentError, PySaxonApiError) as e:
@@ -138,31 +136,38 @@ class SaxonXMLDocument:
         xslt_exec.clear_parameters()
 
         if parameters:
-            self._set_xslt_params_from_dict(xslt_exec, parameters)
+            self._set_xslt_parameters_from_dict(xslt_exec, parameters)
 
         self.xml_doc_str = xslt_exec.transform_to_string(xdm_node=self.xml_doc_tree)
         self._save_to_file(output_filepath=output_filepath)
 
     def add_namespace(self, ns_prefix: str, ns_uri: str):
         """
-        Adds the provided namespace to the class config and namespace
-        properties.
+        Adds the provided namespace to the `namespaces` attribute of the
+        class instance if neither prefix or URI of the new namespace exists.
 
         Parameters:
         - ns_prefix (str): The prefix of the namespace.
         - ns_uri (str): The URI of the namespace.
+
+        Returns:
+        - bool: True if the namespace was added, False if not.
         """
-        self.config["namespaces"].append(
+        for ns in self.namespaces:
+            if ns["prefix"] == ns_prefix or ns["uri"] == ns_uri:
+                return False
+
+        self.namespaces.append(
             {
                 "prefix": ns_prefix,
                 "uri": ns_uri
             }
         )
-        self.namespaces = self.config["namespaces"]
+        return True
 
     def get_all_comment_ids(self) -> List[int]:
         """
-        Extracts all comment IDs from the XML document as integers.
+        Extracts all comment note IDs from the XML document as integers.
 
         The method evaluates an XPath query to find all `@xml:id` attributes
         of <tei:anchor> elements whose IDs start with "start". The "start"
@@ -192,6 +197,22 @@ class SaxonXMLDocument:
         return ids
 
     def get_all_comment_positions(self, comment_ids: List[int]) -> Dict[str, Any]:
+        """
+        Extracts the positions of all comment notes in the XML document, based
+        on the given list of comment IDs. Both start and end tags of the comment
+        notes are considered.
+
+        The positions are set accordingly:
+        - The value of the @n attribute of ancestor <p>, <lg> and <l> elements.
+        - The ancestor element name if the ancestor is a <head>, <note> or
+          <date> element. If the ancestor i a <head> and the text type is `poem`,
+          the position is set to `title`.
+        - If none of the above match, the position is set to `null`.
+
+        Returns:
+        - A dictionary of comment note IDs as keys and corresponding positions
+          as values.
+        """
         xml_doc = self._parse_from_string(self.xml_doc_str)
         id_prefixes = ["start", "end"]
         comment_positions = {}
@@ -250,9 +271,14 @@ class SaxonXMLDocument:
         """
         return self.saxon_proc.parse_xml(xml_text=xml_str, encoding="utf-8")
 
-    def _evaluate_xpath(self, xpath_str: str, node: Optional[PyXdmNode] = None) -> PyXdmValue:
+    def _evaluate_xpath(
+            self,
+            xpath_str: str,
+            node: Optional[PyXdmNode] = None
+    ) -> PyXdmValue:
         """
-        Evaluates an XPath expression using the configured namespaces.
+        Evaluates an XPath expression using the namespaces configures
+        in the class instance.
 
         Parameters:
         - xpath_str (str): The XPath expression to evaluate.
@@ -274,7 +300,7 @@ class SaxonXMLDocument:
     def _remove_blank_lines(self, input_string: str) -> str:
         """
         Removes blank lines (lines with only whitespace or no content) from
-        a given string.
+        the given string.
 
         Parameters:
         - input_string (str): The input string containing lines of text.
@@ -303,7 +329,7 @@ class SaxonXMLDocument:
 
         return formatted_xml
 
-    def _set_xslt_params_from_dict(
+    def _set_xslt_parameters_from_dict(
             self,
             xslt_exec: PyXsltExecutable,
             parameters: dict
@@ -319,7 +345,8 @@ class SaxonXMLDocument:
           type before being set on the XSLT processor.
         """
         for param_name, param_value in parameters.items():
-            xslt_exec.set_parameter(name=param_name, value=self._convert_primitive_type_to_xdm(param_value))
+            xslt_exec.set_parameter(name=param_name,
+                                    value=self._convert_primitive_type_to_xdm(param_value))
 
     def _convert_primitive_type_to_xdm(self, value: any) -> PyXdmValue:
         """
