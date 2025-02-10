@@ -146,9 +146,10 @@ def get_letter_location(letter_id, type):
 
 def clean_comment_html_fragment(html_str: str) -> str:
     """
-    Parses the provided HTML fragment (str) using 1) BeautifulSoup and
-    2) ElementTree from lxml to ensure the result is well-formed XML.
-    Returns the valid XML in stringified form.
+    Parses the provided HTML comment fragment (str) using 1) BeautifulSoup
+    and 2) ElementTree from lxml to ensure the result is well-formed XML.
+    Returns the valid XML, wrapped in a <noteText> element, in stringified
+    form.
     """
     result = "<noteText></noteText>"
     html_str = html_str.strip()
@@ -207,6 +208,40 @@ def construct_notes_xml(comments: List[Dict[str, Any]], comment_positions: Dict[
         notes.append(note)
 
     return "\n".join(notes)
+
+
+def compile_xslt_stylesheets(
+        project: str,
+        xslt_proc: PyXslt30Processor
+) -> Dict[str, Optional[PyXsltExecutable]]:
+    """
+    Compiles the XSLT stylesheets in the project files to Saxon XSLT
+    executables.
+
+    Returns:
+    - A dictionary where the text types (est, com, ms) are keys and the
+    compiled stylesheets are values. If a stylesheet for a text type
+    can't be compiled, it's value will be set to None.
+    """
+    xslt_execs: Dict[str, Optional[PyXsltExecutable]] = {}
+
+    for type_key, xsl_path in [
+        ("est", EST_XSL_PATH_IN_FILE_ROOT),
+        ("com", COM_XSL_PATH_IN_FILE_ROOT),
+        ("ms", MS_XSL_PATH_IN_FILE_ROOT)
+    ]:
+        xsl_full_path = os.path.join(config[project]["file_root"], xsl_path)
+
+        if os.path.exists(xsl_full_path):
+            try:
+                xslt_execs[type_key] = xslt_proc.compile_stylesheet(stylesheet_file=xsl_full_path, encoding="utf-8")
+            except Exception:
+                logger.exception(f"Failed to compile XSLT executable for '{type_key}' files. Make sure '{xsl_path}' exists and is valid in project root.")
+                xslt_execs[type_key] = None
+        else:
+            xslt_execs[type_key] = None
+    
+    return xslt_execs
 
 
 def generate_est_and_com_files(publication_info, project, est_master_file_path, com_master_file_path, est_target_path, com_target_path, com_xsl_path=None):
@@ -556,28 +591,18 @@ def check_publication_mtimes_and_publish_files(project: str, publication_ids: Un
             connection.close()
 
             if use_xslt_processing:
-                # Compile Saxon XSLT stylesheets so they can be reused for
-                # each publication
+                # Initialise a Saxon processor and Saxon XSLT 3.0 processor and
+                # compile Saxon XSLT stylesheets so they can be reused for
+                # each publication.
                 saxon_proc: PySaxonProcessor = PySaxonProcessor(license=False)
                 xslt_proc: PyXslt30Processor = saxon_proc.new_xslt30_processor()
 
-                xslt_execs: Dict[str, Optional[PyXsltExecutable]] = {}
-
-                for type_key, xsl_path in [
-                    ("est", EST_XSL_PATH_IN_FILE_ROOT),
-                    ("com", COM_XSL_PATH_IN_FILE_ROOT),
-                    ("ms", MS_XSL_PATH_IN_FILE_ROOT)
-                ]:
-                    xsl_full_path = os.path.join(config[project]["file_root"], xsl_path)
-
-                    if os.path.exists(xsl_full_path):
-                        try:
-                            xslt_execs[type_key] = xslt_proc.compile_stylesheet(stylesheet_file=xsl_full_path, encoding="utf-8")
-                        except Exception as ex:
-                            logger.warning(f"Failed to compile XSLT executable for '{type_key}' files. Make sure '{xsl_path}' exists and is valid in project root. Exception: {ex}")
-                            xslt_execs[type_key] = None
-                    else:
-                        xslt_execs[type_key] = None
+                # Store the compiled XSLT stylesheets in a dictionary where the
+                # text types (est, com, ms) are keys and the compiled stylesheets
+                # are values. If a stylesheet for a text type can't be compiled,
+                # it's value will be set to None.
+                xslt_execs: Dict[str, Optional[PyXsltExecutable]] = compile_xslt_stylesheets(project,
+                                                                                             xslt_proc)
 
             # Keep a list of changed files for later git commit
             changes = set()
