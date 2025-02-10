@@ -240,7 +240,7 @@ def compile_xslt_stylesheets(
                 xslt_execs[type_key] = None
         else:
             xslt_execs[type_key] = None
-    
+
     return xslt_execs
 
 
