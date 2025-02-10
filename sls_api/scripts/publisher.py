@@ -287,6 +287,8 @@ def generate_est_and_com_files_with_xslt(publication_info: Optional[Dict[str, An
     else:
         try:
             est_document = SaxonXMLDocument(saxon_proc, xml_filepath=est_source_file_path)
+            # Create a dictionary with publication metadata which will be
+            # passed as a parameter to the XSLT processor.
             est_params = {}
             if publication_info is not None:
                 est_params = {
@@ -344,6 +346,8 @@ def generate_est_and_com_files_with_xslt(publication_info: Optional[Dict[str, An
 
     try:
         com_document = SaxonXMLDocument(saxon_proc, xml_filepath=com_source_file_path)
+        # Create a dictionary with publication comment metadata which will be
+        # passed as a parameter to the XSLT processor.
         if est_params:
             com_params = est_params
             com_params["commentId"] = publication_info["publication_comment_id"]
@@ -409,6 +413,8 @@ def generate_ms_file_with_xslt(publication_info: Optional[Dict[str, Any]],
             raise ValueError("XSLT executable for 'ms' is missing.")
 
         ms_document = SaxonXMLDocument(saxon_proc, xml_filepath=source_file_path)
+        # Create a dictionary with publication manuscript metadata which will be
+        # passed as a parameter to the XSLT processor.
         ms_params = {}
         if publication_info is not None:
             ms_params = {
