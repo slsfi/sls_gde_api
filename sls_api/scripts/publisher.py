@@ -635,8 +635,8 @@ def check_publication_mtimes_and_publish_files(project: str, publication_ids: Un
                     logger.info("Comment file not set for publication {}, using template instead.".format(publication_id))
                     comment_file = COMMENTS_TEMPLATE_PATH_IN_FILE_ROOT
 
-                # Add the comment filename and published status to the row
-                # dict so it can be passed to called functions
+                # Add the comment filename to the row dict so it can be passed
+                # to called functions
                 row["com_original_filename"] = comment_file
 
                 com_source_file_path = os.path.join(file_root, comment_file)
