@@ -1037,7 +1037,7 @@ if __name__ == "__main__":
     parser.add_argument("--git_author", type=str, help="Author used for git commits (Default 'Publisher <is@sls.fi>')", default="Publisher <is@sls.fi>")
     parser.add_argument("--no_git", action="store_true", help="Don't run git commands as part of publishing.")
     parser.add_argument("--is_multilingual", action="store_true", help="The publication is multilingual and original_filename is found in translation_text")
-    parser.add_argument("--use_xslt_processing", action="store_true", help="XML files related to the publication are processed using XSLT.")
+    parser.add_argument("--use_xslt_processing", action="store_true", help="XML files related to the publication are processed using project specific XSLT.")
 
     args = parser.parse_args()
 
