@@ -24,9 +24,9 @@ valid_projects = [project for project in config if isinstance(config[project], d
 
 comment_db_engines = {project: create_engine(config[project]["comments_database"], pool_pre_ping=True) for project in valid_projects}
 
-EST_XSL_PATH_IN_FILE_ROOT = "xslt/publisher/publish_est.xsl"
-COM_XSL_PATH_IN_FILE_ROOT = "xslt/publisher/publish_com.xsl"
-MS_XSL_PATH_IN_FILE_ROOT = "xslt/publisher/publish_ms.xsl"
+EST_XSL_PATH_IN_FILE_ROOT = "xslt/publisher/publish-est.xsl"
+COM_XSL_PATH_IN_FILE_ROOT = "xslt/publisher/publish-com.xsl"
+MS_XSL_PATH_IN_FILE_ROOT = "xslt/publisher/publish-ms.xsl"
 LEGACY_COMMENTS_XSL_PATH_IN_FILE_ROOT = "xslt/comment_html_to_tei.xsl"
 COMMENTS_TEMPLATE_PATH_IN_FILE_ROOT = "templates/comment.xml"
 
