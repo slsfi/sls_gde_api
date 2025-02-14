@@ -24,9 +24,9 @@ valid_projects = [project for project in config if isinstance(config[project], d
 
 comment_db_engines = {project: create_engine(config[project]["comments_database"], pool_pre_ping=True) for project in valid_projects}
 
-EST_XSL_PATH_IN_FILE_ROOT = "xslt/publisher/publish-est.xsl"
-COM_XSL_PATH_IN_FILE_ROOT = "xslt/publisher/publish-com.xsl"
-MS_XSL_PATH_IN_FILE_ROOT = "xslt/publisher/publish-ms.xsl"
+EST_WEB_XML_XSL_PATH_IN_FILE_ROOT = "xslt/publisher/generate-web-xml-est.xsl"
+COM_WEB_XML_XSL_PATH_IN_FILE_ROOT = "xslt/publisher/generate-web-xml-com.xsl"
+MS_WEB_XML_XSL_PATH_IN_FILE_ROOT = "xslt/publisher/generate-web-xml-ms.xsl"
 LEGACY_COMMENTS_XSL_PATH_IN_FILE_ROOT = "xslt/comment_html_to_tei.xsl"
 COMMENTS_TEMPLATE_PATH_IN_FILE_ROOT = "templates/comment.xml"
 
@@ -226,9 +226,9 @@ def compile_xslt_stylesheets(
     xslt_execs: Dict[str, Optional[PyXsltExecutable]] = {}
 
     for type_key, xsl_path in [
-        ("est", EST_XSL_PATH_IN_FILE_ROOT),
-        ("com", COM_XSL_PATH_IN_FILE_ROOT),
-        ("ms", MS_XSL_PATH_IN_FILE_ROOT)
+        ("est", EST_WEB_XML_XSL_PATH_IN_FILE_ROOT),
+        ("com", COM_WEB_XML_XSL_PATH_IN_FILE_ROOT),
+        ("ms", MS_WEB_XML_XSL_PATH_IN_FILE_ROOT)
     ]:
         xsl_full_path = os.path.join(config[project]["file_root"], xsl_path)
 
@@ -315,7 +315,7 @@ def generate_est_and_com_files_with_xslt(publication_info: Optional[Dict[str, An
     Generates published est and com files using XSLT processing.
     """
     if xslt_execs["est"] is None:
-        logger.warning(f"XSLT executable for 'est' is missing. '{EST_XSL_PATH_IN_FILE_ROOT}' is invalid or does not exist in project root.")
+        logger.warning(f"XSLT executable for 'est' is missing. '{EST_WEB_XML_XSL_PATH_IN_FILE_ROOT}' is invalid or does not exist in project root.")
         # Don't raise an exception here in case the XSLT for est is
         # intentionally missing, for example if the project doesn't
         # have est files. This still allows com files to be processed.
@@ -352,7 +352,7 @@ def generate_est_and_com_files_with_xslt(publication_info: Optional[Dict[str, An
         return
 
     if xslt_execs["com"] is None:
-        logger.warning(f"XSLT executable for 'com' is missing. '{COM_XSL_PATH_IN_FILE_ROOT}' is invalid or does not exist in project root. Comment file not generated.")
+        logger.warning(f"XSLT executable for 'com' is missing. '{COM_WEB_XML_XSL_PATH_IN_FILE_ROOT}' is invalid or does not exist in project root. Comment file not generated.")
         # Don't raise an exception here so the est file can still be committed.
         return
 
@@ -444,7 +444,7 @@ def generate_ms_file_with_xslt(publication_info: Optional[Dict[str, Any]],
     """
     try:
         if xslt_execs["ms"] is None:
-            logger.error(f"XSLT executable for 'ms' is missing. '{MS_XSL_PATH_IN_FILE_ROOT}' is invalid or does not exist in project root.")
+            logger.error(f"XSLT executable for 'ms' is missing. '{MS_WEB_XML_XSL_PATH_IN_FILE_ROOT}' is invalid or does not exist in project root.")
             raise ValueError("XSLT executable for 'ms' is missing.")
 
         ms_document = SaxonXMLDocument(saxon_proc, xml_filepath=source_file_path)
