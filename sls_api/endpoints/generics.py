@@ -364,25 +364,28 @@ class FileResolver(etree.Resolver):
         return self.resolve_filename(system_url, context)
 
 
-def transform_xml(xsl_file_path: str,
-                  xml_file_path: str,
-                  params: Optional[Dict[str, Any]] = None,
-                  use_saxon: bool = False):
+def transform_xml(
+        xsl_file_path: str,
+        xml_file_path: str,
+        params: Optional[Dict[str, Any]] = None,
+        use_saxon: bool = False
+) -> str:
     """
     Transform an XML document using an XSLT stylesheet with optional parameters.
     The transformation can be performed either using the lxml XSLT 1.0
     processor (default) or the Saxon XSLT 3.0 processor.
 
     Parameters:
-    - xsl_file_path (str): File path to an XSLT stylesheet.
-    - xml_file_path (str): File path to the XML document which is to be transformed.
-    - params (dict or OrderedDict, optional): A dictionary with parameters for
-      the XSLT stylesheet. Defaults to None.
-    - use_saxon (bool, optional): Whether to use the Saxon processor (instead of
-      the lxml processor) or not. Defaults to False.
+        xsl_file_path (str): File path to an XSLT stylesheet.
+        xml_file_path (str): File path to the XML document which is to be
+            transformed.
+        params (dict or OrderedDict, optional): A dictionary with parameters
+            for the XSLT stylesheet. Defaults to None.
+        use_saxon (bool, optional): Whether to use the Saxon processor (instead
+            of the lxml processor) or not. Defaults to False.
 
     Returns:
-    - String representation of the result document.
+        String representation of the result document.
     """
     logger.debug("Transforming {} using {}".format(xml_file_path, xsl_file_path))
     if params is not None:
